@@ -49,7 +49,7 @@
 ## ملفات البناء
 
 GitHub Actions artifact:
-- [PS3-SCALE-Alpha-0.2-build — Run #34](https://github.com/Vikik0/PS3-SCALE/actions/runs/42481903926/artifacts/13617497295)
+- [PS3-SCALE-Alpha-0.2-build — Run #61](https://github.com/Vikik0/PS3-SCALE/actions/runs/42481903926/artifacts/13617497295)
 - Artifact ID: `13617497295`
 - يحتوي على `ps3scale.elf`, `ps3scale.self`, `ps3scale.pkg`, `ps3scale.gnpdrm.pkg`.
 
