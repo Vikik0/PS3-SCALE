@@ -5,18 +5,18 @@ PS3 SCALE is a homebrew project for safely cataloguing PS3 and PS2 titles and, i
 ## Current status — Alpha 0.2
 
 - Read-only PS3/PS2 game discovery and metadata parsing.
-- Tiny3D-based PS3 application UI.
+- Tiny3D-based PS3 application UI with native vector icons on the main menu.
 - PS3 folder, installed-title, PS3 ISO and PS2 ISO discovery.
 - PARAM.SFO parsing and PS2 ISO9660 SYSTEM.CNF serial extraction.
 - GitHub Actions builds ELF, SELF, debug PKG and finalized NPDRM PKG.
 - Host-side tests pass.
-- Physical PS3 installation and runtime validation are still pending.
+- The previous Alpha build has launched on the target CECH-2504A console; the latest icon-enabled build awaits a visual re-check.
 
 **Important:** Alpha 0.2 does not apply game patches or provide a universal in-game upscaler. Real enhancement work must be title-specific and verified against the exact game ID/version. Original game files remain read-only.
 
 ## Build and install
 
-See [the latest successful build](https://github.com/Vikik0/PS3-SCALE/actions/runs/42482158416) and download the PS3-SCALE-Alpha-0.2-build artifact. Use ps3scale.gnpdrm.pkg for the finalized package.
+See [the latest successful build](https://github.com/Vikik0/PS3-SCALE/actions/runs/42484129338) and download the PS3-SCALE-Alpha-0.2-build artifact. Use ps3scale.gnpdrm.pkg for the finalized package.
 
 ## Documentation
 
