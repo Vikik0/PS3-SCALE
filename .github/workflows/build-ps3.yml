@@ -73,13 +73,20 @@ jobs:
           test -s "$PORTLIBS/lib/libmpg123.a"
           test -s "$PORTLIBS/include/soundlib/mpg123.h"
 
+      - name: Assemble embedded background theme
+        run: |
+          set -eu
+          THEME_FILE="PS3-SCALE-Alpha-0.2/pkgfiles/USRDIR/theme.mp3"
+          mkdir -p "$(dirname "$THEME_FILE")"
+          cat PS3-SCALE-Alpha-0.2/audio-source/theme.mp3.part-* > "$THEME_FILE"
+          test "$(wc -c < "$THEME_FILE" | tr -d ' ')" = "5182732"
+          printf '%s  %s\\n' "b8a7b1c2573ea8a397c2fbc3a6c731b25dcb71f572aedf5af8568785620d1b64" "$THEME_FILE" | sha256sum -c -
+
       - name: Check bundled theme asset
         run: |
-          if [ -s "PS3-SCALE-Alpha-0.2/pkgfiles/USRDIR/theme.mp3" ]; then
-            echo "Bundled theme MP3 found; it will be copied into the installed USRDIR."
-          else
-            echo "::warning::theme.mp3 is not present in pkgfiles/USRDIR; the package will use the existing USB/HDD fallback."
-          fi
+          set -eu
+          test -s "PS3-SCALE-Alpha-0.2/pkgfiles/USRDIR/theme.mp3"
+          echo "Verified embedded theme MP3 in pkgfiles/USRDIR."
 
       - name: Build and validate PS3 packages
         working-directory: PS3-SCALE-Alpha-0.2
@@ -96,6 +103,8 @@ jobs:
           PKG_REVISION="$(od -An -tx1 -j4 -N2 ps3scale.gnpdrm.pkg | tr -d ' \n')"
           test "$PKG_MAGIC" = "7f504b47"
           test "$PKG_REVISION" = "8000"
+          test "$(stat -c %s ps3scale.gnpdrm.pkg)" -gt 5000000
+          python3 scripts/verify_pkg_theme.py ps3scale.gnpdrm.pkg
 
           echo "Build outputs:"
           ls -lah ps3scale.elf ps3scale.self ps3scale.pkg ps3scale.gnpdrm.pkg
@@ -105,7 +114,7 @@ jobs:
       - name: Upload PS3 build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PS3-SCALE-Alpha-0.2-build
+          name: PS3-SCALE-Alpha-0.2-build-with-embedded-theme
           if-no-files-found: error
           path: |
             PS3-SCALE-Alpha-0.2/ps3scale.elf
