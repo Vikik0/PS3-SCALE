@@ -22,13 +22,12 @@ LIBDIRS := $(PORTLIBS)
 
 LIBS := -lya2d -lfont3d -ltiny3d -lsimdmath -lgcm_sys -lrsx -lio -lsysutil \
         -lpngdec -ljpgdec -lpng -lz -lfreetype -lpixman-1 \
-        -laudioplayer -lmpg123 -logg -lspu_sound -laudio -lspu_soundmodule \
-        -lrt -llv2 -lsysmodule -lsysfs -lm
+        -lmpg123 -laudio -lrt -llv2 -lsysmodule -lsysfs -lm
 
 CFLAGS = -O2 -Wall -Wextra -std=gnu99 -mcpu=cell $(MACHDEP) $(INCLUDE) \
-         -I$(PORTLIBS)/modules/include -I$(PORTLIBS)/include/soundlib
+         -I$(PORTLIBS)/include/soundlib
 CXXFLAGS = $(CFLAGS)
-LDFLAGS = $(MACHDEP) -Wl,-Map,$(notdir $@).map -L$(PORTLIBS)/modules/lib
+LDFLAGS = $(MACHDEP) -Wl,-Map,$(notdir $@).map
 
 .PHONY: all pkg clean host-test info
 
