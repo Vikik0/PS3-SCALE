@@ -1,108 +1,57 @@
 # PS3 SCALE roadmap
 
-## Alpha 0.1 — safe library foundation (host-tested)
+## Alpha 0.1 — safe library foundation
 
-- [x] PS3 PARAM.SFO parser
-- [x] Folder game scanner (`GAMES`, `GAMEZ`)
-- [x] Installed-title scanner (`HG`, `2P`, `2G`)
-- [x] PS3 ISO / PS2 ISO filename discovery
-- [x] PS2 ISO9660 `SYSTEM.CNF` serial probe
-- [x] PS3 Title ID hint extraction from common ISO filenames
-- [x] Direct mounted Blu-ray scan path implemented
-- [x] Internal HDD, Blu-ray mount, USB000..USB007 scan paths
-- [x] Read-only scan behavior
-- [x] Build with maintained Tiny3D PS3 toolchain container
-- [ ] Test on CECH-2504A / CFW 4.93
+- [x] PS3 PARAM.SFO parser.
+- [x] Folder game scanner (GAMES, GAMEZ).
+- [x] Installed-title scanner (HG, 2P, 2G).
+- [x] PS3 ISO / PS2 ISO filename discovery.
+- [x] PS2 ISO9660 SYSTEM.CNF serial probe.
+- [x] PS3 Title ID hint extraction from common ISO filenames.
+- [x] Direct mounted Blu-ray scan path.
+- [x] Internal HDD, Blu-ray mount and USB000–USB007 scan paths.
+- [x] Read-only scan behavior.
+- [ ] Physical validation on CECH-2504A / CFW 4.93.
 
 ## Alpha 0.2 — library and profile UX
-- ICON0/PIC1 extraction
-- User profile storage under `/dev_hdd0/game/PS3SCALE1/USRDIR/`
-- Per-title compatibility status
-- Local backup/restore manifest (no automatic game-file edits)\n- [ ] Add online catalog/download, per-title backups and rollback\n- [x] Add startup MP3 streaming playback with mpg123 + native PSL1GHT audio output (hardware verification and PKG asset bundling remain)\n- [ ] Add CFW runtime plugin for verified game-start patching and notification
+
+- [x] PS3 and PS2 library screens, sorting and local cover display.
+- [x] Search through native PS3 OSK.
+- [x] Scan layout with independent list, metadata and cover columns.
+- [x] SELECT and START search shortcuts; OSK initial panel included in allowed panel mask.
+- [x] Slow Tiny3D home animation with Settings toggle.
+- [x] Main menu vector icons and library overview.
+- [x] Persistent music, volume and animation settings.
+- [x] Startup MP3 streaming, looping, mute and volume.
+- [x] USB-to-HDD music copy with immediate audio-backend restart.
+- [x] Offline USB package discovery, library rescan and restore defaults.
+- [x] Companion Tools status detection for Apollo, Artemis and webMAN.
+- [x] Static UI contract tests included in host CI.
+- [ ] Physical smoke test of Run #115 UI and music handoff.
 
 ## Alpha 0.3 — PS2 configuration manager
-- [x] Add a restricted in-memory PS2 netemu CONFIG builder for commands 0x44/0x46, with host tests
-- [x] Add a Triangle-triggered PS2 ISO CONFIG preview screen (preview only; no writes)
-- PS2 Classics/PS2 ISO metadata enrichment
-- Match known `ps2_netemu` CONFIG files by title ID and region
-- Hash verification and backup/restore
-- No automatic config writes until hardware tests pass
+
+- [x] Restricted in-memory PS2 netemu CONFIG builder for commands 0x44/0x46, with host tests.
+- [x] Triangle-triggered PS2 ISO CONFIG preview (preview only; no writes).
+- [ ] PS2 Classics/PS2 ISO metadata enrichment.
+- [ ] Match known ps2_netemu CONFIG files by title ID and region.
+- [ ] Hash verification, backup and restore.
+- [ ] No automatic CONFIG writes until hardware tests pass.
 
 ## Alpha 0.4 — PS3 title-specific patch manager
-- Online catalog with signed manifest and SHA-256 checks
-- Exact title ID + update version matching
-- Patch preview, backup, apply, rollback
-- First supported title only after repeatable hardware test
+
+- [ ] Signed online catalog/download.
+- [ ] Exact Title ID + region + game update matching.
+- [ ] Patch preview, backup, apply and rollback.
+- [ ] First supported title only after repeatable hardware test.
+- [ ] CFW runtime component for game-start verification and notification.
 
 ## Later research
-- [x] Document optional webMAN MOD / PS3MAPI route and read-only-first safety boundary
-- CFW PRX/per-title runtime hook feasibility
-- RSX resource/memory budget
-- Game-specific framebuffer or shader experiments
-- Frame interpolation feasibility and performance cost
 
-A release is not considered tested until a PKG is built, installed, launched, and the scanner is
-verified on physical hardware. The host SFO tests do not substitute for console testing.
+- [x] Document optional webMAN MOD / PS3MAPI read-only-first route.
+- [ ] CFW PRX/per-title runtime hook feasibility.
+- [ ] RSX resource/memory budget.
+- [ ] Game-specific framebuffer or shader experiments.
+- [ ] Frame interpolation feasibility and performance cost.
 
-
-## Alpha 0.2 — build pipeline and metadata hardening
-- [x] Replace incomplete Makefile with PSL1GHT recursive build layout
-- [x] Use maintained Tiny3D toolchain container in GitHub Actions
-- [x] Add PS2 ISO9660 serial metadata probe
-- [x] Preserve multiple copies of one Title ID on separate drives
-- [x] Add developer research and online catalog safety rules
-- [x] Execute GitHub Actions on the user's repository (Run #66 passed)
-- [x] Inspect resulting PKG and SELF; finalized PKG header and Content ID validated
-- [ ] Install and test on physical CECH-2504A
-
-
-## Build milestone — 8 Nov 2026
-- [x] Host SFO, scanner and ISO tests pass in GitHub Actions.
-- [x] PPU ELF and CEX SELF built with the Tiny3D toolchain.
-- [x] Debug PKG and finalized NPDRM PKG generated.
-- [x] Finalized PKG magic, revision (0x8000), PS3 package type and declared file size validated.
-- [x] Artifacts uploaded: Run #66, artifact ID `13617318299`.
-- [ ] Install, launch and test on the physical CECH-2504A.
-- [ ] Confirm game scan results against the user's actual HDD and USB layout.
-
-
-## Startup audio implementation — 8 Nov 2026
-- [x] Add streaming MP3 decode using the LGPL mpg123 decoder.
-- [x] Add native PSL1GHT 48 kHz stereo audio-port output.
-- [x] Start the supplied music automatically when PS3 SCALE opens and loop it.
-- [x] Add Settings controls for music mute and volume.
-- [x] Prepare a companion USB bundle containing the finalized PKG and the MP3 at `PS3SCALE/theme.mp3`; the PKG itself remains separate from the audio asset.
-- [ ] Verify real playback, looping, volume and clean shutdown on CECH-2504A / CEX CFW 4.93.
-
-
-## Run #94 milestone — 8 Nov 2026
-- [x] Latest PS3 build and host tests pass in GitHub Actions (Run #94).
-- [x] Vector icons for Scan Games, Settings and About are included in the build.
-- [x] Startup MP3 streaming decoder and native audio output are linked.
-- [x] Companion USB install bundle prepared with PKG + `PS3SCALE/theme.mp3`.
-- [ ] Verify the icons and music on the physical CECH-2504A / CEX CFW 4.93 / Cobra 8.5.
-
-
-## UI and usability pass — 8 Nov 2026
-- [x] Add a restrained, slow Tiny3D vector animation to the home screen with an OFF setting.
-- [x] Add a library overview panel and a Companion Tools information page.
-- [x] Reduce Scan Games font size and separate list, metadata and cover-art regions.
-- [x] Sort the scanned library by title for predictable navigation.
-- [x] Fix the OSK flow using INPUT_ENTERED / DONE / UNLOADED events and `oskGetInputText`.
-- [x] Persist music, volume and animation settings in the app's USRDIR.
-- [x] Add offline USB update-package discovery and a library rescan action.
-- [x] Add static UI contract tests to the host test suite.
-- [ ] Build and install this UI revision on CECH-2504A; verify OSK, settings persistence and smooth animation on hardware.
-
-
-## UI polish and utility actions — 8 Nov 2026
-- [x] Add four main-menu destinations and a lightweight, slow-moving vector background.
-- [x] Add a library overview panel and Companion Tools reference page.
-- [x] Separate scan list, selected-game metadata and cover-art regions; reduce scan font size.
-- [x] Sort the scanned game library by title.
-- [x] Fix PS3 OSK input collection and callback lifecycle.
-- [x] Persist audio and animation settings to the app's internal USRDIR.
-- [x] Add offline USB update-package discovery, library rescan and restore defaults.
-- [x] Add a USB-to-HDD music import action; restart app to switch to the internal copy.
-- [x] Add UI contract checks to host tests.
-- [ ] Verify all new UI and settings behavior on CECH-2504A hardware.
+A release is not considered console-tested until its PKG is installed, launched and exercised on physical hardware. Host CI does not replace console testing.

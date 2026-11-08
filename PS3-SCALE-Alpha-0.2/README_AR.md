@@ -1,166 +1,99 @@
 # PS3 SCALE — Alpha 0.2
 
-**هدف النسخة:** بناء أساس آمن لإدارة مكتبة ألعاب PS3 وPS2، تمهيداً لإضافة تحسينات رسومية خاصة بكل لعبة. جهاز الاختبار الأول هو CECH-2504A Slim / CEX CFW 4.93 / Cobra 8.5.
+**الهدف:** إدارة مكتبة ألعاب PS3 وPS2، وعرض معلومات كل لعبة، وتجهيز أساس آمن لإدارة تحسينات خاصة بكل عنوان. المشروع ما زال Alpha؛ لا يطبّق حالياً تعديلات رسومية على ملفات الألعاب.
 
-## الحالة الحالية
+## آخر بناء ناجح
 
-<details>
-<summary>Build status</summary>
+- GitHub Actions: [Run #115 — Success](https://github.com/Vikik0/PS3-SCALE/actions/runs/42491128350)
+- Commit: \`16c70450996626dbcd12890231fcab2f0443b41f\`
+- Artifact ID: \`13621377066\`
+- Artifact ZIP SHA-256: \`eb8882e3f700226759ddd92793eadbd6cf025f19d278fae464463929e92b65aa\`
+- الاختبارات: Host tests PASS، وبناء ELF وSELF وPKG النهائي PASS.
+- SHA-256 للحزمة \`ps3scale.gnpdrm.pkg\`: \`e4edc12a2d0b81b43da11b7ebc2510f7a8768e149cb9a1044ef2faa4c508ab7b\`
 
-- GitHub Actions Run: #109 — **Success**
-- Commit: `a09892e7a56c53da83ade1e9691277d6e05b84b8`
-- Host-side tests + UI contract tests: PASS
-- PS3 ELF: built
-- PS3 SELF: built
-- Debug PKG: built
-- Finalized NPDRM PKG: built and structurally validated
-- Previous Alpha build launched successfully on the user's CECH-2504A / CFW 4.93 console. Run #94 was confirmed by the user on the console for audio, menu icons and scanning. Run #109 adds the new scan layout, OSK fix, saved settings, home animation, USB update check and music import; those new changes still need a console smoke test.
+التنزيل من Run #115 ثم Artifacts. كما جُهّز USB bundle يحتوي الحزمة والأغنية كملف منفصل.
 
-</details>
+## الميزات الموجودة
 
-ملف التثبيت النهائي هو `ps3scale.gnpdrm.pkg`، وليس نسخة `ps3scale.pkg` غير النهائية.
-
-## ما الموجود فعلياً؟
-
-- محلّل `PARAM.SFO` بلغة C مع فحوص حدود الذاكرة.
-- ماسح مجلدات PS3 في `GAMES` و`GAMEZ`.
-- قراءة الألعاب المثبتة من `/dev_hdd0/game/` حسب CATEGORY:
-  - `HG`: عناوين PS3 المثبتة.
-  - `2P`: PS2 Classics.
-  - `2G`: تثبيت PS2 على الأنظمة التي تدعمه.
-- اكتشاف ملفات ISO في `PS3ISO` و`PS2ISO`.
-- استخراج PS2 serial من ISO9660 عبر `SYSTEM.CNF` عند توفره.
-- استخراج PS3 Title ID كتلميح من أسماء ISO الشائعة.
-- قراءة قرص Blu-ray المركّب مباشرة من `/dev_bdvd/PS3_GAME/PARAM.SFO`.
-- مسح `/dev_hdd0` و`/dev_bdvd` و`/dev_usb000` إلى `/dev_usb007`.
-- القائمة الرئيسية تحتوي أيقونات رسومية Vector مرسومة بـ Tiny3D: عدسة بحث لـ Scan Games، ترس لـ Settings، ورمز معلومات لـ About.\n- واجهة تعرض مكتبتين منفصلتين لـ PS3 وPS2 مع عدّاد لكل منهما، والتبديل بينهما من L1/R1.
-- معاينة PS2 CONFIG للـ PS2 ISO باستخدام Triangle؛ لا تحفظ ولا تثبت أي ملف.
+- فحص مجلدات ألعاب PS3 وPS2 على الهارد الداخلي وUSB والأقراص المركّبة.
+- قراءة بيانات \`PARAM.SFO\` واستخراج Title ID أو PS2 serial عند توفره.
+- فصل مكتبة PS3 عن PS2، والفرز الأبجدي، والبحث من لوحة PS3.
+- شاشة Scan Games بعمود مستقل للقائمة وآخر للمعلومات والغلاف، مع خط أصغر لمنع التداخل.
+- SELECT أو START يفتحان لوحة البحث؛ L1 يختار PS3 وR1 يختار PS2.
+- القائمة الرئيسية تعرض أيقونات Vector وحركة خلفية بطيئة وخفيفة، ويمكن إيقاف الحركة من Settings.
+- Settings: Music ON/OFF، مستوى الصوت، Home Animation ON/OFF، فحص ملف تحديث على USB، إعادة فحص المكتبة، استعادة الإعدادات، ونسخ الأغنية إلى HDD.
+- الإعدادات تُحفظ في \`/dev_hdd0/game/PS3SCALE1/USRDIR/settings.cfg\`.
+- بعد نسخ الأغنية إلى HDD يعيد التطبيق تشغيل محرك الصوت ليحوّل التشغيل إلى النسخة الداخلية.
+- Companion Tools تعرض حالة اكتشاف Apollo Save Tool وArtemis PS3 وwebMAN MOD، مع تحديث الفحص من CROSS.
 - الفحص Read-Only؛ لا يكتب أو يحذف أو يعيد تسمية ملفات الألعاب.
 
-## ما الذي لم يُنفّذ بعد؟
+## الصوت
 
-- لا يوجد حتى الآن محرك تحسين رسومي عام أثناء اللعب.
-- لا توجد بعد إدارة فعلية لتثبيت PS2 CONFIG أو PS3 patches.
-- لا يوجد استخراج للأغلفة ICON0/PIC1 أو ملفات metadata الداخلية من PS3 ISO.
-- تم تشغيل إصدار Alpha سابق على الجهاز؛ إصدار الأيقونات والصوت الجديد يحتاج إعادة تثبيت واختبار على الجهاز.
+الأغنية التي زوّدتني بها تعمل تلقائياً عند فتح التطبيق إذا كانت موجودة في أحد المسارات المدعومة. ملف MP3 **ليس مدمجاً داخل PKG**؛ حزمة USB تضعه منفصلاً في \`PS3SCALE/theme.mp3\`.
 
-تطبيق GameOS عادي لا يبقى مسؤولاً عن رسم اللعبة بعد إغلاقه. لذلك يجب أن يكون تحسين PS3 حقيقياً عبر patch أو plugin خاص باللعبة ومطابقاً لإصدارها، أما PS2 فيمكن دراسة إعدادات `ps2_netemu CONFIG` الخاصة بكل لعبة. لن نعرض أزرار AI Upscale أو Frame Generation كأنها تعمل قبل وجود backend واختبار قابل للقياس.
+لنسخه إلى الهارد الداخلي:
+1. اترك USB موصولاً وشغّل PS3 SCALE.
+2. افتح Settings.
+3. اختر **COPY MUSIC TO INTERNAL HDD** واضغط CROSS.
+4. عند نجاح النسخ، يعيد التطبيق تشغيل الصوت ويستخدم:
+   \`/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3\`
+5. بعد التأكد من التشغيل يمكنك فصل USB.
 
-## الصوت عند فتح التطبيق
+## التحكم
 
-تم دمج مشغل MP3 المتدفق، ويبدأ تلقائياً عند تشغيل PS3 SCALE ويستمر بين الصفحات ويعيد الأغنية من البداية عند نهايتها. من Settings:
-- UP/DOWN: اختيار Music أو Volume.
-- CROSS: تشغيل/كتم الموسيقى.
-- LEFT/RIGHT: خفض/رفع الصوت.
+- القائمة الرئيسية: UP/DOWN، ثم CROSS للفتح، CIRCLE للخروج.
+- Scan Games: UP/DOWN للتنقل، L1/R1 للتبديل بين PS3/PS2، SELECT/START للبحث، SQUARE لإعادة الفحص، CROSS للتفاصيل، CIRCLE للرجوع.
+- PS2 ISO: TRIANGLE لمعاينة CONFIG فقط.
+- Settings: UP/DOWN للتنقل، CROSS للتبديل/التنفيذ، LEFT/RIGHT للصوت.
+- Companion Tools: CROSS لإعادة فحص حالة الأدوات، CIRCLE للرجوع.
 
-ملف الأغنية لم يُضمّن داخل PKG بعد. انسخه مرة واحدة إلى:
-`/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`
+## أدوات مرافقة
 
-ويبحث التطبيق أيضاً عن الاسم الأصلي للملف في المجلد نفسه، ثم عن `PS3SCALE/theme.mp3` في أي منفذ USB من `/dev_usb000` إلى `/dev_usb007`. بعد وضعه في المسار، يعمل تلقائياً دون إنترنت.
+Apollo Save Tool وArtemis PS3 وwebMAN MOD تطبيقات مستقلة. PS3 SCALE لا يحمّل إضافاتها ولا يغيّر بياناتها. صفحة Companion Tools تعرض اكتشافاً محلياً مبنياً على ملفات معروفة؛ عبارة NOT DETECTED لا تثبت دائماً أن الأداة غير موجودة إذا كان تثبيتها في مسار مختلف.
 
-## ملفات البناء
+راجع \`docs/COMPANION_TOOLS.md\`.
 
-GitHub Actions artifact:
-- [PS3-SCALE-Alpha-0.2-build — Run #109](https://github.com/Vikik0/PS3-SCALE/actions/runs/42489288219)
-- Artifact ID: `13620462449` (افتح Run #109 ثم Artifacts لتنزيل الحزمة).
-- يحتوي على `ps3scale.elf`, `ps3scale.self`, `ps3scale.pkg`, `ps3scale.gnpdrm.pkg`.
+## ما لم يُنفّذ بعد
 
-SHA-256 للحزمة النهائية:
-```
-186ae7ef822f5900edfec6c8e94afecfdcbf6a32a98828fd24a84f83c04a6e8b
-```
+- لا يوجد كتالوج أونلاين موثّق لتعديلات الرسوم ولا تنزيل/تطبيق تلقائي للـ patches.
+- لا يوجد حالياً backup/rollback لملفات اللعبة لأن التطبيق لا يعدّلها.
+- لا يوجد CFW runtime plugin لتطبيق patch عند تشغيل اللعبة.
+- لا توجد رسالة داخل اللعبة "Graphics applied — Enjoy!" أو صفارة بعد تطبيق رسومي؛ هذه تحتاج runtime plugin يعمل مع اللعبة ويتحقق من عنوانها وإصدارها.
+- لا يوجد Universal AI Upscaler أو Frame Generation. لا نعلن تحسناً في FPS أو الدقة دون patch خاص باللعبة واختبار فعلي.
+- فحص تحديث USB يكتشف حزمة في المسار المحدد؛ لا يتحقق من توقيع إصدار ولا يثبتها تلقائياً.
 
-Content ID:
-```
-UP0001-PS3SCALE1_00-0000000000000000
-```
+## التثبيت
 
-## التثبيت التجريبي على CFW
+1. نزّل \`ps3scale.gnpdrm.pkg\` من Artifact في Run #115، أو استخدم USB bundle الجاهز.
+2. انسخ PKG إلى USB FAT32.
+3. من XMB افتح Game → Package Manager → Install Package Files → Standard.
+4. اختر \`ps3scale.gnpdrm.pkg\` ثم شغّل PS3 SCALE من قائمة الألعاب.
 
-1. نزّل `ps3scale.gnpdrm.pkg` من GitHub Actions artifact.
-2. انسخ الملف إلى USB بنظام FAT32.
-3. من XMB افتح **Game → Package Manager → Install Package Files → Standard**.
-4. اختر `ps3scale.gnpdrm.pkg`.
-5. بعد التثبيت شغّل PS3 SCALE من قائمة الألعاب.
+لا تثبّت أي patch أو CONFIG على ملفات الألعاب في هذه المرحلة.
 
-هذا تثبيت للتطبيق فقط. لا تثبّت أي game patch أو CONFIG في هذه المرحلة. بعد التشغيل نختبر الخروج إلى XMB، والفحص مرتين، وعدم وجود تكرار، وبقاء ملفات الألعاب دون تغيير.
+## جهاز الاختبار المستهدف
 
-## جهاز الاختبار
+PS3 Slim CECH-2504A، CEX CFW 4.93، Cobra 8.5. Run #115 اجتاز CI، لكن يجب إعادة اختبار نسخة الواجهة الجديدة على الجهاز نفسه قبل وصفها بأنها مختبرة على الجهاز.
 
-- Model: CECH-2504A (Slim)
-- Firmware: 4.93
-- CFW: CEX
-- Cobra: 8.5
-- المساحة الفارغة التي أبلغ عنها المستخدم: قرابة 10 GB
+## البناء والاختبار
 
-لا يحتاج المشروع إلى PSN. ولا نحتاج IDPS أو PSID أو MAC أو الرقم التسلسلي لتطويره؛ لا تشارك هذه المعرفات.
+في بيئة PS3DEV / PSL1GHT / Tiny3D:
 
-## بناء محلياً
-
-المشروع يعتمد على PS3DEV / PSL1GHT وTiny3D وlibfont3d. في بيئة PS3 toolchain:
-
-```sh
+\`\`\`sh
 export PS3DEV=/usr/local/ps3dev
 export PSL1GHT=$PS3DEV
 export PATH=$PATH:$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin
 make clean
 make pkg
-```
+\`\`\`
 
-اختبار الكمبيوتر فقط:
+اختبارات الكمبيوتر:
 
-```sh
+\`\`\`sh
 chmod +x scripts/test_host.sh
 ./scripts/test_host.sh
-```
+\`\`\`
 
-## مسارات البحث
+## سياسة الأمان
 
-- PS3 folder games: `/dev_hdd0/GAMES`, `/dev_hdd0/GAMEZ`
-- PS3 installed titles: `/dev_hdd0/game`
-- PS3 ISO: `/dev_hdd0/PS3ISO`
-- PS2 ISO: `/dev_hdd0/PS2ISO`
-- USB: `/dev_usb000` إلى `/dev_usb007`
-
-ملاحظة: PS2 ISO يحاول استخراج الرقم التسلسلي من `SYSTEM.CNF`. أما PS3 ISO فيُستخرج Title ID من اسم الملف فقط إذا كان مكتوباً فيه. قراءة بيانات PS3 ISO الداخلية واستخراج ICON0/PIC1 مرحلة لاحقة.
-
-## التحكم في Alpha
-
-- L1: فتح مكتبة PS3.
-- R1: فتح مكتبة PS2.
-- D-Pad Up/Down: اختيار لعبة.
-- Square: إعادة الفحص.
-- Triangle: معاينة PS2 CONFIG عند اختيار PS2 ISO (معاينة فقط).
-- Circle: خروج.
-
-## سياسة حماية الملفات
-
-Alpha 0.2 لا تطبّق patches ولا تغيّر أي ملف لعبة. قبل تفعيل أي تعديل مستقبلي يجب:
-1. مطابقة Title ID والمنطقة وإصدار التحديث.
-2. التحقق من SHA-256 والحجم.
-3. إنشاء نسخة احتياطية قابلة للاستعادة.
-4. توفير Rollback.
-5. عرض المصدر ومستوى الثقة والمشاكل المعروفة.
-6. اختبار التعديل على الجهاز المستهدف قبل تصنيفه Hardware Verified.
-
-راجع `docs/RESEARCH_NOTES.md`, `docs/GRAPHICS_ENGINE_REALITY.md`, `docs/PS2_ENGINE.md`, `docs/PATCH_TRUST_POLICY.md`، `docs/WEBMAN_MAPI_INTEGRATION.md`، `docs/UI_FLOW.md`، و`docs/GAME_ENHANCEMENT_WORKFLOW.md`.\n\nتم دمج محرك تشغيل MP3. جهزنا حزمة USB فيها ملف التثبيت والأغنية داخل `PS3SCALE/theme.mp3`؛ اترك USB موصولاً عند تشغيل البرنامج ليقرأها تلقائياً. ويمكن نسخ الأغنية إلى مجلد USRDIR الداخلي للتشغيل دون USB. التفاصيل في `docs/AUDIO_THEME.md` و`docs/BUILD_STATUS.md`.
-
-
-## تحديث الواجهة والتحكم — 8 نوفمبر 2026
-
-- القائمة الرئيسية أصبحت تضم Scan Games وSettings وCompanion Tools وAbout.
-- أضيفت حركة خلفية Vector بطيئة وخفيفة، ويمكن إيقافها من Settings.
-- إعدادات Music ON/OFF ومستوى الصوت وحركة القائمة تُحفظ في:
-  `/dev_hdd0/game/PS3SCALE1/USRDIR/settings.cfg`
-- صفحة Scan Games أعيد ترتيبها إلى عمود للألعاب وعمود منفصل للمعلومات والغلاف، مع خط أصغر وقائمة مرتبة أبجدياً.
-- إصلاح لوحة البحث: يتم جمع النص من `oskGetInputText` ومعالجة أحداث OSK من callback منفصل.
-- Settings تشمل فحص حزمة تحديث موجودة على USB (لا يوجد تحديث تلقائي أو تنزيل عبر الإنترنت في هذه المرحلة)، وإعادة فحص المكتبة، واستعادة الإعدادات الافتراضية.
-- Companion Tools تعرض Apollo Save Tool وArtemis PS3 وwebMAN MOD كأدوات منفصلة؛ لم ندمج إضافاتها أو نعدّل ملفاتها.
-
-**ملاحظة الأغنية:** ملف MP3 ليس جزءاً من نظام PS3 أو من ملف PKG الحالي. التطبيق يقرأه من USRDIR الداخلي أو من `PS3SCALE/theme.mp3` على USB. يمكن نسخه يدوياً إلى USRDIR لتشغيله دون USB.
-
-
-### نسخ الأغنية إلى الهارد الداخلي
-من Settings اختر **COPY MUSIC TO INTERNAL HDD** ثم اضغط CROSS. إذا كانت الأغنية على USB، سينسخها التطبيق إلى:
-`/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`
-بعدها أعد تشغيل PS3 SCALE؛ سيقرأ النسخة الداخلية ويمكنك فصل USB. هذا لا يعني أن الأغنية مدمجة داخل Firmware أو داخل PKG، بل أصبحت محفوظة في مجلد التطبيق على HDD.
+لا تُطبّق تعديلات مستقبلية إلا بعد مطابقة Title ID والمنطقة وإصدار التحديث، والتحقق من المصدر وSHA-256، وإنشاء نسخة احتياطية قابلة للاستعادة، وتوفير Rollback، واختبارها على الجهاز المستهدف. لا تشارك IDPS أو PSID أو MAC أو الرقم التسلسلي.

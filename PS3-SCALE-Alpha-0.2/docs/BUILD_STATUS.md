@@ -2,47 +2,58 @@
 
 Date: 2026-11-08
 
-## Latest verified CI build
-- Workflow run: [#109 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42489288219)
-- Source commit: `a09892e7a56c53da83ade1e9691277d6e05b84b8`
-- Artifact ID: `13620462449`
-- Artifact ZIP SHA-256: `239156cc9f387160a448bf21480093476fcad13fb8a749abb0ea316a3a052a22`
+## Latest code build
+
+- Workflow run: [#115 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42491128350)
+- Source commit: \`16c70450996626dbcd12890231fcab2f0443b41f\`
+- Artifact ID: \`13621377066\`
+- Artifact ZIP size: 1,044,424 bytes
+- Artifact ZIP SHA-256: \`eb8882e3f700226759ddd92793eadbd6cf025f19d278fae464463929e92b65aa\`
 
 ## Build outputs
+
 | File | Size | SHA-256 |
 |---|---:|---|
-| `ps3scale.elf` | 1,642,594 bytes | `67f09e899dec5de547790688d33995993315bf4a79aa18b1985fe1af5d1e2e6a` |
-| `ps3scale.self` | 180,288 bytes | `833f85d4ec12986cdf35aada20d5b7a9540d01f41765833735ed3fc8e95efec7` |
-| `ps3scale.pkg` | 221,776 bytes | `44d83c82abd24a8c10c20565ed77830b8ed8511699c8d27072ab7e761b3867cc` |
-| `ps3scale.gnpdrm.pkg` | 221,776 bytes | `186ae7ef822f5900edfec6c8e94afecfdcbf6a32a98828fd24a84f83c04a6e8b` |
+| \`ps3scale.elf\` | 1,643,015 bytes | \`e4403c837fb498627f716299cf11f9263133382051c786720407b88c5285dbc3\` |
+| \`ps3scale.self\` | 181,456 bytes | \`4b316495b9d8d3a9c0a307a7e6f5d9c45a8aabcdbf736dd1745aa6d75d098b60\` |
+| \`ps3scale.pkg\` | 222,928 bytes | \`4cb06cf1a809f6cee255d50aee9ca6cea475c0691543ef07a73b4a7b9dd6fcab\` |
+| \`ps3scale.gnpdrm.pkg\` | 222,928 bytes | \`e4edc12a2d0b81b43da11b7ebc2510f7a8768e149cb9a1044ef2faa4c508ab7b\` |
 
-The finalized PKG header is `7f504b47 8000 0001` (PS3 package, finalized revision).
+The final package starts with PS3 PKG magic \`7f504b47\`; the CI package validation step completed successfully.
 
-## Tests
+## CI tests
+
 - Host SFO parser tests: PASS.
-- Host scanner tests, including local cover discovery: PASS.
+- Host scanner tests: PASS.
 - Host ISO metadata tests: PASS.
 - Host PS2 CONFIG builder tests: PASS.
 - Static UI contract tests: PASS.
-- PPU ELF / CEX SELF / debug PKG / finalized NPDRM PKG: built successfully.
+- PPU ELF, CEX SELF, debug PKG and finalized NPDRM PKG: built successfully.
 
-## Implemented in the current UI revision
-- Main menu: Scan Games, Settings, Companion Tools, About.
-- Slow Tiny3D vector-orbit animation with an OFF setting; only a few primitives are drawn per frame.
-- Library overview panel with PS3, PS2 and total counts.
-- Separate PS3/PS2 scan lists sorted by title.
-- Smaller scan-screen font and independent columns for list, selected-game metadata and cover art.
-- Native PS3 OSK search lifecycle corrected: text is collected with `oskGetInputText` and OSK events use a separate sysutil callback slot.
-- Settings persist Music ON/OFF, volume and home animation in `USRDIR/settings.cfg`.
-- Settings actions: offline USB update-package discovery, library rescan, restore defaults and copy the music MP3 from USB to internal USRDIR.
-- Muting music outputs silence without continuing MP3 decoding.
-- Companion Tools page documents Apollo Save Tool, Artemis PS3 and webMAN MOD as separate applications; no third-party plugins or data are modified.
+## Implemented in Run #115
 
-## Music behavior
-The MP3 is not embedded in the PS3 firmware or in the current PKG. The application searches internal USRDIR first, then the USB music folder. Settings includes **COPY MUSIC TO INTERNAL HDD**. After copying, restart PS3 SCALE; it will use the internal copy and the USB can be removed.
+- Main menu with four destinations, vector icons, library overview and a slow lightweight ambient animation.
+- Animation can be disabled from Settings.
+- Scan Games now uses two fixed non-overlapping panels, smaller font, shortened list type labels and a separated cover-art region.
+- SELECT and START both open the search OSK; the initial full-width alphabet panel is now included in the allowed OSK panel mask.
+- Settings persist music, volume and animation state.
+- Copy-to-HDD music action restarts the audio backend to switch to the internal copy, including when the file already exists.
+- Offline USB update-file discovery, library rescan and restore defaults.
+- Companion Tools page checks for Apollo Save Tool, Artemis PS3 and webMAN MOD using known local file paths; it does not load or modify their plugins or data.
 
-## Console validation
-The user has confirmed that a previous build launches, scans the actual PS3/PS2 library, renders local cover art, shows the Settings screen and plays the supplied GTA V remix. Run #109 has passed CI but the new layout, OSK fix, persistent settings, copy-to-HDD action and slow animation still need a physical-console smoke test.
+## Music
 
-## Remaining product work
-The actual verified graphics-profile workflow is not complete: signed online catalog, exact Title ID + update matching, profile compatibility database, backup/rollback, CFW runtime plugin, and post-apply in-game notification. The USB update check is an offline file discovery only; it does not verify a release signature or auto-install. No profile is marked applied and no original game file is modified.
+The user-supplied MP3 is not embedded inside the PKG. The USB bundle keeps it as \`PS3SCALE/theme.mp3\`; the app can copy it to \`/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3\`. The bundle includes the finalized PKG and a SHA-256 manifest.
+
+## Physical console validation
+
+A previous Alpha build was confirmed by the user to launch, scan the library, display cover art and play the music. Run #115 passes CI, but its revised scan layout, SELECT/START keyboard, tool detection and immediate music handoff still require a fresh physical-console smoke test.
+
+## Not implemented
+
+- No verified online graphics-profile catalog or automatic patch download/application.
+- No game-file backup/rollback workflow because the current app does not modify game files.
+- No CFW runtime plugin/PRX for game-start patching.
+- No in-game "Graphics applied — Enjoy!" notification or post-apply beep. A standalone GameOS manager exits when the game launches; a separate runtime component must validate the running title and apply the matching patch.
+- No universal AI upscaler or frame generation.
+- USB update discovery does not verify a signed release manifest and does not install packages automatically.
