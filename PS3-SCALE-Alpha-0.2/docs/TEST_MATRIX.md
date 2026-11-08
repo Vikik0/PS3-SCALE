@@ -1,11 +1,13 @@
 # Device test matrix
 
-Primary device:
-- Model: CECH-2504A (PS3 Slim)
-- Firmware: 4.93
-- CFW: CEX
-- Cobra: 8.5
-- Available HDD space reported: about 10 GB
+Primary device (user-reported):
+- Family: PS3 Slim
+- System software: CFW 4.92
+- Exact CECH retail model: not yet confirmed
+- CEX / DEX: not yet verified on the console; the app now queries this read-only when supported
+- Cobra version and available HDD space: not yet confirmed
+
+The app's About page reports the Platform ID, mapped hardware family/series, firmware, and console type. This is a read-only identification step; the user must still confirm the on-device values before a hardware-specific feature is enabled.
 
 Initial safety checks:
 1. Install only the manager PKG; do not install any game patch in Alpha 0.2.
