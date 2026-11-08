@@ -46,7 +46,11 @@ cd curl-7.64.1
 
 export CPPFLAGS="-I$PORTLIBS/include -I$PSL1GHT/ppu/include"
 export CFLAGS="-O2 -mcpu=cell -I$PORTLIBS/include -I$PSL1GHT/ppu/include"
-export LDFLAGS="-L$PORTLIBS/lib -L$PSL1GHT/ppu/lib -lrt -llv2"
+# Keep the PPU sysroot libraries visible to configure's link probes. The
+# socket resolver lives in the PSL1GHT/PS3 net libraries, not in portlibs.
+export LDFLAGS="-L$PS3DEV/ppu/powerpc64-ps3-elf/lib -L$PS3DEV/ppu/lib -L$PSL1GHT/ppu/lib -L$PORTLIBS/lib -lrt -llv2"
+# Match the application's final link order while configure probes gethostbyname.
+export LIBS="-lnetctl -lnet"
 ./configure \
   --host=powerpc64-ps3-elf \
   --prefix="$PORTLIBS" \
@@ -56,7 +60,7 @@ export LDFLAGS="-L$PORTLIBS/lib -L$PSL1GHT/ppu/lib -lrt -llv2"
   --disable-rtsp --disable-dict --disable-telnet --disable-tftp \
   --disable-pop3 --disable-imap --disable-smtp --disable-gopher --disable-smb \
   --with-mbedtls="$PORTLIBS" \
-  --with-ca-bundle="/usr/ssl/certs/ca-bundle.crt"
+  --with-ca-bundle="/dev_hdd0/game/PS3SCALE1/USRDIR/cacert.pem"
 make -j2
 make install
 
