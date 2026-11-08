@@ -26,7 +26,7 @@ The catalog loader, signature verification and hardware-tested patch application
 
 ## Startup music
 
-The user-supplied MP3 is currently loaded from the PS3 filesystem at runtime, not embedded into the PKG. The app searches the paths documented in `docs/AUDIO_THEME.md`; the preferred location is:
+The user-supplied MP3 is currently loaded from the PS3 filesystem at runtime, not embedded into the PKG. The app searches the paths documented in `docs/AUDIO_THEME.md`; the preferred location is the internal USRDIR path, with USB fallback support for `/dev_usb000` through `/dev_usb007`.
 
 `/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`
 
