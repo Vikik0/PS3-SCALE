@@ -91,7 +91,10 @@ assert "START GAME" in src
 assert "start_selected_game()" in main
 assert "ps3scale_webman_start_mounted_game()" in src
 assert "APP VERSION:" in src
-assert "g_music_enabled && !g_music_playing" in main
+assert "if (g_music_enabled)\n        (void)initialize_audio_backend();" in main
+assert "set_background_music_enabled(0);" in main
+assert "set_background_music_enabled(1);" in main
+assert "shutdown_audio_backend();" in main
 assert "BACKGROUND MUSIC STARTED." in main
 assert "PS3SCALE_SETTINGS_PATH" in src
 assert "settings.cfg" in src
