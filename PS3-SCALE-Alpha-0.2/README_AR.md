@@ -33,7 +33,7 @@
 - استخراج PS3 Title ID كتلميح من أسماء ISO الشائعة.
 - قراءة قرص Blu-ray المركّب مباشرة من `/dev_bdvd/PS3_GAME/PARAM.SFO`.
 - مسح `/dev_hdd0` و`/dev_bdvd` و`/dev_usb000` إلى `/dev_usb007`.
-- واجهة أولية تعرض مكتبتين منفصلتين لـ PS3 وPS2 مع عدّاد لكل منهما، والتبديل بينهما من L1/R1.
+- واجهة تعرض مكتبتين منفصلتين لـ PS3 وPS2 مع عدّاد لكل منهما، والتبديل بينهما من L1/R1.\n- معاينة PS2 CONFIG للـ PS2 ISO باستخدام Triangle؛ لا تحفظ ولا تثبت أي ملف.
 - معاينة PS2 CONFIG بأمر Triangle، دون حفظ أو تثبيت الملف.
 - الفحص Read-Only؛ لا يكتب أو يحذف أو يعيد تسمية ملفات الألعاب.
 
@@ -49,7 +49,7 @@
 ## ملفات البناء
 
 GitHub Actions artifact:
-- [PS3-SCALE-Alpha-0.2-build — Run #8](https://github.com/Vikik0/PS3-SCALE/actions/runs/42480769127/artifacts/13618010014)
+- [PS3-SCALE-Alpha-0.2-build — Run #34](https://github.com/Vikik0/PS3-SCALE/actions/runs/42480769127/artifacts/13618010014)
 - Artifact ID: `13618010014`
 - يحتوي على `ps3scale.elf`, `ps3scale.self`, `ps3scale.pkg`, `ps3scale.gnpdrm.pkg`.
 
