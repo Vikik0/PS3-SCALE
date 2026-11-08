@@ -225,7 +225,13 @@ static void draw_text(float x, float y, u32 color, const char *text)
             one[0] = (char)glyph;
             one[1] = '\0';
             SetCurrentFont(ps3scale_locale_glyph_font_index(glyph));
-            cursor = DrawString(cursor, y, one);
+            if (g_language == LANGUAGE_ARABIC && glyph == ' ') {
+                cursor += 6.0f;
+            } else if (g_language == LANGUAGE_ARABIC && glyph >= 128u) {
+                cursor = DrawString(cursor, y, one) - 2.5f;
+            } else {
+                cursor = DrawString(cursor, y, one);
+            }
         }
         SetCurrentFont(0);
     } else {
@@ -691,66 +697,126 @@ static void update_selected_cover(void)
     }
 }
 
+static void draw_ambient_ring(float radius, float tilt, float spin,
+                               float x, float y, float z, u32 color)
+{
+    MATRIX rotation, scale, translation, model;
+    int i;
+    rotation = MatrixMultiply(MatrixRotationY(spin), MatrixRotationX(tilt));
+    scale = MatrixScale(radius, radius, radius);
+    translation = MatrixTranslation(x, y, z);
+    model = MatrixMultiply(MatrixMultiply(scale, rotation), translation);
+    tiny3d_SetMatrixModelView(&model);
+    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+    for (i = 0; i < 48; i++) {
+        float angle = 6.28318530718f * (float)i / 48.0f;
+        tiny3d_VertexPos(cosf(angle), sinf(angle), 0.0f);
+        if (i == 0) tiny3d_VertexColor(color);
+    }
+    tiny3d_End();
+}
+
+static void draw_ambient_satellite(float orbit_radius, float angle,
+                                   float tilt, float spin,
+                                   float x, float y, float z, u32 color)
+{
+    MATRIX rotation, translation, model;
+    float px = cosf(angle) * orbit_radius;
+    float py = sinf(angle) * orbit_radius;
+    rotation = MatrixMultiply(MatrixRotationY(spin), MatrixRotationX(tilt));
+    translation = MatrixTranslation(x, y, z);
+    model = MatrixMultiply(rotation, translation);
+    tiny3d_SetMatrixModelView(&model);
+    tiny3d_SetPolygon(TINY3D_LINES);
+    tiny3d_VertexPos(px - 0.72f, py, 0.0f);
+    tiny3d_VertexColor(color);
+    tiny3d_VertexPos(px + 0.72f, py, 0.0f);
+    tiny3d_VertexPos(px, py - 0.72f, 0.0f);
+    tiny3d_VertexPos(px, py + 0.72f, 0.0f);
+    tiny3d_VertexPos(px, py, -0.72f);
+    tiny3d_VertexPos(px, py, 0.72f);
+    tiny3d_End();
+}
+
 static void draw_home_ambient(void)
 {
-    static const float octahedron[6][3] = {
-        {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f},
-        {0.0f, 0.0f, 1.0f}, {-1.0f, 0.0f, 0.0f},
-        {0.0f, 0.0f, -1.0f}, {0.0f, -1.0f, 0.0f}
-    };
-    static const unsigned char edges[12][2] = {
-        {0,1},{0,2},{0,3},{0,4},{5,1},{5,2},
-        {5,3},{5,4},{1,2},{2,3},{3,4},{4,1}
-    };
-    float phase = g_animation_enabled ? (float)g_frame_counter * 0.0009f : 0.0f;
+    /* Aurora Core: calm wireframe globe, orbital rings, and drifting particles. */
+    const float phase = (float)g_frame_counter * 0.0012f;
+    const float bob = sinf(phase * 0.58f) * 2.6f;
+    const float center_x = 28.0f;
+    const float center_y = 1.5f + bob;
+    const float center_z = 82.0f;
     MATRIX projection, rotation, scale, translation, model;
-    int i;
+    int latitude, longitude, segment, i;
 
     tiny3d_Project3D();
-    projection = MatrixProjPerspective(58.0f, 16.0f / 9.0f, 0.1f, 300.0f);
+    projection = MatrixProjPerspective(70.0f, 16.0f / 9.0f, 0.1f, 300.0f);
     tiny3d_SetProjectionMatrix(&projection);
-    rotation = MatrixMultiply(MatrixRotationY(phase),
-                              MatrixRotationX(phase * 0.63f));
-    scale = MatrixScale(16.0f, 16.0f, 16.0f);
-    translation = MatrixTranslation(42.0f, 0.0f, 92.0f);
-    model = MatrixMultiply(MatrixMultiply(scale, rotation), translation);
-    tiny3d_SetMatrixModelView(&model);
     tiny3d_SetLightsOff();
 
-    tiny3d_SetPolygon(TINY3D_LINES);
-    for (i = 0; i < 12; i++) {
-        const float *a = octahedron[edges[i][0]];
-        const float *b = octahedron[edges[i][1]];
-        tiny3d_VertexPos(a[0], a[1], a[2]);
-        tiny3d_VertexColor(0x65c8e6c0);
-        tiny3d_VertexPos(b[0], b[1], b[2]);
-    }
-    tiny3d_End();
-
-    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
-    for (i = 0; i < 32; i++) {
-        float angle = 6.28318530718f * (float)i / 32.0f;
-        tiny3d_VertexPos(cosf(angle) * 1.62f,
-                         sinf(angle) * 1.62f, 0.0f);
-        if (i == 0) tiny3d_VertexColor(0x8bd450d0);
-    }
-    tiny3d_End();
-
-    rotation = MatrixMultiply(MatrixRotationX(1.12f),
-                              MatrixRotationZ(phase * 0.55f));
+    rotation = MatrixMultiply(MatrixRotationY(phase),
+                              MatrixRotationX(phase * 0.37f));
+    scale = MatrixScale(13.0f, 13.0f, 13.0f);
+    translation = MatrixTranslation(center_x, center_y, center_z);
     model = MatrixMultiply(MatrixMultiply(scale, rotation), translation);
     tiny3d_SetMatrixModelView(&model);
-    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
-    for (i = 0; i < 32; i++) {
-        float angle = 6.28318530718f * (float)i / 32.0f;
-        tiny3d_VertexPos(cosf(angle) * 1.95f,
-                         sinf(angle) * 1.95f, 0.0f);
-        if (i == 0) tiny3d_VertexColor(0x397fb6b0);
+
+    for (latitude = -3; latitude <= 3; latitude++) {
+        float lat = (float)latitude * 0.34f;
+        float ring_radius = cosf(lat);
+        float ring_y = sinf(lat);
+        tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+        for (segment = 0; segment < 40; segment++) {
+            float angle = 6.28318530718f * (float)segment / 40.0f;
+            tiny3d_VertexPos(ring_radius * cosf(angle), ring_y,
+                             ring_radius * sinf(angle));
+            if (segment == 0) {
+                u32 color = (latitude == 0) ? 0x65c8e6d0 :
+                            ((latitude & 1) ? 0x397fb6a0 : 0x4a9fbe90);
+                tiny3d_VertexColor(color);
+            }
+        }
+        tiny3d_End();
     }
-    tiny3d_End();
+
+    for (longitude = 0; longitude < 10; longitude++) {
+        float lon = 6.28318530718f * (float)longitude / 10.0f;
+        tiny3d_SetPolygon(TINY3D_LINE_STRIP);
+        for (segment = 0; segment <= 18; segment++) {
+            float lat = -1.25f + 2.5f * (float)segment / 18.0f;
+            float ring_radius = cosf(lat);
+            tiny3d_VertexPos(ring_radius * cosf(lon), sinf(lat),
+                             ring_radius * sinf(lon));
+            if (segment == 0)
+                tiny3d_VertexColor(0x397fb6a0);
+        }
+        tiny3d_End();
+    }
+
+    draw_ambient_ring(18.8f, 1.08f, phase * 0.42f,
+                      center_x, center_y, center_z, 0x55b9d6b0);
+    draw_ambient_ring(21.2f, 0.38f, -phase * 0.28f,
+                      center_x, center_y, center_z, 0x397fb690);
+    draw_ambient_ring(16.6f, 1.48f, phase * 0.20f,
+                      center_x, center_y, center_z, 0x8bd45090);
+    draw_ambient_satellite(18.8f, phase * 0.42f + 0.7f,
+                           1.08f, phase * 0.42f,
+                           center_x, center_y, center_z, 0x8bd450ff);
+    draw_ambient_satellite(21.2f, -phase * 0.28f + 2.4f,
+                           0.38f, -phase * 0.28f,
+                           center_x, center_y, center_z, 0x65c8e6ff);
 
     tiny3d_Project2D();
     tiny3d_SetMatrixModelView(NULL);
+    for (i = 0; i < 16; i++) {
+        float px = 492.0f +
+            (float)((i * 47 + (int)(g_frame_counter / 4u)) % 330);
+        float py = 34.0f + (float)((i * 31) % 430) +
+                   sinf(phase * 0.8f + (float)i * 0.71f) * 3.5f;
+        float size = (i % 4 == 0) ? 2.0f : 1.0f;
+        u32 color = (i % 3 == 0) ? 0x65c8e680 : 0x8bd45060;
+        draw_solid_rect(px, py, size, size, color);
+    }
 }
 
 static void set_settings_message(const char *message)
@@ -967,7 +1033,7 @@ static void draw_boot(void)
     const int progress[] = {12, 28, 58, 88, 100};
     float width = (640.0f * (float)progress[g_boot_stage]) / 100.0f;
     SetFontSize(14, 21);
-    draw_home_ambient();
+
     draw_text(34, 30, 0xcaff39ff, "PS3 SCALE");
     draw_text(34, 92, 0xffffffff, "STARTING PS3 SCALE");
     draw_text(100, 214, 0xdce3e8ff, stage_text[g_boot_stage]);
@@ -1041,7 +1107,7 @@ static void draw_home(void)
     size_t ps2_count = library_total_count(LIBRARY_PS2);
     int i;
     SetFontSize(12, 18);
-    draw_home_ambient();
+
     draw_text(34, 26, 0xcaff39ff, "PS3 SCALE");
     draw_text(34, 58, 0x9aa6adff,
               "GAME LIBRARY  /  GRAPHICS PROFILES  /  SAFE TOOLS");
@@ -1362,6 +1428,9 @@ static void draw_ui(void)
 {
     tiny3d_Clear(0xff070a0d, TINY3D_CLEAR_ALL);
     tiny3d_Project2D();
+    /* Keep the same calm 3D ambience behind every app page. */
+    if (g_animation_enabled)
+        draw_home_ambient();
     switch (g_screen) {
         case SCREEN_LANGUAGE: draw_language_selection(); break;
         case SCREEN_BOOT: draw_boot(); break;

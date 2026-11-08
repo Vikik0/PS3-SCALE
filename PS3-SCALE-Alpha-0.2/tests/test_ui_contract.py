@@ -52,7 +52,8 @@ assert "PS3SCALE_FONT_EXTENDED_FIRST" in font_loader
 assert "g_extended_font_bitmap + extended_offset" in font_loader
 draw_text_impl = section("static void draw_text", "static int open_background_music")
 assert "SetCurrentFont(ps3scale_locale_glyph_font_index(glyph))" in draw_text_impl
-assert "cursor = DrawString(cursor, y, one)" in draw_text_impl
+assert "cursor = DrawString(cursor, y, one) - 2.5f" in draw_text_impl
+assert "cursor += 6.0f" in draw_text_impl
 
 # Layout contract: compact font, independent list/metadata/cover columns.
 scan = section("static void draw_scan(void)", "static void draw_details(void)")
@@ -76,9 +77,13 @@ assert "settings.cfg" in src
 ambient = section("static void draw_home_ambient(void)", "static void set_settings_message")
 assert "MatrixProjPerspective" in ambient
 assert "MatrixRotationY" in ambient
-assert "TINY3D_LINES" in ambient
-assert "g_frame_counter * 0.0009f" in ambient
-assert "g_animation_enabled" in ambient
+assert "TINY3D_LINE_STRIP" in ambient
+assert "draw_ambient_ring" in ambient
+assert "draw_ambient_satellite" in ambient
+assert "g_frame_counter * 0.0012f" in ambient
+draw_ui_impl = section("static void draw_ui(void)", "static int compare_game_titles")
+assert "if (g_animation_enabled)" in draw_ui_impl
+assert "draw_home_ambient();" in draw_ui_impl
 
 # Library sorting and companion-tool boundaries remain intact.
 assert "qsort(g_games.items" in src
