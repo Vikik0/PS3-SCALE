@@ -16,6 +16,8 @@
 #include <ya2d/ya2d.h>
 #include <matrix.h>
 #include <zlib.h>
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 #include "ps3scale/game.h"
 #include "ps3scale/scanner.h"
@@ -54,6 +56,7 @@ static ya2d_Texture *g_cover_texture = NULL;
 static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 
 #define PS3SCALE_MUSIC_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3"
+#define PS3SCALE_ARABIC_FONT_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/NotoSansArabicUI.ttf"
 #define PS3SCALE_MUSIC_ORIGINAL_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/GTA V - Greyhound Pause Menu Theme Remix.mp3"
 #define PS3SCALE_MUSIC_USB_PATH "/dev_usb000/PS3SCALE/theme.mp3"
 
@@ -104,9 +107,9 @@ static sys_ppu_thread_t g_boot_scan_thread;
 static int g_app_files_ok = 0;
 static int g_extended_font_ready = 0;
 static unsigned char g_extended_font_bitmap[PS3SCALE_FONT_RAW_SIZE];
-static unsigned char g_extended_glyph_min_x[256];
-static unsigned char g_extended_glyph_ink_width[256];
 static int g_ui_font_width = 14;
+static FT_Library g_arabic_ft_library = NULL;
+static FT_Face g_arabic_face = NULL;
 
 static void clamp_selection(void);
 static void scan_library(void);
@@ -157,56 +160,92 @@ static int decode_base64(const char *source, unsigned char *output,
     return (int)used;
 }
 
-static void build_extended_font_metrics(void)
+static void arabic_ttf_glyph_callback(u8 chr, u8 *bitmap,
+                                       short *width, short *height,
+                                       short *y_correction)
 {
-    const size_t bytes_per_row = (PS3SCALE_FONT_WIDTH + 7u) / 8u;
-    const size_t bytes_per_glyph = bytes_per_row * PS3SCALE_FONT_HEIGHT;
-    unsigned glyph;
+    FT_UInt glyph_index;
+    FT_GlyphSlot slot;
+    FT_Bitmap *source;
+    uint32_t codepoint;
+    int baseline = 24;
+    int left, top, row, col;
+    int advance;
 
-    memset(g_extended_glyph_min_x, 0, sizeof(g_extended_glyph_min_x));
-    memset(g_extended_glyph_ink_width, 0, sizeof(g_extended_glyph_ink_width));
+    if (!bitmap || !width || !height || !y_correction) return;
+    memset(bitmap, 0, 32u * 32u);
+    *width = 18;
+    *height = 32;
+    *y_correction = 0;
 
-    /*
-     * The atlas is 1bpp, row-major, and uses BIT7_FIRST_PIXEL. Measure the
-     * visible ink bounds once at startup so Arabic glyphs can be positioned
-     * by their actual bitmap width instead of a guessed fixed character gap.
-     */
-    for (glyph = PS3SCALE_FONT_EXTENDED_FIRST;
-         glyph <= PS3SCALE_FONT_LAST; glyph++) {
-        size_t offset =
-            (size_t)(glyph - PS3SCALE_FONT_FIRST) * bytes_per_glyph;
-        unsigned min_x = PS3SCALE_FONT_WIDTH;
-        unsigned max_x = 0;
-        unsigned row, col;
-        int found = 0;
+    if (!g_arabic_face || chr < 128u || chr > 244u)
+        return;
 
-        if (offset + bytes_per_glyph > sizeof(g_extended_font_bitmap))
-            continue;
+    /* Glyph IDs 128..244 map one-to-one to Arabic Presentation Forms U+FE80..U+FEF4. */
+    codepoint = 0xfe80u + (uint32_t)(chr - 128u);
+    glyph_index = FT_Get_Char_Index(g_arabic_face, (FT_ULong)codepoint);
+    if (glyph_index == 0)
+        return;
 
-        for (row = 0; row < PS3SCALE_FONT_HEIGHT; row++) {
-            for (col = 0; col < PS3SCALE_FONT_WIDTH; col++) {
-                size_t byte_index = offset +
-                    (size_t)row * bytes_per_row + (size_t)(col >> 3);
-                unsigned char mask =
-                    (unsigned char)(0x80u >> (col & 7u));
+    if (FT_Load_Glyph(g_arabic_face, glyph_index, FT_LOAD_DEFAULT) != 0)
+        return;
+    if (FT_Render_Glyph(g_arabic_face->glyph, FT_RENDER_MODE_NORMAL) != 0)
+        return;
 
-                if ((g_extended_font_bitmap[byte_index] & mask) != 0) {
-                    if (col < min_x) min_x = col;
-                    if (!found || col > max_x) max_x = col;
-                    found = 1;
-                }
-            }
-        }
+    slot = g_arabic_face->glyph;
+    source = &slot->bitmap;
+    advance = (int)((slot->advance.x + 32) >> 6);
+    if (advance < 1) advance = 1;
+    if (advance > 32) advance = 32;
+    *width = (short)advance;
 
-        if (found) {
-            g_extended_glyph_min_x[glyph] = (unsigned char)min_x;
-            g_extended_glyph_ink_width[glyph] =
-                (unsigned char)(max_x - min_x + 1u);
+    left = slot->bitmap_left;
+    top = baseline - slot->bitmap_top;
+
+    for (row = 0; row < (int)source->rows; row++) {
+        int dest_y = top + row;
+        const unsigned char *source_row;
+        if (dest_y < 0 || dest_y >= 32) continue;
+
+        if (source->pitch >= 0) {
+            source_row = source->buffer + (size_t)row *
+                         (size_t)source->pitch;
         } else {
-            /* Keep a safe full-cell advance for an empty/unmapped glyph. */
-            g_extended_glyph_min_x[glyph] = 0;
-            g_extended_glyph_ink_width[glyph] = PS3SCALE_FONT_WIDTH;
+            source_row = source->buffer +
+                         (size_t)(source->rows - 1u - (unsigned)row) *
+                         (size_t)(-source->pitch);
         }
+
+        for (col = 0; col < (int)source->width; col++) {
+            int dest_x = left + col;
+            unsigned value = 0;
+
+            if (dest_x < 0 || dest_x >= 32) continue;
+
+            if (source->pixel_mode == FT_PIXEL_MODE_GRAY) {
+                value = source_row[col];
+                if (source->num_grays > 1 && source->num_grays != 256)
+                    value = value * 255u / (unsigned)(source->num_grays - 1);
+            } else if (source->pixel_mode == FT_PIXEL_MODE_MONO) {
+                value = (source_row[col >> 3] &
+                         (unsigned char)(0x80u >> (col & 7))) ? 255u : 0u;
+            }
+
+            bitmap[(size_t)dest_y * 32u + (size_t)dest_x] =
+                (unsigned char)value;
+        }
+    }
+}
+
+static void close_arabic_ttf(void)
+{
+    if (g_arabic_face) {
+        (void)FT_Done_Face(g_arabic_face);
+        g_arabic_face = NULL;
+    }
+    if (g_arabic_ft_library) {
+        (void)FT_Done_FreeType(g_arabic_ft_library);
+        g_arabic_ft_library = NULL;
     }
 }
 
@@ -222,14 +261,13 @@ static int load_extended_font(void)
     int compressed_size;
     uLongf output_size = (uLongf)sizeof(g_extended_font_bitmap);
     u8 *texture_cursor;
+    unsigned glyph;
     const size_t bytes_per_glyph =
         (PS3SCALE_FONT_WIDTH * PS3SCALE_FONT_HEIGHT) / 8u;
-    const size_t extended_offset =
-        (size_t)(PS3SCALE_FONT_EXTENDED_FIRST - PS3SCALE_FONT_FIRST) *
-        bytes_per_glyph;
-    const size_t extended_size =
-        (size_t)(PS3SCALE_FONT_LAST - PS3SCALE_FONT_EXTENDED_FIRST + 1u) *
-        bytes_per_glyph;
+    const size_t spanish_offset =
+        (size_t)(246u - PS3SCALE_FONT_FIRST) * bytes_per_glyph;
+    const size_t spanish_size =
+        (size_t)(254u - 246u + 1u) * bytes_per_glyph;
 
     compressed_size = decode_base64(ps3scale_font_z64, compressed,
                                      sizeof(compressed));
@@ -238,25 +276,50 @@ static int load_extended_font(void)
                    (uLong)compressed_size) != Z_OK ||
         output_size != sizeof(g_extended_font_bitmap))
         return -1;
-    if (extended_offset + extended_size > sizeof(g_extended_font_bitmap))
+    if (spanish_offset + spanish_size > sizeof(g_extended_font_bitmap))
         return -1;
 
-    build_extended_font_metrics();
+    if (FT_Init_FreeType(&g_arabic_ft_library) != 0)
+        return -1;
+    if (FT_New_Face(g_arabic_ft_library, PS3SCALE_ARABIC_FONT_PATH,
+                    0, &g_arabic_face) != 0) {
+        close_arabic_ttf();
+        return -1;
+    }
+    if (FT_Select_Charmap(g_arabic_face, FT_ENCODING_UNICODE) != 0 ||
+        FT_Set_Pixel_Sizes(g_arabic_face, 0, 28) != 0) {
+        close_arabic_ttf();
+        return -1;
+    }
+
+    /* Do not register a partial Arabic font: every mapped form must exist. */
+    for (glyph = 128u; glyph <= 244u; glyph++) {
+        if (ps3scale_locale_is_arabic_glyph((unsigned char)glyph)) {
+            uint32_t codepoint = 0xfe80u + (uint32_t)(glyph - 128u);
+            if (FT_Get_Char_Index(g_arabic_face,
+                                  (FT_ULong)codepoint) == 0) {
+                close_arabic_ttf();
+                return -1;
+            }
+        }
+    }
 
     /*
-     * libfont keeps each bitmap range as a separate font. Register the
-     * original ASCII bitmap as font 0, then the Arabic/extended atlas as
-     * font 1. The compressed atlas starts at codepoint 32, so skip its
-     * first 96 ASCII slots before registering codepoints 128..255.
+     * Font 0 is the compact ASCII bitmap; font 1 is the variable-advance
+     * Noto Sans Arabic UI TTF; font 2 contains the Spanish accent extras.
      */
     ResetFont();
     texture_cursor = (u8 *)g_font_texture;
     texture_cursor = AddFontFromBitmapArray((u8 *)ps3scale_font8x12,
         texture_cursor, 32, 126, 8, 12, 1, BIT7_FIRST_PIXEL);
+    texture_cursor = AddFontFromTTF(texture_cursor, 128, 244, 32, 32,
+                                    arabic_ttf_glyph_callback);
     texture_cursor = AddFontFromBitmapArray(
-        g_extended_font_bitmap + extended_offset, texture_cursor,
-        PS3SCALE_FONT_EXTENDED_FIRST, PS3SCALE_FONT_LAST,
-        PS3SCALE_FONT_WIDTH, PS3SCALE_FONT_HEIGHT, 1, BIT7_FIRST_PIXEL);
+        g_extended_font_bitmap + spanish_offset, texture_cursor,
+        246, 254, PS3SCALE_FONT_WIDTH, PS3SCALE_FONT_HEIGHT,
+        1, BIT7_FIRST_PIXEL);
+
+    close_arabic_ttf();
     if (!texture_cursor || texture_cursor <= (u8 *)g_font_texture)
         return -1;
 
@@ -298,6 +361,7 @@ static void draw_text(float x, float y, u32 color, const char *text)
 
         for (i = 0; i < length; i++) {
             unsigned char glyph = (unsigned char)glyph_text[i];
+            char one[2];
             int font_index = ps3scale_locale_glyph_font_index(glyph);
 
             if (glyph == ' ') {
@@ -307,39 +371,10 @@ static void draw_text(float x, float y, u32 color, const char *text)
                 continue;
             }
 
+            one[0] = (char)glyph;
+            one[1] = '\0';
             SetCurrentFont(font_index);
-            if (ps3scale_locale_is_arabic_glyph(glyph)) {
-                float scale_x =
-                    (float)g_ui_font_width / (float)PS3SCALE_FONT_WIDTH;
-                float ink_width =
-                    (float)g_extended_glyph_ink_width[glyph];
-                unsigned min_x = g_extended_glyph_min_x[glyph];
-                unsigned char next_glyph =
-                    (i + 1u < length) ?
-                    (unsigned char)glyph_text[i + 1u] : 0;
-
-                if (ink_width <= 0.0f)
-                    ink_width = (float)PS3SCALE_FONT_WIDTH;
-
-                /* Align visible ink edges, not the empty bitmap-cell edges. */
-                DrawChar(cursor - ((float)min_x * scale_x), y, 0.0f, glyph);
-                cursor += ink_width * scale_x;
-
-                if (ps3scale_locale_is_arabic_glyph(next_glyph)) {
-                    if (ps3scale_locale_glyphs_joined(glyph, next_glyph)) {
-                        /* Two source pixels of overlap close the joining seam. */
-                        cursor -= scale_x * 2.0f;
-                    } else {
-                        /* Non-joining Arabic letters retain a small natural gap. */
-                        cursor += scale_x * 2.0f;
-                    }
-                } else if (next_glyph != 0 && next_glyph != ' ') {
-                    cursor += scale_x;
-                }
-            } else {
-                DrawChar(cursor, y, 0.0f, glyph);
-                cursor += (float)g_ui_font_width;
-            }
+            cursor = DrawString(cursor, y, one);
         }
         SetCurrentFont(0);
     } else {
