@@ -425,8 +425,21 @@ static void draw_details(void)
     draw_text(34, 394, 0x9aa6adff,
               "Online matching, verified download and rollback are next stages.");
 
-    if (game->kind == PS3SCALE_GAME_PS2_ISO)
+    if (game->kind == PS3SCALE_GAME_PS2_ISO) {
         draw_text(34, 430, 0xcaff39ff, "TRIANGLE: PREVIEW PS2 CONFIG (NO FILE WRITES)");
+        if (g_config_preview) {
+            uint8_t config_data[32];
+            size_t config_size = 0;
+            char hex[96];
+            if (ps3scale_ps2_config_build(
+                    config_data, sizeof(config_data),
+                    PS3SCALE_PS2_CFG_DISABLE_SMOOTHING |
+                    PS3SCALE_PS2_CFG_ENABLE_L2H, &config_size) == 0) {
+                format_hex(hex, sizeof(hex), config_data, config_size);
+                draw_text(34, 454, 0xdce3e8ff, hex);
+            }
+        }
+    }
 
     if (g_cover_texture)
         ya2d_drawTextureEx(g_cover_texture, 690.0f, 120.0f, 0.5f, 120.0f, 160.0f);
