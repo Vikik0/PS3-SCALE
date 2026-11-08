@@ -104,14 +104,14 @@ static void format_hex(char *out, size_t capacity,
     size_t used = 0;
 
     if (!out || capacity == 0) return;
-    out[0] = '\\0';
+    out[0] = '\0';
 
     for (i = 0; i < size && used < capacity; i++) {
         int n = snprintf(out + used, capacity - used,
                          i + 1 == size ? "%02X" : "%02X ",
                          (unsigned)data[i]);
         if (n < 0 || (size_t)n >= capacity - used) {
-            out[capacity - 1] = '\\0';
+            out[capacity - 1] = '\0';
             return;
         }
         used += (size_t)n;
@@ -271,7 +271,8 @@ int main(int argc, char *argv[])
     padInfo pad_info;
     padData pad_data;
     u16 old_up = 0, old_down = 0, old_square = 0;
-    u16 old_cross = 0, old_circle = 0, old_l1 = 0, old_r1 = 0;\n    u16 old_triangle = 0;
+    u16 old_cross = 0, old_circle = 0, old_l1 = 0, old_r1 = 0;
+    u16 old_triangle = 0;
     int pad_ready = 0;
 
     (void)argc;
@@ -312,7 +313,8 @@ int main(int argc, char *argv[])
                     cross = pad_data.BTN_CROSS;
                     circle = pad_data.BTN_CIRCLE;
                     l1 = pad_data.BTN_L1;
-                    r1 = pad_data.BTN_R1;\n                    triangle = pad_data.BTN_TRIANGLE;
+                    r1 = pad_data.BTN_R1;
+                    triangle = pad_data.BTN_TRIANGLE;
                     break;
                 }
             }
@@ -320,10 +322,12 @@ int main(int argc, char *argv[])
 
         if (l1 && !old_l1) {
             g_library = LIBRARY_PS3;
+            g_config_preview = 0;
             g_selected = 0;
         }
         if (r1 && !old_r1) {
             g_library = LIBRARY_PS2;
+            g_config_preview = 0;
             g_selected = 0;
         }
 
@@ -336,6 +340,8 @@ int main(int argc, char *argv[])
         }
         if (square && !old_square)
             scan_library();
+        if (triangle && !old_triangle && g_library == LIBRARY_PS2)
+            g_config_preview = !g_config_preview;
         if (cross && !old_cross) {
             /* Details are already shown in the right-hand panel. */
         }
@@ -348,7 +354,9 @@ int main(int argc, char *argv[])
         old_cross = cross;
         old_circle = circle;
         old_l1 = l1;
-        old_r1 = r1;\n        old_triangle = triangle;
+        old_r1 = r1;
+        old_triangle = triangle;
+        old_triangle = triangle;
 
         draw_ui();
     }
