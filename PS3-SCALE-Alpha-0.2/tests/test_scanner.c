@@ -103,11 +103,15 @@ int main(void)
     snprintf(path, sizeof(path), "%s/GAMES/DemoGame/PS3_GAME", root); make_dir(path);
     snprintf(path, sizeof(path), "%s/GAMES/DemoGame/PS3_GAME/PARAM.SFO", root);
     write_sfo(path, "Demo PS3 Game", "BLUS12345", "DG");
+    snprintf(path, sizeof(path), "%s/GAMES/DemoGame/PS3_GAME/ICON0.PNG", root);
+    write_file(path);
 
     snprintf(path, sizeof(path), "%s/game", root); make_dir(path);
     snprintf(path, sizeof(path), "%s/game/PS2U10000", root); make_dir(path);
     snprintf(path, sizeof(path), "%s/game/PS2U10000/PARAM.SFO", root);
     write_sfo(path, "Demo PS2 Classic", "PS2U10000", "2P");
+    snprintf(path, sizeof(path), "%s/game/PS2U10000/ICON0.PNG", root);
+    write_file(path);
 
     snprintf(path, sizeof(path), "%s/PS2ISO", root); make_dir(path);
     snprintf(path, sizeof(path), "%s/PS2ISO/God of War II.iso", root);
@@ -131,19 +135,25 @@ int main(void)
     assert(list.items[1].kind == PS3SCALE_GAME_PS2_CLASSIC ||
            list.items[2].kind == PS3SCALE_GAME_PS2_CLASSIC);
     assert(list.items[0].title_id[0] != '\0');
+    assert(list.items[0].cover_path[0] != '\0');
 
     {
         size_t i;
         int saw_mounted = 0;
         int saw_ps3_iso_id = 0;
+        int saw_ps2_cover = 0;
         for (i = 0; i < list.count; i++) {
             if (strcmp(list.items[i].title_id, "BLES12345") == 0)
                 saw_mounted = 1;
             if (strcmp(list.items[i].title_id, "BCES01893") == 0)
                 saw_ps3_iso_id = 1;
+            if (strcmp(list.items[i].title, "Demo PS2 Classic") == 0 &&
+                list.items[i].cover_path[0] != '\0')
+                saw_ps2_cover = 1;
         }
         assert(saw_mounted);
         assert(saw_ps3_iso_id);
+        assert(saw_ps2_cover);
     }
 
     puts("PS3 SCALE scanner tests: PASS");
