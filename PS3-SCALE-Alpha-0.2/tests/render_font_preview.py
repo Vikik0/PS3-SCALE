@@ -1,76 +1,54 @@
 #!/usr/bin/env python3
-"""Render the real embedded PS3 SCALE bitmap atlas with the runtime Arabic spacing rules.
-
-This is a host-side visual regression aid. It uses only Python's standard library.
-"""
+"""Visual regression preview using the same Noto Arabic TTF advances as PS3 runtime."""
 from __future__ import annotations
 
-import base64
-import binascii
 import re
-import struct
-import zlib
 from pathlib import Path
 
+from PIL import Image, ImageDraw, ImageFont
+
 ROOT = Path(__file__).resolve().parents[1]
-FONT_Z = ROOT / "source/ps3/font_bitmap_z.h"
+FONT_TTF = ROOT / "pkgfiles/USRDIR/NotoSansArabicUI.ttf"
 FONT_ASCII = ROOT / "source/ps3/font8x12.h"
 ARABIC_MAP = ROOT / "source/ps3/arabic_glyph_map.h"
 OUT = ROOT / "build-host/arabic-font-preview.png"
 
-FONT_WIDTH = 32
-FONT_HEIGHT = 32
+FONT_CELL_W = 32
+FONT_CELL_H = 32
 FONT_FIRST = 32
-FONT_EXTENDED_FIRST = 128
 UI_WIDTH = 14
 UI_HEIGHT = 22
 ZOOM = 4
+BASELINE = 24
 
+assert FONT_TTF.is_file(), f"missing verified runtime font: {FONT_TTF}"
+ARABIC_FONT = ImageFont.truetype(str(FONT_TTF), 28)
 
-def read_assets():
-    z_text = FONT_Z.read_text(encoding="utf-8")
-    z_match = re.search(
-        r"static const char ps3scale_font_z64\[\]\s*=\s*(.*?);",
-        z_text,
-        re.S,
-    )
-    assert z_match, "compressed font atlas declaration not found"
-    encoded = "".join(re.findall(r'"([A-Za-z0-9+/=]+)"', z_match.group(1)))
-    atlas = zlib.decompress(base64.b64decode(encoded))
-    assert len(atlas) == 224 * 128, f"unexpected atlas size: {len(atlas)}"
+ascii_text = FONT_ASCII.read_text(encoding="utf-8")
+ascii_match = re.search(
+    r"ps3scale_font8x12\[\]\s*=\s*\{(.*?)\};",
+    ascii_text,
+    re.S,
+)
+assert ascii_match, "ASCII bitmap declaration not found"
+ASCII_FONT = bytes(
+    int(value, 16)
+    for value in re.findall(r"0x([0-9a-fA-F]{2})", ascii_match.group(1))
+)
+assert len(ASCII_FONT) >= (126 - 32 + 1) * 12
 
-    ascii_text = FONT_ASCII.read_text(encoding="utf-8")
-    ascii_match = re.search(
-        r"ps3scale_font8x12\[\]\s*=\s*\{(.*?)\};",
-        ascii_text,
-        re.S,
-    )
-    assert ascii_match, "ASCII bitmap declaration not found"
-    ascii_font = bytes(
-        int(value, 16)
-        for value in re.findall(r"0x([0-9a-fA-F]{2})", ascii_match.group(1))
-    )
-    assert len(ascii_font) >= (126 - 32 + 1) * 12
-
-    map_text = ARABIC_MAP.read_text(encoding="utf-8")
-    rows = re.findall(
-        r"\{\s*0x([0-9a-fA-F]+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\}",
-        map_text,
-    )
-    forms = {
-        int(cp, 16): tuple(int(value) for value in values)
-        for cp, *values in rows
-    }
-    assert len(forms) >= 30, "Arabic contextual form table was not parsed"
-    return atlas, ascii_font, forms
-
-
-ATLAS, ASCII_FONT, FORMS = read_assets()
+map_text = ARABIC_MAP.read_text(encoding="utf-8")
+rows = re.findall(
+    r"\{\s*0x([0-9a-fA-F]+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\}",
+    map_text,
+)
+FORMS = {
+    int(cp, 16): tuple(int(value) for value in values)
+    for cp, *values in rows
+}
+assert len(FORMS) >= 30, "Arabic contextual form table was not parsed"
 ARABIC_GLYPHS = {
-    glyph
-    for form in FORMS.values()
-    for glyph in form
-    if glyph
+    glyph for form in FORMS.values() for glyph in form if glyph
 }
 
 
@@ -159,6 +137,11 @@ def is_arabic_glyph(glyph: int) -> bool:
     return glyph in ARABIC_GLYPHS
 
 
+def presentation_codepoint(glyph: int) -> int:
+    assert 128 <= glyph <= 244
+    return 0xFE80 + glyph - 128
+
+
 def glyphs_joined(left_glyph: int, right_glyph: int) -> bool:
     left_form = None
     right_form = None
@@ -174,22 +157,12 @@ def glyphs_joined(left_glyph: int, right_glyph: int) -> bool:
     return left_form is not None and right_form is not None
 
 
-def glyph_pixel(glyph: int, x: int, y: int) -> bool:
-    offset = (glyph - FONT_FIRST) * 128
-    byte_index = offset + y * 4 + (x >> 3)
-    return bool(ATLAS[byte_index] & (0x80 >> (x & 7)))
-
-
-def glyph_bounds(glyph: int) -> tuple[int, int]:
-    xs = [
-        x
-        for y in range(FONT_HEIGHT)
-        for x in range(FONT_WIDTH)
-        if glyph_pixel(glyph, x, y)
-    ]
-    if not xs:
-        return 0, FONT_WIDTH
-    return min(xs), max(xs) - min(xs) + 1
+# Verify that the runtime TTF contains every Arabic presentation-form glyph.
+for glyph in ARABIC_GLYPHS:
+    codepoint = presentation_codepoint(glyph)
+    assert ARABIC_FONT.getmask(chr(codepoint)).getbbox() is not None, (
+        f"missing Arabic presentation form U+{codepoint:04X}"
+    )
 
 
 WIDTH = 1024 * ZOOM
@@ -197,35 +170,16 @@ HEIGHT = 720 * ZOOM
 BACKGROUND = (7, 20, 36)
 INK = (226, 245, 255)
 ACCENT = (139, 212, 80)
-pixels = bytearray(BACKGROUND * (WIDTH * HEIGHT))
-
-
-def put_pixel(x: int, y: int, color=INK):
-    if 0 <= x < WIDTH and 0 <= y < HEIGHT:
-        offset = (y * WIDTH + x) * 3
-        pixels[offset : offset + 3] = bytes(color)
-
-
-def fill_rect(x: int, y: int, width: int, height: int, color):
-    for py in range(max(0, y), min(HEIGHT, y + height)):
-        for px in range(max(0, x), min(WIDTH, x + width)):
-            put_pixel(px, py, color)
-
-
-def draw_scaled_arabic_cell(glyph: int, x: float, y: float):
-    for dy in range(UI_HEIGHT):
-        source_y = min(FONT_HEIGHT - 1, int(dy * FONT_HEIGHT / UI_HEIGHT))
-        for dx in range(UI_WIDTH):
-            source_x = min(FONT_WIDTH - 1, int(dx * FONT_WIDTH / UI_WIDTH))
-            if glyph_pixel(glyph, source_x, source_y):
-                px = int(round((x + dx) * ZOOM))
-                py = int(round((y + dy) * ZOOM))
-                fill_rect(px, py, ZOOM, ZOOM, INK)
+canvas = Image.new("RGB", (WIDTH, HEIGHT), BACKGROUND)
+draw = ImageDraw.Draw(canvas)
+arabic_cell_cache = {}
 
 
 def draw_scaled_ascii_cell(glyph: int, x: float, y: float):
     if not 32 <= glyph <= 126:
         glyph = ord("?")
+    if glyph == 32:
+        return
     offset = (glyph - 32) * 12
     for dy in range(UI_HEIGHT):
         source_y = min(11, int(dy * 12 / UI_HEIGHT))
@@ -235,7 +189,32 @@ def draw_scaled_ascii_cell(glyph: int, x: float, y: float):
             if row & (0x80 >> source_x):
                 px = int(round((x + dx) * ZOOM))
                 py = int(round((y + dy) * ZOOM))
-                fill_rect(px, py, ZOOM, ZOOM, INK)
+                draw.rectangle(
+                    (px, py, px + ZOOM - 1, py + ZOOM - 1),
+                    fill=INK,
+                )
+
+
+def arabic_cell(glyph: int) -> Image.Image:
+    if glyph in arabic_cell_cache:
+        return arabic_cell_cache[glyph]
+
+    codepoint = presentation_codepoint(glyph)
+    cell = Image.new("L", (FONT_CELL_W, FONT_CELL_H), 0)
+    cell_draw = ImageDraw.Draw(cell)
+    cell_draw.text(
+        (0, BASELINE),
+        chr(codepoint),
+        font=ARABIC_FONT,
+        fill=255,
+        anchor="ls",
+    )
+    cell = cell.resize(
+        (UI_WIDTH * ZOOM, UI_HEIGHT * ZOOM),
+        Image.Resampling.BILINEAR,
+    )
+    arabic_cell_cache[glyph] = cell
+    return cell
 
 
 def draw_ascii(value: str, x: float, y: float):
@@ -249,102 +228,61 @@ def draw_ascii(value: str, x: float, y: float):
             cursor += UI_WIDTH
 
 
-def draw_runtime_text(value: str, x: float, y: float, join_overlap_source_px: float = 2.0):
+def draw_runtime_text(value: str, x: float, y: float):
     glyphs = shape_text(value)
     contains_arabic = any(is_arabic_glyph(glyph) for glyph in glyphs)
     cursor = x
-    scale_x = UI_WIDTH / FONT_WIDTH
 
-    for index, glyph in enumerate(glyphs):
-        next_glyph = glyphs[index + 1] if index + 1 < len(glyphs) else 0
+    for glyph in glyphs:
         if glyph == 32:
             cursor += UI_WIDTH * (0.5 if contains_arabic else 1.0)
             continue
 
         if is_arabic_glyph(glyph):
-            min_x, ink_width = glyph_bounds(glyph)
-            draw_runtime_x = cursor - min_x * scale_x
-            draw_scaled_arabic_cell(glyph, draw_runtime_x, y)
-            cursor += ink_width * scale_x
-
-            if is_arabic_glyph(next_glyph):
-                if glyphs_joined(glyph, next_glyph):
-                    cursor -= scale_x * join_overlap_source_px
-                else:
-                    cursor += scale_x * 2.0
-            elif next_glyph not in (0, 32):
-                cursor += scale_x
+            cell = arabic_cell(glyph)
+            position = (int(round(cursor * ZOOM)), int(round(y * ZOOM)))
+            canvas.paste(INK, position, cell)
+            codepoint = presentation_codepoint(glyph)
+            advance = round(ARABIC_FONT.getlength(chr(codepoint)))
+            cursor += UI_WIDTH * advance / FONT_CELL_W
         else:
             draw_scaled_ascii_cell(glyph, cursor, y)
             cursor += UI_WIDTH
 
 
 def draw_rule(y: int):
-    fill_rect(40 * ZOOM, y * ZOOM, 900 * ZOOM, 1 * ZOOM, (36, 67, 92))
+    draw.line(
+        (40 * ZOOM, y * ZOOM, 940 * ZOOM, y * ZOOM),
+        fill=(36, 67, 92),
+        width=ZOOM,
+    )
 
 
-# Visual labels are English so the sample Arabic words remain isolated for review.
 draw_ascii("ENGLISH / LATIN FONT", 40, 18)
 draw_runtime_text("PS3 SCALE 4.92", 40, 42)
 draw_rule(78)
 
-draw_ascii("JOIN OVERLAP 2 SOURCE PIXELS", 40, 92)
-draw_runtime_text("سلام", 40, 116, 2)
+draw_ascii("ARABIC SAMPLE 1 / SALAM", 40, 92)
+draw_runtime_text("سلام", 40, 116)
 draw_rule(152)
 
-draw_ascii("JOIN OVERLAP 4 SOURCE PIXELS", 40, 166)
-draw_runtime_text("سلام", 40, 190, 4)
+draw_ascii("ARABIC SAMPLE 2 / SETTINGS", 40, 166)
+draw_runtime_text("الإعدادات", 40, 190)
 draw_rule(226)
 
-draw_ascii("JOIN OVERLAP 6 SOURCE PIXELS", 40, 240)
-draw_runtime_text("سلام", 40, 264, 6)
+draw_ascii("ARABIC SAMPLE 3 / GAME LIBRARY", 40, 240)
+draw_runtime_text("مكتبة الألعاب", 40, 264)
 draw_rule(300)
 
-draw_ascii("JOIN OVERLAP 8 SOURCE PIXELS", 40, 314)
-draw_runtime_text("سلام", 40, 338, 8)
+draw_ascii("ARABIC SAMPLE 4 / VOLUME", 40, 314)
+draw_runtime_text("مستوى الصوت", 40, 338)
 draw_rule(374)
 
-draw_ascii("ARABIC SAMPLE / SETTINGS", 40, 388)
-draw_runtime_text("الإعدادات", 40, 412, 6)
-draw_rule(448)
-
-draw_ascii("ARABIC SAMPLE / GAME LIBRARY", 40, 462)
-draw_runtime_text("مكتبة الألعاب", 40, 486, 6)
-draw_rule(522)
-
-draw_ascii("ARABIC SAMPLE / VOLUME", 40, 536)
-draw_runtime_text("مستوى الصوت", 40, 560, 6)
+draw_ascii("MIXED ARABIC / ENGLISH / NUMBERS", 40, 388)
+draw_runtime_text("PS3: 3 | PS2: 4 | النتائج: 4", 40, 412)
 
 
-def png_chunk(kind: bytes, data: bytes) -> bytes:
-    return (
-        struct.pack(">I", len(data))
-        + kind
-        + data
-        + struct.pack(">I", binascii.crc32(kind + data) & 0xFFFFFFFF)
-    )
-
-
-def write_png(path: Path):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    scanlines = bytearray()
-    stride = WIDTH * 3
-    for row in range(HEIGHT):
-        scanlines.append(0)
-        start = row * stride
-        scanlines.extend(pixels[start : start + stride])
-
-    header = struct.pack(">IIBBBBB", WIDTH, HEIGHT, 8, 2, 0, 0, 0)
-    payload = (
-        b"\x89PNG\r\n\x1a\n"
-        + png_chunk(b"IHDR", header)
-        + png_chunk(b"IDAT", zlib.compress(bytes(scanlines), 9))
-        + png_chunk(b"IEND", b"")
-    )
-    path.write_bytes(payload)
-
-
-# Hard regression checks against the current C locale implementation.
+# Runtime regression checks.
 assert shape_text("سلام") == [225, 142, 224, 179]
 assert glyphs_joined(142, 224)
 assert glyphs_joined(224, 179)
@@ -354,13 +292,12 @@ assert all(is_arabic_glyph(g) for g in shape_text("الإعدادات"))
 assert shape_text("PS3 SCALE 4.92") == list(map(ord, "PS3 SCALE 4.92"))
 assert 32 in shape_text("مستوى الصوت")
 
-missing = [glyph for glyph in ARABIC_GLYPHS if glyph_bounds(glyph)[1] <= 0]
-assert not missing, f"Arabic glyphs missing from bitmap atlas: {missing}"
-
-write_png(OUT)
-print("Arabic font preview: PASS")
+OUT.parent.mkdir(parents=True, exist_ok=True)
+canvas.save(OUT, format="PNG")
+print("Arabic TTF font preview: PASS")
 print("سلام:", shape_text("سلام"))
 print("الإعدادات:", shape_text("الإعدادات"))
 print("مكتبة الألعاب:", shape_text("مكتبة الألعاب"))
 print("مستوى الصوت:", shape_text("مستوى الصوت"))
+print("Mixed:", shape_text("PS3: 3 | PS2: 4 | النتائج: 4"))
 print("PNG:", OUT)
