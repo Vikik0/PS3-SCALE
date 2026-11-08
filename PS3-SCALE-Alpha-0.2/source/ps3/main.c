@@ -1105,6 +1105,8 @@ static int profile_script_state_for_game(const ps3scale_game_t *game,
 {
     if (!game || !game_is_ps3(game) || !game->title_id[0])
         return 0;
+    if (profile && strcmp(profile->trust, "B_COMMUNITY") != 0)
+        return ps3scale_profile_script_state(game->title_id, game->app_ver, NULL);
     return ps3scale_profile_script_state(
         game->title_id, game->app_ver, profile ? profile->patches : NULL);
 }
@@ -1255,6 +1257,11 @@ static void confirm_profile_install(void)
 
     if (!profile) {
         set_details_message("NO EXACT ONLINE PROFILE FOR THIS GAME UPDATE.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+    if (strcmp(profile->trust, "B_COMMUNITY_MANUAL") == 0) {
+        set_details_message("MANUAL-ONLY PROFILE. ONE-LAUNCH APPLY IS NOT SUPPORTED.");
         g_profile_confirm_pending = 0;
         return;
     }
@@ -1691,11 +1698,18 @@ static void draw_online_database(void)
         draw_text(452, 216, 0xdce3e8ff, line);
         snprintf(line, sizeof(line), "EFFECT: %.44s", selected_profile->effect);
         draw_text(452, 244, 0xcaff39ff, line);
-        draw_text(452, 278, 0xffcc66ff, "TRUST: COMMUNITY-REPORTED");
+        if (strcmp(selected_profile->trust, "B_COMMUNITY_MANUAL") == 0)
+            draw_text(452, 278, 0xffcc66ff,
+                      "TRUST: COMMUNITY-REPORTED / MANUAL ONLY");
+        else
+            draw_text(452, 278, 0xffcc66ff, "TRUST: COMMUNITY-REPORTED");
         snprintf(line, sizeof(line), "MEMORY WRITES: %u",
                  selected_profile->patch_count);
         draw_text(452, 306, 0xdce3e8ff, line);
-        if (selected_profile->patch_count == 1)
+        if (strcmp(selected_profile->trust, "B_COMMUNITY_MANUAL") == 0)
+            draw_text(452, 340, 0xffcc66ff,
+                      "MANUAL ONLY: RE-APPLY REQUIRED IN GAME");
+        else if (selected_profile->patch_count == 1)
             draw_text(452, 340, 0x9ee56aff,
                       "ONE-LAUNCH APPLY: AVAILABLE AFTER CONFIRMATION");
         else
@@ -1880,6 +1894,8 @@ static void draw_details(void)
                 snprintf(line, sizeof(line), "PROFILE SCRIPT: STALE - REMOVE");
             else if (script_state == -1)
                 snprintf(line, sizeof(line), "PROFILE SCRIPT: USER-OWNED - NOT TOUCHED");
+            else if (strcmp(profile->trust, "B_COMMUNITY_MANUAL") == 0)
+                snprintf(line, sizeof(line), "MANUAL ONLY: RE-APPLY REQUIRED IN GAME");
             else if (profile->patch_count != 1)
                 snprintf(line, sizeof(line), "AUTO APPLY: MULTI-WRITE MANUAL ONLY");
             else if (script_state == 1)
@@ -2437,6 +2453,8 @@ int main(int argc, char *argv[])
                     set_details_message("A USER WEBMAN SCRIPT EXISTS. IT WAS NOT OVERWRITTEN.");
                 } else if (!profile) {
                     set_details_message("NO EXACT ONLINE PROFILE FOR THIS GAME UPDATE.");
+                } else if (strcmp(profile->trust, "B_COMMUNITY_MANUAL") == 0) {
+                    set_details_message("MANUAL-ONLY PROFILE. ONE-LAUNCH APPLY IS NOT SUPPORTED.");
                 } else if (profile->patch_count != 1) {
                     set_details_message("MULTI-WRITE PROFILE: AUTO APPLY DISABLED FOR SAFETY.");
                 } else {
