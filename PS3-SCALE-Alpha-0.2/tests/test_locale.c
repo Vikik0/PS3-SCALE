@@ -46,6 +46,18 @@ int main(void)
     for (int i = 0; i < length; i++)
         assert((unsigned char)glyphs[i] >= 128u);
 
+    /* English labels and digits must remain in their original left-to-right order. */
+    length = ps3scale_locale_to_glyphs("PS3 SCALE 4.92", glyphs,
+                                       sizeof(glyphs));
+    assert(length == (int)strlen("PS3 SCALE 4.92"));
+    assert(strcmp(glyphs, "PS3 SCALE 4.92") == 0);
+
+    /* Arabic word spacing remains a real space, not an inter-letter gap. */
+    length = ps3scale_locale_to_glyphs("مستوى الصوت", glyphs,
+                                       sizeof(glyphs));
+    assert(length == 11);
+    assert(memchr(glyphs, ' ', (size_t)length) != NULL);
+
     length = ps3scale_locale_to_glyphs("Configuración", glyphs,
                                        sizeof(glyphs));
     assert(length == (int)strlen("Configuración") - 1);
