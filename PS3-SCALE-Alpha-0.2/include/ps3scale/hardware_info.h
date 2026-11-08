@@ -23,7 +23,7 @@ typedef struct ps3scale_hardware_info {
     char firmware_version[8];
     char platform_id[9];
     char model_series[48];
-    uint8_t platform_id_code;
+    uint32_t build_number;
     ps3scale_hardware_family_t family;
     ps3scale_console_type_t console_type;
 } ps3scale_hardware_info_t;
