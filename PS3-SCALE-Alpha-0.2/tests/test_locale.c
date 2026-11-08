@@ -131,6 +131,11 @@ int main(void)
             translated, sizeof(translated)) != 1 ||
         strstr(translated, "إعادة التطبيق") == NULL)
         return 16;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "SETTINGS RESTORED TO DEFAULTS.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "الإعدادات الافتراضية") == NULL)
+        return 17;
 
     if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
             "ONE-LAUNCH PROFILE ARMED. START THE MOUNTED GAME.",
