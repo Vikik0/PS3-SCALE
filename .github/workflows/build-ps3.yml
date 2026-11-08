@@ -53,6 +53,17 @@ jobs:
           command -v make_self_npdrm
           command -v package_finalize
 
+      - name: Build PS3 MP3 playback support
+        run: |
+          set -eu
+          git clone https://github.com/wargio/ps3soundlib.git /tmp/ps3soundlib
+          git -C /tmp/ps3soundlib checkout 262ea20d4e4e3fb5d0aca8a60d09d631c0e17fb8
+          make -C /tmp/ps3soundlib
+          test -s "$PORTLIBS/modules/spu_soundmodule.bin"
+          mkdir -p PS3-SCALE-Alpha-0.2/data
+          cp "$PORTLIBS/modules/spu_soundmodule.bin" PS3-SCALE-Alpha-0.2/data/spu_soundmodule.bin
+          test -s PS3-SCALE-Alpha-0.2/data/spu_soundmodule.bin
+
       - name: Build and validate PS3 packages
         working-directory: PS3-SCALE-Alpha-0.2
         run: |
