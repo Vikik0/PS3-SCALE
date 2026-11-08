@@ -22,3 +22,12 @@
 - Alpha 0.2 does not read this catalog or apply any patch yet.
 
 The catalog loader, signature verification and hardware-tested patch application are future milestones.
+
+
+## Startup music
+
+The user-supplied MP3 is currently loaded from the PS3 filesystem at runtime, not embedded into the PKG. The app searches the paths documented in `docs/AUDIO_THEME.md`; the preferred location is:
+
+`/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`
+
+Copy the provided `GTA V - Greyhound Pause Menu Theme Remix.mp3` to that path and rename it `theme.mp3`. The player streams it offline, loops it, and exposes mute/volume controls in Settings.
