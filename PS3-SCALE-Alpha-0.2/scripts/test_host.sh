@@ -57,5 +57,14 @@ cc -std=c99 -Wall -Wextra -Werror \
   -o "$OUT/test_catalog"
 "$OUT/test_catalog"
 
+cc -std=c99 -Wall -Wextra -Werror \
+  -DPS3SCALE_WEBMAN_TMP_DIR='"/tmp/ps3scale-profile-apply-test"' \
+  -DPS3SCALE_WEBMAN_SCRIPT_DIR='"/tmp/ps3scale-profile-apply-test/wm_ingame"' \
+  -I"$ROOT/include" \
+  "$ROOT/source/ps3/profile_apply.c" \
+  "$ROOT/tests/test_profile_apply.c" \
+  -o "$OUT/test_profile_apply"
+"$OUT/test_profile_apply"
+
 python3 "$ROOT/tests/test_ui_contract.py" "$ROOT/source/ps3/main.c"
 python3 "$ROOT/tests/test_theme_bundle.py" "$ROOT"
