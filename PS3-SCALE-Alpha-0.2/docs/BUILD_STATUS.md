@@ -3,18 +3,18 @@
 Date: 2026-11-08
 
 ## Latest verified CI build
-- Workflow run: [#104 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42488954976)
-- Source commit: `ba098d535a6833fee0079262b8ee417543484a87`
-- Artifact ID: `13621170262`
-- Artifact ZIP SHA-256: `094402c68664d22dfde8619bd89852e41a83f6ce73e6808866132b5d307e8123`
+- Workflow run: [ #105 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42488954976)
+- Source commit: `9c7638de31db624af4abc4673718891cf3d553f5`
+- Artifact ID: `13621056476`
+- Artifact ZIP SHA-256: `31d25b7b4f350debf7033a44f2d6590f8cd26e2dfcc75325c845ffeb6d0481c4`
 
 ## Build outputs
 | File | Size | SHA-256 |
 |---|---:|---|
-| `ps3scale.elf` | 1,642,594 bytes | `f12db83fa87de8599fc6693dd67ba261120df3d6f97a47a8bf6718b1c9a73e69` |
-| `ps3scale.self` | 180,288 bytes | `66e4fb6ea5b3728628ed00ba768b57346f851850627781c3590cff2cfd91e6c3` |
-| `ps3scale.pkg` | 221,776 bytes | `dd03de2740436e4e424f58abccb1a4d9252742a9f2528917521ab29ddeccf298` |
-| `ps3scale.gnpdrm.pkg` | 221,776 bytes | `3632a562232f2afb56f55f20a635985713b039b3843d1e19a63334d8c2feeca2` |
+| `ps3scale.elf` | 1,642,594 bytes | `67f09e899dec5de547790688d33995993315bf4a79aa18b1985fe1af5d1e2e6a` |
+| `ps3scale.self` | 180,288 bytes | `2e971e24a1244b36cb500cc09bc1fac3787ecdbd97d50fc6268b1dd17337d64e` |
+| `ps3scale.pkg` | 221,776 bytes | `7dfc823e251aab51a87e271c6ed4956592d13af67097060fffb8ddb56690ae8b` |
+| `ps3scale.gnpdrm.pkg` | 221,776 bytes | `ee91bcd185e8be2f9e975d9faab7131d1846f0f7db120791e0d06ef25a972065` |
 
 The finalized PKG header is `7f504b47 8000 0001` (PS3 package, finalized revision).
 
@@ -42,7 +42,7 @@ The finalized PKG header is `7f504b47 8000 0001` (PS3 package, finalized revisio
 The MP3 is not embedded in the PS3 firmware or in the current PKG. The application searches internal USRDIR first, then the USB music folder. Settings includes **COPY MUSIC TO INTERNAL HDD**. After copying, restart PS3 SCALE; it will use the internal copy and the USB can be removed.
 
 ## Console validation
-The user has confirmed that a previous build launches, scans the actual PS3/PS2 library, renders local cover art, shows the Settings screen and plays the supplied GTA V remix. Run #104 has passed CI but the new layout, OSK fix, persistent settings, copy-to-HDD action and slow animation still need a physical-console smoke test.
+The user has confirmed that a previous build launches, scans the actual PS3/PS2 library, renders local cover art, shows the Settings screen and plays the supplied GTA V remix. Run #105 has passed CI but the new layout, OSK fix, persistent settings, copy-to-HDD action and slow animation still need a physical-console smoke test.
 
 ## Remaining product work
 The actual verified graphics-profile workflow is not complete: signed online catalog, exact Title ID + update matching, profile compatibility database, backup/rollback, CFW runtime plugin, and post-apply in-game notification. The USB update check is an offline file discovery only; it does not verify a release signature or auto-install. No profile is marked applied and no original game file is modified.
