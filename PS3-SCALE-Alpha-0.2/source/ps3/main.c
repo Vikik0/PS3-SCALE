@@ -1321,7 +1321,7 @@ static void start_selected_game(void)
         return;
     }
     if (script_state == -2) {
-        set_details_message("PROFILE SCRIPT IS OLD OR DOES NOT MATCH THE CURRENT CATALOG. REMOVE IT FIRST.");
+        set_details_message("STALE PROFILE SCRIPT. REMOVE IT BEFORE STARTING.");
         return;
     }
     if (!find_mounted_game(game, &mounted)) {
