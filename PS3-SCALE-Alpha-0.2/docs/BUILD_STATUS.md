@@ -4,23 +4,23 @@ Date: 2026-11-09
 
 ## Latest feature-branch CI build
 
-- Workflow run: [#239 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42537211772)
+- Workflow run: [#239 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42537225780)
 - Pull request: [#6 — draft, not merged](https://github.com/Vikik0/PS3-SCALE/pull/6)
 - Source branch: feature/online-graphics-database
-- Source commit: ae1ec64611a074568e095dcf35b38e9c0dd713a0
+- Source commit: 77d1be60c982df55b11a7316b4c8453c4c00fef0
 - Artifact: PS3-SCALE-Alpha-0.2-build-with-embedded-theme
-- Artifact ID: 13640415092
-- Artifact ZIP size: 14,187,873 bytes
-- Artifact ZIP SHA-256: 84c2116d8ffee7eb0f805158520748a0bb76b14c1a8008312d97d9aad00bf4c8
+- Artifact ID: 13640026610
+- Artifact ZIP size: 14,187,869 bytes
+- Artifact ZIP SHA-256: 1bc94cb2e6196e0ee38b5484122502bbc527af4183b6adee5ca954c5722188f1
 
 ## Build outputs
 
 | File | Size | SHA-256 |
 |---|---:|---|
 | ps3scale.elf | 3,414,232 bytes | 9dbcdae1341b51966a61a2084b9d6adea4d570d1d8ddc3817aa3ad00ec6086c4 |
-| ps3scale.self | 731,408 bytes | 4b8f9b05b8baad9331d4d5af9d1375d66ad124513566d55de42f4e5b5b42ffa2 |
-| ps3scale.pkg | 6,201,760 bytes | b15f4a30bc46d42c9357083e9d978b919c8f840be3076697ae0c499046db59c2 |
-| ps3scale.gnpdrm.pkg | 6,201,760 bytes | 3ffea66bbe7a0d18e59135fe75a7110632ab0314fcb268ef69ea5c4de3a5fce9 |
+| ps3scale.self | 731,408 bytes | d2ff3eb7a897e4a53f0f8fcb57c95f4097de2366f04fc60b804d1d26f410acab |
+| ps3scale.pkg | 6,201,760 bytes | e2180e08d0d40e705c4eebb2ad174bfabdc3fc3e4bdb66ba50aed715a8c986ed |
+| ps3scale.gnpdrm.pkg | 6,201,760 bytes | d81faf08281566320a730b02e4d708ad1f1a85d05f41c2afe0b5759a19b58631 |
 
 Package headers:
 - Debug PKG: 7f504b47 00000001
@@ -42,7 +42,7 @@ The GNPDRM package is the intended install package for the user's CFW console. T
 - PPU ELF, CEX SELF, debug PKG and finalized GNPDRM PKG: built successfully.
 - Embedded theme assembly and asset integrity check: PASS.
 
-## Implemented in Run #239
+## Implemented in Run #240
 
 - First-run language selection: English, Arabic and Spanish; saved in USRDIR/settings.cfg.
 - Spanish translations and an embedded compact Arabic bitmap glyph atlas derived from Noto Sans Arabic.
