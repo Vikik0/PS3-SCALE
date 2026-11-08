@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Vikik0/PS3-SCALE/blob/main/PS3-SCALE-Alpha-0.2/data/catalog.schema.json",
+  "title": "PS3 SCALE Enhancement Catalog",
+  "type": "object",
+  "required": ["schema_version", "catalog_version", "generated_utc", "entries"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "catalog_version": { "type": "string", "minLength": 1 },
+    "generated_utc": { "type": "string", "format": "date-time" },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id", "platform", "title", "region", "game_version",
+          "patch_type", "apply_mode", "trust_level", "status",
+          "source", "license", "artifact", "backup_required",
+          "rollback_available", "known_issues"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9._-]+$" },
+          "platform": { "enum": ["PS3", "PS2"] },
+          "title": { "type": "string", "minLength": 1 },
+          "title_id": { "type": "string", "pattern": "^[A-Z0-9]{9}$" },
+          "ps2_serial": { "type": "string", "pattern": "^[A-Z]{4}_[0-9]{3}\\.[0-9]{2}$" },
+          "region": { "type": "string", "minLength": 1 },
+          "game_version": { "type": "string", "minLength": 1 },
+          "patch_type": {
+            "enum": [
+              "resolution", "fps_unlock", "frame_pacing", "widescreen",
+              "anti_aliasing", "texture", "compatibility", "netemu_config",
+              "other"
+            ]
+          },
+          "apply_mode": {
+            "enum": ["memory_patch", "sidecar_config", "game_file_patch"]
+          },
+          "trust_level": {
+            "enum": ["A_hardware_verified", "B_community_reported", "C_unverified", "blocked"]
+          },
+          "status": { "enum": ["candidate", "verified", "blocked", "deprecated"] },
+          "source": {
+            "type": "object",
+            "required": ["url", "author"],
+            "properties": {
+              "url": { "type": "string", "format": "uri" },
+              "author": { "type": "string", "minLength": 1 },
+              "license": { "type": "string" }
+            },
+            "additionalProperties": false
+          },
+          "license": { "type": "string", "minLength": 1 },
+          "artifact": {
+            "type": "object",
+            "required": ["url", "sha256", "size_bytes"],
+            "properties": {
+              "url": { "type": "string", "format": "uri" },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "size_bytes": { "type": "integer", "minimum": 1 }
+            },
+            "additionalProperties": false
+          },
+          "backup_required": { "const": true },
+          "rollback_available": { "type": "boolean" },
+          "known_issues": { "type": "array", "items": { "type": "string" } },
+          "hardware_tests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["model", "firmware", "result"],
+              "properties": {
+                "model": { "type": "string" },
+                "firmware": { "type": "string" },
+                "result": { "enum": ["pass", "fail", "not_tested"] },
+                "notes": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "platform": { "const": "PS3" } } },
+            "then": { "required": ["title_id"], "not": { "required": ["ps2_serial"] } }
+          },
+          {
+            "if": { "properties": { "platform": { "const": "PS2" } } },
+            "then": { "required": ["ps2_serial"], "not": { "required": ["title_id"] } }
+          }
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
