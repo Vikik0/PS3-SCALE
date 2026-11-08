@@ -23,10 +23,17 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Install host compiler
+      - name: Install host compiler and preview dependency
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential
+          python3 -m pip install --user pillow
+
+      - name: Fetch pinned Noto Sans Arabic UI font
+        working-directory: PS3-SCALE-Alpha-0.2
+        run: |
+          chmod +x scripts/fetch_assets.sh
+          ./scripts/fetch_assets.sh
 
       - name: Run SFO, scanner, ISO, and PS2 CONFIG tests
         working-directory: PS3-SCALE-Alpha-0.2
@@ -63,6 +70,12 @@ jobs:
           command -v make_self
           command -v make_self_npdrm
           command -v package_finalize
+
+      - name: Fetch pinned Noto Sans Arabic UI font
+        working-directory: PS3-SCALE-Alpha-0.2
+        run: |
+          chmod +x scripts/fetch_assets.sh
+          ./scripts/fetch_assets.sh
 
       - name: Build LGPL MP3 decoder
         run: |
