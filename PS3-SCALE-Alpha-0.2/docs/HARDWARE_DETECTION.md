@@ -16,7 +16,7 @@ The Platform ID identifies a hardware platform / board revision. PS3 SCALE maps 
 - FAT: Cok14 (CECHA/B), CokB10 (CECHC/E), CokC12 (CECHG), CokD10 (CECHH), CokE10 (CECHJ/K), CokF10 (CECHL/M/P/Q)
 - Slim: CokG11 (20xx), CokH11 (21xx), CokJ13/J20 (25xx), CokK10 (30xx)
 - Super Slim: CokM10/M20/M30 (40xx), CokP10/P20/P30/P40 (42xx), CokR10/R20/R30/R40 (43xx)
-- Additional N-series IDs (CokN10/N20/N30/N40) are identified as Super Slim platform revisions, but their exact retail model mapping is not asserted.
+- CokN10 is associated with a CECH-40xx B/C NPX-001 board. Other N-series IDs (CokN20/N30/N40), M40, and R20 have incomplete or uncertain retail mappings and are shown with their raw ID rather than a guessed SKU.
 
 This is a series-level identification, not a guaranteed exact retail SKU. Some board revisions (for example M40, N-series, and later R-series variants) have incomplete public retail mappings; the app displays the raw Platform ID so the user can distinguish them. It cannot reliably determine the region letter or every A/B suffix from Platform ID alone. Unknown IDs are shown as unknown rather than guessed.
 
