@@ -1536,10 +1536,13 @@ static void draw_about(void)
     if (g_hardware_info_valid) {
         draw_text(34, 382, 0xdce3e8ff, "DETECTED MODEL:");
         draw_text(210, 382, 0xdce3e8ff, g_hardware_info.model_series);
-        draw_text(34, 416, 0xdce3e8ff, "FIRMWARE:");
-        draw_text(138, 416, 0xdce3e8ff, g_hardware_info.firmware_version);
-        draw_text(280, 416, 0xdce3e8ff, "PLATFORM ID:");
-        draw_text(404, 416, 0xdce3e8ff, g_hardware_info.platform_id);
+        draw_text(34, 416, 0xdce3e8ff, "CONSOLE TYPE:");
+        draw_text(170, 416, 0xdce3e8ff,
+                  ps3scale_console_type_name(g_hardware_info.console_type));
+        draw_text(300, 416, 0xdce3e8ff, "FIRMWARE:");
+        draw_text(404, 416, 0xdce3e8ff, g_hardware_info.firmware_version);
+        draw_text(34, 448, 0xdce3e8ff, "PLATFORM ID:");
+        draw_text(170, 448, 0xdce3e8ff, g_hardware_info.platform_id);
     } else {
         draw_text(34, 382, 0xffcc66ff, "HARDWARE INFO UNAVAILABLE.");
     }
