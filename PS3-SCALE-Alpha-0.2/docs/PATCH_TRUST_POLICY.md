@@ -3,7 +3,7 @@
 ## Trust tiers
 
 - **Tier A — Hardware verified:** tested on real PS3 hardware for the exact Title ID and update version, with tester and source evidence.
-- **Tier B — Community reported:** reported by a community source, but not independently reproduced by PS3 SCALE.
+- **Tier B — Community reported:** reported by a community source, but not independently reproduced by PS3 SCALE. B_COMMUNITY_MANUAL remains Tier B but is explicitly excluded from one-launch automation when the source requires in-game timing or reapplication.
 - **Tier C — Emulator converted / unverified:** imported from RPCS3 or another source without real-hardware confirmation.
 - **Blocked:** known to freeze, corrupt, mismatch the game version, or have an unresolved safety issue.
 
