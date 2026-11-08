@@ -142,6 +142,17 @@ int main(void)
         strstr(translated, "ما زال يستجيب") == NULL)
         return 19;
     if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "CHECKING WEBMAN AND ARMING PROFILE.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "تجهيز ملف التحسين") == NULL)
+        return 21;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "WEBMAN MOD NOT RESPONDING. PROFILE NOT ARMED.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "لم يتم تجهيز") == NULL)
+        return 22;
+
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
             "START UNMODIFIED",
             translated, sizeof(translated)) != 1 ||
         strstr(translated, "دون تحسين") == NULL)
