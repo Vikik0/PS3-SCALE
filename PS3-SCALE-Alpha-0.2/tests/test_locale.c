@@ -103,18 +103,18 @@ int main(void)
                   "العربية") == 0);
 
     if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
-            "ONLINE GRAPHICS DATABASE", output, sizeof(output)) != 1 ||
-        strcmp(output, "قاعدة بيانات تحسين الرسوم") != 0)
+            "ONLINE GRAPHICS DATABASE", translated, sizeof(translated)) != 1 ||
+        strcmp(translated, "قاعدة بيانات تحسين الرسوم") != 0)
         return 8;
     if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
             "PROFILES: 40  |  EXACT LIBRARY MATCHES: 2",
-            output, sizeof(output)) != 1 ||
-        strstr(output, "40") == NULL || strstr(output, "2") == NULL)
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "40") == NULL || strstr(translated, "2") == NULL)
         return 9;
     if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
             "PS3 SCALE PROFILE CHECK COMPLETE. ONLY EXACT BYTE MATCHES ARE CHANGED.",
-            output, sizeof(output)) != 1 ||
-        strstr(output, "PS3 SCALE") == NULL)
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "PS3 SCALE") == NULL)
         return 10;
 
     puts("PS3 SCALE locale tests: PASS");
