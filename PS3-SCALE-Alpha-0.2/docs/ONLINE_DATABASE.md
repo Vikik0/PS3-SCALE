@@ -23,7 +23,7 @@ This is a data catalogue, not a collection of downloaded executable files or EBO
 - The response is capped at 64 KiB and written to a temporary download file.
 - The complete catalogue must pass strict parsing, exact identity validation, patch syntax validation and duplicate detection before replacing the current cache.
 - The previous valid catalogue remains available if the network request or validation fails.
-- Automatic refresh is checked at startup when the local cache is older than 24 hours. START on the Online Graphics Database screen requests a manual refresh.
+- When the user opens Online Graphics Database, the app automatically refreshes if the local cache is older than 24 hours. START on that screen requests a manual refresh. Normal app startup and game launching remain offline.
 - A normal HTTPS catalogue does not require a PSN account.
 
 ## Matching and application limits
