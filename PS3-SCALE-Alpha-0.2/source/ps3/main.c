@@ -1257,7 +1257,7 @@ static void confirm_profile_install(void)
         return;
     }
 
-    result = ps3scale_profile_script_install(profile);
+    result = ps3scale_profile_script_install(profile, g_language);
     g_profile_confirm_pending = 0;
     if (result == 0 || result == 1) {
         set_details_message("AUTO PROFILE INSTALLED. START THE MOUNTED GAME.");
