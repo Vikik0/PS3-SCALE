@@ -2547,8 +2547,12 @@ int main(int argc, char *argv[])
                     g_music_enabled = 1;
                     g_music_volume = 180;
                     g_animation_enabled = 1;
+                    g_language = LANGUAGE_ENGLISH;
+                    g_language_choice = LANGUAGE_ENGLISH;
                     if (!g_music_playing && initialize_audio_backend() != 0)
                         set_settings_message("MUSIC FILE NOT FOUND OR AUDIO INIT FAILED.");
+                    else
+                        set_settings_message("SETTINGS RESTORED TO DEFAULTS.");
                     (void)save_app_settings();
                 } else if (g_settings_selected == 6) {
                     g_language = (g_language + 1) % 3;
