@@ -31,6 +31,14 @@ int main(void)
         "BLUS30464\t01.05\tSkate 3\t60 FPS\tB_COMMUNITY\t"
         "94713A,06,GG\tBad replacement byte.\t"
         "https://github.com/example/profiles\n";
+    static const char invalid_zero_address[] =
+        "BLUS30464\t01.05\tSkate 3\t60 FPS\tB_COMMUNITY\t"
+        "0,06,00\tZero address.\t"
+        "https://github.com/example/profiles\n";
+    static const char invalid_noop[] =
+        "BLUS30464\t01.05\tSkate 3\t60 FPS\tB_COMMUNITY\t"
+        "94713A,06,06\tNo-op patch.\t"
+        "https://github.com/example/profiles\n";
     const char *path = "/tmp/ps3scale_catalog_test.tsv";
     ps3scale_catalog_t catalog;
     ps3scale_game_list_t games;
@@ -73,6 +81,20 @@ int main(void)
         return 11;
     if (catalog.count != 2) /* failed loads do not replace the last good cache */
         return 12;
+
+    if (write_catalog(path, invalid_zero_address) != 0)
+        return 13;
+    if (ps3scale_catalog_load(path, &catalog) >= 0)
+        return 14;
+    if (catalog.count != 2)
+        return 15;
+
+    if (write_catalog(path, invalid_noop) != 0)
+        return 16;
+    if (ps3scale_catalog_load(path, &catalog) >= 0)
+        return 17;
+    if (catalog.count != 2)
+        return 18;
 
     unlink(path);
     puts("PS3 SCALE online catalog tests: PASS");
