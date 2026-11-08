@@ -3,7 +3,7 @@
 Date: 2026-11-08
 
 ## Latest verified CI build
-- Workflow run: [ #109 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42489288219)
+- Workflow run: [#109 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42489288219)
 - Source commit: `a09892e7a56c53da83ade1e9691277d6e05b84b8`
 - Artifact ID: `13620462449`
 - Artifact ZIP SHA-256: `239156cc9f387160a448bf21480093476fcad13fb8a749abb0ea316a3a052a22`
