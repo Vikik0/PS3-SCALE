@@ -17,7 +17,7 @@ PS3 SCALE uses webMAN MOD as an optional bridge for title-specific, in-memory PS
 - Load the bundled or HTTPS-synchronized catalogue.
 - Match exact Title ID and APP_VER.
 - Display the community trust level, reported effect, source and patch count.
-- Require explicit controller confirmation before arming a profile.
+- Require the exact game version to be mounted at /dev_bdvd before arming; the mounted Title ID and APP_VER must match the selected library entry. Explicit controller confirmation is still required.
 - Multi-write profiles remain disabled for automatic application in this build.
 
 ### Stage 3 — one-launch guarded memory profile
