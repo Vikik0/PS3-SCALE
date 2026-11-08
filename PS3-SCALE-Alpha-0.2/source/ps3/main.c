@@ -9,6 +9,7 @@
 
 #include "ps3scale/game.h"
 #include "ps3scale/scanner.h"
+#include "ps3scale/ps2_config.h"
 #include "font8x12.h"
 
 enum {
@@ -19,6 +20,7 @@ enum {
 static ps3scale_game_list_t g_games;
 static int g_selected = 0; /* Index inside the currently filtered library. */
 static int g_library = LIBRARY_PS3;
+static int g_config_preview = 0;
 static int g_exit_requested = 0;
 static u32 *g_font_texture = NULL;
 
@@ -94,6 +96,28 @@ static void clamp_selection(void)
         g_selected = (int)count - 1;
 }
 
+
+static void format_hex(char *out, size_t capacity,
+                       const uint8_t *data, size_t size)
+{
+    size_t i;
+    size_t used = 0;
+
+    if (!out || capacity == 0) return;
+    out[0] = '\\0';
+
+    for (i = 0; i < size && used < capacity; i++) {
+        int n = snprintf(out + used, capacity - used,
+                         i + 1 == size ? "%02X" : "%02X ",
+                         (unsigned)data[i]);
+        if (n < 0 || (size_t)n >= capacity - used) {
+            out[capacity - 1] = '\\0';
+            return;
+        }
+        used += (size_t)n;
+    }
+}
+
 static void draw_ui(void)
 {
     char line[256];
@@ -103,6 +127,8 @@ static void draw_ui(void)
     size_t ps3_count;
     size_t ps2_count;
     const ps3scale_game_t *selected;
+    uint8_t config_data[32];
+    size_t config_size = 0;
 
     count = library_count(g_library);
     ps3_count = library_count(LIBRARY_PS3);
@@ -145,46 +171,81 @@ static void draw_ui(void)
                   line);
     }
 
-    /* Selected title details */
-    draw_text(540, 154, 0xffffffff, "SELECTED TITLE");
+    /* Selected title details or PS2 CONFIG preview */
     selected = count ? library_game_at((size_t)g_selected) : NULL;
 
-    if (selected) {
-        snprintf(line, sizeof(line), "TITLE: %.78s", selected->title);
-        draw_text(540, 188, 0xdce3e8ff, line);
+    if (g_config_preview && g_library == LIBRARY_PS2) {
+        draw_text(540, 154, 0xffffffff, "PS2 CONFIG PREVIEW");
 
-        if (g_library == LIBRARY_PS3) {
-            snprintf(line, sizeof(line), "TITLE ID: %.12s",
-                     selected->title_id[0] ? selected->title_id : "NOT READ");
-            draw_text(540, 218, 0xdce3e8ff, line);
-            snprintf(line, sizeof(line), "CATEGORY: %.6s",
-                     selected->category[0] ? selected->category : "ISO");
-            draw_text(540, 248, 0xdce3e8ff, line);
+        if (!selected) {
+            draw_text(540, 188, 0x9aa6adff, "Select a PS2 ISO first.");
+        } else if (selected->kind != PS3SCALE_GAME_PS2_ISO) {
+            draw_text(540, 188, 0x9aa6adff,
+                      "Preview is currently for PS2 ISO files only.");
+            draw_text(540, 218, 0x9aa6adff,
+                      "Installed PS2 Classics path is not enabled yet.");
+        } else if (ps3scale_ps2_config_build(
+                       config_data, sizeof(config_data),
+                       PS3SCALE_PS2_CFG_DISABLE_SMOOTHING |
+                       PS3SCALE_PS2_CFG_ENABLE_L2H,
+                       &config_size) == 0) {
+            draw_text(540, 188, 0xcaff39ff, "PREVIEW ONLY - NOT INSTALLED");
+            draw_text(540, 218, 0xdce3e8ff,
+                      "0x44: DISABLE SMOOTHING (LESS BLUR / MORE ALIASING)");
+            draw_text(540, 248, 0xdce3e8ff,
+                      "0x46: L2H PERFORMANCE OPTION (TITLE-DEPENDENT)");
+            snprintf(line, sizeof(line), "CONFIG SIZE: %u BYTES",
+                     (unsigned)config_size);
+            draw_text(540, 284, 0xdce3e8ff, line);
+            format_hex(line, sizeof(line), config_data, config_size);
+            draw_text(540, 314, 0xcaff39ff, line);
+            draw_text(540, 350, 0x9aa6adff,
+                      "SIDE-CAR: place beside ISO as <name>.iso.CONFIG");
+            snprintf(line, sizeof(line), "ISO: %.72s", selected->path);
+            draw_text(540, 382, 0x6f7b83ff, line);
         } else {
-            snprintf(line, sizeof(line), "PS2 SERIAL: %.12s",
-                     selected->disc_id[0] ? selected->disc_id :
-                     (selected->title_id[0] ? selected->title_id : "NOT READ"));
-            draw_text(540, 218, 0xdce3e8ff, line);
-            snprintf(line, sizeof(line), "SOURCE: %.24s",
-                     ps3scale_game_kind_name(selected->kind));
-            draw_text(540, 248, 0xdce3e8ff, line);
+            draw_text(540, 188, 0xff7777ff, "Could not build CONFIG preview.");
         }
-
-        snprintf(line, sizeof(line), "PATCH STATUS: NONE / READ-ONLY");
-        draw_text(540, 294, 0xcaff39ff, line);
-        draw_text(540, 324, 0x9aa6adff, "Original game files have not been changed.");
-        snprintf(line, sizeof(line), "PATH: %.70s", selected->path);
-        draw_text(540, 366, 0x6f7b83ff, line);
     } else {
-        draw_text(540, 188, 0x9aa6adff,
-                  g_library == LIBRARY_PS3 ?
-                  "No PS3 games found yet." : "No PS2 games found yet.");
-        if (g_library == LIBRARY_PS3)
-            draw_text(540, 218, 0x9aa6adff,
-                      "Check GAMES, GAMEZ, game and PS3ISO.");
-        else
-            draw_text(540, 218, 0x9aa6adff,
-                      "Check PS2ISO and installed PS2 Classics.");
+        draw_text(540, 154, 0xffffffff, "SELECTED TITLE");
+
+        if (selected) {
+            snprintf(line, sizeof(line), "TITLE: %.78s", selected->title);
+            draw_text(540, 188, 0xdce3e8ff, line);
+
+            if (g_library == LIBRARY_PS3) {
+                snprintf(line, sizeof(line), "TITLE ID: %.12s",
+                         selected->title_id[0] ? selected->title_id : "NOT READ");
+                draw_text(540, 218, 0xdce3e8ff, line);
+                snprintf(line, sizeof(line), "CATEGORY: %.6s",
+                         selected->category[0] ? selected->category : "ISO");
+                draw_text(540, 248, 0xdce3e8ff, line);
+            } else {
+                snprintf(line, sizeof(line), "PS2 SERIAL: %.12s",
+                         selected->disc_id[0] ? selected->disc_id :
+                         (selected->title_id[0] ? selected->title_id : "NOT READ"));
+                draw_text(540, 218, 0xdce3e8ff, line);
+                snprintf(line, sizeof(line), "SOURCE: %.24s",
+                         ps3scale_game_kind_name(selected->kind));
+                draw_text(540, 248, 0xdce3e8ff, line);
+            }
+
+            draw_text(540, 294, 0xcaff39ff, "PATCH STATUS: NONE / READ-ONLY");
+            draw_text(540, 324, 0x9aa6adff,
+                      "Original game files have not been changed.");
+            snprintf(line, sizeof(line), "PATH: %.70s", selected->path);
+            draw_text(540, 366, 0x6f7b83ff, line);
+        } else {
+            draw_text(540, 188, 0x9aa6adff,
+                      g_library == LIBRARY_PS3 ?
+                      "No PS3 games found yet." : "No PS2 games found yet.");
+            if (g_library == LIBRARY_PS3)
+                draw_text(540, 218, 0x9aa6adff,
+                          "Check GAMES, GAMEZ, game and PS3ISO.");
+            else
+                draw_text(540, 218, 0x9aa6adff,
+                          "Check PS2ISO and installed PS2 Classics.");
+        }
     }
 
     if (g_games.truncated)
@@ -192,9 +253,9 @@ static void draw_ui(void)
 
     /* Status and controls */
     draw_text(28, 448, 0x9aa6adff,
-              "L1/R1: SWITCH LIBRARY   UP/DOWN: SELECT   SQUARE: RESCAN   CIRCLE: EXIT");
+              "L1/R1: LIBRARY   UP/DOWN: SELECT   SQUARE: RESCAN   CIRCLE: EXIT");
     draw_text(28, 478, 0x6f7b83ff,
-              "GAME PATCHING IS DISABLED UNTIL A VERIFIED PER-TITLE BACKEND EXISTS.");
+              "TRIANGLE: PS2 ISO CONFIG PREVIEW (NO FILES WRITTEN).");
     tiny3d_Flip();
 }
 
@@ -210,7 +271,7 @@ int main(int argc, char *argv[])
     padInfo pad_info;
     padData pad_data;
     u16 old_up = 0, old_down = 0, old_square = 0;
-    u16 old_cross = 0, old_circle = 0, old_l1 = 0, old_r1 = 0;
+    u16 old_cross = 0, old_circle = 0, old_l1 = 0, old_r1 = 0;\n    u16 old_triangle = 0;
     int pad_ready = 0;
 
     (void)argc;
@@ -236,7 +297,7 @@ int main(int argc, char *argv[])
 
     while (!g_exit_requested) {
         u16 up = 0, down = 0, square = 0, cross = 0, circle = 0;
-        u16 l1 = 0, r1 = 0;
+        u16 l1 = 0, r1 = 0, triangle = 0;
 
         sysUtilCheckCallback();
 
@@ -251,7 +312,7 @@ int main(int argc, char *argv[])
                     cross = pad_data.BTN_CROSS;
                     circle = pad_data.BTN_CIRCLE;
                     l1 = pad_data.BTN_L1;
-                    r1 = pad_data.BTN_R1;
+                    r1 = pad_data.BTN_R1;\n                    triangle = pad_data.BTN_TRIANGLE;
                     break;
                 }
             }
@@ -287,7 +348,7 @@ int main(int argc, char *argv[])
         old_cross = cross;
         old_circle = circle;
         old_l1 = l1;
-        old_r1 = r1;
+        old_r1 = r1;\n        old_triangle = triangle;
 
         draw_ui();
     }
