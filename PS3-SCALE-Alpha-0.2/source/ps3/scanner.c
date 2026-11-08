@@ -82,6 +82,30 @@ static int read_sfo(const char *path, ps3scale_sfo_info_t *info)
     return result;
 }
 
+
+static void find_local_cover(ps3scale_game_t *game, const char *game_path,
+                             int folder_game)
+{
+    char candidate[PS3SCALE_PATH_MAX];
+    struct stat st;
+    const char *names[3];
+    int i;
+
+    if (!game || !game_path) return;
+    names[0] = folder_game ? "PS3_GAME/ICON0.PNG" : "ICON0.PNG";
+    names[1] = folder_game ? "ICON0.PNG" : "PS3_GAME/ICON0.PNG";
+    names[2] = NULL;
+
+    for (i = 0; names[i]; i++) {
+        if (path_join(candidate, sizeof(candidate), game_path, names[i]) != 0)
+            continue;
+        if (stat(candidate, &st) == 0 && S_ISREG(st.st_mode)) {
+            strncpy(game->cover_path, candidate, sizeof(game->cover_path) - 1);
+            return;
+        }
+    }
+}
+
 static int category_is_ps3_disc(const char *cat)
 {
     return cat && strcmp(cat, "DG") == 0;
@@ -121,6 +145,7 @@ static int add_sfo_game(const char *sfo_path, const char *game_path,
     strncpy(game.title_id, info.title_id, sizeof(game.title_id) - 1);
     strncpy(game.category, info.category, sizeof(game.category) - 1);
     strncpy(game.path, game_path, sizeof(game.path) - 1);
+    find_local_cover(&game, game_path, kind == PS3SCALE_GAME_PS3_FOLDER);
     return ps3scale_game_list_add(list, &game) > 0 ? 1 : 0;
 }
 
@@ -194,6 +219,7 @@ static int scan_installed_titles(const char *base,
         strncpy(game.title_id, info.title_id, sizeof(game.title_id) - 1);
         strncpy(game.category, info.category, sizeof(game.category) - 1);
         strncpy(game.path, folder, sizeof(game.path) - 1);
+        find_local_cover(&game, folder, 0);
         if (ps3scale_game_list_add(list, &game) > 0) found++;
     }
 
