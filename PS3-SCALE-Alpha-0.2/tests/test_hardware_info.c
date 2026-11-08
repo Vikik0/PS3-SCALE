@@ -61,6 +61,10 @@ int main(void)
     assert(ps3scale_hardware_info_parse(raw, 24, NULL) == -1);
     assert(strcmp(ps3scale_hardware_family_name(
                       PS3SCALE_HARDWARE_SUPER_SLIM), "SUPER SLIM") == 0);
+    assert(strcmp(ps3scale_console_type_name(PS3SCALE_CONSOLE_CEX), "CEX") == 0);
+    assert(strcmp(ps3scale_console_type_name(PS3SCALE_CONSOLE_DEX), "DEX") == 0);
+    assert(strcmp(ps3scale_console_type_name(PS3SCALE_CONSOLE_DEH), "DEH") == 0);
+    assert(strcmp(ps3scale_console_type_name(PS3SCALE_CONSOLE_UNKNOWN), "UNKNOWN") == 0);
 
     puts("PS3 SCALE hardware information tests: PASS");
     return 0;
