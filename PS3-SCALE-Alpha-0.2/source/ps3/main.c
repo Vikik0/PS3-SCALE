@@ -110,6 +110,7 @@ static int g_hardware_info_valid = 0;
 static unsigned char g_extended_glyph_min_x[256];
 static unsigned char g_extended_glyph_ink_width[256];
 static int g_ui_font_width = 14;
+static int g_ui_font_height = 22;
 
 static void clamp_selection(void);
 static void scan_library(void);
@@ -216,6 +217,7 @@ static void build_extended_font_metrics(void)
 static void set_ui_font_size(int width, int height)
 {
     g_ui_font_width = width;
+    g_ui_font_height = height;
     SetFontSize(width, height);
 }
 
@@ -324,8 +326,22 @@ static void draw_text(float x, float y, u32 color, const char *text)
                 if (ink_width <= 0.0f)
                     ink_width = (float)PS3SCALE_FONT_WIDTH;
 
-                /* Align visible ink edges, not the empty bitmap-cell edges. */
-                DrawChar(cursor - ((float)min_x * scale_x), y, 0.0f, glyph);
+                /*
+                 * Arabic glyphs in the 32x32 atlas contain more vertical
+                 * padding than the compact ASCII font. Enlarge only their
+                 * cell height (about 1.35x) and center it on the UI line so
+                 * Arabic remains readable at both normal and compact sizes.
+                 */
+                {
+                    int arabic_height =
+                        (g_ui_font_height * 27 + 10) / 20;
+                    float y_offset =
+                        (float)(arabic_height - g_ui_font_height) * 0.5f;
+                    SetFontSize(g_ui_font_width, arabic_height);
+                    DrawChar(cursor - ((float)min_x * scale_x),
+                             y - y_offset, 0.0f, glyph);
+                    SetFontSize(g_ui_font_width, g_ui_font_height);
+                }
                 cursor += ink_width * scale_x;
 
                 if (ps3scale_locale_is_arabic_glyph(next_glyph)) {
