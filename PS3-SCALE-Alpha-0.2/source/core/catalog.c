@@ -207,6 +207,7 @@ int ps3scale_catalog_load(const char *path, ps3scale_catalog_t *catalog)
 
         if (length && line[length - 1] != '\n' && !feof(file)) {
             fclose(file);
+            free(parsed);
             return -1; /* Reject overlong or truncated records. */
         }
         while (length && (line[length - 1] == '\n' ||
