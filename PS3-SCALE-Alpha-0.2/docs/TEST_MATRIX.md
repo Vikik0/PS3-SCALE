@@ -8,7 +8,7 @@ Primary device:
 - Available HDD space reported: about 10 GB
 
 Initial safety checks:
-1. Install only the manager PKG; do not install any game patch in Alpha 0.1.
+1. Install only the manager PKG; do not install any game patch in Alpha 0.2.
 2. Launch the app and confirm it returns to XMB with Circle.
 3. Run scan twice and confirm the library count is stable (no duplicates).
 4. Confirm folders, ISO files, and PARAM.SFO files remain unchanged.
