@@ -1096,13 +1096,6 @@ static void scan_library(void)
     clamp_selection();
 }
 
-static void scan_library(void)
-{
-    (void)ps3scale_scan_all(&g_games);
-    g_selected = 0;
-    clamp_selection();
-}
-
 int main(int argc, char *argv[])
 {
     padInfo pad_info;
