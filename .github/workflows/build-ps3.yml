@@ -28,7 +28,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential
 
-      - name: Run SFO, scanner, and ISO tests
+      - name: Run SFO, scanner, ISO, and PS2 CONFIG tests
         working-directory: PS3-SCALE-Alpha-0.2
         run: |
           chmod +x scripts/test_host.sh
