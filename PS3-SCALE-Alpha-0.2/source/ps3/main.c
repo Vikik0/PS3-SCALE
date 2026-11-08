@@ -330,8 +330,8 @@ static void draw_text(float x, float y, u32 color, const char *text)
 
                 if (ps3scale_locale_is_arabic_glyph(next_glyph)) {
                     if (ps3scale_locale_glyphs_joined(glyph, next_glyph)) {
-                        /* Two source pixels of overlap close the joining seam. */
-                        cursor -= scale_x * 2.0f;
+                        /* Four source pixels close the joining seam without merging separate glyphs. */
+                        cursor -= scale_x * 4.0f;
                     } else {
                         /* Non-joining Arabic letters retain a small natural gap. */
                         cursor += scale_x * 2.0f;
