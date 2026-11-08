@@ -7,14 +7,14 @@
 <details>
 <summary>Build status</summary>
 
-- GitHub Actions Run: #61 — **Success**
-- Commit: `94deb82f4097dfe5b2a6fd7d1345736dc8462642`
+- GitHub Actions Run: #70 — **Success**
+- Commit: `8450929cbd30f597fb022c780eb76dcecba7690d`
 - Host-side tests: PASS
 - PS3 ELF: built
 - PS3 SELF: built
 - Debug PKG: built
 - Finalized NPDRM PKG: built and structurally validated
-- Physical console installation: **not tested yet**
+- Previous Alpha build launched successfully on the user's CECH-2504A / CFW 4.93 console; Scan Games and Game Details were photographed. The new icon build still needs a quick visual check.
 
 </details>
 
@@ -33,7 +33,7 @@
 - استخراج PS3 Title ID كتلميح من أسماء ISO الشائعة.
 - قراءة قرص Blu-ray المركّب مباشرة من `/dev_bdvd/PS3_GAME/PARAM.SFO`.
 - مسح `/dev_hdd0` و`/dev_bdvd` و`/dev_usb000` إلى `/dev_usb007`.
-- واجهة تعرض مكتبتين منفصلتين لـ PS3 وPS2 مع عدّاد لكل منهما، والتبديل بينهما من L1/R1.
+- القائمة الرئيسية تحتوي أيقونات رسومية Vector مرسومة بـ Tiny3D: عدسة بحث لـ Scan Games، ترس لـ Settings، ورمز معلومات لـ About.\n- واجهة تعرض مكتبتين منفصلتين لـ PS3 وPS2 مع عدّاد لكل منهما، والتبديل بينهما من L1/R1.
 - معاينة PS2 CONFIG للـ PS2 ISO باستخدام Triangle؛ لا تحفظ ولا تثبت أي ملف.
 - الفحص Read-Only؛ لا يكتب أو يحذف أو يعيد تسمية ملفات الألعاب.
 
@@ -49,13 +49,13 @@
 ## ملفات البناء
 
 GitHub Actions artifact:
-- [PS3-SCALE-Alpha-0.2-build — Run #61](https://github.com/Vikik0/PS3-SCALE/actions/runs/42482158416/artifacts/13617318299)
-- Artifact ID: `13617497295`
+- [PS3-SCALE-Alpha-0.2-build — Run #70](https://github.com/Vikik0/PS3-SCALE/actions/runs/42484129338/artifacts/13618701383)
+- Artifact ID: `13618701383`
 - يحتوي على `ps3scale.elf`, `ps3scale.self`, `ps3scale.pkg`, `ps3scale.gnpdrm.pkg`.
 
 SHA-256 للحزمة النهائية:
 ```
-4449df80aa8763fdc330db2668b70b2ef3e54f861583a10e45a8f1cff38272f6
+1e59e37b4200275d511f45bd0fc32e31a30e3ec9ac3839ec355a7938e16a0e1d
 ```
 
 Content ID:
