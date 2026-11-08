@@ -1392,7 +1392,7 @@ int main(int argc, char *argv[])
                             else
                                 set_settings_message("UPDATE PKG FOUND. INSTALL VIA PACKAGE MANAGER.");
                         } else {
-                            set_settings_message("NO VALID PS3 SCALE UPDATE PKG FOUND ON USB.");
+                            set_settings_message("NO PS3 SCALE UPDATE PACKAGE FOUND ON USB.");
                         }
                     } else if (g_settings_selected == 4) {
                         scan_library();
@@ -1414,8 +1414,13 @@ int main(int argc, char *argv[])
                             else
                                 set_settings_message("MUSIC COPIED TO HDD. RESTART APP TO START AUDIO.");
                         }
-                        else if (copy_result == 1)
-                            set_settings_message("MUSIC IS ALREADY ON INTERNAL HDD.");
+                        else if (copy_result == 1) {
+                            shutdown_audio_backend();
+                            if (initialize_audio_backend() == 0)
+                                set_settings_message("MUSIC ALREADY ON HDD; PLAYBACK SWITCHED TO INTERNAL.");
+                            else
+                                set_settings_message("MUSIC ALREADY ON HDD. RESTART APP IF AUDIO IS STOPPED.");
+                        }
                         else
                             set_settings_message("COPY FAILED. CHECK USB MUSIC FILE AND HDD SPACE.");
                     }
