@@ -29,8 +29,25 @@ static int valid_title_id(const char *value)
     if (!value || strlen(value) != 9)
         return 0;
     for (i = 0; i < 9; i++) {
-        if (!isalnum((unsigned char)value[i]) ||
-            value[i] != (char)toupper((unsigned char)value[i]))
+        if (!((value[i] >= 'A' && value[i] <= 'Z') ||
+              (value[i] >= '0' && value[i] <= '9')))
+            return 0;
+    }
+    return 1;
+}
+
+static int valid_source_url(const char *value)
+{
+    size_t i, length;
+
+    if (!value || strncmp(value, "https://", 8) != 0)
+        return 0;
+    length = strlen(value);
+    if (length <= 8)
+        return 0;
+    for (i = 0; i < length; i++) {
+        unsigned char ch = (unsigned char)value[i];
+        if (ch <= 0x20u || ch >= 0x7fu)
             return 0;
     }
     return 1;
@@ -175,7 +192,7 @@ static int parse_profile_line(char *line, ps3scale_profile_t *profile)
     if (!valid_title_id(profile->title_id) ||
         !valid_app_version(profile->app_ver) ||
         strcmp(profile->trust, "B_COMMUNITY") != 0 ||
-        strncmp(profile->source_url, "https://", 8) != 0 ||
+        !valid_source_url(profile->source_url) ||
         valid_patch_list(profile->patches, &profile->patch_count) != 0)
         return -1;
 
