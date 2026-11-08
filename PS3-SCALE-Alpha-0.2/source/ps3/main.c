@@ -74,6 +74,10 @@ static int g_settings_selected = 0;
 static int g_animation_enabled = 1;
 static unsigned long g_frame_counter = 0;
 static char g_settings_message[128] = "SETTINGS ARE STORED ON THE PS3 HDD.";
+static int g_apollo_installed = 0;
+static int g_artemis_installed = 0;
+static int g_webman_installed = 0;
+static char g_tools_message[96] = "CROSS: REFRESH TOOL STATUS.";
 #define SETTINGS_COUNT 7
 #define PS3SCALE_SETTINGS_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/settings.cfg"
 static char g_music_path[PS3SCALE_PATH_MAX] = "";
@@ -182,8 +186,9 @@ static int open_search_keyboard(void)
     g_osk_input.message = g_osk_title;
     g_osk_input.startText = g_osk_start;
     g_osk_input.maxLength = max_length;
-    g_osk_params.allowedPanels = OSK_PANEL_TYPE_ALPHABET |
-        OSK_PANEL_TYPE_NUMERAL | OSK_PANEL_TYPE_ENGLISH | OSK_PANEL_TYPE_URL;
+    g_osk_params.allowedPanels = OSK_PANEL_TYPE_ALPHABET_FULL_WIDTH |
+        OSK_PANEL_TYPE_ALPHABET | OSK_PANEL_TYPE_NUMERAL |
+        OSK_PANEL_TYPE_ENGLISH | OSK_PANEL_TYPE_URL;
     g_osk_params.firstViewPanel = OSK_PANEL_TYPE_ALPHABET_FULL_WIDTH;
     g_osk_params.controlPoint.x = 0.0f;
     g_osk_params.controlPoint.y = 0.0f;
@@ -834,6 +839,49 @@ static int copy_music_to_internal(void)
     return 0;
 }
 
+
+static int file_exists_readonly(const char *path)
+{
+    FILE *fp;
+    if (!path || !path[0]) return 0;
+    fp = fopen(path, "rb");
+    if (!fp) return 0;
+    fclose(fp);
+    return 1;
+}
+
+static int file_contains_text_readonly(const char *path, const char *needle)
+{
+    FILE *fp;
+    char line[256];
+    int found = 0;
+    if (!path || !needle || !needle[0]) return 0;
+    fp = fopen(path, "r");
+    if (!fp) return 0;
+    while (fgets(line, sizeof(line), fp)) {
+        if (strstr(line, needle)) {
+            found = 1;
+            break;
+        }
+    }
+    fclose(fp);
+    return found;
+}
+
+static void refresh_companion_tool_status(void)
+{
+    g_apollo_installed = file_exists_readonly(
+        "/dev_hdd0/game/NP0APOLLO/USRDIR/EBOOT.BIN");
+    g_artemis_installed = file_exists_readonly(
+        "/dev_hdd0/game/ARTPS3001/USRDIR/EBOOT.BIN");
+    g_webman_installed =
+        file_exists_readonly("/dev_hdd0/plugins/webftp_server.sprx") ||
+        file_contains_text_readonly("/dev_hdd0/boot_plugins.txt",
+                                    "webftp_server.sprx");
+    snprintf(g_tools_message, sizeof(g_tools_message),
+             "STATUS UPDATED. OPEN INSTALLED TOOLS FROM XMB.");
+}
+
 static void draw_home(void)
 {
     static char *items[] = {
@@ -888,45 +936,65 @@ static void draw_scan(void)
     size_t ps3_count = library_total_count(LIBRARY_PS3);
     size_t ps2_count = library_total_count(LIBRARY_PS2);
     const ps3scale_game_t *selected;
-    SetFontSize(10, 16);
+
+    /* Keep the scanner readable on 720p TVs: two fixed, non-overlapping panels. */
+    SetFontSize(9, 14);
     clamp_selection();
     count = library_count(g_library);
     selected = selected_game();
 
-    draw_text(28, 18, 0xcaff39ff, "PS3 SCALE");
-    draw_text(178, 18, 0x9aa6adff, "SCAN GAMES");
-    draw_text(28, 52, 0xffffffff, "PLATFORM");
-    draw_text(150, 52, g_library == LIBRARY_PS3 ? 0xcaff39ff : 0x9aa6adff, "L1: PS3");
-    draw_text(250, 52, g_library == LIBRARY_PS2 ? 0xcaff39ff : 0x9aa6adff, "R1: PS2");
-    draw_text(360, 52, 0x9aa6adff, "SELECT: SEARCH");
-    snprintf(line, sizeof(line), "SEARCH: %.48s",
+    draw_text(28, 16, 0xcaff39ff, "PS3 SCALE");
+    draw_text(178, 16, 0x9aa6adff, "SCAN GAMES");
+
+    draw_text(28, 48, 0xffffffff, "PLATFORM:");
+    draw_text(140, 48, g_library == LIBRARY_PS3 ? 0xcaff39ff : 0x9aa6adff, "L1  PS3");
+    draw_text(250, 48, g_library == LIBRARY_PS2 ? 0xcaff39ff : 0x9aa6adff, "R1  PS2");
+    draw_text(370, 48, 0x9aa6adff, "SELECT/START: SEARCH");
+
+    draw_solid_rect(24.0f, 72.0f, 798.0f, 25.0f, 0x0d1722ff);
+    snprintf(line, sizeof(line), "SEARCH: %.46s",
              g_search[0] ? g_search : "ALL GAMES");
-    draw_text(28, 82, 0xdce3e8ff, line);
+    draw_text(32, 78, 0xdce3e8ff, line);
     snprintf(line, sizeof(line), "PS3: %u  |  PS2: %u  |  RESULTS: %u",
              (unsigned)ps3_count, (unsigned)ps2_count, (unsigned)count);
-    draw_text(28, 110, 0x9aa6adff, line);
-    draw_text(28, 146, 0xffffffff,
-              g_library == LIBRARY_PS3 ? "PS3 GAME LIST" : "PS2 GAME LIST");
-    draw_text(530, 146, 0xffffffff, "SELECTED GAME");
+    draw_text(28, 108, 0x9aa6adff, line);
 
-    start = (g_selected > 7) ? (size_t)(g_selected - 7) : 0;
-    for (i = 0; i < 8 && start + i < count; i++) {
+    draw_outline_rect(22.0f, 138.0f, 402.0f, 292.0f, 0x26445cff);
+    draw_outline_rect(440.0f, 138.0f, 382.0f, 292.0f, 0x26445cff);
+    draw_text(32, 148, 0xffffffff,
+              g_library == LIBRARY_PS3 ? "PS3 GAME LIST" : "PS2 GAME LIST");
+    draw_text(452, 148, 0xffffffff, "SELECTED GAME");
+
+    start = (g_selected > 8) ? (size_t)(g_selected - 8) : 0;
+    for (i = 0; i < 9 && start + i < count; i++) {
         const ps3scale_game_t *game = library_game_at(start + i);
         int is_selected = ((int)(start + i) == g_selected);
-        float row_y = 174.0f + (float)i * 30.0f;
+        const char *kind;
+        float row_y = 178.0f + (float)i * 27.0f;
         if (!game) continue;
-        if (is_selected) draw_solid_rect(24.0f, row_y - 2.0f, 478.0f, 24.0f, 0x14261dff);
-        snprintf(line, sizeof(line), "%c %-10s %.32s",
-                 is_selected ? '>' : ' ',
-                 ps3scale_game_kind_name(game->kind), game->title);
-        draw_text(30, row_y, is_selected ? 0xcaff39ff : 0xdce3e8ff, line);
+        if (game->kind == PS3SCALE_GAME_PS3_ISO ||
+            game->kind == PS3SCALE_GAME_PS2_ISO)
+            kind = "ISO";
+        else if (game->kind == PS3SCALE_GAME_PS2_CLASSIC)
+            kind = "PS2C";
+        else if (game->kind == PS3SCALE_GAME_PS3_HDD ||
+                 game->kind == PS3SCALE_GAME_PS2_HDD)
+            kind = "HDD";
+        else
+            kind = "DIR";
+        if (is_selected)
+            draw_solid_rect(27.0f, row_y - 2.0f, 390.0f, 22.0f, 0x14261dff);
+        snprintf(line, sizeof(line), "%c %-4s %.27s",
+                 is_selected ? '>' : ' ', kind, game->title);
+        draw_text(32, row_y, is_selected ? 0xcaff39ff : 0xdce3e8ff, line);
     }
 
     if (selected) {
-        snprintf(line, sizeof(line), "TITLE: %.24s", selected->title);
-        draw_text(530, 176, 0xdce3e8ff, line);
-        snprintf(line, sizeof(line), "TYPE: %.20s", ps3scale_game_kind_name(selected->kind));
-        draw_text(530, 204, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "TITLE: %.21s", selected->title);
+        draw_text(452, 178, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "TYPE: %.22s",
+                 ps3scale_game_kind_name(selected->kind));
+        draw_text(452, 202, 0xdce3e8ff, line);
         if (g_library == LIBRARY_PS3) {
             snprintf(line, sizeof(line), "TITLE ID: %.16s",
                      selected->title_id[0] ? selected->title_id : "NOT READ");
@@ -935,36 +1003,45 @@ static void draw_scan(void)
                      selected->disc_id[0] ? selected->disc_id :
                      (selected->title_id[0] ? selected->title_id : "NOT READ"));
         }
-        draw_text(530, 232, 0xdce3e8ff, line);
-        draw_text(530, 260, 0x9aa6adff, "CROSS: OPEN DETAILS");
+        draw_text(452, 226, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "PATH: %.20s", selected->path);
+        draw_text(452, 250, 0x9aa6adff, line);
+        draw_text(452, 274, 0xcaff39ff, "CROSS: OPEN DETAILS");
+
+        /* Cover art is isolated on the far right, below the metadata. */
         if (g_cover_texture)
-            ya2d_drawTextureEx(g_cover_texture, 690.0f, 286.0f, 0.5f, 112.0f, 148.0f);
+            ya2d_drawTextureEx(g_cover_texture, 680.0f, 282.0f,
+                               0.5f, 112.0f, 142.0f);
         else {
-            draw_solid_rect(690.0f, 286.0f, 112.0f, 148.0f, 0x101b27ff);
-            draw_outline_rect(690.0f, 286.0f, 112.0f, 148.0f, 0x344654ff);
-            draw_text(700, 350, 0x6f7b83ff, "NO COVER");
+            draw_solid_rect(680.0f, 282.0f, 112.0f, 142.0f, 0x101b27ff);
+            draw_outline_rect(680.0f, 282.0f, 112.0f, 142.0f, 0x344654ff);
+            draw_text(690, 346, 0x6f7b83ff, "NO COVER");
         }
     } else {
-        draw_text(530, 180, 0x9aa6adff, "NO MATCHING GAMES FOUND.");
-        draw_text(530, 208, 0x9aa6adff, "PRESS SELECT TO SEARCH.");
+        draw_text(452, 184, 0x9aa6adff, "NO MATCHING GAMES FOUND.");
+        draw_text(452, 210, 0x9aa6adff, "PRESS SELECT OR START TO SEARCH.");
     }
 
-    if (g_config_preview && selected && selected->kind == PS3SCALE_GAME_PS2_ISO) {
-        uint8_t config_data[32]; size_t config_size = 0;
+    if (g_config_preview && selected &&
+        selected->kind == PS3SCALE_GAME_PS2_ISO) {
+        uint8_t config_data[32];
+        size_t config_size = 0;
         if (ps3scale_ps2_config_build(config_data, sizeof(config_data),
                 PS3SCALE_PS2_CFG_DISABLE_SMOOTHING |
                 PS3SCALE_PS2_CFG_ENABLE_L2H, &config_size) == 0) {
             snprintf(line, sizeof(line), "PS2 CONFIG PREVIEW: %u BYTES",
                      (unsigned)config_size);
-            draw_text(530, 440, 0xcaff39ff, line);
+            draw_text(452, 438, 0xcaff39ff, line);
         }
     }
     if (g_games.truncated)
-        draw_text(28, 420, 0xffcc66ff, "WARNING: LIBRARY LIMIT REACHED (256 TITLES)");
+        draw_text(28, 438, 0xffcc66ff,
+                  "WARNING: LIBRARY LIMIT REACHED (256 TITLES)");
+
     draw_text(28, 470, 0x9aa6adff,
-              "L1/R1: PLATFORM  SELECT: SEARCH  UP/DOWN: MOVE  CROSS: DETAILS");
+              "UP/DOWN MOVE  |  L1/R1 PLATFORM  |  CROSS DETAILS  |  SELECT/START SEARCH");
     draw_text(28, 492, 0x6f7b83ff,
-              "SQUARE: RESCAN  TRIANGLE: PS2 PREVIEW  CIRCLE: BACK");
+              "SQUARE RESCAN  |  TRIANGLE PS2 PREVIEW  |  CIRCLE BACK");
     SetFontSize(14, 22);
 }
 
@@ -1071,24 +1148,40 @@ static void draw_settings(void)
 
 static void draw_tools(void)
 {
-    SetFontSize(11, 17);
+    char line[128];
+    SetFontSize(10, 15);
     draw_text(34, 24, 0xcaff39ff, "PS3 SCALE");
     draw_text(34, 62, 0xffffffff, "COMPANION TOOLS");
+
     draw_text(34, 112, 0xcaff39ff, "APOLLO SAVE TOOL");
+    snprintf(line, sizeof(line), "STATUS: %s",
+             g_apollo_installed ? "INSTALLED" : "NOT DETECTED");
+    draw_text(610, 112, g_apollo_installed ? 0x9ee56aff : 0xffcc66ff, line);
     draw_text(34, 140, 0xdce3e8ff,
-              "Save data management, backups, resigning, trophies and licenses.");
+              "SAVE BACKUP / RESTORE / RESIGN / TROPHY AND LICENSE TOOLS.");
+
     draw_text(34, 190, 0xcaff39ff, "ARTEMIS PS3");
+    snprintf(line, sizeof(line), "STATUS: %s",
+             g_artemis_installed ? "INSTALLED" : "NOT DETECTED");
+    draw_text(610, 190, g_artemis_installed ? 0x9ee56aff : 0xffcc66ff, line);
     draw_text(34, 218, 0xdce3e8ff,
-              "Cheat database and in-game code attachment through its own plugin.");
+              "TITLE-SPECIFIC CHEAT DATABASE AND ITS OWN RUNTIME PLUGIN.");
+
     draw_text(34, 268, 0xcaff39ff, "webMAN MOD");
+    snprintf(line, sizeof(line), "STATUS: %s",
+             g_webman_installed ? "PLUGIN FOUND" : "NOT DETECTED");
+    draw_text(610, 268, g_webman_installed ? 0x9ee56aff : 0xffcc66ff, line);
     draw_text(34, 296, 0xdce3e8ff,
-              "Game mounting, FTP/web tools, fan control and temperature monitoring.");
-    draw_text(34, 354, 0xffffffff, "INTEGRATION POLICY");
-    draw_text(34, 384, 0x9aa6adff,
-              "These are separate homebrew apps; PS3 SCALE does not replace them.");
-    draw_text(34, 414, 0x9aa6adff,
-              "This build does not load their plugins or alter their data.");
-    draw_text(34, 478, 0x9aa6adff, "CIRCLE: BACK");
+              "GAME MOUNTING / FTP / TEMPERATURE / OPTIONAL PS3MAPI.");
+
+    draw_text(34, 354, 0xffffffff, "SAFE INTEGRATION");
+    draw_text(34, 382, 0x9aa6adff,
+              "PS3 SCALE DOES NOT REPLACE OR MODIFY THESE APPLICATIONS.");
+    draw_text(34, 410, 0x9aa6adff,
+              "OPEN INSTALLED TOOLS FROM THE XMB GAME MENU.");
+    draw_text(34, 446, 0x9aa6adff, g_tools_message);
+    draw_text(34, 478, 0x9aa6adff,
+              "CROSS: REFRESH TOOL STATUS  |  CIRCLE: BACK");
     SetFontSize(14, 22);
 }
 
@@ -1161,7 +1254,8 @@ int main(int argc, char *argv[])
     padData pad_data;
     u16 old_up = 0, old_down = 0, old_square = 0;
     u16 old_cross = 0, old_circle = 0, old_l1 = 0, old_r1 = 0;
-    u16 old_triangle = 0, old_select = 0, old_left = 0, old_right = 0;
+    u16 old_triangle = 0, old_select = 0, old_start = 0;
+    u16 old_left = 0, old_right = 0;
     int pad_ready = 0;
 
     (void)argc;
@@ -1183,6 +1277,7 @@ int main(int argc, char *argv[])
     SetFontSize(14, 22);
 
     sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT0, app_sysutil_callback, NULL);
+    refresh_companion_tool_status();
 
     /* Start the supplied GTA V remix automatically when the app opens. */
     (void)initialize_audio_backend();
@@ -1192,7 +1287,7 @@ int main(int argc, char *argv[])
     while (!g_exit_requested) {
         u16 up = 0, down = 0, square = 0, cross = 0, circle = 0;
         u16 l1 = 0, r1 = 0, triangle = 0, select = 0;
-        u16 left = 0, right = 0;
+        u16 left = 0, right = 0, start = 0;
 
         sysUtilCheckCallback();
         g_frame_counter++;
@@ -1211,6 +1306,7 @@ int main(int argc, char *argv[])
                     r1 = pad_data.BTN_R1;
                     triangle = pad_data.BTN_TRIANGLE;
                     select = pad_data.BTN_SELECT;
+                    start = pad_data.BTN_START;
                     left = pad_data.BTN_LEFT;
                     right = pad_data.BTN_RIGHT;
                     break;
@@ -1232,6 +1328,7 @@ int main(int argc, char *argv[])
                         g_screen = SCREEN_SETTINGS;
                     } else if (g_home_selected == 2) {
                         g_screen = SCREEN_TOOLS;
+                        refresh_companion_tool_status();
                     } else {
                         g_screen = SCREEN_ABOUT;
                     }
@@ -1255,7 +1352,7 @@ int main(int argc, char *argv[])
                 }
                 if (down && !old_down && library_count(g_library))
                     g_selected = (g_selected + 1) % (int)library_count(g_library);
-                if (select && !old_select)
+                if ((select && !old_select) || (start && !old_start))
                     (void)open_search_keyboard();
                 if (square && !old_square)
                     scan_library();
@@ -1310,8 +1407,13 @@ int main(int argc, char *argv[])
                         (void)save_app_settings();
                     } else if (g_settings_selected == 6) {
                         int copy_result = copy_music_to_internal();
-                        if (copy_result == 0)
-                            set_settings_message("MUSIC COPIED TO HDD. RESTART APP; USB CAN BE REMOVED.");
+                        if (copy_result == 0) {
+                            shutdown_audio_backend();
+                            if (initialize_audio_backend() == 0)
+                                set_settings_message("MUSIC COPIED; PLAYBACK NOW USES INTERNAL HDD.");
+                            else
+                                set_settings_message("MUSIC COPIED TO HDD. RESTART APP TO START AUDIO.");
+                        }
                         else if (copy_result == 1)
                             set_settings_message("MUSIC IS ALREADY ON INTERNAL HDD.");
                         else
@@ -1332,6 +1434,11 @@ int main(int argc, char *argv[])
 
                 if (circle && !old_circle)
                     g_screen = SCREEN_HOME;
+            } else if (g_screen == SCREEN_TOOLS) {
+                if (cross && !old_cross)
+                    refresh_companion_tool_status();
+                if (circle && !old_circle)
+                    g_screen = SCREEN_HOME;
             } else {
                 if (circle && !old_circle)
                     g_screen = SCREEN_HOME;
@@ -1347,6 +1454,7 @@ int main(int argc, char *argv[])
         old_r1 = r1;
         old_triangle = triangle;
         old_select = select;
+        old_start = start;
         old_left = left;
         old_right = right;
 
