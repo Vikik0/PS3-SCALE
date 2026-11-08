@@ -26,7 +26,7 @@ The app checks these locations in order:
 
 1. `/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`
 2. `/dev_hdd0/game/PS3SCALE1/USRDIR/GTA V - Greyhound Pause Menu Theme Remix.mp3`
-3. `/dev_usb000/PS3SCALE/theme.mp3`
+3. `/dev_usb000/PS3SCALE/theme.mp3` through `/dev_usb007/PS3SCALE/theme.mp3`
 
 **One-time asset placement is still required:** the MP3 is not yet embedded in the PKG. Copy the supplied file to the first path and name it `theme.mp3` (or place it at one of the fallback paths). After that, startup playback is automatic and works offline. If the file is missing, the app continues to run without music and reports the missing track in Settings.
 
