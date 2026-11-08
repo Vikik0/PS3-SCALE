@@ -50,7 +50,9 @@ The GNPDRM package is the intended install package for the user's CFW console. T
 - UTF-8 search input and code-point-aware backspace.
 - Staged startup/loading screen with local app-file check, companion-tool detection and worker-thread game-library scan.
 - Slow low-poly 3D wireframe home emblem with two orbit rings; can be disabled in Settings.
-- Settings persist language, music ON/OFF, volume and animation ON/OFF.
+- Settings persist language, music ON/OFF, volume and animation ON/OFF. Music OFF skips audio initialization at startup and shuts down the decoder, audio port and thread immediately; Music ON restarts them.
+- Reset Settings restores English, Music ON, default volume and Home Animation ON.
+- Online catalogue refresh is deferred until the user opens Online Graphics Database; normal startup and game launching remain offline.
 - The supplied MP3 is assembled into USRDIR/theme.mp3 inside the PKG; no USB copy-to-HDD action is needed.
 - PS3/PS2 library scanning, PARAM.SFO metadata, cover layout, companion-tool discovery and webMAN Start Game support.
 - Online catalogue with 40 starter PS3 profiles, HTTPS verification, 64 KiB response cap, strict parsing and safe cache replacement.
