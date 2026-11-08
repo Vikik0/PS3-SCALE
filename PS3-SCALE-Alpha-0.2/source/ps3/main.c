@@ -9,7 +9,7 @@
 #include <sysutil/sysutil.h>
 #include <sysutil/osk.h>
 #include <sys/memory.h>
-#include <ya2d.h>
+#include <ya2d/ya2d.h>
 
 #include "ps3scale/game.h"
 #include "ps3scale/scanner.h"
