@@ -29,14 +29,6 @@ LDFLAGS = $(MACHDEP) -Wl,-Map,$(notdir $@).map
 
 .PHONY: all pkg clean host-test info
 
-host-test:
-	./scripts/test_host.sh
-
-info:
-	@echo "Target: $(TARGET)"
-	@echo "Package ID: $(APPID)"
-	@echo "Primary hardware test target: CECH-2504A / CEX CFW 4.93 / Cobra 8.5"
-
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 
 export OUTPUT := $(CURDIR)/$(TARGET)
@@ -81,14 +73,10 @@ $(BUILD):
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 # Build the ELF/SELF first in the recursive build directory, then package it.
-# Keeping the package step in the recipe prevents -j builds from racing the
-# recursive object/ELF build against the package dependency chain.
+# The recursive build's default goal is $(OUTPUT).self (defined below).
+# This recipe ensures packaging cannot race object compilation/linking under -j.
 pkg: $(BUILD)
 	@$(MAKE) --no-print-directory $(OUTPUT).pkg
-
-clean:
-	@rm -rf $(BUILD) $(OUTPUT).elf $(OUTPUT).self $(OUTPUT).pkg \
-	        $(OUTPUT).gnpdrm.pkg $(OUTPUT).fake.self
 
 else
 
@@ -110,3 +98,17 @@ $(OUTPUT).elf: $(OFILES)
 -include $(DEPENDS)
 
 endif
+
+# Keep utility targets after the conditional so the recursive build's first
+# explicit target remains $(OUTPUT).self rather than host-test or info.
+host-test:
+	./scripts/test_host.sh
+
+info:
+	@echo "Target: $(TARGET)"
+	@echo "Package ID: $(APPID)"
+	@echo "Primary hardware test target: CECH-2504A / CEX CFW 4.93 / Cobra 8.5"
+
+clean:
+	@rm -rf $(BUILD) $(OUTPUT).elf $(OUTPUT).self $(OUTPUT).pkg \
+	        $(OUTPUT).gnpdrm.pkg $(OUTPUT).fake.self
