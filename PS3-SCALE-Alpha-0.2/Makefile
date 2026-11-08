@@ -110,7 +110,7 @@ host-test:
 info:
 	@echo "Target: $(TARGET)"
 	@echo "Package ID: $(APPID)"
-	@echo "Primary hardware test target: CECH-2504A / CEX CFW 4.93 / Cobra 8.5"
+	@echo "Hardware: auto-detect Platform ID / CEX-DEX-Tool type at runtime; Slim priority, FAT and Super Slim supported"
 
 clean:
 	@rm -rf $(BUILD) $(OUTPUT).elf $(OUTPUT).self $(OUTPUT).pkg \
