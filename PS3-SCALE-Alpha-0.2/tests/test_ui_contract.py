@@ -93,6 +93,9 @@ assert "ps3scale_webman_start_game(&g_game_launch_target)" in src
 assert "game_launch_worker" in src
 assert "service_game_launch();" in main
 assert "sysThreadCreate(&g_game_launch_thread" in src
+assert "profile_arm_worker" in src
+assert "service_profile_arm();" in main
+assert "sysThreadCreate(&g_profile_arm_thread" in src
 assert "find_installed_game(game)" in src
 assert "NO PROFILE FOR THIS TITLE. GAME WILL START UNMODIFIED." in src
 assert "START UNMODIFIED" in src
