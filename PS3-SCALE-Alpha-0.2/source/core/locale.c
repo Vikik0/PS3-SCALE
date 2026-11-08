@@ -206,21 +206,27 @@ static int utf8_next(const unsigned char *s, size_t length,
         return 1;
     }
     if ((c & 0xe0) == 0xc0 && *offset < length) {
+        unsigned char c1 = s[(*offset)++];
         *codepoint = ((uint32_t)(c & 0x1f) << 6) |
-                     (uint32_t)(s[(*offset)++] & 0x3f);
+                     (uint32_t)(c1 & 0x3f);
         return 1;
     }
     if ((c & 0xf0) == 0xe0 && *offset + 1 < length) {
+        unsigned char c1 = s[(*offset)++];
+        unsigned char c2 = s[(*offset)++];
         *codepoint = ((uint32_t)(c & 0x0f) << 12) |
-                     ((uint32_t)(s[(*offset)++] & 0x3f) << 6) |
-                     (uint32_t)(s[(*offset)++] & 0x3f);
+                     ((uint32_t)(c1 & 0x3f) << 6) |
+                     (uint32_t)(c2 & 0x3f);
         return 1;
     }
     if ((c & 0xf8) == 0xf0 && *offset + 2 < length) {
+        unsigned char c1 = s[(*offset)++];
+        unsigned char c2 = s[(*offset)++];
+        unsigned char c3 = s[(*offset)++];
         *codepoint = ((uint32_t)(c & 0x07) << 18) |
-                     ((uint32_t)(s[(*offset)++] & 0x3f) << 12) |
-                     ((uint32_t)(s[(*offset)++] & 0x3f) << 6) |
-                     (uint32_t)(s[(*offset)++] & 0x3f);
+                     ((uint32_t)(c1 & 0x3f) << 12) |
+                     ((uint32_t)(c2 & 0x3f) << 6) |
+                     (uint32_t)(c3 & 0x3f);
         return 1;
     }
     *codepoint = '?';
