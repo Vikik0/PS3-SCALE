@@ -64,7 +64,7 @@ Candidate enhancement routes, in order:
 
 Frame generation is not enabled in Alpha 0.2. A real implementation would need access to consecutive game frames and GPU/memory bandwidth while preserving latency and frame pacing. No generic "30 to 60 FPS" claim will be shown without a measured, title-specific implementation.
 
-## 7. Online catalog safety model
+## 7. Optional webMAN MOD / PS3MAPI integration\n\n- webMAN MOD documents a PS3MAPI HTTP endpoint at `/ps3mapi.ps3?<command>` and a native service on port 7887. Commands include current-process lookup, process/module information, and memory access.\n- This is a possible optional bridge for per-title in-memory patches, not a universal shader or frame-generation engine. Alpha 0.2 does not use MAPI and performs no game memory writes.\n- The first integration milestone must be read-only: confirm webMAN responds, query the current process, and resolve the running title. Only after that should a title-specific memory patch be considered.\n- Keep the service on a trusted LAN; do not expose it to the internet. IDPS/PSID operations, syscall changes, spoofing and clock changes are explicitly out of scope.\n- Some community workflows state that a debug EBOOT may be required for game modifications; this must be validated per method and title on CEX before any write backend is built.\n\n## 8. Online catalog safety model
 
 Every enhancement record must contain:
 - platform, Title ID or PS2 serial, region and exact game update version;
@@ -76,13 +76,13 @@ Every enhancement record must contain:
 Downloads are data only. The app must never execute downloaded code or trust an arbitrary URL returned by a server.
 
 
-## 8. Primary references
+## 9. Primary references
 
 - PSL1GHT SDK: https://github.com/ps3dev/PSL1GHT
 - PS3 toolchain: https://github.com/ps3dev/ps3toolchain
 - Tiny3D toolchain container (used by this project's CI): https://github.com/02900/ps3-toolchain
 - Tiny3D renderer: https://github.com/wargio/tiny3D
-- webMAN MOD source and compatibility notes: https://github.com/aldostools/webMAN-MOD
+- webMAN MOD source, Web Commands and PS3MAPI: https://github.com/aldostools/webMAN-MOD\n- PS3MAPI overview: https://consolemods.org/wiki/PS3%3AMAPI\n- PS2 CONFIG commands and size/path research: https://www.psdevwiki.com/ps3/PS2_Emulation
 - IRISMAN source and feature list: https://github.com/aldostools/IRISMAN
 - PS3 Developer Wiki — PARAM.SFO: https://www.psdevwiki.com/ps3/PARAM.SFO
 - PS3 Developer Wiki — PS2 Emulation: https://www.psdevwiki.com/ps3/PS2_Emulation
