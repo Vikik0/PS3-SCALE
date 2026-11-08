@@ -20,7 +20,7 @@ INCLUDES := include source/ps3
 
 LIBDIRS :=
 
-LIBS := -ltiny3d -lfont -lsimdmath -lgcm_sys -lrsx -lio -lsysutil \
+LIBS := -lfont3d -ltiny3d -lsimdmath -lgcm_sys -lrsx -lio -lsysutil \
         -lrt -llv2 -lsysmodule -lsysfs -lm
 
 CFLAGS = -O2 -Wall -Wextra -std=gnu99 -mcpu=cell $(MACHDEP) $(INCLUDE)
