@@ -1,0 +1,37 @@
+# PS3 SCALE UI flow — requested product behavior
+
+## Main menu
+
+The application opens to three primary destinations:
+1. Scan Games
+2. Settings
+3. About PS3 SCALE
+
+## Scan Games
+
+- Separate PS3 and PS2 library views.
+- Read-only scan of the internal HDD, mounted Blu-ray and USB devices.
+- Search by game title using the PS3 system on-screen keyboard.
+- Display an organized list with platform/source metadata.
+- Selecting a title opens a dedicated details screen.
+- Cover artwork is a planned UI element. The current scanner does not yet extract or render ICON0/PIC1 or remote cover art.
+
+## Game details
+
+The page identifies the selected title using its exact PS3 Title ID or PS2 disc serial where available. It must show:
+- game title, platform and source path;
+- exact identity and update version when known;
+- current enhancement profile and trust level;
+- whether a verified profile exists for this exact game;
+- backup and rollback status;
+- a clear distinction between preview, downloaded, prepared and actually applied states.
+
+No "Applied" status may be displayed merely because a profile was downloaded or staged.
+
+## Settings
+
+The user-supplied GTA V Greyhound pause-menu remix is the requested startup theme. The current Alpha build displays its intended selection, but MP3 playback is not yet wired into the PS3 audio backend.
+
+## Current implementation boundary
+
+The home menu, PS3/PS2 scan pages, title search through the PS3 OSK, game details, Settings and About pages are implemented in the UI source. Cover artwork, remote catalog integration, profile application and actual audio playback remain pending and must be built/tested separately.
