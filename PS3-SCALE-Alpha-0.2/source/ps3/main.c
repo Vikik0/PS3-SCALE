@@ -4,6 +4,9 @@
 #include <ctype.h>
 #include <math.h>
 #include <stdint.h>
+#include <sys/stat.h>
+#include <time.h>
+#include <unistd.h>
 #include <audio/audio.h>
 #include <sys/event_queue.h>
 #include <sys/thread.h>
@@ -23,6 +26,9 @@
 #include "ps3scale/ps2_config.h"
 #include "ps3scale/locale.h"
 #include "ps3scale/hardware_info.h"
+#include "ps3scale/catalog.h"
+#include "ps3scale/online.h"
+#include "ps3scale/profile_apply.h"
 #include "font8x12.h"
 #include "font_bitmap_z.h"
 
@@ -35,6 +41,7 @@ typedef enum app_screen {
     SCREEN_HOME = 0,
     SCREEN_SCAN,
     SCREEN_DETAILS,
+    SCREEN_ONLINE_DB,
     SCREEN_SETTINGS,
     SCREEN_TOOLS,
     SCREEN_ABOUT,
@@ -110,6 +117,25 @@ static unsigned char g_extended_glyph_min_x[256];
 static unsigned char g_extended_glyph_ink_width[256];
 static int g_ui_font_width = 14;
 static int g_ui_font_height = 22;
+
+#define PS3SCALE_CATALOG_CACHE_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/graphics_catalog.tsv"
+#define PS3SCALE_CATALOG_DOWNLOAD_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/graphics_catalog.download"
+#define PS3SCALE_CATALOG_URL "https://raw.githubusercontent.com/Vikik0/PS3-SCALE/main/PS3-SCALE-Alpha-0.2/data/online_profiles.tsv"
+#define PS3SCALE_PROFILE_CACHE_DIR "/dev_hdd0/game/PS3SCALE1/USRDIR/profiles"
+#define PS3SCALE_CATALOG_SYNC_SECONDS (24 * 60 * 60)
+
+static ps3scale_catalog_t g_catalog;
+static ps3scale_catalog_t g_downloaded_catalog;
+static volatile int g_catalog_sync_running = 0;
+static volatile int g_catalog_sync_done = 0;
+static volatile int g_catalog_sync_result = 0;
+static int g_catalog_thread_started = 0;
+static sys_ppu_thread_t g_catalog_thread;
+static int g_catalog_ready = 0;
+static int g_online_selected = 0;
+static int g_profile_confirm_pending = 0;
+static char g_catalog_status[96] = "BUNDLED CATALOG NOT LOADED";
+static char g_online_message[128] = "CROSS: OPEN GAME  SQUARE: CACHE PROFILE  START: SYNC";
 
 static void clamp_selection(void);
 static void scan_library(void);
@@ -941,6 +967,302 @@ static void set_details_message(const char *message)
 {
     if (!message) message = "";
     snprintf(g_details_message, sizeof(g_details_message), "%s", message);
+}
+
+
+#define PS3SCALE_PROFILE_CACHE_FORMAT "PS3SCALE_PROFILE_DATA_V1"
+
+static void load_catalog_cache(void)
+{
+    int count = ps3scale_catalog_load(PS3SCALE_CATALOG_CACHE_PATH, &g_catalog);
+    if (count > 0) {
+        g_catalog_ready = 1;
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "BUNDLED / CACHED DATABASE READY");
+    } else {
+        g_catalog_ready = 0;
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "NO VALID LOCAL DATABASE");
+    }
+}
+
+static int catalog_cache_is_stale(void)
+{
+    struct stat info;
+    time_t now = time(NULL);
+
+    if (stat(PS3SCALE_CATALOG_CACHE_PATH, &info) != 0)
+        return 1;
+    /* An unset console clock must not suppress the first online check. */
+    if (now < (time_t)1600000000)
+        return 1;
+    if (now <= info.st_mtime)
+        return 0;
+    return (now - info.st_mtime) >= PS3SCALE_CATALOG_SYNC_SECONDS;
+}
+
+static void catalog_sync_worker(void *arg)
+{
+    (void)arg;
+    g_catalog_sync_result = 0;
+
+    if (ps3scale_online_download(PS3SCALE_CATALOG_URL,
+                                 PS3SCALE_CATALOG_DOWNLOAD_PATH) == 0 &&
+        ps3scale_catalog_load(PS3SCALE_CATALOG_DOWNLOAD_PATH,
+                              &g_downloaded_catalog) > 0 &&
+        rename(PS3SCALE_CATALOG_DOWNLOAD_PATH,
+               PS3SCALE_CATALOG_CACHE_PATH) == 0) {
+        g_catalog_sync_result = 1;
+    } else {
+        unlink(PS3SCALE_CATALOG_DOWNLOAD_PATH);
+        g_catalog_sync_result = -1;
+    }
+
+    g_catalog_sync_running = 0;
+    g_catalog_sync_done = 1;
+}
+
+static void start_catalog_sync_worker(int force)
+{
+    int rc;
+
+    if (g_catalog_sync_running) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DATABASE SYNC IS ALREADY RUNNING.");
+        return;
+    }
+    if (!force && !catalog_cache_is_stale())
+        return;
+
+    g_catalog_sync_done = 0;
+    g_catalog_sync_result = 0;
+    g_catalog_sync_running = 1;
+    snprintf(g_catalog_status, sizeof(g_catalog_status),
+             "CONNECTING TO GITHUB DATABASE");
+    rc = sysThreadCreate(&g_catalog_thread, catalog_sync_worker, NULL,
+                         1500, 0x10000, THREAD_JOINABLE,
+                         "PS3 SCALE Online Database");
+    if (rc == 0) {
+        g_catalog_thread_started = 1;
+    } else {
+        g_catalog_sync_running = 0;
+        g_catalog_sync_done = 0;
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "ONLINE THREAD COULD NOT START");
+    }
+}
+
+static void service_catalog_sync(void)
+{
+    if (!g_catalog_sync_done)
+        return;
+
+    if (g_catalog_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_catalog_thread, &thread_result);
+        g_catalog_thread_started = 0;
+    }
+
+    if (g_catalog_sync_result == 1) {
+        g_catalog = g_downloaded_catalog;
+        g_catalog_ready = 1;
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "ONLINE DATABASE UPDATED");
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DATABASE UPDATED. EXACT GAME MATCHES ARE READY.");
+    } else if (g_catalog_ready) {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "UPDATE FAILED - USING CACHED DATABASE");
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "UPDATE FAILED. YOUR LAST VALID DATABASE IS STILL AVAILABLE.");
+    } else {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "OFFLINE - NO VALID DATABASE");
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "CONNECT THE PS3 TO THE INTERNET AND PRESS START TO RETRY.");
+    }
+    g_catalog_sync_done = 0;
+}
+
+static const ps3scale_profile_t *profile_for_game(const ps3scale_game_t *game)
+{
+    if (!g_catalog_ready || !game || !game_is_ps3(game))
+        return NULL;
+    return ps3scale_catalog_match_game(&g_catalog, game);
+}
+
+static size_t online_match_count(void)
+{
+    return g_catalog_ready ?
+        ps3scale_catalog_count_matches(&g_catalog, &g_games) : 0;
+}
+
+static const ps3scale_game_t *online_match_at(
+    size_t target, const ps3scale_profile_t **profile_out)
+{
+    size_t i, match_index = 0;
+
+    if (profile_out)
+        *profile_out = NULL;
+    if (!g_catalog_ready)
+        return NULL;
+
+    for (i = 0; i < g_games.count; i++) {
+        const ps3scale_game_t *game = &g_games.items[i];
+        const ps3scale_profile_t *profile;
+        if (!game_is_ps3(game))
+            continue;
+        profile = ps3scale_catalog_match_game(&g_catalog, game);
+        if (!profile)
+            continue;
+        if (match_index == target) {
+            if (profile_out)
+                *profile_out = profile;
+            return game;
+        }
+        match_index++;
+    }
+    return NULL;
+}
+
+static int write_profile_cache(const ps3scale_profile_t *profile)
+{
+    char path[320];
+    FILE *file;
+
+    if (!profile)
+        return -1;
+    (void)mkdir(PS3SCALE_PROFILE_CACHE_DIR, 0777);
+    if (snprintf(path, sizeof(path), "%s/%s_%s.profile",
+                 PS3SCALE_PROFILE_CACHE_DIR,
+                 profile->title_id, profile->app_ver) >= (int)sizeof(path))
+        return -1;
+
+    file = fopen(path, "wb");
+    if (!file)
+        return -1;
+    if (fprintf(file,
+        PS3SCALE_PROFILE_CACHE_FORMAT "\n"
+        "TITLE_ID=%s\nAPP_VER=%s\nTITLE=%s\nEFFECT=%s\n"
+        "TRUST=%s\nPATCH_COUNT=%u\nPATCHES=%s\nNOTES=%s\nSOURCE=%s\n",
+        profile->title_id, profile->app_ver, profile->title,
+        profile->effect, profile->trust, profile->patch_count,
+        profile->patches, profile->notes, profile->source_url) < 0) {
+        fclose(file);
+        unlink(path);
+        return -1;
+    }
+    if (fclose(file) != 0) {
+        unlink(path);
+        return -1;
+    }
+    return 0;
+}
+
+static void cache_selected_online_profile(void)
+{
+    const ps3scale_profile_t *profile = NULL;
+    if (!online_match_at((size_t)g_online_selected, &profile) || !profile) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "NO EXACT TITLE ID / APP VERSION MATCH IS SELECTED.");
+        return;
+    }
+    if (write_profile_cache(profile) == 0) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "PROFILE DATA SAVED TO INTERNAL HDD. NOT APPLIED YET.");
+    } else {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "COULD NOT SAVE PROFILE DATA TO INTERNAL HDD.");
+    }
+}
+
+static void cache_all_online_profiles(void)
+{
+    size_t i, saved = 0;
+    if (!g_catalog_ready) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "NO ONLINE DATABASE IS LOADED.");
+        return;
+    }
+    for (i = 0; i < g_games.count; i++) {
+        const ps3scale_game_t *game = &g_games.items[i];
+        const ps3scale_profile_t *profile;
+        if (!game_is_ps3(game))
+            continue;
+        profile = ps3scale_catalog_match_game(&g_catalog, game);
+        if (profile && write_profile_cache(profile) == 0)
+            saved++;
+    }
+    snprintf(g_online_message, sizeof(g_online_message),
+             "CACHED %u MATCHED PROFILE RECORDS. GAME FILES WERE NOT CHANGED.",
+             (unsigned)saved);
+}
+
+static void open_selected_online_match(void)
+{
+    const ps3scale_game_t *match;
+    const ps3scale_profile_t *profile = NULL;
+    size_t i, count;
+
+    match = online_match_at((size_t)g_online_selected, &profile);
+    if (!match || !profile) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "NO EXACT MATCH IS SELECTED.");
+        return;
+    }
+
+    g_library = LIBRARY_PS3;
+    g_search[0] = '\0';
+    g_selected = 0;
+    count = library_count(LIBRARY_PS3);
+    for (i = 0; i < count; i++) {
+        const ps3scale_game_t *candidate = library_game_at(i);
+        if (candidate &&
+            strcmp(candidate->title_id, match->title_id) == 0 &&
+            strcmp(candidate->app_ver, match->app_ver) == 0) {
+            g_selected = (int)i;
+            break;
+        }
+    }
+    g_profile_confirm_pending = 0;
+    set_details_message("EXACT COMMUNITY PROFILE FOUND. REVIEW BEFORE INSTALL.");
+    g_screen = SCREEN_DETAILS;
+}
+
+static void confirm_profile_install(void)
+{
+    const ps3scale_game_t *game = selected_game();
+    const ps3scale_profile_t *profile = profile_for_game(game);
+    int result;
+
+    if (!profile) {
+        set_details_message("NO EXACT ONLINE PROFILE FOR THIS GAME UPDATE.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+    if (profile->patch_count != 1) {
+        set_details_message("MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+    if (ps3scale_webman_available() != 0 ||
+        ps3scale_webman_ps3mapi_available() != 0) {
+        set_details_message("ENABLE WEBMAN PS3MAPI SERVER BEFORE INSTALLING.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+
+    result = ps3scale_profile_script_install(profile);
+    g_profile_confirm_pending = 0;
+    if (result == 0 || result == 1) {
+        set_details_message("AUTO PROFILE INSTALLED. START THE MOUNTED GAME.");
+    } else if (result == -2) {
+        set_details_message("A USER WEBMAN SCRIPT EXISTS. IT WAS NOT OVERWRITTEN.");
+    } else if (result == -3) {
+        set_details_message("MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY.");
+    } else {
+        set_details_message("PROFILE SCRIPT INSTALL FAILED. NO GAME FILES CHANGED.");
+    }
 }
 
 static int find_mounted_game(const ps3scale_game_t *selected, ps3scale_game_t *mounted)
