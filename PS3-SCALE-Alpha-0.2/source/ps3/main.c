@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
 
 #include <tiny3d.h>
 #include <libfont.h>
@@ -146,6 +147,94 @@ static void draw_text(float x, float y, u32 color, char *text)
     DrawString(x, y, text);
 }
 
+static void draw_solid_rect(float x, float y, float w, float h, u32 color)
+{
+    tiny3d_SetPolygon(TINY3D_QUADS);
+    tiny3d_VertexPos(x, y, 65535.0f);
+    tiny3d_VertexColor(color);
+    tiny3d_VertexPos(x + w, y, 65535.0f);
+    tiny3d_VertexPos(x + w, y + h, 65535.0f);
+    tiny3d_VertexPos(x, y + h, 65535.0f);
+    tiny3d_End();
+}
+
+static void draw_outline_rect(float x, float y, float w, float h, u32 color)
+{
+    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+    tiny3d_VertexPos(x, y, 65535.0f);
+    tiny3d_VertexColor(color);
+    tiny3d_VertexPos(x + w, y, 65535.0f);
+    tiny3d_VertexPos(x + w, y + h, 65535.0f);
+    tiny3d_VertexPos(x, y + h, 65535.0f);
+    tiny3d_End();
+}
+
+static void draw_icon_line(float x1, float y1, float x2, float y2, u32 color)
+{
+    tiny3d_SetPolygon(TINY3D_LINES);
+    tiny3d_VertexPos(x1, y1, 65535.0f);
+    tiny3d_VertexColor(color);
+    tiny3d_VertexPos(x2, y2, 65535.0f);
+    tiny3d_End();
+}
+
+static void draw_circle_outline(float cx, float cy, float radius, u32 color)
+{
+    int i;
+    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+    for (i = 0; i < 24; i++) {
+        float angle = 6.28318530718f * (float)i / 24.0f;
+        tiny3d_VertexPos(cx + cosf(angle) * radius,
+                         cy + sinf(angle) * radius, 65535.0f);
+        if (i == 0)
+            tiny3d_VertexColor(color);
+    }
+    tiny3d_End();
+}
+
+static void draw_gear_outline(float cx, float cy, float radius, u32 color)
+{
+    int i;
+    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+    for (i = 0; i < 24; i++) {
+        float angle = 6.28318530718f * (float)i / 24.0f;
+        float r = (i % 3 == 0) ? radius : radius * 0.78f;
+        tiny3d_VertexPos(cx + cosf(angle) * r,
+                         cy + sinf(angle) * r, 65535.0f);
+        if (i == 0)
+            tiny3d_VertexColor(color);
+    }
+    tiny3d_End();
+}
+
+static void draw_menu_icon(int index, float x, float y, int selected)
+{
+    u32 ink = selected ? 0xcaff39ff : 0x9eb2c0ff;
+    u32 tile = selected ? 0x1b2b1dff : 0x111b25ff;
+    u32 border = selected ? 0x8cbd35ff : 0x344654ff;
+
+    draw_solid_rect(x, y, 38.0f, 38.0f, tile);
+    draw_outline_rect(x, y, 38.0f, 38.0f, border);
+
+    if (index == 0) {
+        /* Scan Games: magnifier with short library lines. */
+        draw_circle_outline(x + 15.0f, y + 14.0f, 8.0f, ink);
+        draw_icon_line(x + 21.0f, y + 21.0f, x + 29.0f, y + 29.0f, ink);
+        draw_icon_line(x + 11.0f, y + 12.0f, x + 17.0f, y + 12.0f, ink);
+        draw_icon_line(x + 11.0f, y + 16.0f, x + 16.0f, y + 16.0f, ink);
+    } else if (index == 1) {
+        /* Settings: compact gear and center hub. */
+        draw_gear_outline(x + 19.0f, y + 19.0f, 13.0f, ink);
+        draw_circle_outline(x + 19.0f, y + 19.0f, 5.0f, ink);
+        draw_solid_rect(x + 17.5f, y + 17.5f, 3.0f, 3.0f, ink);
+    } else {
+        /* About: information mark inside a ring. */
+        draw_circle_outline(x + 19.0f, y + 19.0f, 13.0f, ink);
+        draw_solid_rect(x + 17.5f, y + 16.0f, 3.0f, 10.0f, ink);
+        draw_solid_rect(x + 17.5f, y + 10.0f, 3.0f, 3.0f, ink);
+    }
+}
+
 static int game_is_ps3(const ps3scale_game_t *game)
 {
     if (!game) return 0;
@@ -271,9 +360,9 @@ static void update_selected_cover(void)
 static void draw_home(void)
 {
     static char *items[] = {
-        "[G]  SCAN GAMES",
-        "[S]  SETTINGS",
-        "[i]  ABOUT PS3 SCALE"
+        "SCAN GAMES",
+        "SETTINGS",
+        "ABOUT PS3 SCALE"
     };
     int i;
 
@@ -282,12 +371,15 @@ static void draw_home(void)
     draw_text(34, 122, 0xffffffff, "MAIN MENU");
 
     for (i = 0; i < 3; i++) {
-        char line[96];
-        snprintf(line, sizeof(line), "%c  %s",
-                 (i == g_home_selected) ? '>' : ' ', items[i]);
-        draw_text(62, 184 + (float)i * 58.0f,
-                  (i == g_home_selected) ? 0xcaff39ff : 0xdce3e8ff,
-                  line);
+        float row_y = 170.0f + (float)i * 58.0f;
+        int selected = (i == g_home_selected);
+        if (selected)
+            draw_solid_rect(48.0f, row_y, 430.0f, 44.0f, 0x111e18ff);
+        draw_menu_icon(i, 66.0f, row_y + 3.0f, selected);
+        if (selected)
+            draw_text(44, row_y + 13.0f, 0xcaff39ff, ">");
+        draw_text(124, row_y + 13.0f,
+                  selected ? 0xcaff39ff : 0xdce3e8ff, items[i]);
     }
 
     draw_text(34, 430, 0x9aa6adff, "UP/DOWN: SELECT   CROSS: OPEN   CIRCLE: EXIT");
