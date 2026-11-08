@@ -80,7 +80,7 @@ jobs:
           mkdir -p "$(dirname "$THEME_FILE")"
           cat PS3-SCALE-Alpha-0.2/audio-source/theme.mp3.part-* > "$THEME_FILE"
           test "$(wc -c < "$THEME_FILE" | tr -d ' ')" = "5182732"
-          printf '%s  %s\\n' "b8a7b1c2573ea8a397c2fbc3a6c731b25dcb71f572aedf5af8568785620d1b64" "$THEME_FILE" | sha256sum -c -
+          printf '%s  %s\n' "b8a7b1c2573ea8a397c2fbc3a6c731b25dcb71f572aedf5af8568785620d1b64" "$THEME_FILE" | sha256sum -c -
 
       - name: Check bundled theme asset
         run: |
