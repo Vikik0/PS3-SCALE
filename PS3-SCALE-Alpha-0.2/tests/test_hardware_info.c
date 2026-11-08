@@ -4,11 +4,9 @@
 #include <stdio.h>
 #include <string.h>
 
-static void set_platform(uint8_t raw[24], const char *platform_id,
-                         uint8_t platform_code)
+static void set_platform(uint8_t raw[24], const char *platform_id)
 {
-    raw[7] = platform_code;
-    strncpy((char *)&raw[8], platform_id, 8);
+    strncpy((char *)&raw[7], platform_id, 8);
 }
 
 int main(void)
@@ -20,11 +18,10 @@ int main(void)
     raw[0] = 0x03;
     raw[1] = 0x05;
     raw[2] = 0x50;
-    set_platform(raw, "CokB10", 0x40);
+    set_platform(raw, "CokB10");
     assert(ps3scale_hardware_info_parse(raw, sizeof(raw), &info) == 0);
     assert(strcmp(info.firmware_version, "3.55") == 0);
     assert(strcmp(info.platform_id, "CokB10") == 0);
-    assert(info.platform_id_code == 0x40);
     assert(info.family == PS3SCALE_HARDWARE_FAT);
     assert(strstr(info.model_series, "CECHC") != NULL);
 
@@ -32,7 +29,7 @@ int main(void)
     raw[0] = 0x04;
     raw[1] = 0x09;
     raw[2] = 0x20;
-    set_platform(raw, "CokJ13", 0x80);
+    set_platform(raw, "CokJ13");
     assert(ps3scale_hardware_info_parse(raw, sizeof(raw), &info) == 0);
     assert(strcmp(info.firmware_version, "4.92") == 0);
     assert(info.family == PS3SCALE_HARDWARE_SLIM);
@@ -42,7 +39,7 @@ int main(void)
     raw[0] = 0x04;
     raw[1] = 0x09;
     raw[2] = 0x20;
-    set_platform(raw, "CokM30", 0xb8);
+    set_platform(raw, "CokM30");
     assert(ps3scale_hardware_info_parse(raw, sizeof(raw), &info) == 0);
     assert(info.family == PS3SCALE_HARDWARE_SUPER_SLIM);
     assert(strstr(info.model_series, "CECH-40xx") != NULL);
@@ -51,7 +48,7 @@ int main(void)
     raw[0] = 0x04;
     raw[1] = 0x09;
     raw[2] = 0x20;
-    set_platform(raw, "CokZZZ", 0xff);
+    set_platform(raw, "CokZZZ");
     assert(ps3scale_hardware_info_parse(raw, sizeof(raw), &info) == 0);
     assert(info.family == PS3SCALE_HARDWARE_UNKNOWN);
     assert(strcmp(info.model_series, "Unknown PS3 hardware revision") == 0);
