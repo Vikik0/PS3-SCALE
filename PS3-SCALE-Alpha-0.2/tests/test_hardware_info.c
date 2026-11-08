@@ -20,13 +20,13 @@ int main(void)
     raw[0] = 0x03;
     raw[1] = 0x05;
     raw[2] = 0x50;
-    raw[16] = 0x00; raw[17] = 0x00; raw[18] = 0x12; raw[19] = 0x34;
+    raw[16] = 0x00; raw[17] = 0x00; raw[18] = 0xb5; raw[19] = 0xed;
     set_platform(raw, "CokB10", 0x40);
     assert(ps3scale_hardware_info_parse(raw, sizeof(raw), &info) == 0);
     assert(strcmp(info.firmware_version, "3.55") == 0);
     assert(strcmp(info.platform_id, "CokB10") == 0);
     assert(info.platform_id_code == 0x40u);
-    assert(info.build_number == 0x1234u);
+    assert(info.build_number == 0xb5edu);
     assert(info.family == PS3SCALE_HARDWARE_FAT);
     assert(strstr(info.model_series, "CECHC") != NULL);
 
