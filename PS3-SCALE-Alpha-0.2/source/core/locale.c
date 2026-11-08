@@ -184,7 +184,8 @@ static const locale_entry_t locale_entries[] = {
     {"UPDATE FAILED - USING CACHED DATABASE", "فشل التحديث؛ سيتم استخدام النسخة المحفوظة", "Falló la actualización; se usa la copia guardada"},
     {"OFFLINE - NO VALID DATABASE", "غير متصل - لا توجد قاعدة بيانات صالحة", "Sin conexión - no hay base de datos válida"},
     {"ONLINE THREAD COULD NOT START", "تعذر بدء مهمة الاتصال بالإنترنت", "No se pudo iniciar la tarea en línea"},
-    {"SELECT A MATCHED GAME OR PRESS START TO SYNC.", "اختر لعبة متطابقة أو اضغط START للمزامنة.", "Elige un juego coincidente o pulsa START para sincronizar."}
+    {"SELECT A MATCHED GAME OR PRESS START TO SYNC.", "اختر لعبة متطابقة أو اضغط START للمزامنة.", "Elige un juego coincidente o pulsa START para sincronizar."},
+    {"PS3 SCALE PROFILE CHECK COMPLETE. ONLY EXACT BYTE MATCHES ARE CHANGED.", "اكتمل فحص ملف PS3 SCALE. لن تُعدّل إلا البايتات المطابقة تماماً.", "Comprobación de PS3 SCALE completa. Solo se cambian bytes exactos."}
 };
 
 typedef struct locale_prefix {
@@ -258,6 +259,18 @@ int ps3scale_locale_translate(int language, const char *source,
         else
             snprintf(output, output_size, "PS3: %u | PS2: %u | Resultados: %u",
                      ps3, ps2, results);
+        return 1;
+    }
+
+    if (strncmp(source, "DATABASE: ", 10) == 0) {
+        char translated_status[128];
+        (void)ps3scale_locale_translate(language, source + 10,
+                                        translated_status,
+                                        sizeof(translated_status));
+        if (language == PS3SCALE_LANG_ARABIC)
+            snprintf(output, output_size, "قاعدة البيانات: %s", translated_status);
+        else
+            snprintf(output, output_size, "Base de datos: %s", translated_status);
         return 1;
     }
 
