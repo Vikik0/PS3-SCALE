@@ -560,6 +560,8 @@ static int initialize_audio_backend(void)
 {
     int rc;
 
+    if (!g_music_enabled || g_music_playing)
+        return 0;
     if (open_background_music() != 0)
         goto fail;
 
@@ -2315,8 +2317,9 @@ int main(int argc, char *argv[])
         file_exists_readonly("/dev_hdd0/game/PS3SCALE1/USRDIR/EBOOT.BIN") ||
         file_exists_readonly("/dev_hdd0/game/PS3SCALE1/PARAM.SFO");
 
-    /* Start the supplied theme as soon as the application is initialized. */
-    (void)initialize_audio_backend();
+    /* Start the bundled theme only when the saved Music setting is ON. */
+    if (g_music_enabled)
+        (void)initialize_audio_backend();
 
     if (g_language == LANGUAGE_UNSET) {
         g_language_choice = LANGUAGE_ENGLISH;
@@ -2506,14 +2509,16 @@ int main(int argc, char *argv[])
 
             if (cross && !old_cross) {
                 if (g_settings_selected == 0) {
-                    set_background_music_enabled(!g_music_enabled);
-                    if (g_music_enabled && !g_music_playing) {
+                    if (g_music_enabled) {
+                        set_background_music_enabled(0);
+                        shutdown_audio_backend();
+                        set_settings_message("BACKGROUND MUSIC PAUSED.");
+                    } else {
+                        set_background_music_enabled(1);
                         if (initialize_audio_backend() == 0)
                             set_settings_message("BACKGROUND MUSIC STARTED.");
                         else
                             set_settings_message("MUSIC FILE NOT FOUND OR AUDIO INIT FAILED.");
-                    } else if (!g_music_enabled) {
-                        set_settings_message("BACKGROUND MUSIC PAUSED.");
                     }
                     (void)save_app_settings();
                 } else if (g_settings_selected == 2) {
@@ -2542,6 +2547,8 @@ int main(int argc, char *argv[])
                     g_music_enabled = 1;
                     g_music_volume = 180;
                     g_animation_enabled = 1;
+                    if (!g_music_playing && initialize_audio_backend() != 0)
+                        set_settings_message("MUSIC FILE NOT FOUND OR AUDIO INIT FAILED.");
                     (void)save_app_settings();
                 } else if (g_settings_selected == 6) {
                     g_language = (g_language + 1) % 3;
