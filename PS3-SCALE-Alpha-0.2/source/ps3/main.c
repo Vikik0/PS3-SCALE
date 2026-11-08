@@ -1065,7 +1065,7 @@ static void draw_settings(void)
     }
     draw_text(34, 428, 0xdce3e8ff, g_settings_message);
     draw_text(34, 478, 0x9aa6adff,
-              "UP/DOWN: MOVE  CROSS: SELECT  LEFT/RIGHT: ADJUST  CIRCLE: BACK");
+              "UP/DOWN: MOVE  CROSS: SELECT  LEFT/RIGHT: VOLUME  CIRCLE: BACK");
     SetFontSize(14, 22);
 }
 
@@ -1311,7 +1311,7 @@ int main(int argc, char *argv[])
                     } else if (g_settings_selected == 6) {
                         int copy_result = copy_music_to_internal();
                         if (copy_result == 0)
-                            set_settings_message("MUSIC COPIED TO INTERNAL HDD. RESTART APP, THEN USB CAN BE REMOVED.");
+                            set_settings_message("MUSIC COPIED TO HDD. RESTART APP; USB CAN BE REMOVED.");
                         else if (copy_result == 1)
                             set_settings_message("MUSIC IS ALREADY ON INTERNAL HDD.");
                         else
