@@ -4,23 +4,23 @@ Date: 2026-11-09
 
 ## Latest feature-branch CI build
 
-- Workflow run: [#178 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42532501388)
+- Workflow run: [#215 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42534237391)
 - Pull request: [#6 — draft, not merged](https://github.com/Vikik0/PS3-SCALE/pull/6)
 - Source branch: feature/online-graphics-database
-- Source commit: 8c2bd97987583f1fc9f448cbc401d8a1c8af87ed
+- Source commit: 633d8e7326c0f88c8a90e64a428ee0e643da2a5c
 - Artifact: PS3-SCALE-Alpha-0.2-build-with-embedded-theme
-- Artifact ID: 13638236345
-- Artifact ZIP size: 14,168,053 bytes
-- Artifact ZIP SHA-256: 113ab4f953c8e291cb46e1873dad5b0e1cd05e9836e6bb998d68a5d957ac5c70
+- Artifact ID: 13638538498
+- Artifact ZIP size: 14,172,537 bytes
+- Artifact ZIP SHA-256: c27d4f5e61569ccbabf01eec8b9707806feb97db43fde3d30b1bfd2045853e79
 
 ## Build outputs
 
 | File | Size | SHA-256 |
 |---|---:|---|
-| ps3scale.elf | 3,413,161 bytes | c2076ce6918320672cdf80f6dfa420680ca07a6429babf737c4966e1680d5fc4 |
-| ps3scale.self | 726,544 bytes | f928cf545f321e131729a519e2997cc9965a7b2ab5b1d64527632509117b23a2 |
-| ps3scale.pkg | 6,196,832 bytes | 93957593d155ed85cbc91fbef8dc4d1f341773464489872f5a848f9109ee2d45 |
-| ps3scale.gnpdrm.pkg | 6,196,832 bytes | fd2f68a7e0ba84010512b75e9919628629db88d3bf772357ae7a3984fffcd625 |
+| ps3scale.elf | 3,413,234 bytes | 578de0b83eaf87ee6508fd615f896f59ee0d7f0d632d4dc9bf3080514c776479 |
+| ps3scale.self | 727,696 bytes | 0a4231ba290aa54ed1bcc46ce6a32751133a41185894e3bc85ad347ca9ac765f |
+| ps3scale.pkg | 6,198,048 bytes | 7717fc859e797fbe8251260c71e8bf208c664cc25c152ea4062988542b02842b |
+| ps3scale.gnpdrm.pkg | 6,198,048 bytes | dac5ad6f66896cece80d0a88167cbaf37b5cf72620ce587d1fc5be66c7bb33dc |
 
 Package headers:
 - Debug PKG: 7f504b47 00000001
@@ -41,7 +41,7 @@ The GNPDRM package is the intended install package for the user's CFW console. T
 - PPU ELF, CEX SELF, debug PKG and finalized GNPDRM PKG: built successfully.
 - Embedded theme assembly and asset integrity check: PASS.
 
-## Implemented in Run #178
+## Implemented in Run #215
 
 - First-run language selection: English, Arabic and Spanish; saved in USRDIR/settings.cfg.
 - Spanish translations and an embedded compact Arabic bitmap glyph atlas derived from Noto Sans Arabic.
