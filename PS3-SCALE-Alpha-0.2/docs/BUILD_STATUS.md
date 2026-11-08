@@ -2,24 +2,24 @@
 
 Date: 2026-11-08
 
-## Latest code build
+## Latest verified CI build
 
-- Workflow run: [#115 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42491128350)
-- Source commit: \`16c70450996626dbcd12890231fcab2f0443b41f\`
-- Artifact ID: \`13621377066\`
-- Artifact ZIP size: 1,044,424 bytes
-- Artifact ZIP SHA-256: \`eb8882e3f700226759ddd92793eadbd6cf025f19d278fae464463929e92b65aa\`
+- Workflow run: [#119 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42494932138)
+- Source commit: `7a984e43c279d33c5e5056883c27b21b40a5870f`
+- Artifact ID: `13622478698`
+- Artifact ZIP size: 1,203,134 bytes
+- Artifact ZIP SHA-256: `3be24fe4d3b93cc8dd2f538da2c1ea1aaa9995e216a9f3a52d64a7f2044705ee`
 
 ## Build outputs
 
 | File | Size | SHA-256 |
 |---|---:|---|
-| \`ps3scale.elf\` | 1,643,015 bytes | \`e4403c837fb498627f716299cf11f9263133382051c786720407b88c5285dbc3\` |
-| \`ps3scale.self\` | 181,456 bytes | \`4b316495b9d8d3a9c0a307a7e6f5d9c45a8aabcdbf736dd1745aa6d75d098b60\` |
-| \`ps3scale.pkg\` | 222,928 bytes | \`4cb06cf1a809f6cee255d50aee9ca6cea475c0691543ef07a73b4a7b9dd6fcab\` |
-| \`ps3scale.gnpdrm.pkg\` | 222,928 bytes | \`e4edc12a2d0b81b43da11b7ebc2510f7a8768e149cb9a1044ef2faa4c508ab7b\` |
+| `ps3scale.elf` | 1,646,258 bytes | `d57b00e2e86983dc1d7e38099890acd788e8ced6426b416b809b2d6162b73f5c` |
+| `ps3scale.self` | 220,544 bytes | `185b2e9e010dced8736c97089218f215bc2f78248e87791c8980cf8bb4c47573` |
+| `ps3scale.pkg` | 262,032 bytes | `aeacb3af5aa427f3d3406235647d45c33ab39bfd29ebd6ce82251a6da7d68bb2` |
+| `ps3scale.gnpdrm.pkg` | 262,032 bytes | `8a0f86d8bfaa139d5828b80336196bea55f15e2d0200b92e420b4a0cdc301add` |
 
-The final package starts with PS3 PKG magic \`7f504b47\`; the CI package validation step completed successfully.
+The finalized package header is `7f504b47 8000 0001` (PS3 package, finalized revision).
 
 ## CI tests
 
@@ -27,33 +27,43 @@ The final package starts with PS3 PKG magic \`7f504b47\`; the CI package validat
 - Host scanner tests: PASS.
 - Host ISO metadata tests: PASS.
 - Host PS2 CONFIG builder tests: PASS.
+- Host locale / UTF-8 glyph mapping / keyboard layout tests: PASS.
 - Static UI contract tests: PASS.
 - PPU ELF, CEX SELF, debug PKG and finalized NPDRM PKG: built successfully.
 
-## Implemented in Run #115
+## Implemented in Run #119
 
-- Main menu with four destinations, vector icons, library overview and a slow lightweight ambient animation.
-- Animation can be disabled from Settings.
-- Scan Games now uses two fixed non-overlapping panels, smaller font, shortened list type labels and a separated cover-art region.
-- SELECT and START both open the search OSK; the initial full-width alphabet panel is now included in the allowed OSK panel mask.
-- Settings persist music, volume and animation state.
-- Copy-to-HDD music action restarts the audio backend to switch to the internal copy, including when the file already exists.
-- Offline USB update-file discovery, library rescan and restore defaults.
-- Companion Tools page checks for Apollo Save Tool, Artemis PS3 and webMAN MOD using known local file paths; it does not load or modify their plugins or data.
+- First-run language selection: English, Arabic and Spanish; saved in `USRDIR/settings.cfg`.
+- Spanish translations and an embedded compact Arabic bitmap glyph atlas derived from Noto Sans Arabic.
+- Focused Arabic contextual letter shaping and right-to-left run ordering for translated UI strings.
+- In-app controller keyboard with English, Spanish and Arabic layouts; SELECT and START open it. Native PS3 OSK is no longer used.
+- UTF-8 search input and code-point-aware backspace.
+- Staged startup/loading screen with local app-file check, companion-tool detection and worker-thread game-library scan.
+- Slow low-poly 3D wireframe home emblem with two orbit rings; can be disabled in Settings.
+- Settings persist language, music, volume and animation.
+- Existing scanner, cover-art layout, companion-tool discovery, music streaming and USB-to-HDD music copy remain in the build.
+
+## Localization scope
+
+Arabic rendering is tailored to the app's translated interface and common Arabic letters. This is not a full Unicode shaping/bidi stack; advanced mixed-direction cases, diacritics and unsupported characters in arbitrary game titles may fall back or render imperfectly. See `docs/LOCALIZATION_AND_STARTUP.md` and `docs/THIRD_PARTY_LICENSES.txt`.
 
 ## Music
 
-The user-supplied MP3 is not embedded inside the PKG. The USB bundle keeps it as \`PS3SCALE/theme.mp3\`; the app can copy it to \`/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3\`. The bundle includes the finalized PKG and a SHA-256 manifest.
+The user-supplied MP3 is not embedded inside the PKG. The app reads internal USRDIR first, then the original filename in USRDIR, then `PS3SCALE/theme.mp3` on USB000–USB007. Settings can copy the music to internal HDD.
+
+## Update and download policy
+
+Startup performs local checks only. It does not need internet access and does not download arbitrary files. The USB update check only discovers a PKG with PS3 package magic; it does not verify a signed release manifest or auto-install. A secure online updater remains future work.
 
 ## Physical console validation
 
-A previous Alpha build was confirmed by the user to launch, scan the library, display cover art and play the music. Run #115 passes CI, but its revised scan layout, SELECT/START keyboard, tool detection and immediate music handoff still require a fresh physical-console smoke test.
+A previous Alpha build was confirmed by the user to launch, scan the library, display cover art and play the supplied music. Run #119 passes host CI and builds the final PKG, but the new Arabic glyph rendering, language persistence, custom keyboard navigation, 3D frame pacing, startup scan behavior and audio still need a fresh physical-console smoke test on the target PS3. Host CI does not replace hardware validation.
 
 ## Not implemented
 
 - No verified online graphics-profile catalog or automatic patch download/application.
 - No game-file backup/rollback workflow because the current app does not modify game files.
 - No CFW runtime plugin/PRX for game-start patching.
-- No in-game "Graphics applied — Enjoy!" notification or post-apply beep. A standalone GameOS manager exits when the game launches; a separate runtime component must validate the running title and apply the matching patch.
+- No in-game "Graphics applied — Enjoy!" notification or post-apply beep.
 - No universal AI upscaler or frame generation.
 - USB update discovery does not verify a signed release manifest and does not install packages automatically.

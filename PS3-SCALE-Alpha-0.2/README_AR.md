@@ -4,54 +4,58 @@
 
 ## آخر بناء ناجح
 
-- GitHub Actions: [Run #115 — Success](https://github.com/Vikik0/PS3-SCALE/actions/runs/42491128350)
-- Commit: \`16c70450996626dbcd12890231fcab2f0443b41f\`
-- Artifact ID: \`13621377066\`
-- Artifact ZIP SHA-256: \`eb8882e3f700226759ddd92793eadbd6cf025f19d278fae464463929e92b65aa\`
+- GitHub Actions: [Run #119 — Success](https://github.com/Vikik0/PS3-SCALE/actions/runs/42494932138)
+- Commit: `7a984e43c279d33c5e5056883c27b21b40a5870f`
+- Artifact ID: `13622478698`
+- Artifact ZIP SHA-256: `3be24fe4d3b93cc8dd2f538da2c1ea1aaa9995e216a9f3a52d64a7f2044705ee`
+- SHA-256 للحزمة النهائية `ps3scale.gnpdrm.pkg`: `8a0f86d8bfaa139d5828b80336196bea55f15e2d0200b92e420b4a0cdc301add`
 - الاختبارات: Host tests PASS، وبناء ELF وSELF وPKG النهائي PASS.
-- SHA-256 للحزمة \`ps3scale.gnpdrm.pkg\`: \`e4edc12a2d0b81b43da11b7ebc2510f7a8768e149cb9a1044ef2faa4c508ab7b\`
-
-التنزيل من Run #115 ثم Artifacts. كما جُهّز USB bundle يحتوي الحزمة والأغنية كملف منفصل.
 
 ## الميزات الموجودة
 
 - فحص مجلدات ألعاب PS3 وPS2 على الهارد الداخلي وUSB والأقراص المركّبة.
-- قراءة بيانات \`PARAM.SFO\` واستخراج Title ID أو PS2 serial عند توفره.
-- فصل مكتبة PS3 عن PS2، والفرز الأبجدي، والبحث من لوحة PS3.
+- قراءة بيانات `PARAM.SFO` واستخراج Title ID أو PS2 serial عند توفره.
+- فصل مكتبة PS3 عن PS2، والفرز الأبجدي، والبحث.
 - شاشة Scan Games بعمود مستقل للقائمة وآخر للمعلومات والغلاف، مع خط أصغر لمنع التداخل.
-- SELECT أو START يفتحان لوحة البحث؛ L1 يختار PS3 وR1 يختار PS2.
-- القائمة الرئيسية تعرض أيقونات Vector وحركة خلفية بطيئة وخفيفة، ويمكن إيقاف الحركة من Settings.
-- Settings: Music ON/OFF، مستوى الصوت، Home Animation ON/OFF، فحص ملف تحديث على USB، إعادة فحص المكتبة، استعادة الإعدادات، ونسخ الأغنية إلى HDD.
-- الإعدادات تُحفظ في \`/dev_hdd0/game/PS3SCALE1/USRDIR/settings.cfg\`.
+- **لوحة بحث داخلية** تتحكم فيها بيد PS3، ولا تستدعي لوحة PS3 الأصلية. تدعم الإنجليزية والإسبانية والعربية، والأرقام، والمسافة، والحذف والمسح والتطبيق والإلغاء.
+- أول تشغيل يعرض اختيار اللغة: English / العربية / Español. يتم حفظ اللغة ويمكن تغييرها من Settings.
+- شاشة Loading عند التشغيل تعرض مراحل تهيئة وفحص محلي، ثم تفحص مكتبة الألعاب في خيط منفصل حتى تبقى حركة التحميل مستجيبة.
+- حركة رئيسية ثلاثية الأبعاد منخفضة التفاصيل، بطيئة وخفيفة، ويمكن إيقافها من Settings.
+- Settings: Music ON/OFF، مستوى الصوت، Home Animation ON/OFF، اللغة، فحص ملف تحديث على USB، إعادة فحص المكتبة، استعادة الإعدادات، ونسخ الأغنية إلى HDD.
+- الإعدادات تُحفظ في `/dev_hdd0/game/PS3SCALE1/USRDIR/settings.cfg`.
 - بعد نسخ الأغنية إلى HDD يعيد التطبيق تشغيل محرك الصوت ليحوّل التشغيل إلى النسخة الداخلية.
 - Companion Tools تعرض حالة اكتشاف Apollo Save Tool وArtemis PS3 وwebMAN MOD، مع تحديث الفحص من CROSS.
 - الفحص Read-Only؛ لا يكتب أو يحذف أو يعيد تسمية ملفات الألعاب.
 
+## اللغات العربية والإسبانية
+
+- الواجهة العربية تستخدم مجموعة محارف bitmap مضمّنة مع تشكيل أساسي للحروف العربية واتجاه RTL.
+- التشكيل مخصص لنصوص الواجهة وليس محرك Unicode كاملاً؛ قد لا تظهر بعض المحارف أو الحركات أو أسماء الألعاب متعددة الاتجاهات بشكل مثالي.
+- تم تضمين ترخيص Noto Sans Arabic في `docs/THIRD_PARTY_LICENSES.txt`.
+
+## شاشة البدء والتنزيلات
+
+عند التشغيل ينفذ البرنامج فحوصات محلية لملفات التطبيق والأدوات المساعدة، ثم يفحص مكتبة الألعاب. لا يحتاج إلى تنزيل ملفات من الإنترنت كي يفتح، ولا ينزّل ملفات عشوائية تلقائياً. فحص التحديث الحالي يبحث عن ملف PKG على USB فقط؛ لا يتحقق من توقيع إصدار أونلاين ولا يثبّت التحديث تلقائياً.
+
 ## الصوت
 
-الأغنية التي زوّدتني بها تعمل تلقائياً عند فتح التطبيق إذا كانت موجودة في أحد المسارات المدعومة. ملف MP3 **ليس مدمجاً داخل PKG**؛ حزمة USB تضعه منفصلاً في \`PS3SCALE/theme.mp3\`.
-
-لنسخه إلى الهارد الداخلي:
-1. اترك USB موصولاً وشغّل PS3 SCALE.
-2. افتح Settings.
-3. اختر **COPY MUSIC TO INTERNAL HDD** واضغط CROSS.
-4. عند نجاح النسخ، يعيد التطبيق تشغيل الصوت ويستخدم:
-   \`/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3\`
-5. بعد التأكد من التشغيل يمكنك فصل USB.
+الأغنية التي زوّدتني بها تعمل تلقائياً عند فتح التطبيق إذا كانت موجودة في أحد المسارات المدعومة. ملف MP3 **ليس مدمجاً داخل PKG**؛ يمكن وضعه في `PS3SCALE/theme.mp3` على USB أو نسخه من Settings إلى:
+`/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`.
 
 ## التحكم
 
 - القائمة الرئيسية: UP/DOWN، ثم CROSS للفتح، CIRCLE للخروج.
-- Scan Games: UP/DOWN للتنقل، L1/R1 للتبديل بين PS3/PS2، SELECT/START للبحث، SQUARE لإعادة الفحص، CROSS للتفاصيل، CIRCLE للرجوع.
+- Scan Games: UP/DOWN للتنقل، L1/R1 للتبديل بين PS3/PS2، SELECT/START لفتح لوحة البحث، SQUARE لإعادة الفحص، CROSS للتفاصيل، CIRCLE للرجوع.
+- لوحة البحث: الأسهم للتنقل، CROSS لإضافة المفتاح أو تنفيذ الأمر، CIRCLE للإلغاء.
 - PS2 ISO: TRIANGLE لمعاينة CONFIG فقط.
-- Settings: UP/DOWN للتنقل، CROSS للتبديل/التنفيذ، LEFT/RIGHT للصوت.
+- Settings: UP/DOWN للتنقل، CROSS للتبديل/التنفيذ، LEFT/RIGHT للصوت أو تغيير اللغة.
 - Companion Tools: CROSS لإعادة فحص حالة الأدوات، CIRCLE للرجوع.
 
 ## أدوات مرافقة
 
 Apollo Save Tool وArtemis PS3 وwebMAN MOD تطبيقات مستقلة. PS3 SCALE لا يحمّل إضافاتها ولا يغيّر بياناتها. صفحة Companion Tools تعرض اكتشافاً محلياً مبنياً على ملفات معروفة؛ عبارة NOT DETECTED لا تثبت دائماً أن الأداة غير موجودة إذا كان تثبيتها في مسار مختلف.
 
-راجع \`docs/COMPANION_TOOLS.md\`.
+راجع `docs/COMPANION_TOOLS.md` و`docs/LOCALIZATION_AND_STARTUP.md`.
 
 ## ما لم يُنفّذ بعد
 
@@ -64,35 +68,35 @@ Apollo Save Tool وArtemis PS3 وwebMAN MOD تطبيقات مستقلة. PS3 SCA
 
 ## التثبيت
 
-1. نزّل \`ps3scale.gnpdrm.pkg\` من Artifact في Run #115، أو استخدم USB bundle الجاهز.
-2. انسخ PKG إلى USB FAT32.
-3. من XMB افتح Game → Package Manager → Install Package Files → Standard.
-4. اختر \`ps3scale.gnpdrm.pkg\` ثم شغّل PS3 SCALE من قائمة الألعاب.
-
-لا تثبّت أي patch أو CONFIG على ملفات الألعاب في هذه المرحلة.
+1. افتح [GitHub Actions Run #119](https://github.com/Vikik0/PS3-SCALE/actions/runs/42494932138).
+2. من Artifacts نزّل `PS3-SCALE-Alpha-0.2-build`.
+3. من داخل الأرشيف استخدم **ps3scale.gnpdrm.pkg فقط** للتثبيت.
+4. انسخ PKG إلى USB FAT32.
+5. من XMB افتح Game → Package Manager → Install Package Files → Standard.
+6. اختر `ps3scale.gnpdrm.pkg` ثم شغّل PS3 SCALE من قائمة الألعاب.
 
 ## جهاز الاختبار المستهدف
 
-PS3 Slim CECH-2504A، CEX CFW 4.93، Cobra 8.5. Run #115 اجتاز CI، لكن يجب إعادة اختبار نسخة الواجهة الجديدة على الجهاز نفسه قبل وصفها بأنها مختبرة على الجهاز.
+PS3 Slim CECH-2504A، CEX CFW 4.93، Cobra 8.5. Run #119 اجتاز CI وبنى الحزمة، لكن يجب اختبار اللغات ولوحة البحث وحركة 3D وشاشة التحميل على الجهاز نفسه قبل وصفها بأنها مختبرة على الجهاز.
 
 ## البناء والاختبار
 
 في بيئة PS3DEV / PSL1GHT / Tiny3D:
 
-\`\`\`sh
+```sh
 export PS3DEV=/usr/local/ps3dev
 export PSL1GHT=$PS3DEV
 export PATH=$PATH:$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin
 make clean
 make pkg
-\`\`\`
+```
 
 اختبارات الكمبيوتر:
 
-\`\`\`sh
+```sh
 chmod +x scripts/test_host.sh
 ./scripts/test_host.sh
-\`\`\`
+```
 
 ## سياسة الأمان
 
