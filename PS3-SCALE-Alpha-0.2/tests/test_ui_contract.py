@@ -168,9 +168,12 @@ assert "PS3SCALE_SCRIPT_HEADER_V1" in profile_source
 assert "PS3SCALE_SCRIPT_HEADER_V2" in profile_source
 assert "TITLE_ID=%s APP_VER=%s PATCHES=%s" in profile_source
 assert "/patch.ps3?addr=" in profile_source
-assert "&stop=%08lX&step=64&find=%s&rep=1&val=%s" in profile_source
-assert "address + 0x20ul" in profile_source
+assert "&stop=%08lX&step=%lu&find=%s&rep=1&val=%s" in profile_source
+assert "#define PS3SCALE_PROFILE_SEARCH_WINDOW 0x20ul" in profile_source
+assert "#define PS3SCALE_PROFILE_SEARCH_STEP 64ul" in profile_source
+assert "address + PS3SCALE_PROFILE_SEARCH_WINDOW" in profile_source
 assert "address + 1" not in profile_source
+assert "strcmp(actual_script, expected_script) == 0" in profile_source
 assert '"del %s\\n\\n"' in profile_source
 assert "No success notification is shown" in profile_source
 assert "profile->patch_count != 1" in profile_source
