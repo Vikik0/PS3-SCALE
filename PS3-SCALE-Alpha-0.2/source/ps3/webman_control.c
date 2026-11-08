@@ -80,6 +80,25 @@ static int http_status_is_success(const char *response)
     return status >= 200 && status < 400;
 }
 
+/* Do not rely only on SO_RCVTIMEO: some PS3 socket builds ignore it. */
+static int wait_for_readable(int sock)
+{
+    fd_set read_set;
+    struct timeval timeout;
+    int result;
+
+    FD_ZERO(&read_set);
+    FD_SET(sock, &read_set);
+    timeout.tv_sec = WEBMAN_IO_TIMEOUT_SEC;
+    timeout.tv_usec = 0;
+
+    do {
+        result = select(sock + 1, &read_set, NULL, NULL, &timeout);
+    } while (result < 0 && errno == EINTR);
+
+    return result > 0 && FD_ISSET(sock, &read_set) ? 0 : -1;
+}
+
 static int webman_http_get(const char *path, char *response,
                            size_t response_size)
 {
@@ -144,11 +163,13 @@ static int webman_http_get(const char *path, char *response,
 
     if (response && response_size > 1) {
         while (used + 1 < response_size) {
+            if (wait_for_readable(sock) != 0)
+                break;
             ret = (int)read(sock, response + used, response_size - used - 1);
             if (ret < 0 && errno == EINTR)
                 continue;
             if (ret <= 0)
-                break; /* Includes the bounded receive-timeout case. */
+                break;
             used += (size_t)ret;
             response[used] = '\0';
 
