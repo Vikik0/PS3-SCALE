@@ -51,7 +51,7 @@ export CFLAGS="-O2 -mcpu=cell -I$PORTLIBS/include -I$PSL1GHT/ppu/include"
 export LDFLAGS="-L$PS3DEV/ppu/powerpc64-ps3-elf/lib -L$PS3DEV/ppu/lib -L$PSL1GHT/ppu/lib -L$PORTLIBS/lib -lrt -llv2"
 # Match the application's final link order while configure probes gethostbyname.
 export LIBS="-lnetctl -lnet"
-./configure \
+if ! ./configure \
   --host=powerpc64-ps3-elf \
   --prefix="$PORTLIBS" \
   --disable-shared --enable-static \
@@ -60,7 +60,19 @@ export LIBS="-lnetctl -lnet"
   --disable-rtsp --disable-dict --disable-telnet --disable-tftp \
   --disable-pop3 --disable-imap --disable-smtp --disable-gopher --disable-smb \
   --with-mbedtls="$PORTLIBS" \
-  --with-ca-bundle="/dev_hdd0/game/PS3SCALE1/USRDIR/cacert.pem"
+  --with-ca-bundle="/dev_hdd0/game/PS3SCALE1/USRDIR/cacert.pem"; then
+  echo "=== curl resolver configure diagnostics ==="
+  grep -n -B 8 -A 24 "gethostbyname" config.log || true
+  echo "=== available PPU network libraries ==="
+  find "$PS3DEV/ppu" "$PORTLIBS" -type f \\
+    \( -name 'libnet*.a' -o -name 'libnet*.so' -o -name 'libnetctl*.a' \) -print
+  for library in $(find "$PS3DEV/ppu" "$PORTLIBS" -type f \\
+      \( -name 'libnet*.a' -o -name 'libnetctl*.a' \)); do
+    echo "--- $library"
+    "$PREFIX"nm -g "$library" 2>/dev/null | grep -i "gethostbyname" || true
+  done
+  exit 1
+fi
 make -j2
 make install
 
