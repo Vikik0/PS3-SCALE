@@ -205,10 +205,15 @@ assert "ps3scale_webman_ps3mapi_available" in webman_header.read_text(encoding="
 
 webman_source = source_path.with_name("webman_control.c").read_text(encoding="utf-8")
 assert "connect_with_timeout" in webman_source
+assert "wait_for_readable" in webman_source
 assert "select(sock + 1" in webman_source
-assert '"/play.ps3?%s"' in webman_source
-assert '"/play.ps3%s"' in webman_source
-assert "encode_game_path" in webman_source
+assert "ps3scale_webman_build_start_path" in webman_source
 assert "sleep(1)" not in webman_source
+
+webman_command_source = source_path.parent.parent / "core" / "webman_command.c"
+webman_command_src = webman_command_source.read_text(encoding="utf-8")
+assert '"/play.ps3?%s"' in webman_command_src
+assert '"/play.ps3%s"' in webman_command_src
+assert "encode_game_path" in webman_command_src
 
 print("PS3 SCALE UI contract tests: PASS")
