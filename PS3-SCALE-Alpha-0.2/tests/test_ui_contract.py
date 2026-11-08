@@ -24,7 +24,7 @@ for token in (
     assert token in osk, f"Missing OSK handling: {token}"
 
 # Search must remain wired to SELECT on the Scan Games screen.
-main = section("int main(int argc, char *argv[])", "")
+main = src[src.index("int main(int argc, char *argv[])"):]
 assert "if (select && !old_select)" in main
 assert "(void)open_search_keyboard();" in main
 
