@@ -16,7 +16,7 @@ PS3 SCALE is a homebrew project for safely cataloguing PS3 and PS2 titles and, i
 
 ## Build and install
 
-See [the latest successful build](https://github.com/Vikik0/PS3-SCALE/actions/runs/42479563035) and download the PS3-SCALE-Alpha-0.2-build artifact. Use ps3scale.gnpdrm.pkg for the finalized package.
+See [the latest successful build](https://github.com/Vikik0/PS3-SCALE/actions/runs/42479967093) and download the PS3-SCALE-Alpha-0.2-build artifact. Use ps3scale.gnpdrm.pkg for the finalized package.
 
 ## Documentation
 
