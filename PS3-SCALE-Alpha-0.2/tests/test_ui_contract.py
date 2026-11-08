@@ -83,6 +83,8 @@ for token in ("BACKGROUND MUSIC", "MUSIC VOLUME", "HOME ANIMATION",
               "LANGUAGE"):
     assert token in settings, f"Missing settings entry: {token}"
 assert "copy_music_to_internal" in src
+assert "g_music_enabled && !g_music_playing" in main
+assert "BACKGROUND MUSIC STARTED." in main
 assert "PS3SCALE_SETTINGS_PATH" in src
 assert "settings.cfg" in src
 
