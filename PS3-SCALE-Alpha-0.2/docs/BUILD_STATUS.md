@@ -64,7 +64,7 @@ The GNPDRM package is the intended install package for the user's CFW console. T
 
 ## Profile trust and limitations
 
-All 40 starter catalogue entries are B_COMMUNITY: community-reported and not independently hardware-verified by PS3 SCALE. A successful CI build verifies compilation and host-side contracts, not that a specific profile works on every console or game revision.
+The 40 starter entries comprise 33 single-write B_COMMUNITY profiles eligible for one-launch confirmation, 6 multi-write B_COMMUNITY profiles disabled for automation, and 1 B_COMMUNITY_MANUAL profile (Brütal Legend) excluded because the source requires main-menu application and reapplication after the game resets it. All are community-reported and not independently hardware-verified by PS3 SCALE. A successful CI build verifies compilation and host-side contracts, not that a specific profile works on every console or game revision.
 
 The webMAN batch language does not expose a direct APP_VER condition. PS3 SCALE checks APP_VER before arming and against the mounted game when Start Game is used. Do not update a game between arming and launching the profile. The patch changes only the running game process memory; original game files remain unchanged. Exiting the game clears the process-memory patch.
 
