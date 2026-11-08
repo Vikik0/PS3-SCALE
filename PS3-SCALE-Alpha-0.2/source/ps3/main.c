@@ -1516,7 +1516,6 @@ static void draw_tools(void)
 
 static void draw_about(void)
 {
-    char line[96];
     set_ui_font_size(11, 17);
     draw_text(34, 24, 0xcaff39ff, "PS3 SCALE");
     draw_text(34, 62, 0xffffffff, "ABOUT");
