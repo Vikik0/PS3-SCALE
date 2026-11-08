@@ -152,10 +152,8 @@ static int webman_http_get(const char *path, char *response,
             used += (size_t)ret;
             response[used] = '\0';
 
-            /* All webMAN routes expose the HTTP status in the first line. */
-            if (strchr(response, '\n') != NULL &&
-                (strstr(response, "\r\n\r\n") != NULL ||
-                 used > 512))
+            /* Read a small response body too; PS3MAPI reports its version there. */
+            if (used > 512)
                 break;
         }
         response[used] = '\0';
