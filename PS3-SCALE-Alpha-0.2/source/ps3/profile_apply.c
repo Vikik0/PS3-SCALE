@@ -1,4 +1,5 @@
 #include "ps3scale/profile_apply.h"
+#include "ps3scale/locale.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -130,13 +131,14 @@ static int parse_single_patch(const ps3scale_profile_t *profile,
     return 0;
 }
 
-int ps3scale_profile_script_install(const ps3scale_profile_t *profile)
+int ps3scale_profile_script_install(const ps3scale_profile_t *profile, int language)
 {
     char path[256];
     char temporary_path[272];
     char header[160];
     char expected[34];
     char replacement[34];
+    char popup_text[192];
     unsigned long address;
     FILE *file;
     int state;
@@ -177,6 +179,12 @@ int ps3scale_profile_script_install(const ps3scale_profile_t *profile)
      * address window before writing; a mismatched update is therefore
      * skipped rather than blindly overwritten.
      */
+    if (ps3scale_locale_translate(language,
+            "PS3 SCALE PROFILE CHECK COMPLETE. ONLY EXACT BYTE MATCHES ARE CHANGED.",
+            popup_text, sizeof(popup_text)) == 0) {
+        snprintf(popup_text, sizeof(popup_text),
+                 "PS3 SCALE PROFILE CHECK COMPLETE. ONLY EXACT BYTE MATCHES ARE CHANGED.");
+    }
     written = fprintf(file,
         PS3SCALE_SCRIPT_HEADER " TITLE_ID=%s APP_VER=%s\n"
         "# Source: %s\n"
@@ -184,12 +192,12 @@ int ps3scale_profile_script_install(const ps3scale_profile_t *profile)
         "if ingame\n"
         "/patch.ps3?addr=%08lX&stop=%08lX&step=1&find=%s&rep=1&val=%s\n"
         "beep1\n"
-        "popup PS3 SCALE profile check complete. Only exact byte matches are changed.\n"
+        "popup %s\n"
         "end if\n"
         "end if\n",
         profile->title_id, profile->app_ver, profile->source_url,
         profile->title_id, address - 1, address + 1,
-        expected, replacement);
+        expected, replacement, popup_text);
     if (written < 0) {
         (void)fclose(file);
         unlink(temporary_path);
