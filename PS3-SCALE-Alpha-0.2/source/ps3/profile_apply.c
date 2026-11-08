@@ -149,7 +149,7 @@ static int header_has_marker(const char *header, const char *marker)
         return 0;
     length = strlen(marker);
     return strncmp(header, marker, length) == 0 &&
-           (header[length] == '\\0' || header[length] == ' ');
+           (header[length] == '\0' || header[length] == ' ');
 }
 
 static int header_is_owned(const char *header)
