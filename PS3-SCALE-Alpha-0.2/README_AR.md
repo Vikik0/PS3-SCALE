@@ -4,7 +4,7 @@
 
 ## حالة فرع التطوير
 
-فرع feature/online-graphics-database يضيف قاعدة بيانات أونلاين تضم 40 ملفاً مجتمعياً كبداية، ومزامنة HTTPS، وربطاً مع webMAN MOD لتطبيق تعديل ذاكرة لمرة واحدة بعد تأكيد المستخدم. هذه الملفات مصنفة Community-Reported وليست مختبرة بشكل مستقل على جهاز المستخدم. نجحت اختبارات المضيف وبناء حزم PS3 في Run #215، وتم تنزيل الأثر والتحقق من ملفات ELF وSELF وPKG ورؤوس الحزم وبصمات SHA-256. الحزمة متاحة ضمن Artifacts، لكن هذا الفرع لم يُختبر بعد على الجهاز الفعلي، لذلك ما زال اختبار PS3 مطلوباً قبل اعتباره جاهزاً نهائياً. المراجعة Draft PR #6 ولم يتم دمجها بعد.
+فرع feature/online-graphics-database يضيف قاعدة بيانات أونلاين تضم 40 ملفاً مجتمعياً كبداية، ومزامنة HTTPS، وربطاً مع webMAN MOD لتطبيق تعديل ذاكرة لمرة واحدة بعد تأكيد المستخدم. هذه الملفات مصنفة Community-Reported وليست مختبرة بشكل مستقل على جهاز المستخدم. نجحت اختبارات المضيف وبناء حزم PS3 في Run #239، وتم تنزيل الأثر والتحقق من ملفات ELF وSELF وPKG ورؤوس الحزم وبصمات SHA-256. الحزمة متاحة ضمن Artifacts، لكن هذا الفرع لم يُختبر بعد على الجهاز الفعلي، لذلك ما زال اختبار PS3 مطلوباً قبل اعتباره جاهزاً نهائياً. المراجعة Draft PR #6 ولم يتم دمجها بعد.
 
 ## الميزات
 
@@ -73,7 +73,7 @@
 
 ## تثبيت نسخة CFW
 
-1. نزّل Artifact باسم `PS3-SCALE-Alpha-0.2-build-with-embedded-theme` من Run #215.
+1. نزّل Artifact باسم `PS3-SCALE-Alpha-0.2-build-with-embedded-theme` من Run #239.
 2. فك ضغط ZIP على الكمبيوتر.
 3. انسخ `ps3scale.gnpdrm.pkg` إلى جذر USB مهيأ FAT32.
 4. على PS3 CFW افتح **Package Manager → Install Package Files → Standard** واختر الملف.
@@ -105,4 +105,4 @@ chmod +x scripts/test_host.sh
 ./scripts/test_host.sh
 ~~~
 
-نجح CI في Run #215 وأنتج حزمة GNPDRM صالحة للبناء. اختر `ps3scale.gnpdrm.pkg` من Artifact باسم `PS3-SCALE-Alpha-0.2-build-with-embedded-theme`، ثم اختبرها على الجهاز الفعلي. لا تجهّز أي ملف تحسين قبل التأكد من Title ID وAPP_VER للعبة المركّبة: https://github.com/Vikik0/PS3-SCALE/actions/runs/42534237391
+نجح CI في Run #239 وأنتج حزمة GNPDRM صالحة للبناء. اختر `ps3scale.gnpdrm.pkg` من Artifact باسم `PS3-SCALE-Alpha-0.2-build-with-embedded-theme`، ثم اختبرها على الجهاز الفعلي. لا تجهّز أي ملف تحسين قبل التأكد من Title ID وAPP_VER للعبة المركّبة: https://github.com/Vikik0/PS3-SCALE/actions/runs/42537211772
