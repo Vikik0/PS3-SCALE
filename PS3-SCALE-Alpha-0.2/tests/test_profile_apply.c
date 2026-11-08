@@ -78,13 +78,29 @@ int main(void)
     assert(ps3scale_profile_script_state(profile.title_id, profile.app_ver,
                                          NULL) == -2);
     assert(ps3scale_profile_script_install(&profile) == 1);
+    assert(ps3scale_profile_script_state(profile.title_id, profile.app_ver,
+                                         "947130,06,00") == -2);
+
+    /* Address alignment must not widen the search to neighboring bytes. */
+    strcpy(profile.patches, "947130,06,00");
+    assert(ps3scale_profile_script_install(&profile) == 0);
+    assert(read_text(TEST_SCRIPT_PATH, script, sizeof(script)) == 0);
+    assert(strstr(script,
+        "/patch.ps3?addr=00947130&stop=00947150&step=64&find=06&rep=1&val=00") != NULL);
+    strcpy(profile.patches, "94713F,06,00");
+    assert(ps3scale_profile_script_install(&profile) == 0);
+    assert(read_text(TEST_SCRIPT_PATH, script, sizeof(script)) == 0);
+    assert(strstr(script,
+        "/patch.ps3?addr=0094713F&stop=0094715F&step=64&find=06&rep=1&val=00") != NULL);
+    strcpy(profile.patches, "94713A,06,00");
+    assert(ps3scale_profile_script_install(&profile) == 0);
 
     assert(read_text(TEST_SCRIPT_PATH, script, sizeof(script)) == 0);
     assert(strstr(script,
         "# PS3 SCALE AUTO PROFILE V2 TITLE_ID=BLUS30464 APP_VER=01.05 "
         "PATCHES=94713A,06,00") != NULL);
     assert(strstr(script,
-        "/patch.ps3?addr=0094713A&stop=0094713B&step=1&find=06&rep=1&val=00") != NULL);
+        "/patch.ps3?addr=0094713A&stop=0094715A&step=64&find=06&rep=1&val=00") != NULL);
     assert(strstr(script, "del " TEST_SCRIPT_PATH) != NULL);
     assert(strstr(script, "end if\nend if\n") != NULL);
     assert(strstr(script, "popup") == NULL);
