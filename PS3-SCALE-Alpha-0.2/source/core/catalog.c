@@ -123,7 +123,7 @@ static int valid_patch_list(const char *value, unsigned *patch_count)
 
         address_value = strtoul(address, &end, 16);
         if (!end || *end || address_value == 0 ||
-            address_value > 0xFFFFFFFFul || strcmp(expected, replacement) == 0)
+            address_value > 0xFFFFFFDFul || strcmp(expected, replacement) == 0)
             return -1;
 
         count++;
