@@ -62,6 +62,14 @@ jobs:
           test -s "$PORTLIBS/lib/libmpg123.a"
           test -s "$PORTLIBS/include/soundlib/mpg123.h"
 
+      - name: Check bundled theme asset
+        run: |
+          if [ -s "PS3-SCALE-Alpha-0.2/pkgfiles/USRDIR/theme.mp3" ]; then
+            echo "Bundled theme MP3 found; it will be copied into the installed USRDIR."
+          else
+            echo "::warning::theme.mp3 is not present in pkgfiles/USRDIR; the package will use the existing USB/HDD fallback."
+          fi
+
       - name: Build and validate PS3 packages
         working-directory: PS3-SCALE-Alpha-0.2
         run: |
