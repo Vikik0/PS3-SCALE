@@ -22,9 +22,9 @@ INCLUDES := include source/ps3
 LIBDIRS := $(PORTLIBS)
 
 LIBS := -lya2d -lfont3d -ltiny3d -lsimdmath -lgcm_sys -lrsx -lio -lsysutil \
-        -lpngdec -ljpgdec -lpng -lz -lfreetype -lpixman-1 \
-        -lmpg123 -laudio -lrt -llv2 -lsysmodule -lsysfs \
-        -lcurl -lmbedtls -lmbedx509 -lmbedcrypto -lnetctl -lnet -lz -lm
+        -lpngdec -ljpgdec -lpng -lfreetype -lpixman-1 \
+        -lmpg123 -laudio -lcurl -lmbedtls -lmbedx509 -lmbedcrypto \
+        -lnetctl -lnet -lz -lm -lrt -lsysfs -lsysmodule -llv2
 
 CFLAGS = -O2 -Wall -Wextra -std=gnu99 -mcpu=cell $(MACHDEP) $(INCLUDE) \
          -I$(PORTLIBS)/include/soundlib
