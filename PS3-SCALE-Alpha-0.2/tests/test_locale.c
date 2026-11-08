@@ -112,6 +112,16 @@ int main(void)
         strstr(translated, "40") == NULL || strstr(translated, "2") == NULL)
         return 9;
     if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "WAIT FOR ONLINE DATABASE SYNC TO FINISH.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "مزامنة قاعدة البيانات") == NULL)
+        return 13;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "MOUNT THE EXACT GAME VERSION BEFORE ARMING THIS PROFILE.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "إصدار اللعبة المطابق") == NULL)
+        return 14;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
             "ONE-LAUNCH PROFILE ARMED. START THE MOUNTED GAME.",
             translated, sizeof(translated)) != 1 ||
         strstr(translated, "مرة واحدة") == NULL)
