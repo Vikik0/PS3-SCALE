@@ -8,13 +8,14 @@
 - Existing settings for music, volume and home animation are preserved.
 
 ## Text rendering
-- The app uses two embedded bitmap fonts: a compact Latin ASCII font and a separate extended atlas derived from Noto Sans Arabic.
-- Latin ASCII, common Spanish accents and the Arabic letters used by the translated UI are included in the corresponding font ranges.
-- Arabic UI strings are shaped into isolated/final/initial/medial forms and reordered for a right-to-left display run before drawing.
-- At startup, the app measures each extended glyph's visible bitmap bounds. Arabic glyphs are positioned by their visible ink width, and spacing is adjusted per adjacent pair: connected forms overlap by a controlled source-pixel amount while non-joining letters retain a small gap. Space width scales with the active UI font size.
+- The app uses three font ranges: a compact Latin ASCII bitmap font, a Noto Sans Arabic UI TTF rendered through FreeType, and a small bitmap range for Spanish accent extras.
+- The pinned Noto Sans Arabic UI variable font is fetched at build time from Google Fonts, hash-verified, and bundled into the PKG as `USRDIR/NotoSansArabicUI.ttf`; its upstream OFL license is bundled beside it.
+- Arabic UI strings are shaped into isolated/final/initial/medial presentation forms and reordered for a right-to-left display run before drawing.
+- The Arabic TTF callback uses FreeType's glyph bitmap bearings and advance widths. The renderer therefore advances by the font's real glyph metrics instead of guessing overlap from bitmap bounds; connected letters join according to the font's contextual forms, while non-joining letters retain their natural spacing.
+- English ASCII retains its original bitmap font and left-to-right order. Spaces in mixed Arabic/English strings use the correct width for the adjacent run.
 - Font-size changes are tracked by the UI renderer so Arabic spacing remains proportional on the loading screen, menus, settings, scanner, details and controller keyboard.
-- The embedded Arabic mapping is intentionally small and tailored to the app UI. It is not a complete Unicode, HarfBuzz or ICU implementation. Unsupported characters in arbitrary game titles fall back to a question mark; vowel marks/diacritics and advanced mixed-direction edge cases are not promised.
-- The bitmap atlas is uploaded once during initialization. Text drawing uses the RSX bitmap font rather than rasterizing text every frame.
+- The embedded Arabic shaping map is intentionally small and tailored to the app UI. It is not a complete Unicode, HarfBuzz or ICU implementation. Unsupported characters in arbitrary game titles fall back to a question mark; vowel marks/diacritics and advanced mixed-direction edge cases are not promised.
+- The TTF is rasterized into the RSX bitmap atlas once during initialization; the app does not rasterize text every frame.
 
 ## Search keyboard
 - SELECT or START opens PS3 SCALE's own controller-driven keyboard.
