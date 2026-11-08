@@ -35,4 +35,11 @@ cc -std=c99 -Wall -Wextra -Werror \
   -o "$OUT/test_ps2_config"
 "$OUT/test_ps2_config"
 
+cc -std=c99 -Wall -Wextra -Werror \
+  -I"$ROOT/include" \
+  "$ROOT/source/core/locale.c" \
+  "$ROOT/tests/test_locale.c" \
+  -o "$OUT/test_locale"
+"$OUT/test_locale"
+
 python3 "$ROOT/tests/test_ui_contract.py" "$ROOT/source/ps3/main.c"

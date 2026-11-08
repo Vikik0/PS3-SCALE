@@ -13,14 +13,16 @@
 #include <libfont.h>
 #include <io/pad.h>
 #include <sysutil/sysutil.h>
-#include <sysutil/osk.h>
-#include <sys/memory.h>
 #include <ya2d/ya2d.h>
+#include <matrix.h>
+#include <zlib.h>
 
 #include "ps3scale/game.h"
 #include "ps3scale/scanner.h"
 #include "ps3scale/ps2_config.h"
+#include "ps3scale/locale.h"
 #include "font8x12.h"
+#include "font_bitmap_z.h"
 
 enum {
     LIBRARY_PS3 = 0,
@@ -33,7 +35,10 @@ typedef enum app_screen {
     SCREEN_DETAILS,
     SCREEN_SETTINGS,
     SCREEN_TOOLS,
-    SCREEN_ABOUT
+    SCREEN_ABOUT,
+    SCREEN_LANGUAGE,
+    SCREEN_BOOT,
+    SCREEN_KEYBOARD
 } app_screen_t;
 
 static ps3scale_game_list_t g_games;
@@ -78,44 +83,27 @@ static int g_apollo_installed = 0;
 static int g_artemis_installed = 0;
 static int g_webman_installed = 0;
 static char g_tools_message[96] = "CROSS: REFRESH TOOL STATUS.";
-#define SETTINGS_COUNT 7
+#define SETTINGS_COUNT 8
 #define PS3SCALE_SETTINGS_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/settings.cfg"
 static char g_music_path[PS3SCALE_PATH_MAX] = "";
-
-/* PS3 system on-screen keyboard state used by the Scan Games search field. */
-static int g_osk_active = 0;
-static sys_mem_container_t g_osk_container;
-static u16 g_osk_title[64];
-static u16 g_osk_start[64];
-static u16 g_osk_text[64];
-static int g_osk_input_received = 0;
-static int g_osk_cancelled = 0;
-static int g_osk_unload_requested = 0;
-static oskInputFieldInfo g_osk_input;
-static oskParam g_osk_params;
-static oskCallbackReturnParam g_osk_result;
-
-static void ascii_to_utf16(const char *src, u16 *dst, size_t capacity)
-{
-    size_t i = 0;
-    if (!dst || capacity == 0) return;
-    while (src && src[i] && i + 1 < capacity) {
-        dst[i] = (u8)src[i];
-        i++;
-    }
-    dst[i] = 0;
-}
-
-static void utf16_to_ascii(const u16 *src, char *dst, size_t capacity)
-{
-    size_t i = 0;
-    if (!dst || capacity == 0) return;
-    while (src && src[i] && i + 1 < capacity) {
-        dst[i] = (src[i] < 128) ? (char)src[i] : '?';
-        i++;
-    }
-    dst[i] = '\0';
-}
+enum {
+    LANGUAGE_UNSET = -1,
+    LANGUAGE_ENGLISH = PS3SCALE_LANG_ENGLISH,
+    LANGUAGE_ARABIC = PS3SCALE_LANG_ARABIC,
+    LANGUAGE_SPANISH = PS3SCALE_LANG_SPANISH
+};
+static int g_language = LANGUAGE_UNSET;
+static int g_language_choice = LANGUAGE_ENGLISH;
+static int g_keyboard_selected = 0;
+static char g_search_backup[64] = "";
+static int g_boot_stage = 0;
+static int g_boot_stage_frames = 0;
+static volatile int g_boot_scan_done = 0;
+static int g_boot_scan_thread_started = 0;
+static sys_ppu_thread_t g_boot_scan_thread;
+static int g_app_files_ok = 0;
+static int g_extended_font_ready = 0;
+static unsigned char g_extended_font_bitmap[PS3SCALE_FONT_RAW_SIZE];
 
 static void clamp_selection(void);
 static void scan_library(void);
@@ -126,112 +114,86 @@ static void app_sysutil_callback(u64 status, u64 param, void *userdata)
     if (status == SYSUTIL_EXIT_GAME) g_exit_requested = 1;
 }
 
-static void osk_sysutil_callback(u64 status, u64 param, void *userdata)
-{
-    (void)param; (void)userdata;
-    switch ((u32)status) {
-        case SYSUTIL_OSK_INPUT_ENTERED:
-            if (oskGetInputText(&g_osk_result) == 0) g_osk_input_received = 1;
-            break;
-        case SYSUTIL_OSK_DONE:
-            if (!g_osk_input_received && oskGetInputText(&g_osk_result) == 0)
-                g_osk_input_received = 1;
-            if (!g_osk_unload_requested) {
-                g_osk_unload_requested = 1;
-                (void)oskUnloadAsync(&g_osk_result);
-            }
-            break;
-        case SYSUTIL_OSK_INPUT_CANCELED:
-            g_osk_cancelled = 1;
-            if (!g_osk_unload_requested) {
-                g_osk_unload_requested = 1;
-                (void)oskAbort();
-                (void)oskUnloadAsync(&g_osk_result);
-            }
-            break;
-        case SYSUTIL_OSK_UNLOADED:
-            if (!g_osk_cancelled && g_osk_input_received &&
-                (g_osk_result.res == OSK_OK || g_osk_result.res == OSK_NO_TEXT)) {
-                utf16_to_ascii(g_osk_result.str, g_search, sizeof(g_search));
-                g_selected = 0;
-                g_config_preview = 0;
-                clamp_selection();
-            }
-            g_osk_active = 0;
-            (void)sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT1);
-            (void)sysMemContainerDestroy(g_osk_container);
-            break;
-        default: break;
-    }
-}
-
 static int open_search_keyboard(void)
 {
-    int rc;
-    int max_length = (int)(sizeof(g_osk_text) / sizeof(g_osk_text[0])) - 1;
-    if (g_osk_active) return 0;
-
-    memset(g_osk_title, 0, sizeof(g_osk_title));
-    memset(g_osk_start, 0, sizeof(g_osk_start));
-    memset(g_osk_text, 0, sizeof(g_osk_text));
-    memset(&g_osk_input, 0, sizeof(g_osk_input));
-    memset(&g_osk_params, 0, sizeof(g_osk_params));
-    memset(&g_osk_result, 0, sizeof(g_osk_result));
-
-    ascii_to_utf16("Search games by title:", g_osk_title,
-                   sizeof(g_osk_title) / sizeof(g_osk_title[0]));
-    ascii_to_utf16(g_search, g_osk_start,
-                   sizeof(g_osk_start) / sizeof(g_osk_start[0]));
-
-    g_osk_input.message = g_osk_title;
-    g_osk_input.startText = g_osk_start;
-    g_osk_input.maxLength = max_length;
-    g_osk_params.allowedPanels = OSK_PANEL_TYPE_ALPHABET_FULL_WIDTH |
-        OSK_PANEL_TYPE_ALPHABET | OSK_PANEL_TYPE_NUMERAL |
-        OSK_PANEL_TYPE_ENGLISH | OSK_PANEL_TYPE_URL;
-    g_osk_params.firstViewPanel = OSK_PANEL_TYPE_ALPHABET_FULL_WIDTH;
-    g_osk_params.controlPoint.x = 0.0f;
-    g_osk_params.controlPoint.y = 0.0f;
-    g_osk_params.prohibitFlags = OSK_PROHIBIT_RETURN;
-
-    g_osk_result.res = OSK_NO_TEXT;
-    g_osk_result.len = max_length;
-    g_osk_result.str = g_osk_text;
-    g_osk_input_received = 0;
-    g_osk_cancelled = 0;
-    g_osk_unload_requested = 0;
-
-    rc = sysMemContainerCreate(&g_osk_container, 4 * 1024 * 1024);
-    if (rc != 0) return rc;
-
-    if (oskSetKeyLayoutOption(OSK_10KEY_PANEL | OSK_FULLKEY_PANEL) != 0 ||
-        oskAddSupportLanguage(g_osk_params.allowedPanels) != 0 ||
-        oskSetInitialInputDevice(OSK_DEVICE_PAD) != 0 ||
-        oskSetLayoutMode(OSK_LAYOUTMODE_HORIZONTAL_ALIGN_CENTER |
-                         OSK_LAYOUTMODE_VERTICAL_ALIGN_CENTER) != 0) {
-        (void)sysMemContainerDestroy(g_osk_container);
-        return -1;
-    }
-
-    rc = sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT1, osk_sysutil_callback, NULL);
-    if (rc != 0) {
-        (void)sysMemContainerDestroy(g_osk_container);
-        return rc;
-    }
-    rc = oskLoadAsync(g_osk_container, &g_osk_params, &g_osk_input);
-    if (rc != 0) {
-        (void)sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT1);
-        (void)sysMemContainerDestroy(g_osk_container);
-        return rc;
-    }
-    g_osk_active = 1;
+    snprintf(g_search_backup, sizeof(g_search_backup), "%s", g_search);
+    g_keyboard_selected = 0;
+    g_screen = SCREEN_KEYBOARD;
     return 0;
 }
 
-static void draw_text(float x, float y, u32 color, char *text)
+static int base64_value(char c)
 {
+    if (c >= 'A' && c <= 'Z') return c - 'A';
+    if (c >= 'a' && c <= 'z') return c - 'a' + 26;
+    if (c >= '0' && c <= '9') return c - '0' + 52;
+    if (c == '+') return 62;
+    if (c == '/') return 63;
+    return -1;
+}
+
+static int decode_base64(const char *source, unsigned char *output,
+                         size_t capacity)
+{
+    uint32_t value = 0;
+    int bits = -8;
+    size_t used = 0, i;
+    for (i = 0; source && source[i]; i++) {
+        int digit;
+        if (source[i] == '=') break;
+        digit = base64_value(source[i]);
+        if (digit < 0) continue;
+        value = (value << 6) | (uint32_t)digit;
+        bits += 6;
+        if (bits >= 0) {
+            if (used >= capacity) return -1;
+            output[used++] = (unsigned char)((value >> bits) & 0xff);
+            bits -= 8;
+        }
+    }
+    return (int)used;
+}
+
+static int load_extended_font(void)
+{
+    unsigned char compressed[2048];
+    int compressed_size;
+    uLongf output_size = (uLongf)sizeof(g_extended_font_bitmap);
+
+    compressed_size = decode_base64(ps3scale_font_z64, compressed,
+                                     sizeof(compressed));
+    if (compressed_size <= 0) return -1;
+    if (uncompress(g_extended_font_bitmap, &output_size, compressed,
+                   (uLong)compressed_size) != Z_OK ||
+        output_size != sizeof(g_extended_font_bitmap))
+        return -1;
+
+    ResetFont();
+    (void)AddFontFromBitmapArray(g_extended_font_bitmap,
+        (u8 *)g_font_texture, PS3SCALE_FONT_FIRST, PS3SCALE_FONT_LAST,
+        PS3SCALE_FONT_WIDTH, PS3SCALE_FONT_HEIGHT, 1, BIT7_FIRST_PIXEL);
+    SetCurrentFont(0);
+    g_extended_font_ready = 1;
+    return 0;
+}
+
+static void draw_text(float x, float y, u32 color, const char *text)
+{
+    char translated[512];
+    char glyph_text[512];
+    const char *source = text ? text : "";
+    if (g_language == LANGUAGE_ARABIC || g_language == LANGUAGE_SPANISH) {
+        (void)ps3scale_locale_translate(g_language, source, translated,
+                                        sizeof(translated));
+        source = translated;
+    }
+    if (!g_extended_font_ready &&
+        (g_language == LANGUAGE_ARABIC || g_language == LANGUAGE_SPANISH))
+        source = text ? text : "";
+    (void)ps3scale_locale_to_glyphs(source, glyph_text, sizeof(glyph_text));
+    SetCurrentFont(0);
     SetFontColor(color, 0x00000000);
-    DrawString(x, y, text);
+    DrawString(x, y, glyph_text);
 }
 
 static int open_background_music(void)
@@ -693,18 +655,64 @@ static void update_selected_cover(void)
 
 static void draw_home_ambient(void)
 {
-    float phase = g_animation_enabled ? (float)g_frame_counter * 0.0024f : 0.0f;
-    float cx = 670.0f, cy = 275.0f;
+    static const float octahedron[6][3] = {
+        {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 1.0f}, {-1.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, -1.0f}, {0.0f, -1.0f, 0.0f}
+    };
+    static const unsigned char edges[12][2] = {
+        {0,1},{0,2},{0,3},{0,4},{5,1},{5,2},
+        {5,3},{5,4},{1,2},{2,3},{3,4},{4,1}
+    };
+    float phase = g_animation_enabled ? (float)g_frame_counter * 0.0009f : 0.0f;
+    MATRIX projection, rotation, scale, translation, model;
     int i;
-    draw_circle_outline(cx, cy, 112.0f + 3.0f * sinf(phase), 0x1b3b56ff);
-    draw_circle_outline(cx, cy, 78.0f + 2.0f * cosf(phase * 0.7f), 0x173149ff);
-    for (i = 0; i < 4; i++) {
-        float angle = phase + (float)i * 1.57079632679f;
-        float px = cx + cosf(angle) * 112.0f;
-        float py = cy + sinf(angle) * 112.0f;
-        draw_solid_rect(px - 2.0f, py - 2.0f, 4.0f, 4.0f, 0x477b9cff);
+
+    tiny3d_Project3D();
+    projection = MatrixProjPerspective(58.0f, 16.0f / 9.0f, 0.1f, 300.0f);
+    tiny3d_SetProjectionMatrix(&projection);
+    rotation = MatrixMultiply(MatrixRotationY(phase),
+                              MatrixRotationX(phase * 0.63f));
+    scale = MatrixScale(16.0f, 16.0f, 16.0f);
+    translation = MatrixTranslation(42.0f, 0.0f, 92.0f);
+    model = MatrixMultiply(MatrixMultiply(scale, rotation), translation);
+    tiny3d_SetMatrixModelView(&model);
+    tiny3d_SetLightsOff();
+
+    tiny3d_SetPolygon(TINY3D_LINES);
+    for (i = 0; i < 12; i++) {
+        const float *a = octahedron[edges[i][0]];
+        const float *b = octahedron[edges[i][1]];
+        tiny3d_VertexPos(a[0], a[1], a[2]);
+        tiny3d_VertexColor(0x65c8e6c0);
+        tiny3d_VertexPos(b[0], b[1], b[2]);
     }
-    draw_icon_line(500.0f, 400.0f, 808.0f, 400.0f, 0x18334aff);
+    tiny3d_End();
+
+    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+    for (i = 0; i < 32; i++) {
+        float angle = 6.28318530718f * (float)i / 32.0f;
+        tiny3d_VertexPos(cosf(angle) * 1.62f,
+                         sinf(angle) * 1.62f, 0.0f);
+        if (i == 0) tiny3d_VertexColor(0x8bd450d0);
+    }
+    tiny3d_End();
+
+    rotation = MatrixMultiply(MatrixRotationX(1.12f),
+                              MatrixRotationZ(phase * 0.55f));
+    model = MatrixMultiply(MatrixMultiply(scale, rotation), translation);
+    tiny3d_SetMatrixModelView(&model);
+    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+    for (i = 0; i < 32; i++) {
+        float angle = 6.28318530718f * (float)i / 32.0f;
+        tiny3d_VertexPos(cosf(angle) * 1.95f,
+                         sinf(angle) * 1.95f, 0.0f);
+        if (i == 0) tiny3d_VertexColor(0x397fb6b0);
+    }
+    tiny3d_End();
+
+    tiny3d_Project2D();
+    tiny3d_SetMatrixModelView(NULL);
 }
 
 static void set_settings_message(const char *message)
@@ -718,6 +726,7 @@ static void load_app_settings(void)
     FILE *fp = fopen(PS3SCALE_SETTINGS_PATH, "r");
     char line[64]; int value;
     if (!fp) return;
+    g_language = LANGUAGE_UNSET;
     while (fgets(line, sizeof(line), fp)) {
         if (sscanf(line, "music=%d", &value) == 1)
             g_music_enabled = value ? 1 : 0;
@@ -725,6 +734,9 @@ static void load_app_settings(void)
             set_background_music_volume(value);
         else if (sscanf(line, "animation=%d", &value) == 1)
             g_animation_enabled = value ? 1 : 0;
+        else if (sscanf(line, "language=%d", &value) == 1 &&
+                 value >= LANGUAGE_ENGLISH && value <= LANGUAGE_SPANISH)
+            g_language = value;
     }
     fclose(fp);
 }
@@ -739,6 +751,7 @@ static int save_app_settings(void)
     fprintf(fp, "music=%d\n", g_music_enabled ? 1 : 0);
     fprintf(fp, "volume=%d\n", g_music_volume);
     fprintf(fp, "animation=%d\n", g_animation_enabled ? 1 : 0);
+    fprintf(fp, "language=%d\n", g_language);
     if (fclose(fp) != 0) {
         set_settings_message("SETTINGS SAVE FAILED.");
         return -1;
@@ -880,6 +893,104 @@ static void refresh_companion_tool_status(void)
                                     "webftp_server.sprx");
     snprintf(g_tools_message, sizeof(g_tools_message),
              "STATUS UPDATED. OPEN INSTALLED TOOLS FROM XMB.");
+}
+
+static void draw_language_selection(void)
+{
+    int i;
+    SetFontSize(15, 23);
+    draw_text(34, 28, 0xcaff39ff, "PS3 SCALE");
+    draw_text(34, 88, 0xffffffff, "CHOOSE LANGUAGE");
+    draw_text(34, 126, 0xdce3e8ff, "اختر اللغة");
+    draw_text(34, 164, 0xdce3e8ff, "Elige el idioma");
+    for (i = 0; i < 3; i++) {
+        float y = 226.0f + (float)i * 58.0f;
+        int selected = (i == g_language_choice);
+        if (selected) draw_solid_rect(80.0f, y - 5.0f, 650.0f, 44.0f, 0x173a35ff);
+        draw_outline_rect(80.0f, y - 5.0f, 650.0f, 44.0f,
+                          selected ? 0x8bd450ff : 0x26445cff);
+        draw_text(112, y + 7.0f,
+                  selected ? 0xcaff39ff : 0xdce3e8ff,
+                  ps3scale_locale_language_name(i));
+    }
+    draw_text(34, 478, 0x9aa6adff, "UP/DOWN: SELECT  |  CROSS: CONTINUE");
+    SetFontSize(14, 22);
+}
+
+static void draw_boot(void)
+{
+    const char *stage_text[] = {
+        "INITIALIZING GRAPHICS AND CONTROLLER",
+        "CHECKING SETTINGS AND AUDIO",
+        "SCANNING LOCAL GAME LIBRARY",
+        "CHECKING COMPANION TOOLS",
+        "READY"
+    };
+    const int progress[] = {12, 28, 58, 88, 100};
+    float width = (640.0f * (float)progress[g_boot_stage]) / 100.0f;
+    SetFontSize(14, 21);
+    draw_home_ambient();
+    draw_text(34, 30, 0xcaff39ff, "PS3 SCALE");
+    draw_text(34, 92, 0xffffffff, "STARTING PS3 SCALE");
+    draw_text(100, 214, 0xdce3e8ff, stage_text[g_boot_stage]);
+    draw_outline_rect(100.0f, 286.0f, 648.0f, 20.0f, 0x42647aff);
+    draw_solid_rect(104.0f, 290.0f, width, 12.0f, 0x4aafcaff);
+    if (g_boot_stage == 2) {
+        float moving = 104.0f + (float)((g_frame_counter * 5u) % 530u);
+        draw_solid_rect(moving, 290.0f, 78.0f, 12.0f, 0xcaff39ff);
+    }
+    if (g_boot_stage < 4)
+        draw_text(100, 336, 0x9aa6adff, "PLEASE WAIT...");
+    else
+        draw_text(100, 336, 0x9ee56aff, "READY");
+    draw_text(100, 380, g_app_files_ok ? 0x9ee56aff : 0xffcc66ff,
+              g_app_files_ok ? "APP FILE CHECK: OK" : "APP FILE CHECK: VERIFY INSTALL");
+    draw_text(34, 478, 0x6f7b83ff,
+              "LOCAL CHECKS ONLY  |  NO GAME FILES ARE MODIFIED");
+    SetFontSize(14, 22);
+}
+
+static void draw_keyboard(void)
+{
+    int i;
+    SetFontSize(12, 18);
+    draw_text(34, 22, 0xcaff39ff, "PS3 SCALE");
+    draw_text(34, 56, 0xffffffff, "SEARCH GAMES");
+    draw_text(34, 88, 0x9aa6adff, "TYPE TO FILTER THE LIBRARY");
+    draw_solid_rect(40.0f, 112.0f, 768.0f, 34.0f, 0x0d1722ff);
+    draw_outline_rect(40.0f, 112.0f, 768.0f, 34.0f, 0x42647aff);
+    draw_text(54, 120, 0xcaff39ff, g_search[0] ? g_search : " ");
+    for (i = 0; i < 40; i++) {
+        int row = i / 10;
+        int col = i % 10;
+        float x = 48.0f + (float)col * 76.0f;
+        float y = 160.0f + (float)row * 46.0f;
+        int selected = (i == g_keyboard_selected);
+        draw_solid_rect(x, y, 68.0f, 38.0f,
+                        selected ? 0x1c594dff : 0x111e2bff);
+        draw_outline_rect(x, y, 68.0f, 38.0f,
+                          selected ? 0x8bd450ff : 0x344f63ff);
+        draw_text(x + 23.0f, y + 9.0f, selected ? 0xcaff39ff : 0xdce3e8ff,
+                  ps3scale_locale_keyboard_key(g_language, i));
+    }
+    {
+        static const char *actions[5] = {"SPACE","BACKSPACE","CLEAR","APPLY","CANCEL"};
+        for (i = 0; i < 5; i++) {
+            float x = 36.0f + (float)i * 156.0f;
+            int selected = (g_keyboard_selected == 40 + i);
+            draw_solid_rect(x, 360.0f, 144.0f, 42.0f,
+                            selected ? 0x1c594dff : 0x111e2bff);
+            draw_outline_rect(x, 360.0f, 144.0f, 42.0f,
+                              selected ? 0x8bd450ff : 0x344f63ff);
+            draw_text(x + 14.0f, 372.0f,
+                      selected ? 0xcaff39ff : 0xdce3e8ff, actions[i]);
+        }
+    }
+    draw_text(34, 440, 0x9aa6adff,
+              "ARROWS MOVE  |  CROSS SELECT  |  CIRCLE CANCEL");
+    draw_text(34, 478, 0x6f7b83ff,
+              "CUSTOM KEYBOARD  |  NO PS3 SYSTEM KEYBOARD REQUIRED");
+    SetFontSize(14, 22);
 }
 
 static void draw_home(void)
@@ -1108,7 +1219,8 @@ static void draw_settings(void)
     static char *labels[SETTINGS_COUNT] = {
         "BACKGROUND MUSIC", "MUSIC VOLUME", "HOME ANIMATION",
         "CHECK FOR USB UPDATE", "RESCAN GAME LIBRARY",
-        "RESTORE DEFAULT SETTINGS", "COPY MUSIC TO INTERNAL HDD"
+        "RESTORE DEFAULT SETTINGS", "COPY MUSIC TO INTERNAL HDD",
+        "LANGUAGE"
     };
     char value[96];
     int i;
@@ -1128,7 +1240,9 @@ static void draw_settings(void)
         else if (i == 3) snprintf(value, sizeof(value), "SCAN USB000 - USB007");
         else if (i == 4) snprintf(value, sizeof(value), "CURRENT LIBRARY");
         else if (i == 5) snprintf(value, sizeof(value), "DEFAULTS");
-        else snprintf(value, sizeof(value), "IMPORT FROM USB");
+        else if (i == 6) snprintf(value, sizeof(value), "IMPORT FROM USB");
+        else snprintf(value, sizeof(value), "%s",
+                      ps3scale_locale_language_name(g_language));
         draw_text(48, y, selected ? 0xcaff39ff : 0xdce3e8ff, labels[i]);
         draw_text(590, y, selected ? 0xcaff39ff : 0x9aa6adff, value);
     }
@@ -1142,7 +1256,7 @@ static void draw_settings(void)
     }
     draw_text(34, 428, 0xdce3e8ff, g_settings_message);
     draw_text(34, 478, 0x9aa6adff,
-              "UP/DOWN: MOVE  CROSS: SELECT  LEFT/RIGHT: VOLUME  CIRCLE: BACK");
+              "UP/DOWN: MOVE  CROSS: SELECT  LEFT/RIGHT: ADJUST  CIRCLE: BACK");
     SetFontSize(14, 22);
 }
 
@@ -1211,6 +1325,9 @@ static void draw_ui(void)
     tiny3d_Clear(0xff070a0d, TINY3D_CLEAR_ALL);
     tiny3d_Project2D();
     switch (g_screen) {
+        case SCREEN_LANGUAGE: draw_language_selection(); break;
+        case SCREEN_BOOT: draw_boot(); break;
+        case SCREEN_KEYBOARD: draw_keyboard(); break;
         case SCREEN_HOME: draw_home(); break;
         case SCREEN_SCAN: draw_scan(); break;
         case SCREEN_DETAILS: draw_details(); break;
@@ -1248,6 +1365,148 @@ static void scan_library(void)
     clamp_selection();
 }
 
+static void boot_scan_worker(void *arg)
+{
+    (void)arg;
+    scan_library();
+    g_boot_scan_done = 1;
+}
+
+static void start_boot_scan(void)
+{
+    int rc;
+    g_boot_scan_done = 0;
+    rc = sysThreadCreate(&g_boot_scan_thread, boot_scan_worker, NULL,
+                         1500, 0x8000, THREAD_JOINABLE,
+                         "PS3 SCALE Library Scan");
+    if (rc == 0) {
+        g_boot_scan_thread_started = 1;
+    } else {
+        scan_library();
+        g_boot_scan_done = 1;
+    }
+}
+
+static void boot_tick(void)
+{
+    if (g_boot_stage == 0) {
+        if (++g_boot_stage_frames >= 22) {
+            g_boot_stage = 1;
+            g_boot_stage_frames = 0;
+        }
+    } else if (g_boot_stage == 1) {
+        if (++g_boot_stage_frames >= 22) {
+            refresh_companion_tool_status();
+            g_boot_stage = 2;
+            g_boot_stage_frames = 0;
+            start_boot_scan();
+        }
+    } else if (g_boot_stage == 2) {
+        if (g_boot_scan_done) {
+            u64 thread_result = 0;
+            if (g_boot_scan_thread_started) {
+                (void)sysThreadJoin(g_boot_scan_thread, &thread_result);
+                g_boot_scan_thread_started = 0;
+            }
+            g_boot_stage = 3;
+            g_boot_stage_frames = 0;
+        }
+    } else if (g_boot_stage == 3) {
+        if (++g_boot_stage_frames >= 24) {
+            g_boot_stage = 4;
+            g_boot_stage_frames = 0;
+        }
+    } else if (g_boot_stage == 4) {
+        if (++g_boot_stage_frames >= 36) {
+            g_screen = SCREEN_HOME;
+            g_boot_stage_frames = 0;
+        }
+    }
+}
+
+static void keyboard_move(int direction)
+{
+    if (g_keyboard_selected >= 40) {
+        int col = g_keyboard_selected - 40;
+        if (direction == 0) g_keyboard_selected = 30 + col * 2;
+        else if (direction == 1) g_keyboard_selected = col;
+        else if (direction == 2) g_keyboard_selected = 40 + ((col + 1) % 5);
+        else g_keyboard_selected = 40 + ((col + 4) % 5);
+        return;
+    }
+    {
+        int row = g_keyboard_selected / 10;
+        int col = g_keyboard_selected % 10;
+        if (direction == 0)
+            g_keyboard_selected = row > 0 ? g_keyboard_selected - 10 :
+                                  40 + (col / 2);
+        else if (direction == 1)
+            g_keyboard_selected = row < 3 ? g_keyboard_selected + 10 :
+                                  40 + (col / 2);
+        else if (direction == 2)
+            g_keyboard_selected = row * 10 + ((col + 1) % 10);
+        else
+            g_keyboard_selected = row * 10 + ((col + 9) % 10);
+    }
+}
+
+static void keyboard_append(const char *value)
+{
+    size_t used, amount;
+    if (!value) return;
+    used = strlen(g_search);
+    amount = strlen(value);
+    if (used + amount < sizeof(g_search)) {
+        memcpy(g_search + used, value, amount + 1);
+        clamp_selection();
+    }
+}
+
+static void keyboard_backspace(void)
+{
+    size_t n = strlen(g_search);
+    if (n == 0) return;
+    n--;
+    while (n > 0 && (((unsigned char)g_search[n] & 0xc0) == 0x80)) n--;
+    g_search[n] = '\0';
+    clamp_selection();
+}
+
+static void keyboard_cancel(void)
+{
+    snprintf(g_search, sizeof(g_search), "%s", g_search_backup);
+    g_selected = 0;
+    g_screen = SCREEN_SCAN;
+    clamp_selection();
+}
+
+static void keyboard_apply(void)
+{
+    g_selected = 0;
+    g_config_preview = 0;
+    g_screen = SCREEN_SCAN;
+    clamp_selection();
+}
+
+static void keyboard_press(void)
+{
+    if (g_keyboard_selected < 40) {
+        keyboard_append(ps3scale_locale_keyboard_key(g_language,
+                                                     g_keyboard_selected));
+    } else if (g_keyboard_selected == 40) {
+        keyboard_append(" ");
+    } else if (g_keyboard_selected == 41) {
+        keyboard_backspace();
+    } else if (g_keyboard_selected == 42) {
+        g_search[0] = '\0';
+        g_selected = 0;
+    } else if (g_keyboard_selected == 43) {
+        keyboard_apply();
+    } else {
+        keyboard_cancel();
+    }
+}
+
 int main(int argc, char *argv[])
 {
     padInfo pad_info;
@@ -1270,19 +1529,33 @@ int main(int argc, char *argv[])
     if (!g_font_texture) return 1;
 
     ResetFont();
-    AddFontFromBitmapArray((u8 *)ps3scale_font8x12,
-                           (u8 *)g_font_texture,
-                           32, 126, 8, 12, 1, BIT7_FIRST_PIXEL);
+    if (load_extended_font() != 0) {
+        ResetFont();
+        AddFontFromBitmapArray((u8 *)ps3scale_font8x12,
+                               (u8 *)g_font_texture,
+                               32, 126, 8, 12, 1, BIT7_FIRST_PIXEL);
+        g_extended_font_ready = 0;
+    }
     SetCurrentFont(0);
     SetFontSize(14, 22);
 
     sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT0, app_sysutil_callback, NULL);
-    refresh_companion_tool_status();
+    g_app_files_ok =
+        file_exists_readonly("/dev_hdd0/game/PS3SCALE1/USRDIR/EBOOT.BIN") ||
+        file_exists_readonly("/dev_hdd0/game/PS3SCALE1/PARAM.SFO");
 
-    /* Start the supplied GTA V remix automatically when the app opens. */
+    /* Start the supplied theme as soon as the application is initialized. */
     (void)initialize_audio_backend();
 
-    scan_library();
+    if (g_language == LANGUAGE_UNSET) {
+        g_language_choice = LANGUAGE_ENGLISH;
+        g_screen = SCREEN_LANGUAGE;
+    } else {
+        g_language_choice = g_language;
+        g_screen = SCREEN_BOOT;
+    }
+    g_boot_stage = 0;
+    g_boot_stage_frames = 0;
 
     while (!g_exit_requested) {
         u16 up = 0, down = 0, square = 0, cross = 0, circle = 0;
@@ -1292,7 +1565,7 @@ int main(int argc, char *argv[])
         sysUtilCheckCallback();
         g_frame_counter++;
 
-        if (!g_osk_active && pad_ready && ioPadGetInfo(&pad_info) == 0) {
+        if (pad_ready && ioPadGetInfo(&pad_info) == 0) {
             int p;
             for (p = 0; p < MAX_PADS; p++) {
                 if (!pad_info.status[p]) continue;
@@ -1314,140 +1587,172 @@ int main(int argc, char *argv[])
             }
         }
 
-        if (!g_osk_active) {
-            if (g_screen == SCREEN_HOME) {
-                if (up && !old_up)
-                    g_home_selected = (g_home_selected + 3) % 4;
-                if (down && !old_down)
-                    g_home_selected = (g_home_selected + 1) % 4;
-                if (cross && !old_cross) {
-                    if (g_home_selected == 0) {
-                        g_screen = SCREEN_SCAN;
-                        g_selected = 0;
-                    } else if (g_home_selected == 1) {
-                        g_screen = SCREEN_SETTINGS;
-                    } else if (g_home_selected == 2) {
-                        g_screen = SCREEN_TOOLS;
-                        refresh_companion_tool_status();
-                    } else {
-                        g_screen = SCREEN_ABOUT;
-                    }
-                }
-                if (circle && !old_circle)
-                    g_exit_requested = 1;
-            } else if (g_screen == SCREEN_SCAN) {
-                if (l1 && !old_l1) {
-                    g_library = LIBRARY_PS3;
-                    g_selected = 0;
-                    g_config_preview = 0;
-                }
-                if (r1 && !old_r1) {
-                    g_library = LIBRARY_PS2;
-                    g_selected = 0;
-                    g_config_preview = 0;
-                }
-                if (up && !old_up && library_count(g_library)) {
-                    int count = (int)library_count(g_library);
-                    g_selected = (g_selected > 0) ? g_selected - 1 : count - 1;
-                }
-                if (down && !old_down && library_count(g_library))
-                    g_selected = (g_selected + 1) % (int)library_count(g_library);
-                if ((select && !old_select) || (start && !old_start))
-                    (void)open_search_keyboard();
-                if (square && !old_square)
-                    scan_library();
-                if (triangle && !old_triangle && g_library == LIBRARY_PS2)
-                    g_config_preview = !g_config_preview;
-                if (cross && !old_cross && selected_game())
-                    g_screen = SCREEN_DETAILS;
-                if (circle && !old_circle)
-                    g_screen = SCREEN_HOME;
-            } else if (g_screen == SCREEN_DETAILS) {
-                if (triangle && !old_triangle && selected_game() &&
-                    selected_game()->kind == PS3SCALE_GAME_PS2_ISO)
-                    g_config_preview = !g_config_preview;
-                if (circle && !old_circle)
-                    g_screen = SCREEN_SCAN;
-            } else if (g_screen == SCREEN_SETTINGS) {
-                if (up && !old_up)
-                    g_settings_selected = (g_settings_selected + SETTINGS_COUNT - 1) % SETTINGS_COUNT;
-                if (down && !old_down)
-                    g_settings_selected = (g_settings_selected + 1) % SETTINGS_COUNT;
-
-                if (cross && !old_cross) {
-                    if (g_settings_selected == 0) {
-                        set_background_music_enabled(!g_music_enabled);
-                        (void)save_app_settings();
-                    } else if (g_settings_selected == 2) {
-                        g_animation_enabled = !g_animation_enabled;
-                        (void)save_app_settings();
-                    } else if (g_settings_selected == 3) {
-                        char update_path[PS3SCALE_PATH_MAX];
-                        if (find_usb_update_package(update_path, sizeof(update_path))) {
-                            const char *usb = strstr(update_path, "/dev_usb");
-                            if (usb)
-                                snprintf(g_settings_message, sizeof(g_settings_message),
-                                         "UPDATE PKG FOUND ON USB%.3s. INSTALL VIA PACKAGE MANAGER.",
-                                         usb + 8);
-                            else
-                                set_settings_message("UPDATE PKG FOUND. INSTALL VIA PACKAGE MANAGER.");
-                        } else {
-                            set_settings_message("NO PS3 SCALE UPDATE PACKAGE FOUND ON USB.");
-                        }
-                    } else if (g_settings_selected == 4) {
-                        scan_library();
-                        snprintf(g_settings_message, sizeof(g_settings_message),
-                                 "SCAN COMPLETE: %u PS3 / %u PS2 TITLES.",
-                                 (unsigned)library_total_count(LIBRARY_PS3),
-                                 (unsigned)library_total_count(LIBRARY_PS2));
-                    } else if (g_settings_selected == 5) {
-                        g_music_enabled = 1;
-                        g_music_volume = 180;
-                        g_animation_enabled = 1;
-                        (void)save_app_settings();
-                    } else if (g_settings_selected == 6) {
-                        int copy_result = copy_music_to_internal();
-                        if (copy_result == 0) {
-                            shutdown_audio_backend();
-                            if (initialize_audio_backend() == 0)
-                                set_settings_message("MUSIC COPIED; PLAYBACK NOW USES INTERNAL HDD.");
-                            else
-                                set_settings_message("MUSIC COPIED TO HDD. RESTART APP TO START AUDIO.");
-                        }
-                        else if (copy_result == 1) {
-                            shutdown_audio_backend();
-                            if (initialize_audio_backend() == 0)
-                                set_settings_message("MUSIC ALREADY ON HDD; PLAYBACK SWITCHED TO INTERNAL.");
-                            else
-                                set_settings_message("MUSIC ALREADY ON HDD. RESTART APP IF AUDIO IS STOPPED.");
-                        }
-                        else
-                            set_settings_message("COPY FAILED. CHECK USB MUSIC FILE AND HDD SPACE.");
-                    }
-                }
-
-                if (g_settings_selected == 1) {
-                    if (left && !old_left) {
-                        set_background_music_volume(g_music_volume - 13);
-                        (void)save_app_settings();
-                    }
-                    if (right && !old_right) {
-                        set_background_music_volume(g_music_volume + 13);
-                        (void)save_app_settings();
-                    }
-                }
-
-                if (circle && !old_circle)
-                    g_screen = SCREEN_HOME;
-            } else if (g_screen == SCREEN_TOOLS) {
-                if (cross && !old_cross)
-                    refresh_companion_tool_status();
-                if (circle && !old_circle)
-                    g_screen = SCREEN_HOME;
-            } else {
-                if (circle && !old_circle)
-                    g_screen = SCREEN_HOME;
+        if (g_screen == SCREEN_LANGUAGE) {
+            if (up && !old_up)
+                g_language_choice = (g_language_choice + 2) % 3;
+            if (down && !old_down)
+                g_language_choice = (g_language_choice + 1) % 3;
+            if (cross && !old_cross) {
+                g_language = g_language_choice;
+                (void)save_app_settings();
+                g_boot_stage = 0;
+                g_boot_stage_frames = 0;
+                g_screen = SCREEN_BOOT;
             }
+        } else if (g_screen == SCREEN_BOOT) {
+            boot_tick();
+        } else if (g_screen == SCREEN_KEYBOARD) {
+            if (up && !old_up) keyboard_move(0);
+            if (down && !old_down) keyboard_move(1);
+            if (right && !old_right) keyboard_move(2);
+            if (left && !old_left) keyboard_move(3);
+            if (cross && !old_cross) keyboard_press();
+            if (circle && !old_circle) keyboard_cancel();
+        } else if (g_screen == SCREEN_HOME) {
+            if (up && !old_up)
+                g_home_selected = (g_home_selected + 3) % 4;
+            if (down && !old_down)
+                g_home_selected = (g_home_selected + 1) % 4;
+            if (cross && !old_cross) {
+                if (g_home_selected == 0) {
+                    g_screen = SCREEN_SCAN;
+                    g_selected = 0;
+                } else if (g_home_selected == 1) {
+                    g_screen = SCREEN_SETTINGS;
+                } else if (g_home_selected == 2) {
+                    g_screen = SCREEN_TOOLS;
+                    refresh_companion_tool_status();
+                } else {
+                    g_screen = SCREEN_ABOUT;
+                }
+            }
+            if (circle && !old_circle)
+                g_exit_requested = 1;
+        } else if (g_screen == SCREEN_SCAN) {
+            if (l1 && !old_l1) {
+                g_library = LIBRARY_PS3;
+                g_selected = 0;
+                g_config_preview = 0;
+            }
+            if (r1 && !old_r1) {
+                g_library = LIBRARY_PS2;
+                g_selected = 0;
+                g_config_preview = 0;
+            }
+            if (up && !old_up && library_count(g_library)) {
+                int count = (int)library_count(g_library);
+                g_selected = (g_selected > 0) ? g_selected - 1 : count - 1;
+            }
+            if (down && !old_down && library_count(g_library))
+                g_selected = (g_selected + 1) % (int)library_count(g_library);
+            if ((select && !old_select) || (start && !old_start))
+                (void)open_search_keyboard();
+            if (square && !old_square)
+                scan_library();
+            if (triangle && !old_triangle && g_library == LIBRARY_PS2)
+                g_config_preview = !g_config_preview;
+            if (cross && !old_cross && selected_game())
+                g_screen = SCREEN_DETAILS;
+            if (circle && !old_circle)
+                g_screen = SCREEN_HOME;
+        } else if (g_screen == SCREEN_DETAILS) {
+            if (triangle && !old_triangle && selected_game() &&
+                selected_game()->kind == PS3SCALE_GAME_PS2_ISO)
+                g_config_preview = !g_config_preview;
+            if (circle && !old_circle)
+                g_screen = SCREEN_SCAN;
+        } else if (g_screen == SCREEN_SETTINGS) {
+            if (up && !old_up)
+                g_settings_selected = (g_settings_selected + SETTINGS_COUNT - 1) % SETTINGS_COUNT;
+            if (down && !old_down)
+                g_settings_selected = (g_settings_selected + 1) % SETTINGS_COUNT;
+
+            if (cross && !old_cross) {
+                if (g_settings_selected == 0) {
+                    set_background_music_enabled(!g_music_enabled);
+                    (void)save_app_settings();
+                } else if (g_settings_selected == 2) {
+                    g_animation_enabled = !g_animation_enabled;
+                    (void)save_app_settings();
+                } else if (g_settings_selected == 3) {
+                    char update_path[PS3SCALE_PATH_MAX];
+                    if (find_usb_update_package(update_path, sizeof(update_path))) {
+                        const char *usb = strstr(update_path, "/dev_usb");
+                        if (usb)
+                            snprintf(g_settings_message, sizeof(g_settings_message),
+                                     "UPDATE PKG FOUND ON USB%.3s. INSTALL VIA PACKAGE MANAGER.",
+                                     usb + 8);
+                        else
+                            set_settings_message("UPDATE PKG FOUND. INSTALL VIA PACKAGE MANAGER.");
+                    } else {
+                        set_settings_message("NO PS3 SCALE UPDATE PACKAGE FOUND ON USB.");
+                    }
+                } else if (g_settings_selected == 4) {
+                    scan_library();
+                    snprintf(g_settings_message, sizeof(g_settings_message),
+                             "SCAN COMPLETE: %u PS3 / %u PS2 TITLES.",
+                             (unsigned)library_total_count(LIBRARY_PS3),
+                             (unsigned)library_total_count(LIBRARY_PS2));
+                } else if (g_settings_selected == 5) {
+                    g_music_enabled = 1;
+                    g_music_volume = 180;
+                    g_animation_enabled = 1;
+                    (void)save_app_settings();
+                } else if (g_settings_selected == 6) {
+                    int copy_result = copy_music_to_internal();
+                    if (copy_result == 0) {
+                        shutdown_audio_backend();
+                        if (initialize_audio_backend() == 0)
+                            set_settings_message("MUSIC COPIED; PLAYBACK NOW USES INTERNAL HDD.");
+                        else
+                            set_settings_message("MUSIC COPIED TO HDD. RESTART APP TO START AUDIO.");
+                    } else if (copy_result == 1) {
+                        shutdown_audio_backend();
+                        if (initialize_audio_backend() == 0)
+                            set_settings_message("MUSIC ALREADY ON HDD; PLAYBACK SWITCHED TO INTERNAL.");
+                        else
+                            set_settings_message("MUSIC ALREADY ON HDD. RESTART APP IF AUDIO IS STOPPED.");
+                    } else {
+                        set_settings_message("COPY FAILED. CHECK USB MUSIC FILE AND HDD SPACE.");
+                    }
+                } else if (g_settings_selected == 7) {
+                    g_language = (g_language + 1) % 3;
+                    g_language_choice = g_language;
+                    (void)save_app_settings();
+                }
+            }
+
+            if (g_settings_selected == 7) {
+                if (left && !old_left) {
+                    g_language = (g_language + 2) % 3;
+                    g_language_choice = g_language;
+                    (void)save_app_settings();
+                }
+                if (right && !old_right) {
+                    g_language = (g_language + 1) % 3;
+                    g_language_choice = g_language;
+                    (void)save_app_settings();
+                }
+            }
+            if (g_settings_selected == 1) {
+                if (left && !old_left) {
+                    set_background_music_volume(g_music_volume - 13);
+                    (void)save_app_settings();
+                }
+                if (right && !old_right) {
+                    set_background_music_volume(g_music_volume + 13);
+                    (void)save_app_settings();
+                }
+            }
+            if (circle && !old_circle)
+                g_screen = SCREEN_HOME;
+        } else if (g_screen == SCREEN_TOOLS) {
+            if (cross && !old_cross)
+                refresh_companion_tool_status();
+            if (circle && !old_circle)
+                g_screen = SCREEN_HOME;
+        } else if (circle && !old_circle) {
+            g_screen = SCREEN_HOME;
         }
 
         old_up = up;
@@ -1463,17 +1768,15 @@ int main(int argc, char *argv[])
         old_left = left;
         old_right = right;
 
-        if (!g_osk_active) {
-            if (g_screen == SCREEN_SCAN || g_screen == SCREEN_DETAILS)
-                update_selected_cover();
-            draw_ui();
-        }
+        if (g_screen == SCREEN_SCAN || g_screen == SCREEN_DETAILS)
+            update_selected_cover();
+        draw_ui();
     }
 
-    if (g_osk_active) {
-        (void)oskAbort();
-        (void)oskUnloadAsync(&g_osk_result);
-        (void)sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT1);
+    if (g_boot_scan_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_boot_scan_thread, &thread_result);
+        g_boot_scan_thread_started = 0;
     }
     shutdown_audio_backend();
     sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
