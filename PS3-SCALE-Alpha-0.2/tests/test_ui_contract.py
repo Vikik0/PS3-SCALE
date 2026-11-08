@@ -83,6 +83,18 @@ assert "copy_music_to_internal" in src
 assert "PS3SCALE_SETTINGS_PATH" in src
 assert "settings.cfg" in src
 
+# Read-only hardware detection reports firmware and the Platform ID without console IDs.
+assert "ps3scale_hardware_detect(&g_hardware_info)" in main
+about = section("static void draw_about(void)", "static void draw_ui(void)")
+for token in ("HARDWARE INFORMATION", "DETECTED MODEL:", "FIRMWARE:",
+              "PLATFORM ID:", "HARDWARE INFO UNAVAILABLE."):
+    assert token in about
+hardware_detect_path = source_path.with_name("hardware_detect.c")
+hardware_detect_src = hardware_detect_path.read_text(encoding="utf-8")
+assert "lv2syscall1(387" in hardware_detect_src
+assert "ps3scale_hardware_info_parse" in hardware_detect_src
+assert "IDPS" not in hardware_detect_src and "PSID" not in hardware_detect_src
+
 # Home animation is true 3D but remains low-complexity and slow.
 ambient = section("static void draw_home_ambient(void)", "static void set_settings_message")
 assert "MatrixProjPerspective" in ambient
