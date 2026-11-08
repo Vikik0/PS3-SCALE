@@ -51,7 +51,7 @@ export CFLAGS="-O2 -mcpu=cell -I$PORTLIBS/include -I$PSL1GHT/ppu/include"
 export LDFLAGS="-L$PS3DEV/ppu/powerpc64-ps3-elf/lib -L$PS3DEV/ppu/lib -L$PSL1GHT/ppu/lib -L$PORTLIBS/lib"
 # Keep static dependencies after the network archives so configure's link probes
 # resolve sysModuleLoad/sysModuleUnload pulled in by libnet.a.
-export LIBS="-lnetctl -lnet -llv2 -lrt"
+export LIBS="-lnetctl -lnet -lsysmodule -llv2 -lrt"
 if ! ./configure \
   --host=powerpc64-ps3-elf \
   --prefix="$PORTLIBS" \
