@@ -3,6 +3,12 @@
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
+#include <malloc.h>
+#include <unistd.h>
+#include <sys/spu.h>
+#include <lv2/spu.h>
+#include <soundlib/spu_soundlib.h>
+#include <soundlib/audioplayer.h>
 
 #include <tiny3d.h>
 #include <libfont.h>
@@ -16,6 +22,7 @@
 #include "ps3scale/scanner.h"
 #include "ps3scale/ps2_config.h"
 #include "font8x12.h"
+#include "spu_soundmodule_bin.h"
 
 enum {
     LIBRARY_PS3 = 0,
@@ -41,6 +48,22 @@ static char g_search[64] = "";
 static u32 *g_font_texture = NULL;
 static ya2d_Texture *g_cover_texture = NULL;
 static char g_cover_path[PS3SCALE_PATH_MAX] = "";
+
+#define PS3SCALE_MUSIC_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3"
+#define PS3SCALE_MUSIC_ORIGINAL_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/GTA V - Greyhound Pause Menu Theme Remix.mp3"
+#define PS3SCALE_MUSIC_USB_PATH "/dev_usb000/PS3SCALE/theme.mp3"
+
+static u32 g_spu = 0;
+static sysSpuImage g_spu_image;
+static int g_spu_ready = 0;
+static int g_spu_image_ready = 0;
+static int g_soundlib_ready = 0;
+static int g_music_playing = 0;
+static int g_music_attempted = 0;
+static int g_music_enabled = 1;
+static int g_music_volume = 180;
+static int g_settings_selected = 0;
+static char g_music_path[PS3SCALE_PATH_MAX] = "";
 
 /* PS3 system on-screen keyboard state used by the Scan Games search field. */
 static int g_osk_active = 0;
@@ -145,6 +168,137 @@ static void draw_text(float x, float y, u32 color, char *text)
 {
     SetFontColor(color, 0x00000000);
     DrawString(x, y, text);
+}
+
+static void stop_background_music(void)
+{
+    if (g_music_playing) {
+        StopAudio();
+        g_music_playing = 0;
+    }
+}
+
+static int start_background_music(void)
+{
+    char path_primary[] = PS3SCALE_MUSIC_PATH;
+    char path_original[] = PS3SCALE_MUSIC_ORIGINAL_PATH;
+    char path_usb[] = PS3SCALE_MUSIC_USB_PATH;
+    char *paths[] = { path_primary, path_original, path_usb };
+    size_t i;
+
+    if (!g_soundlib_ready || !g_music_enabled)
+        return -1;
+
+    stop_background_music();
+    g_music_attempted = 1;
+    g_music_path[0] = '\0';
+
+    for (i = 0; i < sizeof(paths) / sizeof(paths[0]); i++) {
+        if (PlayAudio(paths[i], 0, AUDIO_INFINITE_TIME) == 0) {
+            g_music_playing = 1;
+            strncpy(g_music_path, paths[i], sizeof(g_music_path) - 1);
+            g_music_path[sizeof(g_music_path) - 1] = '\0';
+            SetVolumeAudio(g_music_volume);
+            return 0;
+        }
+    }
+
+    return -1;
+}
+
+static void set_background_music_enabled(int enabled)
+{
+    g_music_enabled = enabled ? 1 : 0;
+
+    if (!g_music_enabled) {
+        stop_background_music();
+    } else if (g_soundlib_ready) {
+        (void)start_background_music();
+    }
+}
+
+static void set_background_music_volume(int volume)
+{
+    if (volume < 0) volume = 0;
+    if (volume > 255) volume = 255;
+    g_music_volume = volume;
+
+    if (g_soundlib_ready)
+        SetVolumeAudio(g_music_volume);
+}
+
+static void update_background_music(void)
+{
+    int status;
+
+    if (!g_music_enabled || !g_music_playing)
+        return;
+
+    status = StatusAudio();
+    if (status == AUDIO_STATUS_EOF || status == AUDIO_STATUS_ERR) {
+        g_music_playing = 0;
+        (void)start_background_music();
+    }
+}
+
+static void shutdown_audio_backend(void)
+{
+    stop_background_music();
+
+    if (g_soundlib_ready) {
+        SND_End();
+        g_soundlib_ready = 0;
+    }
+
+    if (g_spu_ready) {
+        (void)sysSpuRawDestroy(g_spu);
+        g_spu_ready = 0;
+    }
+
+    if (g_spu_image_ready) {
+        sysSpuImageClose(&g_spu_image);
+        g_spu_image_ready = 0;
+    }
+}
+
+static int initialize_audio_backend(void)
+{
+    int rc;
+
+    rc = sysSpuInitialize(6, 5);
+    if (rc != 0)
+        return -1;
+
+    rc = sysSpuRawCreate(&g_spu, NULL);
+    if (rc != 0)
+        return -1;
+    g_spu_ready = 1;
+
+    rc = sysSpuImageImport(&g_spu_image, spu_soundmodule_bin, 0);
+    if (rc != 0)
+        goto fail;
+    g_spu_image_ready = 1;
+
+    rc = sysSpuRawImageLoad(g_spu, &g_spu_image);
+    if (rc != 0)
+        goto fail;
+
+    rc = SND_Init(g_spu);
+    if (rc != 0)
+        goto fail;
+    g_soundlib_ready = 1;
+
+    /* The sound library starts muted; unmute before starting the MP3 player. */
+    SND_Pause(0);
+    SetVolumeAudio(g_music_volume);
+    if (g_music_enabled)
+        (void)start_background_music();
+
+    return 0;
+
+fail:
+    shutdown_audio_backend();
+    return -1;
 }
 
 static void draw_solid_rect(float x, float y, float w, float h, u32 color)
@@ -555,16 +709,41 @@ static void draw_details(void)
 
 static void draw_settings(void)
 {
+    char line[160];
+    u32 music_color = (g_settings_selected == 0) ? 0xcaff39ff : 0xdce3e8ff;
+    u32 volume_color = (g_settings_selected == 1) ? 0xcaff39ff : 0xdce3e8ff;
+
     draw_text(34, 28, 0xcaff39ff, "PS3 SCALE");
     draw_text(34, 70, 0xffffffff, "SETTINGS");
-    draw_text(34, 132, 0xdce3e8ff,
-              "Startup theme: GTA V - Greyhound Pause Menu Theme Remix");
-    draw_text(34, 172, 0xffcc66ff,
-              "Audio playback backend is not enabled in this build yet.");
-    draw_text(34, 236, 0xdce3e8ff, "Safety: game files are read-only by default.");
-    draw_text(34, 274, 0xdce3e8ff,
-              "Any future patch must have a verified backup and rollback.");
-    draw_text(34, 478, 0x9aa6adff, "CIRCLE: BACK");
+    draw_text(34, 116, 0x9aa6adff, "STARTUP MUSIC");
+
+    snprintf(line, sizeof(line), "%c  MUSIC: %s",
+             (g_settings_selected == 0) ? '>' : ' ',
+             g_music_enabled ? "ON" : "OFF");
+    draw_text(48, 164, music_color, line);
+
+    snprintf(line, sizeof(line), "%c  VOLUME: %d / 255",
+             (g_settings_selected == 1) ? '>' : ' ',
+             g_music_volume);
+    draw_text(48, 216, volume_color, line);
+
+    draw_text(34, 278, 0x9aa6adff,
+              "TRACK: GTA V - Greyhound Pause Menu Remix");
+
+    if (!g_soundlib_ready) {
+        draw_text(34, 326, 0xffcc66ff,
+                  "Audio engine failed to initialize.");
+    } else if (g_music_playing) {
+        draw_text(34, 326, 0x9ee56aff, "MUSIC STATUS: PLAYING / LOOP");
+    } else {
+        draw_text(34, 326, 0xffcc66ff,
+                  "MUSIC FILE NOT FOUND - SEE AUDIO SETUP");
+    }
+
+    draw_text(34, 366, 0xdce3e8ff,
+              "Game files remain read-only unless a verified profile is available.");
+    draw_text(34, 478, 0x9aa6adff,
+              "UP/DOWN: SELECT  CROSS: MUSIC ON/OFF  LEFT/RIGHT: VOLUME  CIRCLE: BACK");
 }
 
 static void draw_about(void)
@@ -609,7 +788,7 @@ int main(int argc, char *argv[])
     padData pad_data;
     u16 old_up = 0, old_down = 0, old_square = 0;
     u16 old_cross = 0, old_circle = 0, old_l1 = 0, old_r1 = 0;
-    u16 old_triangle = 0, old_select = 0;
+    u16 old_triangle = 0, old_select = 0, old_left = 0, old_right = 0;
     int pad_ready = 0;
 
     (void)argc;
@@ -631,11 +810,15 @@ int main(int argc, char *argv[])
 
     sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT0, app_sysutil_callback, NULL);
 
+    /* Start the supplied GTA V remix automatically when the app opens. */
+    (void)initialize_audio_backend();
+
     scan_library();
 
     while (!g_exit_requested) {
         u16 up = 0, down = 0, square = 0, cross = 0, circle = 0;
         u16 l1 = 0, r1 = 0, triangle = 0, select = 0;
+        u16 left = 0, right = 0;
 
         sysUtilCheckCallback();
 
@@ -653,6 +836,8 @@ int main(int argc, char *argv[])
                     r1 = pad_data.BTN_R1;
                     triangle = pad_data.BTN_TRIANGLE;
                     select = pad_data.BTN_SELECT;
+                    left = pad_data.BTN_LEFT;
+                    right = pad_data.BTN_RIGHT;
                     break;
                 }
             }
@@ -709,6 +894,24 @@ int main(int argc, char *argv[])
                     g_config_preview = !g_config_preview;
                 if (circle && !old_circle)
                     g_screen = SCREEN_SCAN;
+            } else if (g_screen == SCREEN_SETTINGS) {
+                if (up && !old_up)
+                    g_settings_selected = (g_settings_selected + 1) % 2;
+                if (down && !old_down)
+                    g_settings_selected = (g_settings_selected + 1) % 2;
+
+                if (cross && !old_cross && g_settings_selected == 0)
+                    set_background_music_enabled(!g_music_enabled);
+
+                if (g_settings_selected == 1) {
+                    if (left && !old_left)
+                        set_background_music_volume(g_music_volume - 16);
+                    if (right && !old_right)
+                        set_background_music_volume(g_music_volume + 16);
+                }
+
+                if (circle && !old_circle)
+                    g_screen = SCREEN_HOME;
             } else {
                 if (circle && !old_circle)
                     g_screen = SCREEN_HOME;
@@ -724,6 +927,10 @@ int main(int argc, char *argv[])
         old_r1 = r1;
         old_triangle = triangle;
         old_select = select;
+        old_left = left;
+        old_right = right;
+
+        update_background_music();
 
         if (!g_osk_active) {
             if (g_screen == SCREEN_SCAN || g_screen == SCREEN_DETAILS)
@@ -734,6 +941,7 @@ int main(int argc, char *argv[])
 
     if (g_osk_active)
         (void)oskAbort();
+    shutdown_audio_backend();
     sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
     if (g_cover_texture) ya2d_freeTexture(g_cover_texture);
     g_cover_texture = NULL;
