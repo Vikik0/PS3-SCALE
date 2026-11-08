@@ -182,7 +182,14 @@ static int open_background_music(void)
     static const char *paths[] = {
         PS3SCALE_MUSIC_PATH,
         PS3SCALE_MUSIC_ORIGINAL_PATH,
-        PS3SCALE_MUSIC_USB_PATH
+        "/dev_usb000/PS3SCALE/theme.mp3",
+        "/dev_usb001/PS3SCALE/theme.mp3",
+        "/dev_usb002/PS3SCALE/theme.mp3",
+        "/dev_usb003/PS3SCALE/theme.mp3",
+        "/dev_usb004/PS3SCALE/theme.mp3",
+        "/dev_usb005/PS3SCALE/theme.mp3",
+        "/dev_usb006/PS3SCALE/theme.mp3",
+        "/dev_usb007/PS3SCALE/theme.mp3"
     };
     int error = 0;
     size_t i;
