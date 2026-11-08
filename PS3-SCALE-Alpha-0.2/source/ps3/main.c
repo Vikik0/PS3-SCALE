@@ -21,6 +21,7 @@
 #include "ps3scale/scanner.h"
 #include "ps3scale/ps2_config.h"
 #include "ps3scale/locale.h"
+#include "ps3scale/hardware_info.h"
 #include "font8x12.h"
 #include "font_bitmap_z.h"
 
@@ -104,9 +105,12 @@ static sys_ppu_thread_t g_boot_scan_thread;
 static int g_app_files_ok = 0;
 static int g_extended_font_ready = 0;
 static unsigned char g_extended_font_bitmap[PS3SCALE_FONT_RAW_SIZE];
+static ps3scale_hardware_info_t g_hardware_info;
+static int g_hardware_info_valid = 0;
 static unsigned char g_extended_glyph_min_x[256];
 static unsigned char g_extended_glyph_ink_width[256];
 static int g_ui_font_width = 14;
+static int g_ui_font_height = 22;
 
 static void clamp_selection(void);
 static void scan_library(void);
@@ -213,6 +217,7 @@ static void build_extended_font_metrics(void)
 static void set_ui_font_size(int width, int height)
 {
     g_ui_font_width = width;
+    g_ui_font_height = height;
     SetFontSize(width, height);
 }
 
@@ -321,14 +326,28 @@ static void draw_text(float x, float y, u32 color, const char *text)
                 if (ink_width <= 0.0f)
                     ink_width = (float)PS3SCALE_FONT_WIDTH;
 
-                /* Align visible ink edges, not the empty bitmap-cell edges. */
-                DrawChar(cursor - ((float)min_x * scale_x), y, 0.0f, glyph);
+                /*
+                 * Arabic glyphs in the 32x32 atlas contain more vertical
+                 * padding than the compact ASCII font. Enlarge only their
+                 * cell height (about 1.35x) and center it on the UI line so
+                 * Arabic remains readable at both normal and compact sizes.
+                 */
+                {
+                    int arabic_height =
+                        (g_ui_font_height * 27 + 10) / 20;
+                    float y_offset =
+                        (float)(arabic_height - g_ui_font_height) * 0.5f;
+                    SetFontSize(g_ui_font_width, arabic_height);
+                    DrawChar(cursor - ((float)min_x * scale_x),
+                             y - y_offset, 0.0f, glyph);
+                    SetFontSize(g_ui_font_width, g_ui_font_height);
+                }
                 cursor += ink_width * scale_x;
 
                 if (ps3scale_locale_is_arabic_glyph(next_glyph)) {
                     if (ps3scale_locale_glyphs_joined(glyph, next_glyph)) {
-                        /* Two source pixels of overlap close the joining seam. */
-                        cursor -= scale_x * 2.0f;
+                        /* Four source pixels close the joining seam without merging separate glyphs. */
+                        cursor -= scale_x * 4.0f;
                     } else {
                         /* Non-joining Arabic letters retain a small natural gap. */
                         cursor += scale_x * 2.0f;
@@ -1519,7 +1538,7 @@ static void draw_about(void)
     draw_text(34, 112, 0xdce3e8ff,
               "PS3 / PS2 GAME LIBRARY AND GRAPHICS PROFILE MANAGER.");
     draw_text(34, 152, 0xdce3e8ff,
-              "TARGET TEST DEVICE: PS3 SLIM / CEX CFW.");
+              "TARGET HARDWARE: PS3 FAT / SLIM / SUPER SLIM.");
     draw_text(34, 192, 0x9aa6adff,
               "ALPHA 0.2 - EXPERIMENTAL HOMEBREW SOFTWARE.");
     draw_text(34, 232, 0x9aa6adff,
@@ -1528,6 +1547,21 @@ static void draw_about(void)
               "NO UNIVERSAL UPSCALER OR FRAME GENERATION IS CLAIMED.");
     draw_text(34, 312, 0x9aa6adff,
               "PROFILES NEED EXACT TITLE / UPDATE MATCHING.");
+
+    draw_text(34, 352, 0xffffffff, "HARDWARE INFORMATION");
+    if (g_hardware_info_valid) {
+        draw_text(34, 382, 0xdce3e8ff, "DETECTED MODEL:");
+        draw_text(210, 382, 0xdce3e8ff, g_hardware_info.model_series);
+        draw_text(34, 416, 0xdce3e8ff, "CONSOLE TYPE:");
+        draw_text(170, 416, 0xdce3e8ff,
+                  ps3scale_console_type_name(g_hardware_info.console_type));
+        draw_text(300, 416, 0xdce3e8ff, "FIRMWARE:");
+        draw_text(404, 416, 0xdce3e8ff, g_hardware_info.firmware_version);
+        draw_text(34, 448, 0xdce3e8ff, "PLATFORM ID:");
+        draw_text(170, 448, 0xdce3e8ff, g_hardware_info.platform_id);
+    } else {
+        draw_text(34, 382, 0xffcc66ff, "HARDWARE INFO UNAVAILABLE.");
+    }
     draw_text(34, 478, 0x9aa6adff, "CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
@@ -1739,6 +1773,8 @@ int main(int argc, char *argv[])
 
     ps3scale_game_list_init(&g_games);
     load_app_settings();
+    g_hardware_info_valid =
+        (ps3scale_hardware_detect(&g_hardware_info) == 0);
 
     if (!ya2d_init()) return 1;
     pad_ready = 1;
@@ -1887,6 +1923,14 @@ int main(int argc, char *argv[])
             if (cross && !old_cross) {
                 if (g_settings_selected == 0) {
                     set_background_music_enabled(!g_music_enabled);
+                    if (g_music_enabled && !g_music_playing) {
+                        if (initialize_audio_backend() == 0)
+                            set_settings_message("BACKGROUND MUSIC STARTED.");
+                        else
+                            set_settings_message("MUSIC FILE NOT FOUND OR AUDIO INIT FAILED.");
+                    } else if (!g_music_enabled) {
+                        set_settings_message("BACKGROUND MUSIC PAUSED.");
+                    }
                     (void)save_app_settings();
                 } else if (g_settings_selected == 2) {
                     g_animation_enabled = !g_animation_enabled;

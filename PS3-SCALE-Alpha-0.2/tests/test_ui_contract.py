@@ -59,11 +59,14 @@ assert "g_extended_glyph_ink_width" in metrics
 draw_text_impl = section("static void draw_text", "static int open_background_music")
 assert "SetCurrentFont(font_index)" in draw_text_impl
 assert "DrawChar(cursor - ((float)min_x * scale_x)" in draw_text_impl
+assert "g_ui_font_height * 27 + 10" in draw_text_impl
+assert "SetFontSize(g_ui_font_width, arabic_height)" in draw_text_impl
 assert "ps3scale_locale_glyphs_joined(glyph, next_glyph)" in draw_text_impl
 assert "ps3scale_locale_is_arabic_glyph" in draw_text_impl
-assert "cursor -= scale_x * 2.0f" in draw_text_impl
+assert "cursor -= scale_x * 4.0f" in draw_text_impl
 assert "cursor = DrawString(cursor, y, one) - 2.5f" not in draw_text_impl
-assert src.count("SetFontSize(") == 1  # only the tracked UI font-size wrapper may call libfont directly
+assert src.count("SetFontSize(") == 3  # wrapper plus Arabic-size set/restore
+assert draw_text_impl.count("SetFontSize(") == 2
 
 # Layout contract: compact font, independent list/metadata/cover columns.
 scan = section("static void draw_scan(void)", "static void draw_details(void)")
@@ -80,8 +83,24 @@ for token in ("BACKGROUND MUSIC", "MUSIC VOLUME", "HOME ANIMATION",
               "LANGUAGE"):
     assert token in settings, f"Missing settings entry: {token}"
 assert "copy_music_to_internal" in src
+assert "g_music_enabled && !g_music_playing" in main
+assert "BACKGROUND MUSIC STARTED." in main
 assert "PS3SCALE_SETTINGS_PATH" in src
 assert "settings.cfg" in src
+
+# Read-only hardware detection reports firmware and the Platform ID without console IDs.
+assert "ps3scale_hardware_detect(&g_hardware_info)" in main
+about = section("static void draw_about(void)", "static void draw_ui(void)")
+for token in ("HARDWARE INFORMATION", "DETECTED MODEL:", "CONSOLE TYPE:",
+              "FIRMWARE:", "PLATFORM ID:", "HARDWARE INFO UNAVAILABLE."):
+    assert token in about
+hardware_detect_path = source_path.with_name("hardware_detect.c")
+hardware_detect_src = hardware_detect_path.read_text(encoding="utf-8")
+assert "lv2syscall1(387" in hardware_detect_src
+assert "lv2syscall1(985" in hardware_detect_src
+assert "ps3scale_hardware_info_parse" in hardware_detect_src
+assert "ps3scale_console_type_name" in about
+assert "IDPS" not in hardware_detect_src and "PSID" not in hardware_detect_src
 
 # Home animation is true 3D but remains low-complexity and slow.
 ambient = section("static void draw_home_ambient(void)", "static void set_settings_message")
