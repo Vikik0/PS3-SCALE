@@ -7,14 +7,14 @@
 <details>
 <summary>Build status</summary>
 
-- GitHub Actions Run: #92 — **Success**
-- Commit: `96319a5d4d169b3f187bc78d39480035e9881230`
-- Host-side tests: PASS
+- GitHub Actions Run: #105 — **Success**
+- Commit: `9c7638de31db624af4abc4673718891cf3d553f5`
+- Host-side tests + UI contract tests: PASS
 - PS3 ELF: built
 - PS3 SELF: built
 - Debug PKG: built
 - Finalized NPDRM PKG: built and structurally validated
-- Previous Alpha build launched successfully on the user's CECH-2504A / CFW 4.93 console. The vector-icon and startup-audio build has passed CI and still needs physical visual/audio verification.
+- Previous Alpha build launched successfully on the user's CECH-2504A / CFW 4.93 console. Run #94 was confirmed by the user on the console for audio, menu icons and scanning. Run #105 adds the new scan layout, OSK fix, saved settings, home animation, USB update check and music import; those new changes still need a console smoke test.
 
 </details>
 
@@ -61,13 +61,13 @@
 ## ملفات البناء
 
 GitHub Actions artifact:
-- [PS3-SCALE-Alpha-0.2-build — Run #92](https://github.com/Vikik0/PS3-SCALE/actions/runs/42485983279)
-- Artifact ID: `13619531282` (افتح Run #84 ثم Artifacts لتنزيل الحزمة).
+- [PS3-SCALE-Alpha-0.2-build — Run #92](https://github.com/Vikik0/PS3-SCALE/actions/runs/42489130423)
+- Artifact ID: `13621056476` (افتح Run #84 ثم Artifacts لتنزيل الحزمة).
 - يحتوي على `ps3scale.elf`, `ps3scale.self`, `ps3scale.pkg`, `ps3scale.gnpdrm.pkg`.
 
 SHA-256 للحزمة النهائية:
 ```
-794b6f6678e85d08685f47665890fce0f2512580ff25a968ce04e06dff48a165
+ee91bcd185e8be2f9e975d9faab7131d1846f0f7db120791e0d06ef25a972065
 ```
 
 Content ID:
