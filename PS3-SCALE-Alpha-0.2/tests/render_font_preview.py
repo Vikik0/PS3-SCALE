@@ -195,7 +195,7 @@ def glyph_bounds(glyph: int) -> tuple[int, int]:
 
 
 WIDTH = 1024 * ZOOM
-HEIGHT = 780 * ZOOM
+HEIGHT = 860 * ZOOM
 BACKGROUND = (7, 20, 36)
 INK = (226, 245, 255)
 ACCENT = (139, 212, 80)
@@ -327,6 +327,11 @@ draw_rule(670)
 draw_ascii("ARABIC SAMPLE / MUSIC", 40, 684)
 draw_runtime_text("تشغيل الموسيقى", 40, 708, 4)
 draw_rule(744)
+draw_rule(744)
+
+draw_ascii("MIXED ARABIC + ENGLISH + NUMBERS", 40, 760)
+draw_runtime_text("إصدار PS3 4.92", 40, 784, 4)
+draw_rule(820)
 
 
 def png_chunk(kind: bytes, data: bytes) -> bytes:
@@ -376,6 +381,8 @@ for sample in required_arabic:
     assert shaped, f"Arabic sample did not shape: {sample}"
     assert all(g == 32 or is_arabic_glyph(g) for g in shaped), sample
 assert shape_text("PS3 SCALE 4.92") == list(map(ord, "PS3 SCALE 4.92"))
+mixed = "".join(chr(g) for g in shape_text("إصدار PS3 4.92"))
+assert "PS3" in mixed and "4.92" in mixed
 assert ARABIC_CELL_HEIGHT > UI_HEIGHT
 assert 32 in shape_text("مستوى الصوت")
 
