@@ -120,7 +120,7 @@ static int g_ui_font_height = 22;
 
 #define PS3SCALE_CATALOG_CACHE_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/graphics_catalog.tsv"
 #define PS3SCALE_CATALOG_DOWNLOAD_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/graphics_catalog.download"
-#define PS3SCALE_CATALOG_URL "https://raw.githubusercontent.com/Vikik0/PS3-SCALE/main/PS3-SCALE-Alpha-0.2/data/online_profiles.tsv"
+#define PS3SCALE_CATALOG_URL "https://raw.githubusercontent.com/Vikik0/PS3-SCALE/feature/online-graphics-database/PS3-SCALE-Alpha-0.2/data/online_profiles.tsv"
 #define PS3SCALE_PROFILE_CACHE_DIR "/dev_hdd0/game/PS3SCALE1/USRDIR/profiles"
 #define PS3SCALE_CATALOG_SYNC_SECONDS (24 * 60 * 60)
 
@@ -1096,6 +1096,15 @@ static const ps3scale_profile_t *profile_for_game(const ps3scale_game_t *game)
     return ps3scale_catalog_match_game(&g_catalog, game);
 }
 
+static int profile_script_state_for_game(const ps3scale_game_t *game,
+                                         const ps3scale_profile_t *profile)
+{
+    if (!game || !game_is_ps3(game) || !game->title_id[0])
+        return 0;
+    return ps3scale_profile_script_state(
+        game->title_id, game->app_ver, profile ? profile->patches : NULL);
+}
+
 static size_t online_match_count(void)
 {
     return g_catalog_ready ?
@@ -1257,10 +1266,10 @@ static void confirm_profile_install(void)
         return;
     }
 
-    result = ps3scale_profile_script_install(profile, g_language);
+    result = ps3scale_profile_script_install(profile);
     g_profile_confirm_pending = 0;
     if (result == 0 || result == 1) {
-        set_details_message("AUTO PROFILE INSTALLED. START THE MOUNTED GAME.");
+        set_details_message("ONE-LAUNCH PROFILE ARMED. START THE MOUNTED GAME.");
     } else if (result == -2) {
         set_details_message("A USER WEBMAN SCRIPT EXISTS. IT WAS NOT OVERWRITTEN.");
     } else if (result == -3) {
@@ -1286,8 +1295,9 @@ static int find_mounted_game(const ps3scale_game_t *selected, ps3scale_game_t *m
         const ps3scale_game_t *candidate = &mounted_list.items[i];
         if (strcmp(candidate->title_id, selected->title_id) != 0)
             continue;
-        if (selected->app_ver[0] && candidate->app_ver[0] &&
-            strcmp(candidate->app_ver, selected->app_ver) != 0)
+        if (selected->app_ver[0] &&
+            (!candidate->app_ver[0] ||
+             strcmp(candidate->app_ver, selected->app_ver) != 0))
             continue;
         *mounted = *candidate;
         return 1;
@@ -1300,8 +1310,7 @@ static void start_selected_game(void)
     const ps3scale_game_t *game = selected_game();
     const ps3scale_profile_t *profile = profile_for_game(game);
     ps3scale_game_t mounted;
-    int script_state = profile ?
-        ps3scale_profile_script_state(profile->title_id, profile->app_ver) : 0;
+    int script_state = profile_script_state_for_game(game, profile);
 
     if (!game || !game_is_ps3(game)) {
         set_details_message("START GAME SUPPORTS PS3 TITLES ONLY.");
@@ -1312,7 +1321,7 @@ static void start_selected_game(void)
         return;
     }
     if (script_state == -2) {
-        set_details_message("PROFILE UPDATE MISMATCH. REVIEW / REINSTALL THE PROFILE.");
+        set_details_message("PROFILE SCRIPT IS OLD OR DOES NOT MATCH THE CURRENT CATALOG. REMOVE IT FIRST.");
         return;
     }
     if (!find_mounted_game(game, &mounted)) {
@@ -1329,9 +1338,9 @@ static void start_selected_game(void)
     }
 
     if (script_state == 1)
-        set_details_message("AUTO PROFILE CHECK WILL RUN. MISMATCHED BYTES ARE SKIPPED.");
+        set_details_message("ONE-LAUNCH PROFILE WILL CHECK THE EXACT ADDRESS AND ORIGINAL BYTES.");
     else if (profile)
-        set_details_message("EXACT PROFILE FOUND, BUT AUTO APPLY IS OFF. STARTING UNMODIFIED.");
+        set_details_message("EXACT PROFILE FOUND, BUT ONE-LAUNCH APPLY IS NOT ARMED. STARTING UNMODIFIED.");
     else
         set_details_message("NO EXACT ONLINE PROFILE. STARTING UNMODIFIED GAME.");
 
@@ -1667,7 +1676,7 @@ static void draw_online_database(void)
         draw_text(452, 306, 0xdce3e8ff, line);
         if (selected_profile->patch_count == 1)
             draw_text(452, 340, 0x9ee56aff,
-                      "AUTO APPLY: AVAILABLE AFTER CONFIRMATION");
+                      "ONE-LAUNCH APPLY: AVAILABLE AFTER CONFIRMATION");
         else
             draw_text(452, 340, 0xffcc66ff,
                       "AUTO APPLY: DISABLED FOR MULTI-WRITE SAFETY");
@@ -1806,8 +1815,8 @@ static void draw_details(void)
     char line[256];
     const ps3scale_game_t *game = selected_game();
     const ps3scale_profile_t *profile = profile_for_game(game);
-    int script_state = profile ?
-        ps3scale_profile_script_state(profile->title_id, profile->app_ver) : 0;
+    int script_state = profile_script_state_for_game(game, profile);
+
     set_ui_font_size(11, 17);
     draw_text(28, 22, 0xcaff39ff, "PS3 SCALE");
     draw_text(180, 25, 0x9aa6adff, "GAME DETAILS");
@@ -1846,19 +1855,31 @@ static void draw_details(void)
             draw_text(34, 316, 0xcaff39ff, line);
             draw_text(34, 348, 0xffcc66ff,
                       "TRUST: COMMUNITY-REPORTED - REVIEW BEFORE USE.");
-            if (profile->patch_count == 1) {
-                if (script_state == 1)
-                    snprintf(line, sizeof(line), "AUTO APPLY: ENABLED");
-                else if (script_state == -2)
-                    snprintf(line, sizeof(line), "AUTO APPLY: UPDATE MISMATCH");
-                else if (script_state == -1)
-                    snprintf(line, sizeof(line), "AUTO APPLY: USER SCRIPT EXISTS");
-                else
-                    snprintf(line, sizeof(line), "AUTO APPLY: DISABLED");
-            } else {
+            if (script_state == -2)
+                snprintf(line, sizeof(line), "PROFILE SCRIPT: STALE - REMOVE");
+            else if (script_state == -1)
+                snprintf(line, sizeof(line), "PROFILE SCRIPT: USER-OWNED - NOT TOUCHED");
+            else if (profile->patch_count != 1)
                 snprintf(line, sizeof(line), "AUTO APPLY: MULTI-WRITE MANUAL ONLY");
-            }
+            else if (script_state == 1)
+                snprintf(line, sizeof(line), "ONE-LAUNCH PROFILE: ARMED");
+            else
+                snprintf(line, sizeof(line), "ONE-LAUNCH PROFILE: NOT ARMED");
             draw_text(34, 376, 0xdce3e8ff, line);
+        } else if (script_state == -2) {
+            draw_text(34, 316, 0xffcc66ff,
+                      "OLD PROFILE SCRIPT DOES NOT MATCH THIS CATALOG.");
+            draw_text(34, 348, 0x9aa6adff,
+                      "REMOVE IT BEFORE STARTING THIS GAME.");
+            draw_text(34, 376, 0x9aa6adff,
+                      "NO EXACT PROFILE IS AVAILABLE FOR THIS UPDATE.");
+        } else if (script_state == -1) {
+            draw_text(34, 316, 0xffcc66ff,
+                      "A USER WEBMAN SCRIPT EXISTS FOR THIS TITLE.");
+            draw_text(34, 348, 0x9aa6adff,
+                      "PS3 SCALE WILL NOT MODIFY OR REMOVE IT.");
+            draw_text(34, 376, 0x9aa6adff,
+                      "NO EXACT ONLINE PROFILE IS AVAILABLE.");
         } else {
             draw_text(34, 316, 0xffcc66ff,
                       "NO EXACT ONLINE PROFILE FOR THIS UPDATE.");
@@ -1867,12 +1888,13 @@ static void draw_details(void)
             draw_text(34, 376, 0x9aa6adff,
                       "OPEN ONLINE DATABASE TO CHECK SUPPORTED PROFILES.");
         }
+
         draw_solid_rect(34.0f, 396.0f, 224.0f, 40.0f, 0x173a35ff);
         draw_outline_rect(34.0f, 396.0f, 224.0f, 40.0f, 0x8bd450ff);
         draw_text(58, 407, 0xcaff39ff, "START GAME");
         if (g_profile_confirm_pending)
             draw_text(34, 448, 0xffcc66ff,
-                      "COMMUNITY PATCH: TRIANGLE CONFIRMS INSTALL; CIRCLE CANCELS.");
+                      "COMMUNITY PATCH: TRIANGLE CONFIRMS; CIRCLE CANCELS.");
         else
             draw_text(34, 448, 0x9aa6adff, g_details_message);
     } else {
@@ -1904,7 +1926,7 @@ static void draw_details(void)
 
     draw_text(34, 478, 0x9aa6adff,
               game_is_ps3(game) ?
-              "CROSS/START: START GAME  SQUARE: AUTO PROFILE  CIRCLE: BACK" :
+              "CROSS/START: START GAME  SQUARE: ARM/REMOVE PROFILE  CIRCLE: BACK" :
               "TRIANGLE: CONFIG PREVIEW  |  CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
@@ -2384,24 +2406,21 @@ int main(int argc, char *argv[])
             const ps3scale_game_t *game = selected_game();
             const ps3scale_profile_t *profile = profile_for_game(game);
             if (square && !old_square && game && game_is_ps3(game)) {
-                if (!profile) {
+                int state = profile_script_state_for_game(game, profile);
+                if (state == 1 || state == -2) {
+                    if (ps3scale_profile_script_remove(game->title_id) == 0)
+                        set_details_message("ONE-LAUNCH PROFILE SCRIPT REMOVED FROM WEBMAN.");
+                    else
+                        set_details_message("COULD NOT REMOVE THE PS3 SCALE PROFILE SCRIPT.");
+                } else if (state == -1) {
+                    set_details_message("A USER WEBMAN SCRIPT EXISTS. IT WAS NOT OVERWRITTEN.");
+                } else if (!profile) {
                     set_details_message("NO EXACT ONLINE PROFILE FOR THIS GAME UPDATE.");
                 } else if (profile->patch_count != 1) {
                     set_details_message("MULTI-WRITE PROFILE: AUTO APPLY DISABLED FOR SAFETY.");
                 } else {
-                    int state = ps3scale_profile_script_state(
-                        profile->title_id, profile->app_ver);
-                    if (state == 1) {
-                        if (ps3scale_profile_script_remove(profile->title_id) == 0)
-                            set_details_message("AUTO PROFILE REMOVED FROM WEBMAN.");
-                        else
-                            set_details_message("COULD NOT REMOVE THE PS3 SCALE PROFILE SCRIPT.");
-                    } else if (state == -1) {
-                        set_details_message("A USER WEBMAN SCRIPT EXISTS. IT WAS NOT OVERWRITTEN.");
-                    } else {
-                        g_profile_confirm_pending = 1;
-                        set_details_message("COMMUNITY PATCH. TRIANGLE TO CONFIRM INSTALL.");
-                    }
+                    g_profile_confirm_pending = 1;
+                    set_details_message("COMMUNITY PATCH. TRIANGLE TO ARM ONE-LAUNCH PROFILE.");
                 }
             }
             if (triangle && !old_triangle) {
