@@ -1,0 +1,69 @@
+name: PS3 SCALE build
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "PS3-SCALE-Alpha-0.2/**"
+      - ".github/workflows/build-ps3.yml"
+  pull_request:
+    paths:
+      - "PS3-SCALE-Alpha-0.2/**"
+      - ".github/workflows/build-ps3.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  host-tests:
+    name: Host-side tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install host compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Run SFO, scanner, and ISO tests
+        working-directory: PS3-SCALE-Alpha-0.2
+        run: |
+          chmod +x scripts/test_host.sh
+          ./scripts/test_host.sh
+
+  ps3-build:
+    name: Build PS3 ELF, SELF, and PKG
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/02900/ps3-toolchain-tiny3d:latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          echo "PS3DEV=$PS3DEV"
+          echo "PSL1GHT=$PSL1GHT"
+          command -v ppu-gcc
+          command -v make
+
+      - name: Build package
+        working-directory: PS3-SCALE-Alpha-0.2
+        run: |
+          make clean
+          make -j2 pkg
+          echo "Build outputs:"
+          ls -lah ps3scale.elf ps3scale.self ps3scale.pkg
+
+      - name: Upload PS3 build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps3-scale-alpha-0.2
+          if-no-files-found: error
+          path: |
+            PS3-SCALE-Alpha-0.2/ps3scale.elf
+            PS3-SCALE-Alpha-0.2/ps3scale.self
+            PS3-SCALE-Alpha-0.2/ps3scale.pkg
