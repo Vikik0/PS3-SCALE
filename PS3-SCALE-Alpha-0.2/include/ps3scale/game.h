@@ -26,6 +26,7 @@ typedef struct ps3scale_game {
     char disc_id[PS3SCALE_DISC_ID_MAX]; /* PS2 serial, e.g. SLUS_203.12 */
     char category[PS3SCALE_CAT_MAX];
     char path[PS3SCALE_PATH_MAX];
+    char cover_path[PS3SCALE_PATH_MAX]; /* Local ICON0.PNG when present. */
 } ps3scale_game_t;
 
 typedef struct ps3scale_game_list {
