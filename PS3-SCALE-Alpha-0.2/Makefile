@@ -17,7 +17,6 @@ BUILD := build
 SOURCES := source/core source/ps3
 DATA := data
 INCLUDES := include source/ps3
-PKGFILES := $(CURDIR)/pkgfiles
 
 LIBDIRS :=
 
@@ -29,7 +28,6 @@ CXXFLAGS = $(CFLAGS)
 LDFLAGS = $(MACHDEP) -Wl,-Map,$(notdir $@).map
 
 .PHONY: all pkg clean host-test info
-all: $(BUILD)
 
 host-test:
 	./scripts/test_host.sh
@@ -76,11 +74,17 @@ export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib) \
                    $(LIBPSL1GHT_LIB) -L$(PORTLIBS)/lib
 
 .PHONY: $(BUILD)
+all: $(BUILD)
+
 $(BUILD):
 	@mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
-pkg: $(BUILD) $(OUTPUT).pkg
+# Build the ELF/SELF first in the recursive build directory, then package it.
+# Keeping the package step in the recipe prevents -j builds from racing the
+# recursive object/ELF build against the package dependency chain.
+pkg: $(BUILD)
+	@$(MAKE) --no-print-directory $(OUTPUT).pkg
 
 clean:
 	@rm -rf $(BUILD) $(OUTPUT).elf $(OUTPUT).self $(OUTPUT).pkg \
