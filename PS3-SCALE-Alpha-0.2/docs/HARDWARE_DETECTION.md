@@ -4,8 +4,8 @@
 
 PS3 SCALE uses two read-only GameOS queries when the running firmware allows them:
 
-- LV2 syscall 387 (`sys_sm_get_system_info`) supplies the system-software version and Platform ID.
-- LV2 syscall 985 (`sys_dbg_get_console_type`) is an optional best-effort query for CEX, DEX, or DEH.
+- LV2 syscall 387 (`sys_sm_get_system_info`) supplies the 24-byte `platform_info_s` record: a 7-byte firmware field, a 9-byte Platform ID field beginning at byte offset 7, a 32-bit build number, and a reserved 32-bit field.
+- LV2 syscall 985 (`sys_dbg_get_console_type`) is an optional best-effort query. It writes the console type through its output pointer: CEX=1, DEX=2, DEH=3.
 
 The app does not read or display IDPS, PSID, account identifiers, or other console-unique identifiers.
 
@@ -27,4 +27,4 @@ The detection result is informational and is not used to apply game patches. A g
 
 ## Verification
 
-Host tests cover firmware-version parsing and representative FAT, Slim, and Super Slim Platform IDs. Actual syscall availability and the displayed result must be checked on the user's PS3 CFW 4.92 device.
+Host tests cover firmware-version parsing and representative FAT, Slim, and Super Slim Platform IDs using the correct 7-byte firmware / 9-byte Platform ID layout. Actual syscall availability and the displayed result must be checked on the user's PS3 CFW 4.92 device.
