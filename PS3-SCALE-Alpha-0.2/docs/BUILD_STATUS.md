@@ -3,20 +3,20 @@
 Date: 2026-11-08
 
 ## Latest GitHub Actions build
-- Workflow run: [#84 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42485612038)
-- Source commit: `f5642796325333ee8c5af44d1295f76657998c48`
-- Artifact: [PS3-SCALE-Alpha-0.2-build](https://github.com/Vikik0/PS3-SCALE/actions/runs/42485612038/artifacts/13619530789)
-- Artifact ID: `13619530789`
-- Artifact ZIP SHA-256: `59899713ad164eca6c398e56e07f0d3364d6589c153a5672b9e94bb62ad3ff2f`
+- Workflow run: [#92 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42485983279)
+- Source commit: `96319a5d4d169b3f187bc78d39480035e9881230`
+- Artifact: [PS3-SCALE-Alpha-0.2-build](https://github.com/Vikik0/PS3-SCALE/actions/runs/42485983279/artifacts/13619531282)
+- Artifact ID: `13619531282`
+- Artifact ZIP SHA-256: `2108969ba7ef080108c04afd847c29ab585a8a801cbf7b27f6e68c06d877b526`
 
 ## Build outputs
 
 | File | Size | SHA-256 |
 |---|---:|---|
-| `ps3scale.elf` | 1,524,928 bytes | `5ddf271e6fdf0babc58c2add6e4f9f7c7f26cc711cf7c669c664ef852f798b57` |
-| `ps3scale.self` | 172,896 bytes | `f0e015884dd6ed6bcf5cf2a1fda4e343aa3ba393f69a6466f9924db9fc988414` |
-| `ps3scale.pkg` | 181,648 bytes | `3748e2afc02a3812ba6e438259e2aa3a8926780d89acbac70c0ed809505eaa38` |
-| `ps3scale.gnpdrm.pkg` | 181,648 bytes | `cd7810f4ad88bf3d7d086a1ec8203eb847988b1abc4516af09e71f680a8249fb` |
+| `ps3scale.elf` | 1,524,928 bytes | `2d88cac45011e5472d2f45a84a5d41fad8f2b5f4550d1ca112d40dabe01003f9` |
+| `ps3scale.self` | 172,960 bytes | `438d4edbf697d449d14ee451001fad1c5068d85d47afad17aee5d57ab536f2d8` |
+| `ps3scale.pkg` | 181,712 bytes | `94d6c3f0c9abc3675d325037cbb4b6f87351dce6948d890aa4e821d4dee20dc0` |
+| `ps3scale.gnpdrm.pkg` | 181,712 bytes | `794b6f6678e85d08685f47665890fce0f2512580ff25a968ce04e06dff48a165` |
 
 ## Package validation
 - PKG magic: `7f504b47`
@@ -40,7 +40,7 @@ The package passed the automated structural checks. This does not replace instal
 - PS2 CONFIG preview only; no sidecar file is written or applied
 - Streaming MP3 decoder (LGPL mpg123) linked with native PSL1GHT audio output
 - Startup music auto-start, loop, mute toggle and volume controls implemented
-- MP3 asset is not embedded in the PKG yet; it must be copied once to the documented USRDIR path
+- MP3 asset is not embedded in the PKG; the app checks internal USRDIR and USB000–USB007 paths
 
 ## Console smoke test reported by user
 A previous Alpha build launched successfully on the target CECH-2504A / CEX CFW 4.93 / Cobra 8.5 console. The user supplied photos showing:
@@ -48,11 +48,11 @@ A previous Alpha build launched successfully on the target CECH-2504A / CEX CFW 
 - PS3 game scan list with detected titles
 - Game details page and local Minecraft ICON0 cover
 
-Run 84 has passed CI but has not yet been installed on the console. The new vector icons and audio playback therefore still need a physical-console check.
+Run 92 has passed CI but has not yet been installed on the console. The new vector icons and audio playback therefore still need a physical-console check.
 
 ## Remaining validation
-1. Install the Run 84 package over the existing app (same package identity) and confirm the three vector icons render.
-2. Copy the supplied MP3 to `/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`.
+1. Install the Run 92 package over the existing app (same package identity) and confirm the three vector icons render.
+2. Copy the supplied music folder `PS3SCALE/theme.mp3` to the root of a FAT32 USB drive and keep it connected; the app searches USB000 through USB007. Alternatively copy the file to `/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`.
 3. Confirm music starts automatically, continues across screens, loops, and responds to mute/volume.
 4. Confirm audio shuts down cleanly when exiting the app.
 5. Confirm Settings and About open and return correctly.
