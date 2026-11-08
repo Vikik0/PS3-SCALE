@@ -50,14 +50,24 @@ font_loader = section("static int load_extended_font(void)", "static void draw_t
 assert "ps3scale_font8x12" in font_loader
 assert "PS3SCALE_FONT_EXTENDED_FIRST" in font_loader
 assert "g_extended_font_bitmap + extended_offset" in font_loader
+assert "build_extended_font_metrics();" in font_loader
+assert "BIT7_FIRST_PIXEL" in font_loader
+metrics = section("static void build_extended_font_metrics(void)", "static void set_ui_font_size")
+assert "0x80u >> (col & 7u)" in metrics
+assert "g_extended_glyph_min_x" in metrics
+assert "g_extended_glyph_ink_width" in metrics
 draw_text_impl = section("static void draw_text", "static int open_background_music")
-assert "SetCurrentFont(ps3scale_locale_glyph_font_index(glyph))" in draw_text_impl
-assert "cursor = DrawString(cursor, y, one) - 2.5f" in draw_text_impl
-assert "cursor += 6.0f" in draw_text_impl
+assert "SetCurrentFont(font_index)" in draw_text_impl
+assert "DrawChar(cursor - ((float)min_x * scale_x)" in draw_text_impl
+assert "ps3scale_locale_glyphs_joined(glyph, next_glyph)" in draw_text_impl
+assert "ps3scale_locale_is_arabic_glyph" in draw_text_impl
+assert "cursor -= scale_x * 2.0f" in draw_text_impl
+assert "cursor = DrawString(cursor, y, one) - 2.5f" not in draw_text_impl
+assert src.count("SetFontSize(") == 1  # only the tracked UI font-size wrapper may call libfont directly
 
 # Layout contract: compact font, independent list/metadata/cover columns.
 scan = section("static void draw_scan(void)", "static void draw_details(void)")
-assert "SetFontSize(9, 14)" in scan
+assert "set_ui_font_size(9, 14)" in scan
 assert "draw_text(452, 178" in scan
 assert "ya2d_drawTextureEx(g_cover_texture, 680.0f, 282.0f" in scan
 assert "SELECT/START: SEARCH" in scan

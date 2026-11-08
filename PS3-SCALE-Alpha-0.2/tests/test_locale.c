@@ -29,6 +29,34 @@ int main(void)
     assert((unsigned char)glyphs[1] >= 128);
     assert((unsigned char)glyphs[2] >= 128);
     assert((unsigned char)glyphs[3] >= 128);
+    /* Arabic shaping is visual RTL order with the correct contextual forms. */
+    assert((unsigned char)glyphs[0] == 225u); /* meem isolated */
+    assert((unsigned char)glyphs[1] == 142u); /* alif final */
+    assert((unsigned char)glyphs[2] == 224u); /* lam medial */
+    assert((unsigned char)glyphs[3] == 179u); /* seen initial */
+    assert(ps3scale_locale_is_arabic_glyph(225u));
+    assert(!ps3scale_locale_is_arabic_glyph(246u));
+    assert(ps3scale_locale_glyphs_joined(142u, 224u));
+    assert(ps3scale_locale_glyphs_joined(224u, 179u));
+    assert(!ps3scale_locale_glyphs_joined(225u, 142u));
+
+    length = ps3scale_locale_to_glyphs("الإعدادات", glyphs,
+                                       sizeof(glyphs));
+    assert(length == 9);
+    for (int i = 0; i < length; i++)
+        assert((unsigned char)glyphs[i] >= 128u);
+
+    /* English labels and digits must remain in their original left-to-right order. */
+    length = ps3scale_locale_to_glyphs("PS3 SCALE 4.92", glyphs,
+                                       sizeof(glyphs));
+    assert(length == (int)strlen("PS3 SCALE 4.92"));
+    assert(strcmp(glyphs, "PS3 SCALE 4.92") == 0);
+
+    /* Arabic word spacing remains a real space, not an inter-letter gap. */
+    length = ps3scale_locale_to_glyphs("مستوى الصوت", glyphs,
+                                       sizeof(glyphs));
+    assert(length == 11);
+    assert(memchr(glyphs, ' ', (size_t)length) != NULL);
 
     length = ps3scale_locale_to_glyphs("Configuración", glyphs,
                                        sizeof(glyphs));

@@ -104,6 +104,9 @@ static sys_ppu_thread_t g_boot_scan_thread;
 static int g_app_files_ok = 0;
 static int g_extended_font_ready = 0;
 static unsigned char g_extended_font_bitmap[PS3SCALE_FONT_RAW_SIZE];
+static unsigned char g_extended_glyph_min_x[256];
+static unsigned char g_extended_glyph_ink_width[256];
+static int g_ui_font_width = 14;
 
 static void clamp_selection(void);
 static void scan_library(void);
@@ -154,6 +157,65 @@ static int decode_base64(const char *source, unsigned char *output,
     return (int)used;
 }
 
+static void build_extended_font_metrics(void)
+{
+    const size_t bytes_per_row = (PS3SCALE_FONT_WIDTH + 7u) / 8u;
+    const size_t bytes_per_glyph = bytes_per_row * PS3SCALE_FONT_HEIGHT;
+    unsigned glyph;
+
+    memset(g_extended_glyph_min_x, 0, sizeof(g_extended_glyph_min_x));
+    memset(g_extended_glyph_ink_width, 0, sizeof(g_extended_glyph_ink_width));
+
+    /*
+     * The atlas is 1bpp, row-major, and uses BIT7_FIRST_PIXEL. Measure the
+     * visible ink bounds once at startup so Arabic glyphs can be positioned
+     * by their actual bitmap width instead of a guessed fixed character gap.
+     */
+    for (glyph = PS3SCALE_FONT_EXTENDED_FIRST;
+         glyph <= PS3SCALE_FONT_LAST; glyph++) {
+        size_t offset =
+            (size_t)(glyph - PS3SCALE_FONT_FIRST) * bytes_per_glyph;
+        unsigned min_x = PS3SCALE_FONT_WIDTH;
+        unsigned max_x = 0;
+        unsigned row, col;
+        int found = 0;
+
+        if (offset + bytes_per_glyph > sizeof(g_extended_font_bitmap))
+            continue;
+
+        for (row = 0; row < PS3SCALE_FONT_HEIGHT; row++) {
+            for (col = 0; col < PS3SCALE_FONT_WIDTH; col++) {
+                size_t byte_index = offset +
+                    (size_t)row * bytes_per_row + (size_t)(col >> 3);
+                unsigned char mask =
+                    (unsigned char)(0x80u >> (col & 7u));
+
+                if ((g_extended_font_bitmap[byte_index] & mask) != 0) {
+                    if (col < min_x) min_x = col;
+                    if (!found || col > max_x) max_x = col;
+                    found = 1;
+                }
+            }
+        }
+
+        if (found) {
+            g_extended_glyph_min_x[glyph] = (unsigned char)min_x;
+            g_extended_glyph_ink_width[glyph] =
+                (unsigned char)(max_x - min_x + 1u);
+        } else {
+            /* Keep a safe full-cell advance for an empty/unmapped glyph. */
+            g_extended_glyph_min_x[glyph] = 0;
+            g_extended_glyph_ink_width[glyph] = PS3SCALE_FONT_WIDTH;
+        }
+    }
+}
+
+static void set_ui_font_size(int width, int height)
+{
+    g_ui_font_width = width;
+    SetFontSize(width, height);
+}
+
 static int load_extended_font(void)
 {
     unsigned char compressed[2048];
@@ -179,10 +241,12 @@ static int load_extended_font(void)
     if (extended_offset + extended_size > sizeof(g_extended_font_bitmap))
         return -1;
 
+    build_extended_font_metrics();
+
     /*
-     * libfont keeps each bitmap range as a separate font.  Register the
+     * libfont keeps each bitmap range as a separate font. Register the
      * original ASCII bitmap as font 0, then the Arabic/extended atlas as
-     * font 1.  The compressed atlas starts at codepoint 32, so skip its
+     * font 1. The compressed atlas starts at codepoint 32, so skip its
      * first 96 ASCII slots before registering codepoints 128..255.
      */
     ResetFont();
@@ -193,7 +257,8 @@ static int load_extended_font(void)
         g_extended_font_bitmap + extended_offset, texture_cursor,
         PS3SCALE_FONT_EXTENDED_FIRST, PS3SCALE_FONT_LAST,
         PS3SCALE_FONT_WIDTH, PS3SCALE_FONT_HEIGHT, 1, BIT7_FIRST_PIXEL);
-    if (!texture_cursor) return -1;
+    if (!texture_cursor || texture_cursor <= (u8 *)g_font_texture)
+        return -1;
 
     SetCurrentFont(0);
     g_extended_font_ready = 1;
@@ -205,6 +270,9 @@ static void draw_text(float x, float y, u32 color, const char *text)
     char translated[512];
     char glyph_text[512];
     const char *source = text ? text : "";
+    size_t i, length;
+    int contains_arabic = 0;
+
     if (g_language == LANGUAGE_ARABIC || g_language == LANGUAGE_SPANISH) {
         (void)ps3scale_locale_translate(g_language, source, translated,
                                         sizeof(translated));
@@ -213,24 +281,64 @@ static void draw_text(float x, float y, u32 color, const char *text)
     if (!g_extended_font_ready &&
         (g_language == LANGUAGE_ARABIC || g_language == LANGUAGE_SPANISH))
         source = text ? text : "";
-    (void)ps3scale_locale_to_glyphs(source, glyph_text, sizeof(glyph_text));
-    SetFontColor(color, 0x00000000);
 
+    (void)ps3scale_locale_to_glyphs(source, glyph_text, sizeof(glyph_text));
+    length = strlen(glyph_text);
+    for (i = 0; i < length; i++) {
+        if (ps3scale_locale_is_arabic_glyph(
+                (unsigned char)glyph_text[i])) {
+            contains_arabic = 1;
+            break;
+        }
+    }
+
+    SetFontColor(color, 0x00000000);
     if (g_extended_font_ready) {
-        size_t i;
         float cursor = x;
-        for (i = 0; glyph_text[i] != '\0'; i++) {
+
+        for (i = 0; i < length; i++) {
             unsigned char glyph = (unsigned char)glyph_text[i];
-            char one[2];
-            one[0] = (char)glyph;
-            one[1] = '\0';
-            SetCurrentFont(ps3scale_locale_glyph_font_index(glyph));
-            if (g_language == LANGUAGE_ARABIC && glyph == ' ') {
-                cursor += 6.0f;
-            } else if (g_language == LANGUAGE_ARABIC && glyph >= 128u) {
-                cursor = DrawString(cursor, y, one) - 2.5f;
+            int font_index = ps3scale_locale_glyph_font_index(glyph);
+
+            if (glyph == ' ') {
+                cursor += contains_arabic ?
+                    ((float)g_ui_font_width * 0.5f) :
+                    (float)g_ui_font_width;
+                continue;
+            }
+
+            SetCurrentFont(font_index);
+            if (ps3scale_locale_is_arabic_glyph(glyph)) {
+                float scale_x =
+                    (float)g_ui_font_width / (float)PS3SCALE_FONT_WIDTH;
+                float ink_width =
+                    (float)g_extended_glyph_ink_width[glyph];
+                unsigned min_x = g_extended_glyph_min_x[glyph];
+                unsigned char next_glyph =
+                    (i + 1u < length) ?
+                    (unsigned char)glyph_text[i + 1u] : 0;
+
+                if (ink_width <= 0.0f)
+                    ink_width = (float)PS3SCALE_FONT_WIDTH;
+
+                /* Align visible ink edges, not the empty bitmap-cell edges. */
+                DrawChar(cursor - ((float)min_x * scale_x), y, 0.0f, glyph);
+                cursor += ink_width * scale_x;
+
+                if (ps3scale_locale_is_arabic_glyph(next_glyph)) {
+                    if (ps3scale_locale_glyphs_joined(glyph, next_glyph)) {
+                        /* Two source pixels of overlap close the joining seam. */
+                        cursor -= scale_x * 2.0f;
+                    } else {
+                        /* Non-joining Arabic letters retain a small natural gap. */
+                        cursor += scale_x * 2.0f;
+                    }
+                } else if (next_glyph != 0 && next_glyph != ' ') {
+                    cursor += scale_x;
+                }
             } else {
-                cursor = DrawString(cursor, y, one);
+                DrawChar(cursor, y, 0.0f, glyph);
+                cursor += (float)g_ui_font_width;
             }
         }
         SetCurrentFont(0);
@@ -1002,7 +1110,7 @@ static void refresh_companion_tool_status(void)
 static void draw_language_selection(void)
 {
     int i;
-    SetFontSize(15, 23);
+    set_ui_font_size(15, 23);
     draw_text(34, 28, 0xcaff39ff, "PS3 SCALE");
     draw_text(34, 88, 0xffffffff, "CHOOSE LANGUAGE");
     draw_text(34, 126, 0xdce3e8ff, "اختر اللغة");
@@ -1018,7 +1126,7 @@ static void draw_language_selection(void)
                   ps3scale_locale_language_name(i));
     }
     draw_text(34, 478, 0x9aa6adff, "UP/DOWN: SELECT  |  CROSS: CONTINUE");
-    SetFontSize(14, 22);
+    set_ui_font_size(14, 22);
 }
 
 static void draw_boot(void)
@@ -1032,7 +1140,7 @@ static void draw_boot(void)
     };
     const int progress[] = {12, 28, 58, 88, 100};
     float width = (640.0f * (float)progress[g_boot_stage]) / 100.0f;
-    SetFontSize(14, 21);
+    set_ui_font_size(14, 21);
 
     draw_text(34, 30, 0xcaff39ff, "PS3 SCALE");
     draw_text(34, 92, 0xffffffff, "STARTING PS3 SCALE");
@@ -1051,13 +1159,13 @@ static void draw_boot(void)
               g_app_files_ok ? "APP FILE CHECK: OK" : "APP FILE CHECK: VERIFY INSTALL");
     draw_text(34, 478, 0x6f7b83ff,
               "LOCAL CHECKS ONLY  |  NO GAME FILES ARE MODIFIED");
-    SetFontSize(14, 22);
+    set_ui_font_size(14, 22);
 }
 
 static void draw_keyboard(void)
 {
     int i;
-    SetFontSize(12, 18);
+    set_ui_font_size(12, 18);
     draw_text(34, 22, 0xcaff39ff, "PS3 SCALE");
     draw_text(34, 56, 0xffffffff, "SEARCH GAMES");
     draw_text(34, 88, 0x9aa6adff, "TYPE TO FILTER THE LIBRARY");
@@ -1094,7 +1202,7 @@ static void draw_keyboard(void)
               "ARROWS MOVE  |  CROSS SELECT  |  CIRCLE CANCEL");
     draw_text(34, 478, 0x6f7b83ff,
               "CUSTOM KEYBOARD  |  NO PS3 SYSTEM KEYBOARD REQUIRED");
-    SetFontSize(14, 22);
+    set_ui_font_size(14, 22);
 }
 
 static void draw_home(void)
@@ -1106,7 +1214,7 @@ static void draw_home(void)
     size_t ps3_count = library_total_count(LIBRARY_PS3);
     size_t ps2_count = library_total_count(LIBRARY_PS2);
     int i;
-    SetFontSize(12, 18);
+    set_ui_font_size(12, 18);
 
     draw_text(34, 26, 0xcaff39ff, "PS3 SCALE");
     draw_text(34, 58, 0x9aa6adff,
@@ -1141,7 +1249,7 @@ static void draw_home(void)
               "UP/DOWN: SELECT   CROSS: OPEN   CIRCLE: EXIT");
     draw_text(34, 478, 0x6f7b83ff,
               "LOCAL LIBRARY SCAN  |  NO INTERNET REQUIRED");
-    SetFontSize(14, 22);
+    set_ui_font_size(14, 22);
 }
 
 static void draw_scan(void)
@@ -1153,7 +1261,7 @@ static void draw_scan(void)
     const ps3scale_game_t *selected;
 
     /* Keep the scanner readable on 720p TVs: two fixed, non-overlapping panels. */
-    SetFontSize(9, 14);
+    set_ui_font_size(9, 14);
     clamp_selection();
     count = library_count(g_library);
     selected = selected_game();
@@ -1257,20 +1365,20 @@ static void draw_scan(void)
               "UP/DOWN MOVE  |  L1/R1 PLATFORM  |  CROSS DETAILS  |  SELECT/START SEARCH");
     draw_text(28, 492, 0x6f7b83ff,
               "SQUARE RESCAN  |  TRIANGLE PS2 PREVIEW  |  CIRCLE BACK");
-    SetFontSize(14, 22);
+    set_ui_font_size(14, 22);
 }
 
 static void draw_details(void)
 {
     char line[256];
     const ps3scale_game_t *game = selected_game();
-    SetFontSize(11, 17);
+    set_ui_font_size(11, 17);
     draw_text(28, 22, 0xcaff39ff, "PS3 SCALE");
     draw_text(180, 25, 0x9aa6adff, "GAME DETAILS");
     if (!game) {
         draw_text(34, 120, 0x9aa6adff, "NO GAME SELECTED.");
         draw_text(34, 478, 0x9aa6adff, "CIRCLE: BACK");
-        SetFontSize(14, 22);
+        set_ui_font_size(14, 22);
         return;
     }
     snprintf(line, sizeof(line), "TITLE: %.48s", game->title);
@@ -1315,7 +1423,7 @@ static void draw_details(void)
     }
     draw_text(34, 478, 0x9aa6adff,
               "TRIANGLE: CONFIG PREVIEW  |  CIRCLE: BACK TO GAME LIST");
-    SetFontSize(14, 22);
+    set_ui_font_size(14, 22);
 }
 
 static void draw_settings(void)
@@ -1328,7 +1436,7 @@ static void draw_settings(void)
     };
     char value[96];
     int i;
-    SetFontSize(12, 18);
+    set_ui_font_size(12, 18);
     draw_text(34, 24, 0xcaff39ff, "PS3 SCALE");
     draw_text(34, 58, 0xffffffff, "SETTINGS");
     draw_text(34, 92, 0x9aa6adff,
@@ -1361,13 +1469,13 @@ static void draw_settings(void)
     draw_text(34, 428, 0xdce3e8ff, g_settings_message);
     draw_text(34, 478, 0x9aa6adff,
               "UP/DOWN: MOVE  CROSS: SELECT  LEFT/RIGHT: ADJUST  CIRCLE: BACK");
-    SetFontSize(14, 22);
+    set_ui_font_size(14, 22);
 }
 
 static void draw_tools(void)
 {
     char line[128];
-    SetFontSize(10, 15);
+    set_ui_font_size(10, 15);
     draw_text(34, 24, 0xcaff39ff, "PS3 SCALE");
     draw_text(34, 62, 0xffffffff, "COMPANION TOOLS");
 
@@ -1400,12 +1508,12 @@ static void draw_tools(void)
     draw_text(34, 446, 0x9aa6adff, g_tools_message);
     draw_text(34, 478, 0x9aa6adff,
               "CROSS: REFRESH TOOL STATUS  |  CIRCLE: BACK");
-    SetFontSize(14, 22);
+    set_ui_font_size(14, 22);
 }
 
 static void draw_about(void)
 {
-    SetFontSize(11, 17);
+    set_ui_font_size(11, 17);
     draw_text(34, 24, 0xcaff39ff, "PS3 SCALE");
     draw_text(34, 62, 0xffffffff, "ABOUT");
     draw_text(34, 112, 0xdce3e8ff,
@@ -1421,7 +1529,7 @@ static void draw_about(void)
     draw_text(34, 312, 0x9aa6adff,
               "PROFILES NEED EXACT TITLE / UPDATE MATCHING.");
     draw_text(34, 478, 0x9aa6adff, "CIRCLE: BACK");
-    SetFontSize(14, 22);
+    set_ui_font_size(14, 22);
 }
 
 static void draw_ui(void)
@@ -1646,7 +1754,7 @@ int main(int argc, char *argv[])
         g_extended_font_ready = 0;
     }
     SetCurrentFont(0);
-    SetFontSize(14, 22);
+    set_ui_font_size(14, 22);
 
     sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT0, app_sysutil_callback, NULL);
     g_app_files_ok =
