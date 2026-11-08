@@ -24,3 +24,12 @@ the rendered game resolution increased.
 ## PS3 Slim test target
 The first physical target is CECH-2504A, CEX CFW 4.93, Cobra 8.5. The exact graphics backend
 must be validated on this hardware before enabling any patch for other Slim/FAT/Super Slim units.
+
+
+## Optional PS3MAPI backend research
+
+webMAN MOD can expose PS3MAPI over HTTP and supports process information plus memory access. This gives PS3 SCALE a possible per-title live-memory patch route on CEX, but it does not provide a universal shader or framebuffer post-process layer.
+
+Alpha 0.2 must remain read-only. A future implementation should first query the current process and title identity, then require an exact game/version match and verified original bytes before any memory write. The MAPI service must remain on the trusted local network; IDPS/PSID access, syscall changes and clock changes are out of scope.
+
+See [WEBMAN_MAPI_INTEGRATION.md](WEBMAN_MAPI_INTEGRATION.md).
