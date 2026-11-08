@@ -151,7 +151,7 @@ assert "MOUNT THE EXACT GAME VERSION BEFORE ARMING THIS PROFILE." in src
 assert "WAIT FOR ONLINE DATABASE SYNC TO FINISH." in src
 assert "WAIT FOR ONLINE DATABASE SYNC TO FINISH BEFORE STARTING." in src
 assert "find_mounted_game(game, &mounted)" in src
-assert "if (g_catalog_sync_running)" in src
+assert "if (g_catalog_sync_running || g_catalog_sync_done)" in src
 assert "(!candidate->app_ver[0] ||" in src
 assert "feature/online-graphics-database" in src
 
