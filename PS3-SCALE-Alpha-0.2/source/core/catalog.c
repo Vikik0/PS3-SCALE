@@ -185,7 +185,7 @@ int ps3scale_catalog_load(const char *path, ps3scale_catalog_t *catalog)
 {
     FILE *file;
     char line[CATALOG_LINE_MAX];
-    ps3scale_catalog_t parsed;
+    ps3scale_catalog_t *parsed;
 
     if (!path || !catalog)
         return -1;
@@ -194,7 +194,12 @@ int ps3scale_catalog_load(const char *path, ps3scale_catalog_t *catalog)
     if (!file)
         return -1;
 
-    memset(&parsed, 0, sizeof(parsed));
+    parsed = (ps3scale_catalog_t *)malloc(sizeof(*parsed));
+    if (!parsed) {
+        fclose(file);
+        return -1;
+    }
+    memset(parsed, 0, sizeof(*parsed));
     while (fgets(line, sizeof(line), file)) {
         size_t length = strlen(line);
         ps3scale_profile_t profile;
@@ -211,33 +216,42 @@ int ps3scale_catalog_load(const char *path, ps3scale_catalog_t *catalog)
         if (!length || line[0] == '#')
             continue;
 
-        if (parsed.count >= PS3SCALE_CATALOG_MAX_PROFILES ||
+        if (parsed->count >= PS3SCALE_CATALOG_MAX_PROFILES ||
             parse_profile_line(line, &profile) != 0) {
             fclose(file);
+            free(parsed);
             return -1;
         }
 
-        for (i = 0; i < parsed.count; i++) {
-            if (strcmp(parsed.items[i].title_id, profile.title_id) == 0 &&
-                strcmp(parsed.items[i].app_ver, profile.app_ver) == 0) {
+        for (i = 0; i < parsed->count; i++) {
+            if (strcmp(parsed->items[i].title_id, profile.title_id) == 0 &&
+                strcmp(parsed->items[i].app_ver, profile.app_ver) == 0) {
                 fclose(file);
+                free(parsed);
                 return -1; /* Duplicate exact identity is ambiguous. */
             }
         }
-        parsed.items[parsed.count++] = profile;
+        parsed->items[parsed->count++] = profile;
     }
 
     if (ferror(file)) {
         fclose(file);
+        free(parsed);
         return -1;
     }
     fclose(file);
 
-    if (!parsed.count)
+    if (!parsed->count) {
+        free(parsed);
         return -1;
+    }
 
-    *catalog = parsed;
-    return (int)parsed.count;
+    *catalog = *parsed;
+    {
+        int count = (int)parsed->count;
+        free(parsed);
+        return count;
+    }
 }
 
 const ps3scale_profile_t *ps3scale_catalog_match(
