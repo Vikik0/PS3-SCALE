@@ -23,6 +23,7 @@ The current starter catalogue contains only B_COMMUNITY records. None should be 
 
 - The per-title webMAN script checks the exact Title ID and in-game state.
 - /patch.ps3 starts at the requested address with stop=address+0x20 and step=64. Given the current 1-16-byte signature limit and webMAN's 16-byte upper-bound rounding, only the requested address is a candidate. It writes only when the expected original bytes match.
+- The complete V2 script body is compared with the deterministic generated content before Start Game. A matching header alone is insufficient; edited or appended commands are treated as stale and must be removed or regenerated.
 - The script deletes itself after the one launch attempt. It is not a permanent auto-run profile.
 - Multi-write records remain disabled for automatic application.
 - No success popup is shown because the current batch-script path cannot verify the post-write value back to PS3 SCALE.
