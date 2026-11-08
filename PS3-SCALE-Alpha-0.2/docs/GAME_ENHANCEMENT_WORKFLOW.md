@@ -8,7 +8,7 @@
 4. It loads the bundled/cached catalogue and optionally synchronizes the HTTPS catalogue.
 5. A profile is displayed only for an exact Title ID + APP_VER match. Its effect, community trust level and source are shown.
 6. Before arming an eligible single-write B_COMMUNITY profile, PS3 SCALE revalidates the exact installed HDD title's Title ID + APP_VER from PARAM.SFO, or verifies the exact mounted /dev_bdvd Title ID + APP_VER for disc/folder titles. The user then confirms with SQUARE followed by TRIANGLE. Multi-write profiles and manual-only profiles such as Brütal Legend are not automated. No patch is silently armed.
-7. PS3 SCALE requires webMAN MOD and PS3MAPI to respond before writing the per-title script.
+7. PS3 SCALE checks webMAN MOD and PS3MAPI on a worker thread before writing the per-title script, keeping the controller UI responsive during network delays.
 8. Start Game runs in a worker thread so a slow or unavailable webMAN service cannot freeze controller input. Installed PS3 HDD/NPDRM titles launch through webMAN's /play.ps3?<TITLE_ID> route. PS3 folder and ISO entries launch through /play.ps3<URL-encoded-game-path>; an already-mounted /dev_bdvd title uses /play.ps3.
 9. If a profile is armed, PS3 SCALE rechecks the installed HDD metadata or exact mounted disc version before launching. If no exact profile exists, or a profile has not been armed, the selected game still launches normally without a graphics patch.
 10. webMAN runs /dev_hdd0/tmp/wm_ingame/<TITLE_ID>.bat for an armed title. The one-launch script checks the Title ID, in-game state, exact memory address and expected original bytes. It then deletes itself.
