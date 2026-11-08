@@ -1458,6 +1458,7 @@ static void keyboard_append(const char *value)
     amount = strlen(value);
     if (used + amount < sizeof(g_search)) {
         memcpy(g_search + used, value, amount + 1);
+        g_selected = 0;
         clamp_selection();
     }
 }
@@ -1469,6 +1470,7 @@ static void keyboard_backspace(void)
     n--;
     while (n > 0 && (((unsigned char)g_search[n] & 0xc0) == 0x80)) n--;
     g_search[n] = '\0';
+    g_selected = 0;
     clamp_selection();
 }
 

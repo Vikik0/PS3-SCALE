@@ -112,7 +112,17 @@ static const locale_entry_t locale_entries[] = {
     {"CLEAR", "مسح", "Limpiar"},
     {"APPLY", "تطبيق", "Aplicar"},
     {"CANCEL", "إلغاء", "Cancelar"},
-    {"ARROWS MOVE  |  CROSS SELECT  |  CIRCLE CANCEL", "الأسهم للتنقل | X للاختيار | دائرة للإلغاء", "Flechas mover | X seleccionar | Círculo cancelar"}
+    {"ARROWS MOVE  |  CROSS SELECT  |  CIRCLE CANCEL", "الأسهم للتنقل | X للاختيار | دائرة للإلغاء", "Flechas mover | X seleccionar | Círculo cancelar"},
+    {"UP/DOWN: SELECT  |  CROSS: CONTINUE", "أعلى/أسفل: اختيار | X: متابعة", "Arriba/abajo: elegir | X: continuar"},
+    {"STARTING PS3 SCALE", "جارٍ تشغيل PS3 SCALE", "Iniciando PS3 SCALE"},
+    {"APP FILE CHECK: OK", "فحص ملفات البرنامج: سليم", "Archivos de la aplicación: correctos"},
+    {"APP FILE CHECK: VERIFY INSTALL", "فحص ملفات البرنامج: تحقق من التثبيت", "Archivos de la aplicación: verifica la instalación"},
+    {"LOCAL CHECKS ONLY  |  NO GAME FILES ARE MODIFIED", "فحوصات محلية فقط | لا يتم تعديل ملفات الألعاب", "Solo comprobaciones locales | no se modifican juegos"},
+    {"CUSTOM KEYBOARD  |  NO PS3 SYSTEM KEYBOARD REQUIRED", "لوحة مفاتيح داخلية | لا حاجة للوحة PS3 الأصلية", "Teclado propio | no se usa el teclado del sistema PS3"},
+    {"UP/DOWN: MOVE  CROSS: SELECT  LEFT/RIGHT: ADJUST  CIRCLE: BACK", "أعلى/أسفل: تنقل | X: اختيار | يمين/يسار: تعديل | دائرة: رجوع", "Arriba/abajo: mover | X: elegir | izquierda/derecha: ajustar | círculo: volver"},
+    {"NO COVER", "لا توجد صورة غلاف", "Sin carátula"},
+    {"CIRCLE: BACK", "دائرة: رجوع", "Círculo: volver"},
+    {"UPDATE PKG FOUND. INSTALL VIA PACKAGE MANAGER.", "تم العثور على تحديث PKG. ثبّته عبر مدير الحزم.", "Actualización PKG encontrada. Instálala desde Package Manager."}
 };
 
 typedef struct locale_prefix {
