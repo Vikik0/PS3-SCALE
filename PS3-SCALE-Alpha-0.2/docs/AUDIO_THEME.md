@@ -28,7 +28,7 @@ The app can therefore start the theme without a USB drive or a manual copy step.
 - Start automatically when PS3 SCALE opens if Music is enabled.
 - Continue while moving between app screens.
 - Loop continuously.
-- Settings exposes Music ON/OFF and volume.
+- Settings exposes Music ON/OFF and volume. If Music is OFF in saved settings, the audio decoder/port/thread are not initialized at startup; switching OFF closes them immediately, and switching ON initializes them again.
 - Stop the audio thread and close the audio port cleanly when the app exits.
 
 ## Implementation
