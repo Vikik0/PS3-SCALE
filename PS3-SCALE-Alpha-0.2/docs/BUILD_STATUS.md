@@ -41,7 +41,7 @@ The finalized package header is `7f504b47 8000 0001` (PS3 package, finalized rev
 - Staged startup/loading screen with local app-file check, companion-tool detection and worker-thread game-library scan.
 - Slow low-poly 3D wireframe home emblem with two orbit rings; can be disabled in Settings.
 - Settings persist language, music, volume and animation.
-- Existing scanner, cover-art layout, companion-tool discovery, music streaming and USB-to-HDD music copy remain in the build.
+- Existing scanner, cover-art layout, companion-tool discovery and music streaming remain in the build. The music is assembled into `USRDIR/theme.mp3` during the package build; the Settings screen no longer exposes a copy-to-HDD action.
 
 ## Localization scope
 
@@ -49,7 +49,7 @@ Arabic rendering is tailored to the app's translated interface and common Arabic
 
 ## Music
 
-The user-supplied MP3 is not embedded inside the PKG. The app reads internal USRDIR first, then the original filename in USRDIR, then `PS3SCALE/theme.mp3` on USB000–USB007. Settings can copy the music to internal HDD.
+The user-supplied MP3 is embedded inside the PKG at `USRDIR/theme.mp3`. The build reconstructs it from ordered binary chunks and verifies its SHA-256. Playback reads only `/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`; no USB fallback or copy-to-HDD setting remains.
 
 ## Update and download policy
 
@@ -63,7 +63,7 @@ A previous Alpha build was confirmed by the user to launch, scan the library, di
 
 - No verified online graphics-profile catalog or automatic patch download/application.
 - No game-file backup/rollback workflow because the current app does not modify game files.
-- No CFW runtime plugin/PRX for game-start patching.
-- No in-game "Graphics applied — Enjoy!" notification or post-apply beep.
+- No verified graphics-profile catalogue or automatic graphics memory patch is enabled yet.
+- The Start Game action uses webMAN MOD to launch a matching mounted PS3 title and play a sound popup; the in-game success notification remains disabled until a patch is verified.
 - No universal AI upscaler or frame generation.
 - USB update discovery does not verify a signed release manifest and does not install packages automatically.

@@ -144,6 +144,7 @@ static int add_sfo_game(const char *sfo_path, const char *game_path,
             sizeof(game.title) - 1);
     strncpy(game.title_id, info.title_id, sizeof(game.title_id) - 1);
     strncpy(game.category, info.category, sizeof(game.category) - 1);
+    strncpy(game.app_ver, info.app_ver, sizeof(game.app_ver) - 1);
     strncpy(game.path, game_path, sizeof(game.path) - 1);
     find_local_cover(&game, game_path, kind == PS3SCALE_GAME_PS3_FOLDER);
     return ps3scale_game_list_add(list, &game) > 0 ? 1 : 0;
@@ -218,6 +219,7 @@ static int scan_installed_titles(const char *base,
                 sizeof(game.title) - 1);
         strncpy(game.title_id, info.title_id, sizeof(game.title_id) - 1);
         strncpy(game.category, info.category, sizeof(game.category) - 1);
+        strncpy(game.app_ver, info.app_ver, sizeof(game.app_ver) - 1);
         strncpy(game.path, folder, sizeof(game.path) - 1);
         find_local_cover(&game, folder, 0);
         if (ps3scale_game_list_add(list, &game) > 0) found++;

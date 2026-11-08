@@ -26,6 +26,6 @@ This prevents a successful build from being mistaken for a music-embedded build 
 
 ## Runtime
 
-After installation, the song is available at `/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`. No USB drive or manual copy is needed for the built-in startup theme. The app retains its existing USB/HDD fallback behavior.
+After installation, the song is available at `/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`. No USB drive or manual copy is needed for the built-in startup theme. The app opens only the embedded internal resource. There is no USB music fallback and no manual copy action. The MP3 is assembled from the ordered binary chunks before packaging.
 
 Real playback, looping, volume adjustment, and clean shutdown still require final testing on PS3 hardware.

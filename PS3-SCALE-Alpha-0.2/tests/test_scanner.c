@@ -38,9 +38,9 @@ static size_t add_entry(unsigned char *buf, size_t idx,
 static size_t make_sfo(unsigned char *buf, const char *title,
                        const char *title_id, const char *category)
 {
-    const size_t entry_bytes = 3 * 16;
+    const size_t entry_bytes = 4 * 16;
     const size_t keyoff = 20 + entry_bytes;
-    const char keys[] = "TITLE\0TITLE_ID\0CATEGORY\0";
+    const char keys[] = "TITLE\0TITLE_ID\0CATEGORY\0APP_VER\0";
     const size_t dataoff = keyoff + sizeof(keys);
     size_t p = dataoff, n;
 
@@ -49,7 +49,7 @@ static size_t make_sfo(unsigned char *buf, const char *title,
     put32(buf + 4, 0x00000101);
     put32(buf + 8, (unsigned int)keyoff);
     put32(buf + 12, (unsigned int)dataoff);
-    put32(buf + 16, 3);
+    put32(buf + 16, 4);
     memcpy(buf + keyoff, keys, sizeof(keys));
 
     n = add_entry(buf, 0, 0, title, (unsigned int)(p - dataoff));
@@ -58,6 +58,8 @@ static size_t make_sfo(unsigned char *buf, const char *title,
     memcpy(buf + p, title_id, n); p += n;
     n = add_entry(buf, 2, 15, category, (unsigned int)(p - dataoff));
     memcpy(buf + p, category, n); p += n;
+    n = add_entry(buf, 3, 24, "01.04", (unsigned int)(p - dataoff));
+    memcpy(buf + p, "01.04", n); p += n;
     return p;
 }
 
@@ -135,6 +137,7 @@ int main(void)
     assert(list.items[1].kind == PS3SCALE_GAME_PS2_CLASSIC ||
            list.items[2].kind == PS3SCALE_GAME_PS2_CLASSIC);
     assert(list.items[0].title_id[0] != '\0');
+    assert(strcmp(list.items[0].app_ver, "01.04") == 0);
 
     {
         size_t i;
@@ -143,8 +146,10 @@ int main(void)
         int saw_ps2_cover = 0;
         int saw_ps3_cover = 0;
         for (i = 0; i < list.count; i++) {
-            if (strcmp(list.items[i].title_id, "BLES12345") == 0)
+            if (strcmp(list.items[i].title_id, "BLES12345") == 0) {
                 saw_mounted = 1;
+                assert(strcmp(list.items[i].app_ver, "01.04") == 0);
+            }
             if (strcmp(list.items[i].title_id, "BCES01893") == 0)
                 saw_ps3_iso_id = 1;
             if (strcmp(list.items[i].title, "Demo PS2 Classic") == 0 &&

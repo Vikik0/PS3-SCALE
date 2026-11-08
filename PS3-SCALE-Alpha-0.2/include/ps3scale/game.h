@@ -9,6 +9,7 @@
 #define PS3SCALE_ID_MAX    16
 #define PS3SCALE_DISC_ID_MAX 16
 #define PS3SCALE_CAT_MAX   8
+#define PS3SCALE_GAME_APP_VER_MAX 16
 
 typedef enum ps3scale_game_kind {
     PS3SCALE_GAME_PS3_FOLDER = 0,
@@ -25,6 +26,7 @@ typedef struct ps3scale_game {
     char title_id[PS3SCALE_ID_MAX];
     char disc_id[PS3SCALE_DISC_ID_MAX]; /* PS2 serial, e.g. SLUS_203.12 */
     char category[PS3SCALE_CAT_MAX];
+    char app_ver[PS3SCALE_GAME_APP_VER_MAX];
     char path[PS3SCALE_PATH_MAX];
     char cover_path[PS3SCALE_PATH_MAX]; /* Local ICON0.PNG when present. */
 } ps3scale_game_t;

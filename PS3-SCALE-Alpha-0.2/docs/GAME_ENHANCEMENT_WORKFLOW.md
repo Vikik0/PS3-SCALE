@@ -9,16 +9,16 @@
 5. If a compatible enhancement exists, PS3 SCALE downloads the patch/config and validates its source, license, SHA-256, size, game identity and version.
 6. Before any game-file change, PS3 SCALE creates and verifies a restorable backup. Prefer sidecar config or profile files that leave the original ISO/game data unchanged.
 7. The app reports one of: Not supported, Downloaded, Prepared, Applied, or Failed. It must never call a prepared profile "Applied".
-8. The user exits PS3 SCALE. A short PS3 confirmation beep may be played only after the preparation/apply step actually succeeds.
-9. When the user launches the game, a separately loaded CFW plugin or title-specific runtime hook checks the running process and exact game identity. It applies only a matching, verified profile.
-10. Only after the runtime hook verifies the expected patch bytes/state does it display the top-screen notification: "Graphics applied — Enjoy!"
+8. The user presses Start Game from the details screen. PS3 SCALE verifies that the selected Title ID is currently mounted at `/dev_bdvd` and that the mounted APP_VER matches when available.
+9. With webMAN MOD responding, PS3 SCALE requests a short sound popup and calls `/play.ps3` to launch the mounted disc from the XMB Game column.
+10. A future per-title script under `/dev_hdd0/tmp/wm_ingame/<TITLE_ID>.bat` can apply only an exact, verified memory profile at game start and then show a webMAN popup. The success text must not appear until the patch is actually verified.
 
 ## Required architecture
 
 A normal GameOS manager process exits before the game begins rendering. It cannot itself remain alive to display a later in-game notification. The lifecycle therefore requires two cooperating components:
 
 - **PS3 SCALE manager:** library scanning, exact title matching, catalog/download, backup, preparation, status and user interface.
-- **Runtime component:** a CFW plugin/PRX or proven per-title hook that loads with the game, validates its identity/version, applies the selected memory patch and raises the notification.
+- **Runtime component:** webMAN MOD per-title batch automation is the first integration target. Its game-load event can run a script keyed by Title ID; a CFW PRX is a later option if a real HUD overlay is required. The script must validate the exact game/update before writing memory.
 
 For PS2 Classics/PS2 ISO, the compatible path is a per-title `ps2_netemu` CONFIG where the specific game and emulator support it. A sidecar CONFIG is preferred over modifying the ISO.
 
@@ -35,4 +35,4 @@ For PS2 Classics/PS2 ISO, the compatible path is a per-title `ps2_netemu` CONFIG
 
 ## Current status
 
-The current Alpha UI has library navigation, title search and a game-details page. It does not yet download/apply game patches, create game backups, install a runtime plugin, emit the requested exit beep, or display the in-game success notification. Those are later engineering milestones, not completed features.
+The current build adds a Start Game action for a PS3 title that is confirmed mounted at `/dev_bdvd`. It uses webMAN MOD for the sound popup and `/play.ps3` launch. It still has no verified graphics-profile catalogue, no memory patch application, and no "Graphics improved — Enjoy!" success popup. Those remain disabled rather than faked.

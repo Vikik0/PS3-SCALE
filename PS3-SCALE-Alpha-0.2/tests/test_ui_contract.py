@@ -29,7 +29,7 @@ assert "CHOOSE LANGUAGE" in src
 assert "اختر اللغة" in src
 assert "Elige el idioma" in src
 assert 'fprintf(fp, "language=%d\\n", g_language);' in src
-assert "g_settings_selected == 7" in main
+assert "g_settings_selected == 6" in main
 
 # Startup sequence: local checks and a background library scan with progress.
 assert "SCREEN_BOOT" in src
@@ -80,10 +80,17 @@ assert "SELECT/START: SEARCH" in scan
 settings = section("static void draw_settings(void)", "static void draw_tools(void)")
 for token in ("BACKGROUND MUSIC", "MUSIC VOLUME", "HOME ANIMATION",
               "CHECK FOR USB UPDATE", "RESCAN GAME LIBRARY",
-              "RESTORE DEFAULT SETTINGS", "COPY MUSIC TO INTERNAL HDD",
-              "LANGUAGE"):
+              "RESTORE DEFAULT SETTINGS", "LANGUAGE"):
     assert token in settings, f"Missing settings entry: {token}"
-assert "copy_music_to_internal" in src
+assert "COPY MUSIC TO INTERNAL HDD" not in settings
+assert "copy_music_to_internal" not in src
+assert "AUDIO ENGINE:" not in settings
+assert "g_music_path" not in src
+assert "mpg123_open(g_mpg123, PS3SCALE_MUSIC_PATH)" in src
+assert "START GAME" in src
+assert "start_selected_game()" in main
+assert "ps3scale_webman_start_mounted_game()" in src
+assert "APP VERSION:" in src
 assert "g_music_enabled && !g_music_playing" in main
 assert "BACKGROUND MUSIC STARTED." in main
 assert "PS3SCALE_SETTINGS_PATH" in src
@@ -123,6 +130,6 @@ assert "ARTEMIS PS3" in src
 assert "webMAN MOD" in src
 assert "refresh_companion_tool_status" in src
 assert "shutdown_audio_backend();" in main
-assert "PLAYBACK NOW USES INTERNAL HDD" in src
+assert "PS3SCALE_MUSIC_PATH" in src
 
 print("PS3 SCALE UI contract tests: PASS")

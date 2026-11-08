@@ -26,7 +26,7 @@
 - [x] Embedded compact Arabic bitmap glyph atlas with contextual letter forms and RTL run ordering.
 - [x] Staged startup screen with local app check and worker-thread library scan.
 - [x] Startup MP3 streaming, looping, mute and volume.
-- [x] USB-to-HDD music copy with immediate audio-backend restart.
+- [x] Theme MP3 embedded in the PKG; no manual USB copy action required.
 - [x] Offline USB package discovery, library rescan and restore defaults.
 - [x] Companion Tools status detection for Apollo, Artemis and webMAN.
 - [x] Static UI contract tests included in host CI.

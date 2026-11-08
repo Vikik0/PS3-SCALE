@@ -23,7 +23,7 @@ LIBDIRS := $(PORTLIBS)
 
 LIBS := -lya2d -lfont3d -ltiny3d -lsimdmath -lgcm_sys -lrsx -lio -lsysutil \
         -lpngdec -ljpgdec -lpng -lz -lfreetype -lpixman-1 \
-        -lmpg123 -laudio -lrt -llv2 -lsysmodule -lsysfs -lm
+        -lmpg123 -laudio -lrt -llv2 -lsysmodule -lsysfs -lnet -lm
 
 CFLAGS = -O2 -Wall -Wextra -std=gnu99 -mcpu=cell $(MACHDEP) $(INCLUDE) \
          -I$(PORTLIBS)/include/soundlib
@@ -79,6 +79,7 @@ $(BUILD):
 # The recursive build's default goal is $(OUTPUT).self (defined below).
 # This recipe ensures packaging cannot race object compilation/linking under -j.
 pkg: $(BUILD)
+	@python3 scripts/prepare_theme.py
 	@$(MAKE) --no-print-directory $(OUTPUT).pkg
 
 else
