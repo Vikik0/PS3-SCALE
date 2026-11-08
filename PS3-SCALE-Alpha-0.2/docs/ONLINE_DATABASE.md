@@ -32,7 +32,7 @@ This is a data catalogue, not a collection of downloaded executable files or EBO
 - All starter records are B_COMMUNITY; they are community reports, not profiles independently hardware-verified by PS3 SCALE.
 - A single-write profile can be armed only after an explicit controller confirmation. webMAN MOD and its PS3MAPI endpoint must respond.
 - Multi-write profiles remain disabled for automatic application in this build.
-- The generated webMAN script is one-launch only. It checks the Title ID, in-game state, exact target address and expected original bytes, then deletes itself after the launch attempt.
+- The generated webMAN script is one-launch only. It checks the Title ID, in-game state, exact target address and expected original bytes, then deletes itself after the launch attempt. Before allowing Start Game, PS3 SCALE compares the complete script body against the deterministic generated script; a matching header alone is not trusted, and any manual body edit is treated as stale.
 - The script does not show a success popup. webMAN's batch command does not provide PS3 SCALE with a verified post-write memory value, so the app must not claim that the patch succeeded.
 - The patch changes the running game's memory only. It does not modify the original game folder, EBOOT, ISO or update files. Closing the game ends that process and clears its in-memory patch.
 
