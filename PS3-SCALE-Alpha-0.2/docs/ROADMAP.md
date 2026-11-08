@@ -18,7 +18,7 @@
 - ICON0/PIC1 extraction
 - User profile storage under `/dev_hdd0/game/PS3SCALE1/USRDIR/`
 - Per-title compatibility status
-- Local backup/restore manifest (no automatic game-file edits)
+- Local backup/restore manifest (no automatic game-file edits)\n- [ ] Add online catalog/download, per-title backups and rollback\n- [ ] Add startup MP3 playback after PS3 audio decoder integration\n- [ ] Add CFW runtime plugin for verified game-start patching and notification
 
 ## Alpha 0.3 — PS2 configuration manager
 - [x] Add a restricted in-memory PS2 netemu CONFIG builder for commands 0x44/0x46, with host tests
