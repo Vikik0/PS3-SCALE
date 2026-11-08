@@ -143,6 +143,12 @@ static int g_game_launch_thread_started = 0;
 static int g_game_launch_profile_armed = 0;
 static sys_ppu_thread_t g_game_launch_thread;
 static ps3scale_game_t g_game_launch_target;
+static volatile int g_profile_arm_running = 0;
+static volatile int g_profile_arm_done = 0;
+static volatile int g_profile_arm_result = -1;
+static int g_profile_arm_thread_started = 0;
+static sys_ppu_thread_t g_profile_arm_thread;
+static ps3scale_profile_t g_profile_arm_target;
 
 static void clamp_selection(void);
 static void scan_library(void);
@@ -150,6 +156,7 @@ static int find_mounted_game(const ps3scale_game_t *selected,
                              ps3scale_game_t *mounted);
 static int find_installed_game(const ps3scale_game_t *selected);
 static void service_game_launch(void);
+static void service_profile_arm(void);
 
 static void app_sysutil_callback(u64 status, u64 param, void *userdata)
 {
@@ -1047,7 +1054,8 @@ static void start_catalog_sync_worker(int force)
     int rc;
 
     if (g_catalog_sync_running || g_catalog_sync_done ||
-        g_game_launch_running || g_game_launch_done) {
+        g_game_launch_running || g_game_launch_done ||
+        g_profile_arm_running || g_profile_arm_done) {
         snprintf(g_online_message, sizeof(g_online_message),
                  "DATABASE SYNC OR GAME START IS ALREADY RUNNING.");
         return;
@@ -1261,6 +1269,55 @@ static void open_selected_online_match(void)
     g_screen = SCREEN_DETAILS;
 }
 
+static void profile_arm_worker(void *arg)
+{
+    (void)arg;
+
+    if (ps3scale_webman_available() != 0) {
+        g_profile_arm_result = -100;
+    } else if (ps3scale_webman_ps3mapi_available() != 0) {
+        g_profile_arm_result = -101;
+    } else {
+        g_profile_arm_result =
+            ps3scale_profile_script_install(&g_profile_arm_target);
+    }
+
+    g_profile_arm_done = 1;
+    g_profile_arm_running = 0;
+}
+
+static void service_profile_arm(void)
+{
+    int result;
+
+    if (!g_profile_arm_done)
+        return;
+
+    if (g_profile_arm_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_profile_arm_thread, &thread_result);
+        g_profile_arm_thread_started = 0;
+    }
+
+    result = g_profile_arm_result;
+    g_profile_arm_done = 0;
+    g_profile_arm_running = 0;
+
+    if (result == 0 || result == 1) {
+        set_details_message("ONE-LAUNCH PROFILE ARMED. START THIS GAME.");
+    } else if (result == -100) {
+        set_details_message("WEBMAN MOD NOT RESPONDING. PROFILE NOT ARMED.");
+    } else if (result == -101) {
+        set_details_message("PS3MAPI NOT ACTIVE. PROFILE NOT ARMED.");
+    } else if (result == -2) {
+        set_details_message("A USER WEBMAN SCRIPT EXISTS. IT WAS NOT OVERWRITTEN.");
+    } else if (result == -3) {
+        set_details_message("MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY.");
+    } else {
+        set_details_message("PROFILE SCRIPT INSTALL FAILED. NO GAME FILES CHANGED.");
+    }
+}
+
 static void confirm_profile_install(void)
 {
     const ps3scale_game_t *game = selected_game();
@@ -1283,7 +1340,8 @@ static void confirm_profile_install(void)
         return;
     }
     if (g_catalog_sync_running || g_catalog_sync_done ||
-        g_game_launch_running || g_game_launch_done) {
+        g_game_launch_running || g_game_launch_done ||
+        g_profile_arm_running || g_profile_arm_done) {
         set_details_message("WAIT FOR ONLINE DATABASE OR GAME ACTION TO FINISH.");
         g_profile_confirm_pending = 0;
         return;
@@ -1303,23 +1361,22 @@ static void confirm_profile_install(void)
             return;
         }
     }
-    if (ps3scale_webman_available() != 0 ||
-        ps3scale_webman_ps3mapi_available() != 0) {
-        set_details_message("ENABLE WEBMAN PS3MAPI SERVER BEFORE INSTALLING.");
-        g_profile_confirm_pending = 0;
-        return;
-    }
-
-    result = ps3scale_profile_script_install(profile);
+    g_profile_arm_target = *profile;
+    g_profile_arm_result = -1;
+    g_profile_arm_done = 0;
+    g_profile_arm_running = 1;
     g_profile_confirm_pending = 0;
-    if (result == 0 || result == 1) {
-        set_details_message("ONE-LAUNCH PROFILE ARMED. START THE MOUNTED GAME.");
-    } else if (result == -2) {
-        set_details_message("A USER WEBMAN SCRIPT EXISTS. IT WAS NOT OVERWRITTEN.");
-    } else if (result == -3) {
-        set_details_message("MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY.");
+    set_details_message("CHECKING WEBMAN AND ARMING PROFILE.");
+
+    result = sysThreadCreate(&g_profile_arm_thread, profile_arm_worker, NULL,
+                             1500, 0x8000, THREAD_JOINABLE,
+                             "PS3 SCALE Profile Arm");
+    if (result == 0) {
+        g_profile_arm_thread_started = 1;
     } else {
-        set_details_message("PROFILE SCRIPT INSTALL FAILED. NO GAME FILES CHANGED.");
+        g_profile_arm_running = 0;
+        g_profile_arm_done = 0;
+        set_details_message("COULD NOT START PROFILE WORKER. NO PATCH WAS ARMED.");
     }
 }
 
@@ -1431,8 +1488,9 @@ static void start_selected_game(void)
         set_details_message("TITLE ID NOT AVAILABLE. RESCAN THE GAME.");
         return;
     }
-    if (g_game_launch_running || g_game_launch_done) {
-        set_details_message("GAME START REQUEST IS ALREADY RUNNING.");
+    if (g_game_launch_running || g_game_launch_done ||
+        g_profile_arm_running || g_profile_arm_done) {
+        set_details_message("GAME OR PROFILE ACTION IS ALREADY RUNNING.");
         return;
     }
     if (g_catalog_sync_running || g_catalog_sync_done) {
@@ -2034,7 +2092,9 @@ static void draw_details(void)
 
         draw_solid_rect(34.0f, 396.0f, 270.0f, 40.0f, 0x173a35ff);
         draw_outline_rect(34.0f, 396.0f, 270.0f, 40.0f, 0x8bd450ff);
-        if (g_game_launch_running)
+        if (g_profile_arm_running)
+            draw_text(58, 407, 0xcaff39ff, "ARMING PROFILE...");
+        else if (g_game_launch_running)
             draw_text(58, 407, 0xcaff39ff, "STARTING...");
         else if (profile && script_state == 1)
             draw_text(58, 407, 0xcaff39ff, "START WITH PROFILE");
@@ -2448,6 +2508,7 @@ int main(int argc, char *argv[])
         sysUtilCheckCallback();
         service_catalog_sync();
         service_game_launch();
+        service_profile_arm();
         g_frame_counter++;
 
         if (pad_ready && ioPadGetInfo(&pad_info) == 0) {
@@ -2556,8 +2617,16 @@ int main(int argc, char *argv[])
             const ps3scale_game_t *game = selected_game();
             const ps3scale_profile_t *profile = profile_for_game(game);
             if (square && !old_square && game && game_is_ps3(game)) {
-                int state = profile_script_state_for_game(game, profile);
-                if (state == 1 || state == -2) {
+                int state;
+                if (g_profile_arm_running || g_profile_arm_done) {
+                    set_details_message("WAIT FOR PROFILE ARMING TO FINISH.");
+                    state = 99;
+                } else {
+                    state = profile_script_state_for_game(game, profile);
+                }
+                if (state == 99) {
+                    /* The profile worker owns this script path until it finishes. */
+                } else if (state == 1 || state == -2) {
                     if (ps3scale_profile_script_remove(game->title_id) == 0)
                         set_details_message("ONE-LAUNCH PROFILE SCRIPT REMOVED FROM WEBMAN.");
                     else
@@ -2736,6 +2805,11 @@ int main(int argc, char *argv[])
         u64 thread_result = 0;
         (void)sysThreadJoin(g_game_launch_thread, &thread_result);
         g_game_launch_thread_started = 0;
+    }
+    if (g_profile_arm_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_profile_arm_thread, &thread_result);
+        g_profile_arm_thread_started = 0;
     }
     shutdown_audio_backend();
     sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
