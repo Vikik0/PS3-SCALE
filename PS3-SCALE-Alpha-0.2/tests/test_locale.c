@@ -132,6 +132,22 @@ int main(void)
         strstr(translated, "إعادة التطبيق") == NULL)
         return 16;
     if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "NO PROFILE FOR THIS TITLE. GAME WILL START UNMODIFIED.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "دون تعديلات") == NULL)
+        return 18;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "WEBMAN START FAILED. APP STILL RESPONSIVE.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "ما زال يستجيب") == NULL)
+        return 19;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "START UNMODIFIED",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "دون تحسين") == NULL)
+        return 20;
+
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
             "SETTINGS RESTORED TO DEFAULTS.",
             translated, sizeof(translated)) != 1 ||
         strstr(translated, "الإعدادات الافتراضية") == NULL)
