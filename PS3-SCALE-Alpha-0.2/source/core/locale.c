@@ -418,7 +418,9 @@ finished:
 
 int ps3scale_locale_glyph_font_index(unsigned char glyph)
 {
-    return glyph >= 128u ? 1 : 0;
+    if (glyph >= 128u && glyph <= 244u) return 1; /* Arabic TTF font */
+    if (glyph >= 246u && glyph <= 254u) return 2; /* Spanish bitmap extras */
+    return 0; /* Latin ASCII font */
 }
 
 int ps3scale_locale_is_arabic_glyph(unsigned char glyph)
