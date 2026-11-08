@@ -21,6 +21,7 @@
 #include "ps3scale/scanner.h"
 #include "ps3scale/ps2_config.h"
 #include "ps3scale/locale.h"
+#include "ps3scale/hardware_info.h"
 #include "font8x12.h"
 #include "font_bitmap_z.h"
 
@@ -104,6 +105,8 @@ static sys_ppu_thread_t g_boot_scan_thread;
 static int g_app_files_ok = 0;
 static int g_extended_font_ready = 0;
 static unsigned char g_extended_font_bitmap[PS3SCALE_FONT_RAW_SIZE];
+static ps3scale_hardware_info_t g_hardware_info;
+static int g_hardware_info_valid = 0;
 static unsigned char g_extended_glyph_min_x[256];
 static unsigned char g_extended_glyph_ink_width[256];
 static int g_ui_font_width = 14;
@@ -1513,13 +1516,14 @@ static void draw_tools(void)
 
 static void draw_about(void)
 {
+    char line[96];
     set_ui_font_size(11, 17);
     draw_text(34, 24, 0xcaff39ff, "PS3 SCALE");
     draw_text(34, 62, 0xffffffff, "ABOUT");
     draw_text(34, 112, 0xdce3e8ff,
               "PS3 / PS2 GAME LIBRARY AND GRAPHICS PROFILE MANAGER.");
     draw_text(34, 152, 0xdce3e8ff,
-              "TARGET TEST DEVICE: PS3 SLIM / CEX CFW.");
+              "TARGET HARDWARE: PS3 FAT / SLIM / SUPER SLIM.");
     draw_text(34, 192, 0x9aa6adff,
               "ALPHA 0.2 - EXPERIMENTAL HOMEBREW SOFTWARE.");
     draw_text(34, 232, 0x9aa6adff,
@@ -1528,6 +1532,18 @@ static void draw_about(void)
               "NO UNIVERSAL UPSCALER OR FRAME GENERATION IS CLAIMED.");
     draw_text(34, 312, 0x9aa6adff,
               "PROFILES NEED EXACT TITLE / UPDATE MATCHING.");
+
+    draw_text(34, 352, 0xffffffff, "HARDWARE INFORMATION");
+    if (g_hardware_info_valid) {
+        draw_text(34, 382, 0xdce3e8ff, "DETECTED MODEL:");
+        draw_text(210, 382, 0xdce3e8ff, g_hardware_info.model_series);
+        draw_text(34, 416, 0xdce3e8ff, "FIRMWARE:");
+        draw_text(138, 416, 0xdce3e8ff, g_hardware_info.firmware_version);
+        draw_text(280, 416, 0xdce3e8ff, "PLATFORM ID:");
+        draw_text(404, 416, 0xdce3e8ff, g_hardware_info.platform_id);
+    } else {
+        draw_text(34, 382, 0xffcc66ff, "HARDWARE INFO UNAVAILABLE.");
+    }
     draw_text(34, 478, 0x9aa6adff, "CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
@@ -1739,6 +1755,8 @@ int main(int argc, char *argv[])
 
     ps3scale_game_list_init(&g_games);
     load_app_settings();
+    g_hardware_info_valid =
+        (ps3scale_hardware_detect(&g_hardware_info) == 0);
 
     if (!ya2d_init()) return 1;
     pad_ready = 1;
