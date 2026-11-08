@@ -74,7 +74,7 @@ static int g_settings_selected = 0;
 static int g_animation_enabled = 1;
 static unsigned long g_frame_counter = 0;
 static char g_settings_message[128] = "SETTINGS ARE STORED ON THE PS3 HDD.";
-#define SETTINGS_COUNT 6
+#define SETTINGS_COUNT 7
 #define PS3SCALE_SETTINGS_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/settings.cfg"
 static char g_music_path[PS3SCALE_PATH_MAX] = "";
 
@@ -776,6 +776,64 @@ static int find_usb_update_package(char *found_path, size_t capacity)
     return 0;
 }
 
+static int copy_music_to_internal(void)
+{
+    FILE *existing = fopen(PS3SCALE_MUSIC_PATH, "rb");
+    FILE *input = NULL;
+    FILE *output = NULL;
+    char source_path[PS3SCALE_PATH_MAX];
+    unsigned char buffer[16384];
+    size_t amount;
+    int device, failed = 0;
+
+    if (existing) {
+        fclose(existing);
+        return 1;
+    }
+
+    source_path[0] = '\0';
+    if (g_music_path[0] && strstr(g_music_path, "/dev_usb")) {
+        snprintf(source_path, sizeof(source_path), "%s", g_music_path);
+        input = fopen(source_path, "rb");
+    }
+
+    for (device = 0; !input && device < 8; device++) {
+        snprintf(source_path, sizeof(source_path),
+                 "/dev_usb%03d/PS3SCALE/theme.mp3", device);
+        input = fopen(source_path, "rb");
+    }
+
+    if (!input)
+        return -1;
+
+    output = fopen(PS3SCALE_MUSIC_PATH, "wb");
+    if (!output) {
+        fclose(input);
+        return -1;
+    }
+
+    while ((amount = fread(buffer, 1, sizeof(buffer), input)) > 0) {
+        if (fwrite(buffer, 1, amount, output) != amount) {
+            failed = 1;
+            break;
+        }
+    }
+
+    if (ferror(input))
+        failed = 1;
+    if (fclose(input) != 0)
+        failed = 1;
+    if (fclose(output) != 0)
+        failed = 1;
+
+    if (failed) {
+        (void)remove(PS3SCALE_MUSIC_PATH);
+        return -1;
+    }
+
+    return 0;
+}
+
 static void draw_home(void)
 {
     static char *items[] = {
@@ -896,9 +954,9 @@ static void draw_scan(void)
         if (ps3scale_ps2_config_build(config_data, sizeof(config_data),
                 PS3SCALE_PS2_CFG_DISABLE_SMOOTHING |
                 PS3SCALE_PS2_CFG_ENABLE_L2H, &config_size) == 0) {
-            draw_text(530, 440, 0xcaff39ff, "PS2 CONFIG PREVIEW ONLY");
-            snprintf(line, sizeof(line), "SIZE: %u BYTES", (unsigned)config_size);
-            draw_text(530, 458, 0xdce3e8ff, line);
+            snprintf(line, sizeof(line), "PS2 CONFIG PREVIEW: %u BYTES",
+                     (unsigned)config_size);
+            draw_text(530, 440, 0xcaff39ff, line);
         }
     }
     if (g_games.truncated)
@@ -973,7 +1031,7 @@ static void draw_settings(void)
     static char *labels[SETTINGS_COUNT] = {
         "BACKGROUND MUSIC", "MUSIC VOLUME", "HOME ANIMATION",
         "CHECK FOR USB UPDATE", "RESCAN GAME LIBRARY",
-        "RESTORE DEFAULT SETTINGS"
+        "RESTORE DEFAULT SETTINGS", "COPY MUSIC TO INTERNAL HDD"
     };
     char value[96];
     int i;
@@ -983,7 +1041,7 @@ static void draw_settings(void)
     draw_text(34, 92, 0x9aa6adff,
               "PERSONALIZE THE APP AND RUN SAFE MAINTENANCE TASKS.");
     for (i = 0; i < SETTINGS_COUNT; i++) {
-        float y = 128.0f + (float)i * 43.0f;
+        float y = 124.0f + (float)i * 38.0f;
         int selected = (i == g_settings_selected);
         if (selected) draw_solid_rect(28.0f, y - 4.0f, 780.0f, 34.0f, 0x14261dff);
         value[0] = '\0';
@@ -992,7 +1050,8 @@ static void draw_settings(void)
         else if (i == 2) snprintf(value, sizeof(value), "%s", g_animation_enabled ? "ON" : "OFF");
         else if (i == 3) snprintf(value, sizeof(value), "SCAN USB000 - USB007");
         else if (i == 4) snprintf(value, sizeof(value), "CURRENT LIBRARY");
-        else snprintf(value, sizeof(value), "DEFAULTS");
+        else if (i == 5) snprintf(value, sizeof(value), "DEFAULTS");
+        else snprintf(value, sizeof(value), "IMPORT FROM USB");
         draw_text(48, y, selected ? 0xcaff39ff : 0xdce3e8ff, labels[i]);
         draw_text(590, y, selected ? 0xcaff39ff : 0x9aa6adff, value);
     }
@@ -1249,6 +1308,14 @@ int main(int argc, char *argv[])
                         g_music_volume = 180;
                         g_animation_enabled = 1;
                         (void)save_app_settings();
+                    } else if (g_settings_selected == 6) {
+                        int copy_result = copy_music_to_internal();
+                        if (copy_result == 0)
+                            set_settings_message("MUSIC COPIED TO INTERNAL HDD. RESTART APP, THEN USB CAN BE REMOVED.");
+                        else if (copy_result == 1)
+                            set_settings_message("MUSIC IS ALREADY ON INTERNAL HDD.");
+                        else
+                            set_settings_message("COPY FAILED. CHECK USB MUSIC FILE AND HDD SPACE.");
                     }
                 }
 

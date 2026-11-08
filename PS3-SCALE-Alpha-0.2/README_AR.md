@@ -158,3 +158,9 @@ Alpha 0.2 لا تطبّق patches ولا تغيّر أي ملف لعبة. قبل
 - Companion Tools تعرض Apollo Save Tool وArtemis PS3 وwebMAN MOD كأدوات منفصلة؛ لم ندمج إضافاتها أو نعدّل ملفاتها.
 
 **ملاحظة الأغنية:** ملف MP3 ليس جزءاً من نظام PS3 أو من ملف PKG الحالي. التطبيق يقرأه من USRDIR الداخلي أو من `PS3SCALE/theme.mp3` على USB. يمكن نسخه يدوياً إلى USRDIR لتشغيله دون USB.
+
+
+### نسخ الأغنية إلى الهارد الداخلي
+من Settings اختر **COPY MUSIC TO INTERNAL HDD** ثم اضغط CROSS. إذا كانت الأغنية على USB، سينسخها التطبيق إلى:
+`/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`
+بعدها أعد تشغيل PS3 SCALE؛ سيقرأ النسخة الداخلية ويمكنك فصل USB. هذا لا يعني أن الأغنية مدمجة داخل Firmware أو داخل PKG، بل أصبحت محفوظة في مجلد التطبيق على HDD.

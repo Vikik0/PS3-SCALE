@@ -43,6 +43,8 @@ assert "HOME ANIMATION" in settings
 assert "CHECK FOR USB UPDATE" in settings
 assert "RESCAN GAME LIBRARY" in settings
 assert "RESTORE DEFAULT SETTINGS" in settings
+assert "COPY MUSIC TO INTERNAL HDD" in settings
+assert "copy_music_to_internal" in src
 assert "PS3SCALE_SETTINGS_PATH" in src
 assert "settings.cfg" in src
 

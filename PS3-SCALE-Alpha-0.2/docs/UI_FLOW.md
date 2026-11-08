@@ -30,6 +30,7 @@ Settings are stored at `/dev_hdd0/game/PS3SCALE1/USRDIR/settings.cfg`:
 - Check for a PS3 SCALE PKG in the documented USB update folders.
 - Rescan the game library.
 - Restore default settings.
+- Copy the music file from USB to the internal app USRDIR. After copying, restart PS3 SCALE; it will prefer the internal copy and the USB can be removed.
 
 The USB update check is offline and only looks for a package file with a PKG header. It does not download, verify a release signature, or install the package. The user must install a confirmed PS3 SCALE update through Package Manager.
 
