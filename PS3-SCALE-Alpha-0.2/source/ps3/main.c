@@ -136,18 +136,1176 @@ static int g_online_selected = 0;
 static int g_profile_confirm_pending = 0;
 static char g_catalog_status[96] = "BUNDLED CATALOG NOT LOADED";
 static char g_online_message[128] = "SELECT A MATCHED GAME OR PRESS START TO SYNC.";
-static volatile int g_game_launch_running = 0;
-static volatile int g_game_launch_done = 0;
-static volatile int g_game_launch_result = -1;
-static int g_game_launch_thread_started = 0;
-static int g_game_launch_profile_armed = 0;
-static sys_ppu_thread_t g_game_launch_thread;
-static ps3scale_game_t g_game_launch_target;
 
 static void clamp_selection(void);
 static void scan_library(void);
 static int find_mounted_game(const ps3scale_game_t *selected,
-                             ps3scale_game_t *mounted)
+                             ps3scale_game_t *mounted);
+
+static void app_sysutil_callback(u64 status, u64 param, void *userdata)
+{
+    (void)param; (void)userdata;
+    if (status == SYSUTIL_EXIT_GAME) g_exit_requested = 1;
+}
+
+static int open_search_keyboard(void)
+{
+    snprintf(g_search_backup, sizeof(g_search_backup), "%s", g_search);
+    g_keyboard_selected = 0;
+    g_screen = SCREEN_KEYBOARD;
+    return 0;
+}
+
+static int base64_value(char c)
+{
+    if (c >= 'A' && c <= 'Z') return c - 'A';
+    if (c >= 'a' && c <= 'z') return c - 'a' + 26;
+    if (c >= '0' && c <= '9') return c - '0' + 52;
+    if (c == '+') return 62;
+    if (c == '/') return 63;
+    return -1;
+}
+
+static int decode_base64(const char *source, unsigned char *output,
+                         size_t capacity)
+{
+    uint32_t value = 0;
+    int bits = -8;
+    size_t used = 0, i;
+    for (i = 0; source && source[i]; i++) {
+        int digit;
+        if (source[i] == '=') break;
+        digit = base64_value(source[i]);
+        if (digit < 0) continue;
+        value = (value << 6) | (uint32_t)digit;
+        bits += 6;
+        if (bits >= 0) {
+            if (used >= capacity) return -1;
+            output[used++] = (unsigned char)((value >> bits) & 0xff);
+            bits -= 8;
+        }
+    }
+    return (int)used;
+}
+
+static void build_extended_font_metrics(void)
+{
+    const size_t bytes_per_row = (PS3SCALE_FONT_WIDTH + 7u) / 8u;
+    const size_t bytes_per_glyph = bytes_per_row * PS3SCALE_FONT_HEIGHT;
+    unsigned glyph;
+
+    memset(g_extended_glyph_min_x, 0, sizeof(g_extended_glyph_min_x));
+    memset(g_extended_glyph_ink_width, 0, sizeof(g_extended_glyph_ink_width));
+
+    /*
+     * The atlas is 1bpp, row-major, and uses BIT7_FIRST_PIXEL. Measure the
+     * visible ink bounds once at startup so Arabic glyphs can be positioned
+     * by their actual bitmap width instead of a guessed fixed character gap.
+     */
+    for (glyph = PS3SCALE_FONT_EXTENDED_FIRST;
+         glyph <= PS3SCALE_FONT_LAST; glyph++) {
+        size_t offset =
+            (size_t)(glyph - PS3SCALE_FONT_FIRST) * bytes_per_glyph;
+        unsigned min_x = PS3SCALE_FONT_WIDTH;
+        unsigned max_x = 0;
+        unsigned row, col;
+        int found = 0;
+
+        if (offset + bytes_per_glyph > sizeof(g_extended_font_bitmap))
+            continue;
+
+        for (row = 0; row < PS3SCALE_FONT_HEIGHT; row++) {
+            for (col = 0; col < PS3SCALE_FONT_WIDTH; col++) {
+                size_t byte_index = offset +
+                    (size_t)row * bytes_per_row + (size_t)(col >> 3);
+                unsigned char mask =
+                    (unsigned char)(0x80u >> (col & 7u));
+
+                if ((g_extended_font_bitmap[byte_index] & mask) != 0) {
+                    if (col < min_x) min_x = col;
+                    if (!found || col > max_x) max_x = col;
+                    found = 1;
+                }
+            }
+        }
+
+        if (found) {
+            g_extended_glyph_min_x[glyph] = (unsigned char)min_x;
+            g_extended_glyph_ink_width[glyph] =
+                (unsigned char)(max_x - min_x + 1u);
+        } else {
+            /* Keep a safe full-cell advance for an empty/unmapped glyph. */
+            g_extended_glyph_min_x[glyph] = 0;
+            g_extended_glyph_ink_width[glyph] = PS3SCALE_FONT_WIDTH;
+        }
+    }
+}
+
+static void set_ui_font_size(int width, int height)
+{
+    g_ui_font_width = width;
+    g_ui_font_height = height;
+    SetFontSize(width, height);
+}
+
+static int load_extended_font(void)
+{
+    unsigned char compressed[2048];
+    int compressed_size;
+    uLongf output_size = (uLongf)sizeof(g_extended_font_bitmap);
+    u8 *texture_cursor;
+    const size_t bytes_per_glyph =
+        (PS3SCALE_FONT_WIDTH * PS3SCALE_FONT_HEIGHT) / 8u;
+    const size_t extended_offset =
+        (size_t)(PS3SCALE_FONT_EXTENDED_FIRST - PS3SCALE_FONT_FIRST) *
+        bytes_per_glyph;
+    const size_t extended_size =
+        (size_t)(PS3SCALE_FONT_LAST - PS3SCALE_FONT_EXTENDED_FIRST + 1u) *
+        bytes_per_glyph;
+
+    compressed_size = decode_base64(ps3scale_font_z64, compressed,
+                                     sizeof(compressed));
+    if (compressed_size <= 0) return -1;
+    if (uncompress(g_extended_font_bitmap, &output_size, compressed,
+                   (uLong)compressed_size) != Z_OK ||
+        output_size != sizeof(g_extended_font_bitmap))
+        return -1;
+    if (extended_offset + extended_size > sizeof(g_extended_font_bitmap))
+        return -1;
+
+    build_extended_font_metrics();
+
+    /*
+     * libfont keeps each bitmap range as a separate font. Register the
+     * original ASCII bitmap as font 0, then the Arabic/extended atlas as
+     * font 1. The compressed atlas starts at codepoint 32, so skip its
+     * first 96 ASCII slots before registering codepoints 128..255.
+     */
+    ResetFont();
+    texture_cursor = (u8 *)g_font_texture;
+    texture_cursor = AddFontFromBitmapArray((u8 *)ps3scale_font8x12,
+        texture_cursor, 32, 126, 8, 12, 1, BIT7_FIRST_PIXEL);
+    texture_cursor = AddFontFromBitmapArray(
+        g_extended_font_bitmap + extended_offset, texture_cursor,
+        PS3SCALE_FONT_EXTENDED_FIRST, PS3SCALE_FONT_LAST,
+        PS3SCALE_FONT_WIDTH, PS3SCALE_FONT_HEIGHT, 1, BIT7_FIRST_PIXEL);
+    if (!texture_cursor || texture_cursor <= (u8 *)g_font_texture)
+        return -1;
+
+    SetCurrentFont(0);
+    g_extended_font_ready = 1;
+    return 0;
+}
+
+static void draw_text(float x, float y, u32 color, const char *text)
+{
+    char translated[512];
+    char glyph_text[512];
+    const char *source = text ? text : "";
+    size_t i, length;
+    int contains_arabic = 0;
+    int arabic_width = (g_ui_font_width * 18 + 7) / 14;
+
+    if (arabic_width < g_ui_font_width)
+        arabic_width = g_ui_font_width;
+
+    if (g_language == LANGUAGE_ARABIC || g_language == LANGUAGE_SPANISH) {
+        (void)ps3scale_locale_translate(g_language, source, translated,
+                                        sizeof(translated));
+        source = translated;
+    }
+    if (!g_extended_font_ready &&
+        (g_language == LANGUAGE_ARABIC || g_language == LANGUAGE_SPANISH))
+        source = text ? text : "";
+
+    (void)ps3scale_locale_to_glyphs(source, glyph_text, sizeof(glyph_text));
+    length = strlen(glyph_text);
+    for (i = 0; i < length; i++) {
+        if (ps3scale_locale_is_arabic_glyph(
+                (unsigned char)glyph_text[i])) {
+            contains_arabic = 1;
+            break;
+        }
+    }
+
+    SetFontColor(color, 0x00000000);
+    if (g_extended_font_ready) {
+        float cursor = x;
+
+        for (i = 0; i < length; i++) {
+            unsigned char glyph = (unsigned char)glyph_text[i];
+            int font_index = ps3scale_locale_glyph_font_index(glyph);
+
+            if (glyph == ' ') {
+                cursor += contains_arabic ?
+                    ((float)arabic_width * 0.5f) :
+                    (float)g_ui_font_width;
+                continue;
+            }
+
+            SetCurrentFont(font_index);
+            if (ps3scale_locale_is_arabic_glyph(glyph)) {
+                float scale_x =
+                    (float)arabic_width / (float)PS3SCALE_FONT_WIDTH;
+                float ink_width =
+                    (float)g_extended_glyph_ink_width[glyph];
+                unsigned min_x = g_extended_glyph_min_x[glyph];
+                unsigned char next_glyph =
+                    (i + 1u < length) ?
+                    (unsigned char)glyph_text[i + 1u] : 0;
+
+                if (ink_width <= 0.0f)
+                    ink_width = (float)PS3SCALE_FONT_WIDTH;
+
+                /*
+                 * Arabic glyphs in the 32x32 atlas contain more vertical
+                 * padding than the compact ASCII font. Enlarge only their
+                 * cell height (about 1.35x) and center it on the UI line so
+                 * Arabic remains readable at both normal and compact sizes.
+                 */
+                {
+                    int arabic_height =
+                        (g_ui_font_height * 27 + 10) / 20;
+                    float y_offset =
+                        (float)(arabic_height - g_ui_font_height) * 0.5f;
+                    SetFontSize(arabic_width, arabic_height);
+                    DrawChar(cursor - ((float)min_x * scale_x),
+                             y - y_offset, 0.0f, glyph);
+                    SetFontSize(g_ui_font_width, g_ui_font_height);
+                }
+                cursor += ink_width * scale_x;
+
+                if (ps3scale_locale_is_arabic_glyph(next_glyph)) {
+                    if (ps3scale_locale_glyphs_joined(glyph, next_glyph)) {
+                        /* Four source pixels close the joining seam without merging separate glyphs. */
+                        cursor -= scale_x * 4.0f;
+                    } else {
+                        /* Non-joining Arabic letters retain a small natural gap. */
+                        cursor += scale_x * 2.0f;
+                    }
+                } else if (next_glyph != 0 && next_glyph != ' ') {
+                    cursor += scale_x;
+                }
+            } else {
+                DrawChar(cursor, y, 0.0f, glyph);
+                cursor += (float)g_ui_font_width;
+            }
+        }
+        SetCurrentFont(0);
+    } else {
+        SetCurrentFont(0);
+        DrawString(x, y, glyph_text);
+    }
+}
+
+static int open_background_music(void)
+{
+    int error = 0;
+    long rate = 0;
+    int channels = 0;
+    int encoding = 0;
+
+    if (mpg123_init() != MPG123_OK)
+        return -1;
+    g_mpg123_initialized = 1;
+
+    g_mpg123 = mpg123_new(NULL, &error);
+    if (!g_mpg123)
+        return -1;
+
+    if (mpg123_format_none(g_mpg123) != MPG123_OK ||
+        mpg123_param(g_mpg123, MPG123_FORCE_RATE, 48000, 0.0) != MPG123_OK ||
+        mpg123_format(g_mpg123, 48000, MPG123_STEREO,
+                      MPG123_ENC_SIGNED_16) != MPG123_OK)
+        return -1;
+
+    /* The theme is bundled in the PKG; never depend on USB or a manual copy. */
+    if (mpg123_open(g_mpg123, PS3SCALE_MUSIC_PATH) != MPG123_OK)
+        return -1;
+
+    if (mpg123_getformat(g_mpg123, &rate, &channels, &encoding) != MPG123_OK ||
+        rate != 48000 || channels != MPG123_STEREO ||
+        encoding != MPG123_ENC_SIGNED_16) {
+        mpg123_close(g_mpg123);
+        return -1;
+    }
+
+    return 0;
+}
+
+static void fill_audio_block(float *output)
+{
+    short pcm[AUDIO_BLOCK_SAMPLES * 2];
+    size_t total = 0, target = sizeof(pcm), i;
+    float gain = g_music_enabled ? ((float)g_music_volume / 255.0f) : 0.0f;
+
+    if (gain <= 0.0f) {
+        memset(output, 0, sizeof(float) * AUDIO_BLOCK_SAMPLES * 2);
+        return;
+    }
+    memset(pcm, 0, sizeof(pcm));
+    while (total < target && g_audio_thread_running) {
+        size_t decoded = 0;
+        int rc = mpg123_read(g_mpg123, ((unsigned char *)pcm) + total,
+                             target - total, &decoded);
+        total += decoded;
+        if (rc == MPG123_NEW_FORMAT) {
+            long rate = 0; int channels = 0, encoding = 0;
+            if (mpg123_getformat(g_mpg123, &rate, &channels, &encoding) != MPG123_OK ||
+                rate != 48000 || channels != MPG123_STEREO ||
+                encoding != MPG123_ENC_SIGNED_16) break;
+            continue;
+        }
+        if (rc == MPG123_DONE) {
+            if (mpg123_seek(g_mpg123, 0, SEEK_SET) < 0) break;
+            continue;
+        }
+        if (rc == MPG123_ERR || (decoded == 0 && rc == MPG123_OK)) break;
+    }
+    for (i = 0; i < AUDIO_BLOCK_SAMPLES * 2; i++)
+        output[i] = ((float)pcm[i] / 32768.0f) * gain;
+}
+
+static void audio_output_thread(void *arg)
+{
+    (void)arg;
+
+    while (g_audio_thread_running) {
+        sys_event_t event;
+        u64 current_block;
+        u32 next_block;
+        float *audio_data;
+        float *destination;
+        s32 rc = sysEventQueueReceive(g_audio_queue, &event, 20 * 1000);
+
+        if (rc != 0)
+            continue;
+        if (!g_audio_thread_running)
+            break;
+
+        current_block = *(volatile u64 *)(uintptr_t)g_audio_config.readIndex;
+        next_block = (u32)((current_block + 1) % g_audio_config.numBlocks);
+        audio_data = (float *)(uintptr_t)g_audio_config.audioDataStart;
+        destination = audio_data +
+            ((size_t)next_block * (size_t)g_audio_config.channelCount *
+             AUDIO_BLOCK_SAMPLES);
+
+        fill_audio_block(destination);
+    }
+}
+
+static void set_background_music_enabled(int enabled)
+{
+    g_music_enabled = enabled ? 1 : 0;
+}
+
+static void set_background_music_volume(int volume)
+{
+    if (volume < 0) volume = 0;
+    if (volume > 255) volume = 255;
+    g_music_volume = volume;
+}
+
+static void shutdown_audio_backend(void)
+{
+    u64 thread_result = 0;
+
+    g_audio_thread_running = 0;
+
+    if (g_audio_thread_started) {
+        (void)sysThreadJoin(g_audio_thread, &thread_result);
+        g_audio_thread_started = 0;
+    }
+
+    if (g_audio_port_started) {
+        (void)audioPortStop(g_audio_port);
+        g_audio_port_started = 0;
+    }
+
+    if (g_audio_notify_ready) {
+        (void)audioRemoveNotifyEventQueue(g_audio_queue_key);
+        g_audio_notify_ready = 0;
+    }
+
+    if (g_audio_port_open) {
+        (void)audioPortClose(g_audio_port);
+        g_audio_port_open = 0;
+    }
+
+    if (g_audio_queue_ready) {
+        (void)sysEventQueueDestroy(g_audio_queue, 0);
+        g_audio_queue_ready = 0;
+    }
+
+    if (g_audio_initialized) {
+        (void)audioQuit();
+        g_audio_initialized = 0;
+    }
+
+    if (g_mpg123) {
+        (void)mpg123_close(g_mpg123);
+        mpg123_delete(g_mpg123);
+        g_mpg123 = NULL;
+    }
+
+    if (g_mpg123_initialized) {
+        mpg123_exit();
+        g_mpg123_initialized = 0;
+    }
+
+    g_music_playing = 0;
+}
+
+static int initialize_audio_backend(void)
+{
+    int rc;
+
+    if (!g_music_enabled || g_music_playing)
+        return 0;
+    if (open_background_music() != 0)
+        goto fail;
+
+    rc = audioInit();
+    if (rc != 0)
+        goto fail;
+    g_audio_initialized = 1;
+
+    g_audio_params.numChannels = AUDIO_PORT_2CH;
+    g_audio_params.numBlocks = AUDIO_BLOCK_8;
+    g_audio_params.attrib = AUDIO_PORT_INITLEVEL;
+    g_audio_params.level = 1.0f;
+
+    rc = audioPortOpen(&g_audio_params, &g_audio_port);
+    if (rc != 0)
+        goto fail;
+    g_audio_port_open = 1;
+
+    rc = audioGetPortConfig(g_audio_port, &g_audio_config);
+    if (rc != 0)
+        goto fail;
+
+    rc = audioCreateNotifyEventQueue(&g_audio_queue, &g_audio_queue_key);
+    if (rc != 0)
+        goto fail;
+    g_audio_queue_ready = 1;
+
+    rc = audioSetNotifyEventQueue(g_audio_queue_key);
+    if (rc != 0)
+        goto fail;
+    g_audio_notify_ready = 1;
+
+    (void)sysEventQueueDrain(g_audio_queue);
+
+    rc = audioPortStart(g_audio_port);
+    if (rc != 0)
+        goto fail;
+    g_audio_port_started = 1;
+
+    g_audio_thread_running = 1;
+    rc = sysThreadCreate(&g_audio_thread, audio_output_thread, NULL,
+                         1000, 0x4000, THREAD_JOINABLE, "PS3 SCALE Music");
+    if (rc != 0) {
+        g_audio_thread_running = 0;
+        goto fail;
+    }
+
+    g_audio_thread_started = 1;
+    g_music_playing = 1;
+    return 0;
+
+fail:
+    shutdown_audio_backend();
+    return -1;
+}
+
+static void draw_solid_rect(float x, float y, float w, float h, u32 color)
+{
+    tiny3d_SetPolygon(TINY3D_QUADS);
+    tiny3d_VertexPos(x, y, 65535.0f);
+    tiny3d_VertexColor(color);
+    tiny3d_VertexPos(x + w, y, 65535.0f);
+    tiny3d_VertexPos(x + w, y + h, 65535.0f);
+    tiny3d_VertexPos(x, y + h, 65535.0f);
+    tiny3d_End();
+}
+
+static void draw_outline_rect(float x, float y, float w, float h, u32 color)
+{
+    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+    tiny3d_VertexPos(x, y, 65535.0f);
+    tiny3d_VertexColor(color);
+    tiny3d_VertexPos(x + w, y, 65535.0f);
+    tiny3d_VertexPos(x + w, y + h, 65535.0f);
+    tiny3d_VertexPos(x, y + h, 65535.0f);
+    tiny3d_End();
+}
+
+static void draw_icon_line(float x1, float y1, float x2, float y2, u32 color)
+{
+    tiny3d_SetPolygon(TINY3D_LINES);
+    tiny3d_VertexPos(x1, y1, 65535.0f);
+    tiny3d_VertexColor(color);
+    tiny3d_VertexPos(x2, y2, 65535.0f);
+    tiny3d_End();
+}
+
+static void draw_circle_outline(float cx, float cy, float radius, u32 color)
+{
+    int i;
+    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+    for (i = 0; i < 24; i++) {
+        float angle = 6.28318530718f * (float)i / 24.0f;
+        tiny3d_VertexPos(cx + cosf(angle) * radius,
+                         cy + sinf(angle) * radius, 65535.0f);
+        if (i == 0)
+            tiny3d_VertexColor(color);
+    }
+    tiny3d_End();
+}
+
+static void draw_gear_outline(float cx, float cy, float radius, u32 color)
+{
+    int i;
+    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+    for (i = 0; i < 24; i++) {
+        float angle = 6.28318530718f * (float)i / 24.0f;
+        float r = (i % 3 == 0) ? radius : radius * 0.78f;
+        tiny3d_VertexPos(cx + cosf(angle) * r,
+                         cy + sinf(angle) * r, 65535.0f);
+        if (i == 0)
+            tiny3d_VertexColor(color);
+    }
+    tiny3d_End();
+}
+
+static void draw_menu_icon(int index, float x, float y, int selected)
+{
+    u32 ink = selected ? 0xcaff39ff : 0x9eb2c0ff;
+    u32 tile = selected ? 0x1b2b1dff : 0x111b25ff;
+    u32 border = selected ? 0x8cbd35ff : 0x344654ff;
+    draw_solid_rect(x, y, 38.0f, 38.0f, tile);
+    draw_outline_rect(x, y, 38.0f, 38.0f, border);
+    if (index == 0) {
+        draw_circle_outline(x + 15.0f, y + 14.0f, 8.0f, ink);
+        draw_icon_line(x + 21.0f, y + 21.0f, x + 29.0f, y + 29.0f, ink);
+        draw_icon_line(x + 11.0f, y + 12.0f, x + 17.0f, y + 12.0f, ink);
+        draw_icon_line(x + 11.0f, y + 16.0f, x + 16.0f, y + 16.0f, ink);
+    } else if (index == 1) {
+        draw_circle_outline(x + 19.0f, y + 19.0f, 13.0f, ink);
+        draw_circle_outline(x + 19.0f, y + 19.0f, 5.0f, ink);
+        draw_icon_line(x + 6.0f, y + 19.0f, x + 32.0f, y + 19.0f, ink);
+        draw_icon_line(x + 19.0f, y + 6.0f, x + 19.0f, y + 32.0f, ink);
+    } else if (index == 2) {
+        draw_gear_outline(x + 19.0f, y + 19.0f, 13.0f, ink);
+        draw_circle_outline(x + 19.0f, y + 19.0f, 5.0f, ink);
+        draw_solid_rect(x + 17.5f, y + 17.5f, 3.0f, 3.0f, ink);
+    } else if (index == 3) {
+        draw_icon_line(x + 10.0f, y + 28.0f, x + 27.0f, y + 11.0f, ink);
+        draw_icon_line(x + 11.0f, y + 10.0f, x + 28.0f, y + 27.0f, ink);
+        draw_circle_outline(x + 10.0f, y + 10.0f, 4.0f, ink);
+        draw_circle_outline(x + 28.0f, y + 28.0f, 4.0f, ink);
+    } else {
+        draw_circle_outline(x + 19.0f, y + 19.0f, 13.0f, ink);
+        draw_solid_rect(x + 17.5f, y + 16.0f, 3.0f, 10.0f, ink);
+        draw_solid_rect(x + 17.5f, y + 10.0f, 3.0f, 3.0f, ink);
+    }
+}
+
+static int game_is_ps3(const ps3scale_game_t *game)
+{
+    if (!game) return 0;
+    return game->kind == PS3SCALE_GAME_PS3_FOLDER ||
+           game->kind == PS3SCALE_GAME_PS3_HDD ||
+           game->kind == PS3SCALE_GAME_PS3_ISO;
+}
+
+static int game_is_ps2(const ps3scale_game_t *game)
+{
+    if (!game) return 0;
+    return game->kind == PS3SCALE_GAME_PS2_CLASSIC ||
+           game->kind == PS3SCALE_GAME_PS2_HDD ||
+           game->kind == PS3SCALE_GAME_PS2_ISO;
+}
+
+static int text_contains_ci(const char *text, const char *query)
+{
+    size_t i, j;
+    if (!query || !query[0]) return 1;
+    if (!text) return 0;
+
+    for (i = 0; text[i]; i++) {
+        for (j = 0; query[j]; j++) {
+            if (!text[i + j]) break;
+            if (tolower((unsigned char)text[i + j]) !=
+                tolower((unsigned char)query[j]))
+                break;
+        }
+        if (!query[j]) return 1;
+    }
+    return 0;
+}
+
+static int game_matches_library(const ps3scale_game_t *game)
+{
+    int platform_match =
+        (g_library == LIBRARY_PS3) ? game_is_ps3(game) : game_is_ps2(game);
+
+    return platform_match && text_contains_ci(game->title, g_search);
+}
+
+static size_t library_count(int library)
+{
+    size_t i, count = 0;
+    for (i = 0; i < g_games.count; i++) {
+        int platform_match =
+            (library == LIBRARY_PS3) ? game_is_ps3(&g_games.items[i])
+                                     : game_is_ps2(&g_games.items[i]);
+        if (platform_match && text_contains_ci(g_games.items[i].title, g_search))
+            count++;
+    }
+    return count;
+}
+
+static size_t library_total_count(int library)
+{
+    size_t i, count = 0;
+    for (i = 0; i < g_games.count; i++) {
+        int match = (library == LIBRARY_PS3) ?
+            game_is_ps3(&g_games.items[i]) : game_is_ps2(&g_games.items[i]);
+        if (match) count++;
+    }
+    return count;
+}
+
+static const ps3scale_game_t *library_game_at(size_t visible_index)
+{
+    size_t i, current = 0;
+    for (i = 0; i < g_games.count; i++) {
+        if (!game_matches_library(&g_games.items[i])) continue;
+        if (current == visible_index) return &g_games.items[i];
+        current++;
+    }
+    return NULL;
+}
+
+static const ps3scale_game_t *selected_game(void)
+{
+    size_t count = library_count(g_library);
+    if (count == 0) return NULL;
+    if (g_selected < 0 || (size_t)g_selected >= count) return NULL;
+    return library_game_at((size_t)g_selected);
+}
+
+static void clamp_selection(void)
+{
+    size_t count = library_count(g_library);
+    if (count == 0) g_selected = 0;
+    else if (g_selected >= (int)count) g_selected = (int)count - 1;
+}
+
+static void format_hex(char *out, size_t capacity,
+                       const uint8_t *data, size_t size)
+{
+    size_t i, used = 0;
+    if (!out || capacity == 0) return;
+    out[0] = '\0';
+
+    for (i = 0; i < size && used < capacity; i++) {
+        int n = snprintf(out + used, capacity - used,
+                         i + 1 == size ? "%02X" : "%02X ",
+                         (unsigned)data[i]);
+        if (n < 0 || (size_t)n >= capacity - used) {
+            out[capacity - 1] = '\0';
+            return;
+        }
+        used += (size_t)n;
+    }
+}
+
+
+static void update_selected_cover(void)
+{
+    const ps3scale_game_t *game = selected_game();
+    const char *path = (game && game->cover_path[0]) ? game->cover_path : "";
+
+    if (strcmp(path, g_cover_path) == 0)
+        return;
+
+    if (g_cover_texture) {
+        ya2d_freeTexture(g_cover_texture);
+        g_cover_texture = NULL;
+    }
+    g_cover_path[0] = '\0';
+
+    if (path[0]) {
+        g_cover_texture = ya2d_loadPNGfromFile(path);
+        if (g_cover_texture)
+            strncpy(g_cover_path, path, sizeof(g_cover_path) - 1);
+    }
+}
+
+static void draw_ambient_ring(float radius, float tilt, float spin,
+                               float x, float y, float z, u32 color)
+{
+    MATRIX rotation, scale, translation, model;
+    int i;
+    rotation = MatrixMultiply(MatrixRotationY(spin), MatrixRotationX(tilt));
+    scale = MatrixScale(radius, radius, radius);
+    translation = MatrixTranslation(x, y, z);
+    model = MatrixMultiply(MatrixMultiply(scale, rotation), translation);
+    tiny3d_SetMatrixModelView(&model);
+    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+    for (i = 0; i < 48; i++) {
+        float angle = 6.28318530718f * (float)i / 48.0f;
+        tiny3d_VertexPos(cosf(angle), sinf(angle), 0.0f);
+        if (i == 0) tiny3d_VertexColor(color);
+    }
+    tiny3d_End();
+}
+
+static void draw_ambient_satellite(float orbit_radius, float angle,
+                                   float tilt, float spin,
+                                   float x, float y, float z, u32 color)
+{
+    MATRIX rotation, translation, model;
+    float px = cosf(angle) * orbit_radius;
+    float py = sinf(angle) * orbit_radius;
+    rotation = MatrixMultiply(MatrixRotationY(spin), MatrixRotationX(tilt));
+    translation = MatrixTranslation(x, y, z);
+    model = MatrixMultiply(rotation, translation);
+    tiny3d_SetMatrixModelView(&model);
+    tiny3d_SetPolygon(TINY3D_LINES);
+    tiny3d_VertexPos(px - 0.72f, py, 0.0f);
+    tiny3d_VertexColor(color);
+    tiny3d_VertexPos(px + 0.72f, py, 0.0f);
+    tiny3d_VertexPos(px, py - 0.72f, 0.0f);
+    tiny3d_VertexPos(px, py + 0.72f, 0.0f);
+    tiny3d_VertexPos(px, py, -0.72f);
+    tiny3d_VertexPos(px, py, 0.72f);
+    tiny3d_End();
+}
+
+static void draw_home_ambient(void)
+{
+    /* Aurora Core: calm wireframe globe, orbital rings, and drifting particles. */
+    const float phase = (float)g_frame_counter * 0.0012f;
+    const float bob = sinf(phase * 0.58f) * 2.6f;
+    const float center_x = 28.0f;
+    const float center_y = 1.5f + bob;
+    const float center_z = 82.0f;
+    MATRIX projection, rotation, scale, translation, model;
+    int latitude, longitude, segment, i;
+
+    tiny3d_Project3D();
+    projection = MatrixProjPerspective(70.0f, 16.0f / 9.0f, 0.1f, 300.0f);
+    tiny3d_SetProjectionMatrix(&projection);
+    tiny3d_SetLightsOff();
+
+    rotation = MatrixMultiply(MatrixRotationY(phase),
+                              MatrixRotationX(phase * 0.37f));
+    scale = MatrixScale(13.0f, 13.0f, 13.0f);
+    translation = MatrixTranslation(center_x, center_y, center_z);
+    model = MatrixMultiply(MatrixMultiply(scale, rotation), translation);
+    tiny3d_SetMatrixModelView(&model);
+
+    for (latitude = -3; latitude <= 3; latitude++) {
+        float lat = (float)latitude * 0.34f;
+        float ring_radius = cosf(lat);
+        float ring_y = sinf(lat);
+        tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+        for (segment = 0; segment < 40; segment++) {
+            float angle = 6.28318530718f * (float)segment / 40.0f;
+            tiny3d_VertexPos(ring_radius * cosf(angle), ring_y,
+                             ring_radius * sinf(angle));
+            if (segment == 0) {
+                u32 color = (latitude == 0) ? 0x65c8e6d0 :
+                            ((latitude & 1) ? 0x397fb6a0 : 0x4a9fbe90);
+                tiny3d_VertexColor(color);
+            }
+        }
+        tiny3d_End();
+    }
+
+    for (longitude = 0; longitude < 10; longitude++) {
+        float lon = 6.28318530718f * (float)longitude / 10.0f;
+        tiny3d_SetPolygon(TINY3D_LINE_STRIP);
+        for (segment = 0; segment <= 18; segment++) {
+            float lat = -1.25f + 2.5f * (float)segment / 18.0f;
+            float ring_radius = cosf(lat);
+            tiny3d_VertexPos(ring_radius * cosf(lon), sinf(lat),
+                             ring_radius * sinf(lon));
+            if (segment == 0)
+                tiny3d_VertexColor(0x397fb6a0);
+        }
+        tiny3d_End();
+    }
+
+    draw_ambient_ring(18.8f, 1.08f, phase * 0.42f,
+                      center_x, center_y, center_z, 0x55b9d6b0);
+    draw_ambient_ring(21.2f, 0.38f, -phase * 0.28f,
+                      center_x, center_y, center_z, 0x397fb690);
+    draw_ambient_ring(16.6f, 1.48f, phase * 0.20f,
+                      center_x, center_y, center_z, 0x8bd45090);
+    draw_ambient_satellite(18.8f, phase * 0.42f + 0.7f,
+                           1.08f, phase * 0.42f,
+                           center_x, center_y, center_z, 0x8bd450ff);
+    draw_ambient_satellite(21.2f, -phase * 0.28f + 2.4f,
+                           0.38f, -phase * 0.28f,
+                           center_x, center_y, center_z, 0x65c8e6ff);
+
+    tiny3d_Project2D();
+    tiny3d_SetMatrixModelView(NULL);
+    for (i = 0; i < 16; i++) {
+        float px = 492.0f +
+            (float)((i * 47 + (int)(g_frame_counter / 4u)) % 330);
+        float py = 34.0f + (float)((i * 31) % 430) +
+                   sinf(phase * 0.8f + (float)i * 0.71f) * 3.5f;
+        float size = (i % 4 == 0) ? 2.0f : 1.0f;
+        u32 color = (i % 3 == 0) ? 0x65c8e680 : 0x8bd45060;
+        draw_solid_rect(px, py, size, size, color);
+    }
+}
+
+static void set_settings_message(const char *message)
+{
+    if (!message) message = "";
+    snprintf(g_settings_message, sizeof(g_settings_message), "%s", message);
+}
+
+static void set_details_message(const char *message)
+{
+    if (!message) message = "";
+    snprintf(g_details_message, sizeof(g_details_message), "%s", message);
+}
+
+
+#define PS3SCALE_PROFILE_CACHE_FORMAT "PS3SCALE_PROFILE_DATA_V1"
+
+static void load_catalog_cache(void)
+{
+    int count = ps3scale_catalog_load(PS3SCALE_CATALOG_CACHE_PATH, &g_catalog);
+    if (count > 0) {
+        g_catalog_ready = 1;
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "BUNDLED / CACHED DATABASE READY");
+    } else {
+        g_catalog_ready = 0;
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "NO VALID LOCAL DATABASE");
+    }
+}
+
+static int catalog_cache_is_stale(void)
+{
+    struct stat info;
+    time_t now = time(NULL);
+
+    if (stat(PS3SCALE_CATALOG_CACHE_PATH, &info) != 0)
+        return 1;
+    /* An unset console clock must not suppress the first online check. */
+    if (now < (time_t)1600000000)
+        return 1;
+    if (now <= info.st_mtime)
+        return 0;
+    return (now - info.st_mtime) >= PS3SCALE_CATALOG_SYNC_SECONDS;
+}
+
+static void catalog_sync_worker(void *arg)
+{
+    (void)arg;
+    g_catalog_sync_result = 0;
+
+    if (ps3scale_online_download(PS3SCALE_CATALOG_URL,
+                                 PS3SCALE_CATALOG_DOWNLOAD_PATH) == 0 &&
+        ps3scale_catalog_load(PS3SCALE_CATALOG_DOWNLOAD_PATH,
+                              &g_downloaded_catalog) > 0 &&
+        rename(PS3SCALE_CATALOG_DOWNLOAD_PATH,
+               PS3SCALE_CATALOG_CACHE_PATH) == 0) {
+        g_catalog_sync_result = 1;
+    } else {
+        unlink(PS3SCALE_CATALOG_DOWNLOAD_PATH);
+        g_catalog_sync_result = -1;
+    }
+
+    /* Publish completion before clearing running so UI actions never
+     * overlap the final network teardown window. */
+    g_catalog_sync_done = 1;
+    g_catalog_sync_running = 0;
+}
+
+static void start_catalog_sync_worker(int force)
+{
+    int rc;
+
+    if (g_catalog_sync_running || g_catalog_sync_done) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DATABASE SYNC IS ALREADY RUNNING.");
+        return;
+    }
+    if (!force && !catalog_cache_is_stale())
+        return;
+
+    g_catalog_sync_done = 0;
+    g_catalog_sync_result = 0;
+    g_catalog_sync_running = 1;
+    snprintf(g_catalog_status, sizeof(g_catalog_status),
+             "CONNECTING TO GITHUB DATABASE");
+    rc = sysThreadCreate(&g_catalog_thread, catalog_sync_worker, NULL,
+                         1500, 0x10000, THREAD_JOINABLE,
+                         "PS3 SCALE Online Database");
+    if (rc == 0) {
+        g_catalog_thread_started = 1;
+    } else {
+        g_catalog_sync_running = 0;
+        g_catalog_sync_done = 0;
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "ONLINE THREAD COULD NOT START");
+    }
+}
+
+static void service_catalog_sync(void)
+{
+    if (!g_catalog_sync_done)
+        return;
+
+    if (g_catalog_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_catalog_thread, &thread_result);
+        g_catalog_thread_started = 0;
+    }
+
+    if (g_catalog_sync_result == 1) {
+        g_catalog = g_downloaded_catalog;
+        g_catalog_ready = 1;
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "ONLINE DATABASE UPDATED");
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DATABASE UPDATED. EXACT GAME MATCHES ARE READY.");
+    } else if (g_catalog_ready) {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "UPDATE FAILED - USING CACHED DATABASE");
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "UPDATE FAILED. YOUR LAST VALID DATABASE IS STILL AVAILABLE.");
+    } else {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "OFFLINE - NO VALID DATABASE");
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "CONNECT THE PS3 TO THE INTERNET AND PRESS START TO RETRY.");
+    }
+    g_catalog_sync_done = 0;
+}
+
+static const ps3scale_profile_t *profile_for_game(const ps3scale_game_t *game)
+{
+    if (!g_catalog_ready || !game || !game_is_ps3(game))
+        return NULL;
+    return ps3scale_catalog_match_game(&g_catalog, game);
+}
+
+static int profile_script_state_for_game(const ps3scale_game_t *game,
+                                         const ps3scale_profile_t *profile)
+{
+    if (!game || !game_is_ps3(game) || !game->title_id[0])
+        return 0;
+    if (profile && strcmp(profile->trust, "B_COMMUNITY") != 0)
+        return ps3scale_profile_script_state(game->title_id, game->app_ver, NULL);
+    return ps3scale_profile_script_state(
+        game->title_id, game->app_ver, profile ? profile->patches : NULL);
+}
+
+static size_t online_match_count(void)
+{
+    return g_catalog_ready ?
+        ps3scale_catalog_count_matches(&g_catalog, &g_games) : 0;
+}
+
+static const ps3scale_game_t *online_match_at(
+    size_t target, const ps3scale_profile_t **profile_out)
+{
+    size_t i, match_index = 0;
+
+    if (profile_out)
+        *profile_out = NULL;
+    if (!g_catalog_ready)
+        return NULL;
+
+    for (i = 0; i < g_games.count; i++) {
+        const ps3scale_game_t *game = &g_games.items[i];
+        const ps3scale_profile_t *profile;
+        if (!game_is_ps3(game))
+            continue;
+        profile = ps3scale_catalog_match_game(&g_catalog, game);
+        if (!profile)
+            continue;
+        if (match_index == target) {
+            if (profile_out)
+                *profile_out = profile;
+            return game;
+        }
+        match_index++;
+    }
+    return NULL;
+}
+
+static int write_profile_cache(const ps3scale_profile_t *profile)
+{
+    char path[320];
+    FILE *file;
+
+    if (!profile)
+        return -1;
+    (void)mkdir(PS3SCALE_PROFILE_CACHE_DIR, 0777);
+    if (snprintf(path, sizeof(path), "%s/%s_%s.profile",
+                 PS3SCALE_PROFILE_CACHE_DIR,
+                 profile->title_id, profile->app_ver) >= (int)sizeof(path))
+        return -1;
+
+    file = fopen(path, "wb");
+    if (!file)
+        return -1;
+    if (fprintf(file,
+        PS3SCALE_PROFILE_CACHE_FORMAT "\n"
+        "TITLE_ID=%s\nAPP_VER=%s\nTITLE=%s\nEFFECT=%s\n"
+        "TRUST=%s\nPATCH_COUNT=%u\nPATCHES=%s\nNOTES=%s\nSOURCE=%s\n",
+        profile->title_id, profile->app_ver, profile->title,
+        profile->effect, profile->trust, profile->patch_count,
+        profile->patches, profile->notes, profile->source_url) < 0) {
+        fclose(file);
+        unlink(path);
+        return -1;
+    }
+    if (fclose(file) != 0) {
+        unlink(path);
+        return -1;
+    }
+    return 0;
+}
+
+static void cache_selected_online_profile(void)
+{
+    const ps3scale_profile_t *profile = NULL;
+    if (!online_match_at((size_t)g_online_selected, &profile) || !profile) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "NO EXACT TITLE ID / APP VERSION MATCH IS SELECTED.");
+        return;
+    }
+    if (write_profile_cache(profile) == 0) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "PROFILE DATA SAVED TO INTERNAL HDD. NOT APPLIED YET.");
+    } else {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "COULD NOT SAVE PROFILE DATA TO INTERNAL HDD.");
+    }
+}
+
+static void cache_all_online_profiles(void)
+{
+    size_t i, saved = 0;
+    if (!g_catalog_ready) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "NO ONLINE DATABASE IS LOADED.");
+        return;
+    }
+    for (i = 0; i < g_games.count; i++) {
+        const ps3scale_game_t *game = &g_games.items[i];
+        const ps3scale_profile_t *profile;
+        if (!game_is_ps3(game))
+            continue;
+        profile = ps3scale_catalog_match_game(&g_catalog, game);
+        if (profile && write_profile_cache(profile) == 0)
+            saved++;
+    }
+    snprintf(g_online_message, sizeof(g_online_message),
+             "CACHED %u MATCHED PROFILE RECORDS. GAME FILES WERE NOT CHANGED.",
+             (unsigned)saved);
+}
+
+static void open_selected_online_match(void)
+{
+    const ps3scale_game_t *match;
+    const ps3scale_profile_t *profile = NULL;
+    size_t i, count;
+
+    match = online_match_at((size_t)g_online_selected, &profile);
+    if (!match || !profile) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "NO EXACT MATCH IS SELECTED.");
+        return;
+    }
+
+    g_library = LIBRARY_PS3;
+    g_search[0] = '\0';
+    g_selected = 0;
+    count = library_count(LIBRARY_PS3);
+    for (i = 0; i < count; i++) {
+        const ps3scale_game_t *candidate = library_game_at(i);
+        if (candidate &&
+            strcmp(candidate->title_id, match->title_id) == 0 &&
+            strcmp(candidate->app_ver, match->app_ver) == 0) {
+            g_selected = (int)i;
+            break;
+        }
+    }
+    g_profile_confirm_pending = 0;
+    set_details_message("EXACT COMMUNITY PROFILE FOUND. REVIEW BEFORE INSTALL.");
+    g_screen = SCREEN_DETAILS;
+}
+
+static void confirm_profile_install(void)
+{
+    const ps3scale_game_t *game = selected_game();
+    const ps3scale_profile_t *profile = profile_for_game(game);
+    int result;
+
+    if (!profile) {
+        set_details_message("NO EXACT ONLINE PROFILE FOR THIS GAME UPDATE.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+    if (strcmp(profile->trust, "B_COMMUNITY_MANUAL") == 0) {
+        set_details_message("MANUAL-ONLY PROFILE. ONE-LAUNCH APPLY IS NOT SUPPORTED.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+    if (profile->patch_count != 1) {
+        set_details_message("MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+    if (g_catalog_sync_running || g_catalog_sync_done) {
+        set_details_message("WAIT FOR ONLINE DATABASE SYNC TO FINISH.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+    {
+        ps3scale_game_t mounted;
+        if (!find_mounted_game(game, &mounted)) {
+            set_details_message("MOUNT THE EXACT GAME VERSION BEFORE ARMING THIS PROFILE.");
+            g_profile_confirm_pending = 0;
+            return;
+        }
+    }
+    if (ps3scale_webman_available() != 0 ||
+        ps3scale_webman_ps3mapi_available() != 0) {
+        set_details_message("ENABLE WEBMAN PS3MAPI SERVER BEFORE INSTALLING.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+
+    result = ps3scale_profile_script_install(profile);
+    g_profile_confirm_pending = 0;
+    if (result == 0 || result == 1) {
+        set_details_message("ONE-LAUNCH PROFILE ARMED. START THE MOUNTED GAME.");
+    } else if (result == -2) {
+        set_details_message("A USER WEBMAN SCRIPT EXISTS. IT WAS NOT OVERWRITTEN.");
+    } else if (result == -3) {
+        set_details_message("MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY.");
+    } else {
+        set_details_message("PROFILE SCRIPT INSTALL FAILED. NO GAME FILES CHANGED.");
+    }
+}
+
+static int find_mounted_game(const ps3scale_game_t *selected, ps3scale_game_t *mounted)
 {
     ps3scale_game_list_t mounted_list;
     size_t i;
@@ -171,143 +1329,6 @@ static int find_mounted_game(const ps3scale_game_t *selected,
         return 1;
     }
     return 0;
-}
-
-/* Re-read the installed HDD title's PARAM.SFO before arming a memory profile. */
-static int find_installed_game(const ps3scale_game_t *selected)
-{
-    ps3scale_game_list_t installed_list;
-    size_t i;
-
-    if (!selected || selected->kind != PS3SCALE_GAME_PS3_HDD ||
-        !selected->title_id[0] || !selected->app_ver[0])
-        return 0;
-
-    ps3scale_game_list_init(&installed_list);
-    if (ps3scale_scan_device("/dev_hdd0", &installed_list) <= 0)
-        return 0;
-
-    for (i = 0; i < installed_list.count; i++) {
-        const ps3scale_game_t *candidate = &installed_list.items[i];
-        if (candidate->kind != PS3SCALE_GAME_PS3_HDD)
-            continue;
-        if (strcmp(candidate->title_id, selected->title_id) != 0 ||
-            strcmp(candidate->app_ver, selected->app_ver) != 0 ||
-            strcmp(candidate->path, selected->path) != 0)
-            continue;
-        return 1;
-    }
-    return 0;
-}
-
-static void game_launch_worker(void *arg)
-{
-    (void)arg;
-
-    if (g_game_launch_profile_armed &&
-        ps3scale_webman_ps3mapi_available() != 0) {
-        g_game_launch_result = -2;
-    } else {
-        g_game_launch_result =
-            ps3scale_webman_start_game(&g_game_launch_target);
-    }
-
-    g_game_launch_done = 1;
-    g_game_launch_running = 0;
-}
-
-static void service_game_launch(void)
-{
-    if (!g_game_launch_done)
-        return;
-
-    if (g_game_launch_thread_started) {
-        u64 thread_result = 0;
-        (void)sysThreadJoin(g_game_launch_thread, &thread_result);
-        g_game_launch_thread_started = 0;
-    }
-
-    g_game_launch_done = 0;
-    g_game_launch_running = 0;
-
-    if (g_game_launch_result == 0) {
-        set_details_message("WEBMAN ACCEPTED START REQUEST.");
-        g_exit_requested = 1;
-    } else if (g_game_launch_result == -2) {
-        set_details_message("PS3MAPI NOT ACTIVE. PROFILE WAS NOT APPLIED.");
-    } else {
-        set_details_message("WEBMAN START FAILED. APP STILL RESPONSIVE.");
-    }
-}
-
-static void start_selected_game(void)
-{
-    const ps3scale_game_t *game = selected_game();
-    const ps3scale_profile_t *profile;
-    ps3scale_game_t mounted;
-    int script_state;
-    int rc;
-
-    if (!game || !game_is_ps3(game)) {
-        set_details_message("START GAME SUPPORTS PS3 TITLES ONLY.");
-        return;
-    }
-    if (!game->title_id[0]) {
-        set_details_message("TITLE ID NOT AVAILABLE. RESCAN THE GAME.");
-        return;
-    }
-    if (g_game_launch_running || g_game_launch_done) {
-        set_details_message("GAME START REQUEST IS ALREADY RUNNING.");
-        return;
-    }
-    if (g_catalog_sync_running || g_catalog_sync_done) {
-        set_details_message("WAIT FOR ONLINE DATABASE SYNC TO FINISH BEFORE STARTING.");
-        return;
-    }
-
-    profile = profile_for_game(game);
-    script_state = profile_script_state_for_game(game, profile);
-    if (script_state == -2) {
-        set_details_message("STALE PROFILE SCRIPT. REMOVE IT BEFORE STARTING.");
-        return;
-    }
-
-    /* A one-launch patch must still target the exact selected game revision. */
-    if (script_state == 1) {
-        if (game->kind == PS3SCALE_GAME_PS3_HDD) {
-            if (!find_installed_game(game)) {
-                set_details_message("GAME UPDATE CHANGED. RESCAN BEFORE STARTING PROFILE.");
-                return;
-            }
-        } else if (!find_mounted_game(game, &mounted)) {
-            set_details_message("MOUNT THE EXACT GAME VERSION BEFORE STARTING PROFILE.");
-            return;
-        }
-    }
-
-    g_game_launch_target = *game;
-    g_game_launch_profile_armed = (script_state == 1);
-    g_game_launch_result = -1;
-    g_game_launch_done = 0;
-    g_game_launch_running = 1;
-
-    if (script_state == 1)
-        set_details_message("STARTING GAME WITH ONE-LAUNCH PROFILE.");
-    else if (profile)
-        set_details_message("PROFILE NOT ARMED. STARTING GAME UNMODIFIED.");
-    else
-        set_details_message("NO EXACT PROFILE. STARTING GAME UNMODIFIED.");
-
-    rc = sysThreadCreate(&g_game_launch_thread, game_launch_worker, NULL,
-                         1500, 0x8000, THREAD_JOINABLE,
-                         "PS3 SCALE Game Launch");
-    if (rc == 0) {
-        g_game_launch_thread_started = 1;
-    } else {
-        g_game_launch_running = 0;
-        g_game_launch_done = 0;
-        set_details_message("COULD NOT START GAME LAUNCH WORKER. APP IS READY.");
-    }
 }
 
 static void start_selected_game(void)
@@ -904,17 +1925,12 @@ static void draw_details(void)
             draw_text(34, 348, 0x9aa6adff,
                       "TITLE ID AND APP VERSION MUST BOTH MATCH.");
             draw_text(34, 376, 0x9aa6adff,
-                      "NO PROFILE FOR THIS TITLE. GAME WILL START UNMODIFIED.");
+                      "OPEN ONLINE DATABASE TO CHECK SUPPORTED PROFILES.");
         }
 
-        draw_solid_rect(34.0f, 396.0f, 270.0f, 40.0f, 0x173a35ff);
-        draw_outline_rect(34.0f, 396.0f, 270.0f, 40.0f, 0x8bd450ff);
-        if (g_game_launch_running)
-            draw_text(58, 407, 0xcaff39ff, "STARTING...");
-        else if (profile && script_state == 1)
-            draw_text(58, 407, 0xcaff39ff, "START WITH PROFILE");
-        else
-            draw_text(58, 407, 0xcaff39ff, "START UNMODIFIED");
+        draw_solid_rect(34.0f, 396.0f, 224.0f, 40.0f, 0x173a35ff);
+        draw_outline_rect(34.0f, 396.0f, 224.0f, 40.0f, 0x8bd450ff);
+        draw_text(58, 407, 0xcaff39ff, "START GAME");
         if (g_profile_confirm_pending)
             draw_text(34, 448, 0xffcc66ff,
                       "COMMUNITY PATCH: TRIANGLE CONFIRMS; CIRCLE CANCELS.");
@@ -1322,7 +2338,6 @@ int main(int argc, char *argv[])
 
         sysUtilCheckCallback();
         service_catalog_sync();
-        service_game_launch();
         g_frame_counter++;
 
         if (pad_ready && ioPadGetInfo(&pad_info) == 0) {
@@ -1606,11 +2621,6 @@ int main(int argc, char *argv[])
         u64 thread_result = 0;
         (void)sysThreadJoin(g_catalog_thread, &thread_result);
         g_catalog_thread_started = 0;
-    }
-    if (g_game_launch_thread_started) {
-        u64 thread_result = 0;
-        (void)sysThreadJoin(g_game_launch_thread, &thread_result);
-        g_game_launch_thread_started = 0;
     }
     shutdown_audio_backend();
     sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
