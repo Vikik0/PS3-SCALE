@@ -64,6 +64,7 @@ draw_text_impl = section("static void draw_text", "static int open_background_mu
 assert "SetCurrentFont(font_index)" in draw_text_impl
 assert "cursor = DrawString(cursor, y, one)" in draw_text_impl
 assert "g_ui_font_width * 0.5f" in draw_text_impl
+assert "previous_arabic" in draw_text_impl and "next_arabic" in draw_text_impl
 assert "ps3scale_locale_is_arabic_glyph" in draw_text_impl
 assert "DrawChar(" not in draw_text_impl
 assert src.count("SetFontSize(") == 1  # only the tracked UI font-size wrapper may call libfont directly
