@@ -192,8 +192,8 @@ def glyph_bounds(glyph: int) -> tuple[int, int]:
     return min(xs), max(xs) - min(xs) + 1
 
 
-WIDTH = 1024
-HEIGHT = 390
+WIDTH = 1024 * ZOOM
+HEIGHT = 390 * ZOOM
 BACKGROUND = (7, 20, 36)
 INK = (226, 245, 255)
 ACCENT = (139, 212, 80)
