@@ -11,7 +11,7 @@
 - [x] Direct mounted Blu-ray scan path implemented
 - [x] Internal HDD, Blu-ray mount, USB000..USB007 scan paths
 - [x] Read-only scan behavior
-- [ ] Build with maintained Tiny3D PS3 toolchain container
+- [x] Build with maintained Tiny3D PS3 toolchain container
 - [ ] Test on CECH-2504A / CFW 4.93
 
 ## Alpha 0.2 — library and profile UX
@@ -48,6 +48,16 @@ verified on physical hardware. The host SFO tests do not substitute for console 
 - [x] Add PS2 ISO9660 serial metadata probe
 - [x] Preserve multiple copies of one Title ID on separate drives
 - [x] Add developer research and online catalog safety rules
-- [ ] Execute GitHub Actions on the user's repository
-- [ ] Inspect resulting PKG and SELF
+- [x] Execute GitHub Actions on the user's repository (Run #8 passed)
+- [x] Inspect resulting PKG and SELF; finalized PKG header and Content ID validated
 - [ ] Install and test on physical CECH-2504A
+
+
+## Build milestone — 8 Nov 2026
+- [x] Host SFO, scanner and ISO tests pass in GitHub Actions.
+- [x] PPU ELF and CEX SELF built with the Tiny3D toolchain.
+- [x] Debug PKG and finalized NPDRM PKG generated.
+- [x] Finalized PKG magic, revision (0x8000), PS3 package type and declared file size validated.
+- [x] Artifacts uploaded: Run #8, artifact ID `13616618869`.
+- [ ] Install, launch and test on the physical CECH-2504A.
+- [ ] Confirm game scan results against the user's actual HDD and USB layout.
