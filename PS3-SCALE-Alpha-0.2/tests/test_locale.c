@@ -52,6 +52,13 @@ int main(void)
     assert(length == (int)strlen("PS3 SCALE 4.92"));
     assert(strcmp(glyphs, "PS3 SCALE 4.92") == 0);
 
+    /* Mixed RTL Arabic + LTR product names and version numbers stay intact. */
+    length = ps3scale_locale_to_glyphs("إصدار PS3 4.92", glyphs,
+                                       sizeof(glyphs));
+    assert(length > 0);
+    assert(strstr(glyphs, "PS3") != NULL);
+    assert(strstr(glyphs, "4.92") != NULL);
+
     /* Arabic word spacing remains a real space, not an inter-letter gap. */
     length = ps3scale_locale_to_glyphs("مستوى الصوت", glyphs,
                                        sizeof(glyphs));
