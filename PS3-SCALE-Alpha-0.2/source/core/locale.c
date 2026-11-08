@@ -187,6 +187,15 @@ static const locale_entry_t locale_entries[] = {
     {"START WITH PROFILE", "تشغيل مع التحسين", "Iniciar con perfil"},
     {"STARTING...", "جارٍ التشغيل...", "Iniciando..."},
     {"COULD NOT START GAME LAUNCH WORKER. APP IS READY.", "تعذر بدء مهمة التشغيل؛ التطبيق جاهز.", "No se pudo iniciar la tarea; la aplicación está lista."},
+    {"CHECKING WEBMAN AND ARMING PROFILE.", "جارٍ التحقق من webMAN وتجهيز ملف التحسين.", "Comprobando webMAN y activando el perfil."},
+    {"ONE-LAUNCH PROFILE ARMED. START THIS GAME.", "تم تجهيز ملف التحسين لمرة واحدة؛ شغّل هذه اللعبة.", "Perfil de una sola ejecución activado; inicia este juego."},
+    {"WEBMAN MOD NOT RESPONDING. PROFILE NOT ARMED.", "webMAN MOD لا يستجيب؛ لم يتم تجهيز ملف التحسين.", "webMAN MOD no responde; el perfil no se activó."},
+    {"PS3MAPI NOT ACTIVE. PROFILE NOT ARMED.", "PS3MAPI غير مفعّل؛ لم يتم تجهيز ملف التحسين.", "PS3MAPI no está activo; el perfil no se activó."},
+    {"COULD NOT START PROFILE WORKER. NO PATCH WAS ARMED.", "تعذر بدء مهمة التجهيز؛ لم يتم تفعيل أي تعديل.", "No se pudo iniciar la tarea; no se activó ningún parche."},
+    {"WAIT FOR PROFILE ARMING TO FINISH.", "انتظر حتى ينتهي تجهيز ملف التحسين.", "Espera a que termine la activación del perfil."},
+    {"GAME OR PROFILE ACTION IS ALREADY RUNNING.", "هناك عملية تشغيل أو تجهيز ملف تحسين قيد التنفيذ.", "Ya hay una acción de juego o perfil en curso."},
+    {"ARMING PROFILE...", "جارٍ تجهيز التحسين...", "Activando perfil..."},
+
 
     {"SETTINGS RESTORED TO DEFAULTS.", "تمت استعادة الإعدادات الافتراضية.", "Se restauraron los ajustes predeterminados."},
 
