@@ -73,6 +73,17 @@ int main(void)
     assert(ps3scale_profile_script_install(&profile) == 0);
     assert(ps3scale_profile_script_state(profile.title_id, profile.app_ver,
                                          profile.patches) == 1);
+
+    /* A matching header is not enough: any edited script body is stale. */
+    assert(write_text(TEST_SCRIPT_PATH,
+        "# PS3 SCALE AUTO PROFILE V2 TITLE_ID=BLUS30464 APP_VER=01.05 PATCHES=94713A,06,00\n"
+        "# MANUAL EDIT: body differs from the generated script\n") == 0);
+    assert(ps3scale_profile_script_state(profile.title_id, profile.app_ver,
+                                         profile.patches) == -2);
+    assert(ps3scale_profile_script_install(&profile) == 0);
+    assert(ps3scale_profile_script_state(profile.title_id, profile.app_ver,
+                                         profile.patches) == 1);
+
     assert(ps3scale_profile_script_state(profile.title_id, "01.06",
                                          profile.patches) == -2);
     assert(ps3scale_profile_script_state(profile.title_id, profile.app_ver,
