@@ -57,7 +57,7 @@ int main(void)
     strcpy(game.title_id, "BLUS30464");
     strcpy(game.app_ver, "01.05");
     strcpy(game.title, "Skate 3");
-    if (ps3scale_game_list_add(&games, &game) != 0)
+    if (ps3scale_game_list_add(&games, &game) != 1)
         return 7;
     game.kind = PS3SCALE_GAME_PS2_ISO;
     strcpy(game.title_id, "BCUS98174");
