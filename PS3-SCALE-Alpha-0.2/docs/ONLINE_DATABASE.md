@@ -30,7 +30,7 @@ This is a data catalogue, not a collection of downloaded executable files or EBO
 
 - A profile matches only when both Title ID and APP_VER are exact. Title names alone never select a patch.
 - The starter catalogue contains 33 one-launch-eligible B_COMMUNITY records, 6 multi-write B_COMMUNITY records that remain disabled, and 1 B_COMMUNITY_MANUAL record (Brütal Legend) that requires in-game reapplication and is excluded from automation. All are community reports, not profiles independently hardware-verified by PS3 SCALE.
-- A single-write profile can be armed only after the exact Title ID + APP_VER is mounted at /dev_bdvd and the user explicitly confirms. webMAN MOD and its PS3MAPI endpoint must respond.
+- An eligible single-write B_COMMUNITY profile can be armed only after the exact Title ID + APP_VER is mounted at /dev_bdvd and the user explicitly confirms. Manual-only and multi-write profiles cannot be armed by this build. webMAN MOD and its PS3MAPI endpoint must respond.
 - Multi-write profiles remain disabled for automatic application in this build.
 - The generated webMAN script is one-launch only. It checks the Title ID, in-game state, exact target address and expected original bytes, then deletes itself after the launch attempt. Before allowing Start Game, PS3 SCALE compares the complete script body against the deterministic generated script; a matching header alone is not trusted, and any manual body edit is treated as stale.
 - The script does not show a success popup. webMAN's batch command does not provide PS3 SCALE with a verified post-write memory value, so the app must not claim that the patch succeeded.
