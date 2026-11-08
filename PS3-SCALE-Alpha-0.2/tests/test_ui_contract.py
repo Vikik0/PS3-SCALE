@@ -94,6 +94,8 @@ assert "APP VERSION:" in src
 assert "if (g_music_enabled)\n        (void)initialize_audio_backend();" in main
 assert "set_background_music_enabled(0);" in main
 assert "set_background_music_enabled(1);" in main
+assert "g_language = LANGUAGE_ENGLISH;" in main
+assert "SETTINGS RESTORED TO DEFAULTS." in main
 assert "shutdown_audio_backend();" in main
 assert "BACKGROUND MUSIC STARTED." in main
 assert "PS3SCALE_SETTINGS_PATH" in src
