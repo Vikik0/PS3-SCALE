@@ -27,3 +27,10 @@ cc -std=c99 -Wall -Wextra -Werror \
   "$ROOT/tests/test_iso9660.c" \
   -o "$OUT/test_iso9660"
 "$OUT/test_iso9660"
+
+cc -std=c99 -Wall -Wextra -Werror \
+  -I"$ROOT/include" \
+  "$ROOT/source/core/ps2_config.c" \
+  "$ROOT/tests/test_ps2_config.c" \
+  -o "$OUT/test_ps2_config"
+"$OUT/test_ps2_config"
