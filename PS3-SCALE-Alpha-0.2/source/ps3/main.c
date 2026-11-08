@@ -139,6 +139,8 @@ static char g_online_message[128] = "SELECT A MATCHED GAME OR PRESS START TO SYN
 
 static void clamp_selection(void);
 static void scan_library(void);
+static int find_mounted_game(const ps3scale_game_t *selected,
+                             ps3scale_game_t *mounted);
 
 static void app_sysutil_callback(u64 status, u64 param, void *userdata)
 {
@@ -1259,6 +1261,19 @@ static void confirm_profile_install(void)
         g_profile_confirm_pending = 0;
         return;
     }
+    if (g_catalog_sync_running) {
+        set_details_message("WAIT FOR ONLINE DATABASE SYNC TO FINISH.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+    {
+        ps3scale_game_t mounted;
+        if (!find_mounted_game(game, &mounted)) {
+            set_details_message("MOUNT THE EXACT GAME VERSION BEFORE ARMING THIS PROFILE.");
+            g_profile_confirm_pending = 0;
+            return;
+        }
+    }
     if (ps3scale_webman_available() != 0 ||
         ps3scale_webman_ps3mapi_available() != 0) {
         set_details_message("ENABLE WEBMAN PS3MAPI SERVER BEFORE INSTALLING.");
@@ -1322,6 +1337,10 @@ static void start_selected_game(void)
     }
     if (script_state == -2) {
         set_details_message("STALE PROFILE SCRIPT. REMOVE IT BEFORE STARTING.");
+        return;
+    }
+    if (g_catalog_sync_running) {
+        set_details_message("WAIT FOR ONLINE DATABASE SYNC TO FINISH BEFORE STARTING.");
         return;
     }
     if (!find_mounted_game(game, &mounted)) {
