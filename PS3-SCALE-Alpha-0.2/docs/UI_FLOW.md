@@ -11,10 +11,10 @@ The application opens to three primary destinations:
 
 - Separate PS3 and PS2 library views.
 - Read-only scan of the internal HDD, mounted Blu-ray and USB devices.
-- Search by game title using the PS3 system on-screen keyboard.
+- Search by game title using the PS3 system on-screen keyboard (SELECT opens it).
 - Display an organized list with platform/source metadata.
 - Selecting a title opens a dedicated details screen.
-- Cover artwork is a planned UI element. The current scanner does not yet extract or render ICON0/PIC1 or remote cover art.
+- Local ICON0.PNG artwork is discovered for PS3 folder games and installed titles and rendered through YA2D. ISO cover extraction and remote cover lookup remain planned.
 
 ## Game details
 
@@ -34,4 +34,4 @@ The user-supplied GTA V Greyhound pause-menu remix is the requested startup them
 
 ## Current implementation boundary
 
-The home menu, PS3/PS2 scan pages, title search through the PS3 OSK, game details, Settings and About pages are implemented in the UI source. Cover artwork, remote catalog integration, profile application and actual audio playback remain pending and must be built/tested separately.
+The home menu, PS3/PS2 scan pages, title search through the PS3 OSK, game details, Settings and About pages are implemented in the UI source. Local ICON0 covers are supported for folder/installed titles. ISO/online cover lookup, remote catalog integration, profile application and actual audio playback remain pending and must be built/tested separately.
