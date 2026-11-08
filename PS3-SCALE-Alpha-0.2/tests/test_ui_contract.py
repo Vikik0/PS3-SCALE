@@ -150,6 +150,7 @@ assert "profile ? profile->patches : NULL" in src
 assert "MOUNT THE EXACT GAME VERSION BEFORE ARMING THIS PROFILE." in src
 assert "MANUAL-ONLY PROFILE. ONE-LAUNCH APPLY IS NOT SUPPORTED." in src
 assert "B_COMMUNITY_MANUAL" in src
+assert 'profile && strcmp(profile->trust, "B_COMMUNITY") != 0' in src
 assert "WAIT FOR ONLINE DATABASE SYNC TO FINISH." in src
 assert "WAIT FOR ONLINE DATABASE SYNC TO FINISH BEFORE STARTING." in src
 assert "find_mounted_game(game, &mounted)" in src
