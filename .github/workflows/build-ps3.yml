@@ -49,13 +49,20 @@ jobs:
           echo "PSL1GHT=$PSL1GHT"
           command -v ppu-gcc
           command -v make
+          command -v make_self
+          command -v make_self_npdrm
+          command -v package_finalize
 
       - name: Build package
         working-directory: PS3-SCALE-Alpha-0.2
         run: |
+          set -eu
           make clean
-          make -j2 pkg
+          make pkg
           echo "Build outputs:"
+          test -s ps3scale.elf
+          test -s ps3scale.self
+          test -s ps3scale.pkg
           ls -lah ps3scale.elf ps3scale.self ps3scale.pkg
 
       - name: Upload PS3 build artifacts
