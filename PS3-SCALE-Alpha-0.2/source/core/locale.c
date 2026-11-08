@@ -171,6 +171,7 @@ static const locale_entry_t locale_entries[] = {
     {"MANUAL-ONLY PROFILE. ONE-LAUNCH APPLY IS NOT SUPPORTED.", "هذا الملف يدوي فقط؛ التطبيق لمرة واحدة غير مدعوم له.", "Perfil manual; la aplicación de un solo inicio no está disponible."},
     {"TRUST: COMMUNITY-REPORTED / MANUAL ONLY", "الثقة: تقرير مجتمعي / يدوي فقط", "Confianza: informe comunitario / solo manual"},
     {"MANUAL ONLY: RE-APPLY REQUIRED IN GAME", "يدوي فقط: يجب إعادة التطبيق داخل اللعبة", "Solo manual: hay que volver a aplicarlo dentro del juego"},
+    {"SETTINGS RESTORED TO DEFAULTS.", "تمت استعادة الإعدادات الافتراضية.", "Se restauraron los ajustes predeterminados."},
 
     {"ONE-LAUNCH PROFILE ARMED. START THE MOUNTED GAME.", "تم تجهيز ملف التحسين للتشغيل مرة واحدة؛ شغّل اللعبة المركّبة.", "Perfil de un solo inicio preparado; inicia el juego montado."},
     {"MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY.", "الملف يتطلب تعديلات متعددة؛ التطبيق التلقائي متوقف للأمان.", "Perfil de varias escrituras; aplicación automática desactivada."},
