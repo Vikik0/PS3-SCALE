@@ -23,7 +23,8 @@ LIBDIRS := $(PORTLIBS)
 
 LIBS := -lya2d -lfont3d -ltiny3d -lsimdmath -lgcm_sys -lrsx -lio -lsysutil \
         -lpngdec -ljpgdec -lpng -lz -lfreetype -lpixman-1 \
-        -lmpg123 -laudio -lrt -llv2 -lsysmodule -lsysfs -lnet -lm
+        -lmpg123 -laudio -lrt -llv2 -lsysmodule -lsysfs \
+        -lcurl -lpolarssl -lnetctl -lnet -lz -lm
 
 CFLAGS = -O2 -Wall -Wextra -std=gnu99 -mcpu=cell $(MACHDEP) $(INCLUDE) \
          -I$(PORTLIBS)/include/soundlib
@@ -80,6 +81,8 @@ $(BUILD):
 # This recipe ensures packaging cannot race object compilation/linking under -j.
 pkg: $(BUILD)
 	@python3 scripts/prepare_theme.py
+	@cp data/online_profiles.tsv pkgfiles/USRDIR/graphics_catalog.tsv
+	@test -s pkgfiles/USRDIR/cacert.pem
 	@$(MAKE) --no-print-directory $(OUTPUT).pkg
 
 else
