@@ -14,6 +14,26 @@
 #define PS3SCALE_DOWNLOAD_LIMIT (64L * 1024L)
 #define PS3SCALE_USER_AGENT "PS3SCALE/0.3"
 
+typedef struct download_context {
+    FILE *file;
+    size_t bytes_written;
+} download_context_t;
+
+static size_t write_catalog_data(void *contents, size_t size,
+                                 size_t count, void *user_data)
+{
+    download_context_t *context = (download_context_t *)user_data;
+    size_t bytes = size * count;
+
+    if (!context || !context->file ||
+        bytes > (size_t)PS3SCALE_DOWNLOAD_LIMIT - context->bytes_written)
+        return 0;
+    if (fwrite(contents, 1, bytes, context->file) != bytes)
+        return 0;
+    context->bytes_written += bytes;
+    return bytes;
+}
+
 static int network_modules_ready(void)
 {
     int result;
@@ -60,6 +80,7 @@ int ps3scale_online_download(const char *url, const char *destination)
     CURLcode curl_result;
     long response_code = 0;
     FILE *file = NULL;
+    download_context_t download;
     char temporary_path[512];
     int result = -1;
 
@@ -81,6 +102,8 @@ int ps3scale_online_download(const char *url, const char *destination)
     file = fopen(temporary_path, "wb");
     if (!file)
         goto cleanup;
+    memset(&download, 0, sizeof(download));
+    download.file = file;
 
     curl = curl_easy_init();
     if (!curl)
@@ -88,8 +111,8 @@ int ps3scale_online_download(const char *url, const char *destination)
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, PS3SCALE_USER_AGENT);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, fwrite);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_catalog_data);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &download);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 12L);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
     curl_easy_setopt(curl, CURLOPT_MAXFILESIZE, PS3SCALE_DOWNLOAD_LIMIT);
@@ -107,7 +130,9 @@ int ps3scale_online_download(const char *url, const char *destination)
 
     curl_result = curl_easy_perform(curl);
     (void)curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-    if (curl_result == CURLE_OK && response_code == 200)
+    if (curl_result == CURLE_OK && response_code == 200 &&
+        download.bytes_written > 0 &&
+        download.bytes_written <= (size_t)PS3SCALE_DOWNLOAD_LIMIT)
         result = 0;
 
 cleanup:
