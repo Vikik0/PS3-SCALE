@@ -61,6 +61,6 @@ verified on physical hardware. The host SFO tests do not substitute for console 
 - [x] PPU ELF and CEX SELF built with the Tiny3D toolchain.
 - [x] Debug PKG and finalized NPDRM PKG generated.
 - [x] Finalized PKG magic, revision (0x8000), PS3 package type and declared file size validated.
-- [x] Artifacts uploaded: Run #8, artifact ID `13616618869`.
+- [x] Artifacts uploaded: Run #34, artifact ID `13618010014`.
 - [ ] Install, launch and test on the physical CECH-2504A.
 - [ ] Confirm game scan results against the user's actual HDD and USB layout.
