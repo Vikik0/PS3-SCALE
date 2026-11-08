@@ -81,3 +81,15 @@ verified on physical hardware. The host SFO tests do not substitute for console 
 - [x] Startup MP3 streaming decoder and native audio output are linked.
 - [x] Companion USB install bundle prepared with PKG + `PS3SCALE/theme.mp3`.
 - [ ] Verify the icons and music on the physical CECH-2504A / CEX CFW 4.93 / Cobra 8.5.
+
+
+## UI and usability pass — 8 Nov 2026
+- [x] Add a restrained, slow Tiny3D vector animation to the home screen with an OFF setting.
+- [x] Add a library overview panel and a Companion Tools information page.
+- [x] Reduce Scan Games font size and separate list, metadata and cover-art regions.
+- [x] Sort the scanned library by title for predictable navigation.
+- [x] Fix the OSK flow using INPUT_ENTERED / DONE / UNLOADED events and `oskGetInputText`.
+- [x] Persist music, volume and animation settings in the app's USRDIR.
+- [x] Add offline USB update-package discovery and a library rescan action.
+- [x] Add static UI contract tests to the host test suite.
+- [ ] Build and install this UI revision on CECH-2504A; verify OSK, settings persistence and smooth animation on hardware.

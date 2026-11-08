@@ -34,3 +34,5 @@ cc -std=c99 -Wall -Wextra -Werror \
   "$ROOT/tests/test_ps2_config.c" \
   -o "$OUT/test_ps2_config"
 "$OUT/test_ps2_config"
+
+python3 "$ROOT/tests/test_ui_contract.py" "$ROOT/source/ps3/main.c"

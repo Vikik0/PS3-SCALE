@@ -144,3 +144,17 @@ Alpha 0.2 لا تطبّق patches ولا تغيّر أي ملف لعبة. قبل
 6. اختبار التعديل على الجهاز المستهدف قبل تصنيفه Hardware Verified.
 
 راجع `docs/RESEARCH_NOTES.md`, `docs/GRAPHICS_ENGINE_REALITY.md`, `docs/PS2_ENGINE.md`, `docs/PATCH_TRUST_POLICY.md`، `docs/WEBMAN_MAPI_INTEGRATION.md`، `docs/UI_FLOW.md`، و`docs/GAME_ENHANCEMENT_WORKFLOW.md`.\n\nتم دمج محرك تشغيل MP3. جهزنا حزمة USB فيها ملف التثبيت والأغنية داخل `PS3SCALE/theme.mp3`؛ اترك USB موصولاً عند تشغيل البرنامج ليقرأها تلقائياً. ويمكن نسخ الأغنية إلى مجلد USRDIR الداخلي للتشغيل دون USB. التفاصيل في `docs/AUDIO_THEME.md` و`docs/BUILD_STATUS.md`.
+
+
+## تحديث الواجهة والتحكم — 8 نوفمبر 2026
+
+- القائمة الرئيسية أصبحت تضم Scan Games وSettings وCompanion Tools وAbout.
+- أضيفت حركة خلفية Vector بطيئة وخفيفة، ويمكن إيقافها من Settings.
+- إعدادات Music ON/OFF ومستوى الصوت وحركة القائمة تُحفظ في:
+  `/dev_hdd0/game/PS3SCALE1/USRDIR/settings.cfg`
+- صفحة Scan Games أعيد ترتيبها إلى عمود للألعاب وعمود منفصل للمعلومات والغلاف، مع خط أصغر وقائمة مرتبة أبجدياً.
+- إصلاح لوحة البحث: يتم جمع النص من `oskGetInputText` ومعالجة أحداث OSK من callback منفصل.
+- Settings تشمل فحص حزمة تحديث موجودة على USB (لا يوجد تحديث تلقائي أو تنزيل عبر الإنترنت في هذه المرحلة)، وإعادة فحص المكتبة، واستعادة الإعدادات الافتراضية.
+- Companion Tools تعرض Apollo Save Tool وArtemis PS3 وwebMAN MOD كأدوات منفصلة؛ لم ندمج إضافاتها أو نعدّل ملفاتها.
+
+**ملاحظة الأغنية:** ملف MP3 ليس جزءاً من نظام PS3 أو من ملف PKG الحالي. التطبيق يقرأه من USRDIR الداخلي أو من `PS3SCALE/theme.mp3` على USB. يمكن نسخه يدوياً إلى USRDIR لتشغيله دون USB.
