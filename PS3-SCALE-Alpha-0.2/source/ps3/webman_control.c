@@ -1,4 +1,5 @@
 #include "ps3scale/webman.h"
+#include "ps3scale/webman_command.h"
 
 #include <arpa/inet.h>
 #include <net/net.h>
@@ -210,112 +211,13 @@ int ps3scale_webman_ps3mapi_available(void)
     return 0;
 }
 
-static int valid_title_id(const char *title_id)
-{
-    size_t i;
-
-    if (!title_id || strlen(title_id) != 9)
-        return 0;
-    for (i = 0; i < 9; i++) {
-        if (!((title_id[i] >= 'A' && title_id[i] <= 'Z') ||
-              (title_id[i] >= '0' && title_id[i] <= '9')))
-            return 0;
-    }
-    return 1;
-}
-
-static int allowed_game_path(const char *path)
-{
-    static const char *roots[] = {
-        "/dev_hdd0/", "/dev_bdvd/", "/dev_usb000/", "/dev_usb001/",
-        "/dev_usb002/", "/dev_usb003/", "/dev_usb004/", "/dev_usb005/",
-        "/dev_usb006/", "/dev_usb007/"
-    };
-    size_t i;
-
-    if (!path)
-        return 0;
-    if (strcmp(path, "/dev_bdvd") == 0)
-        return 1;
-    for (i = 0; i < sizeof(roots) / sizeof(roots[0]); i++) {
-        size_t length = strlen(roots[i]);
-        if (strncmp(path, roots[i], length) == 0)
-            break;
-    }
-    if (i == sizeof(roots) / sizeof(roots[0]))
-        return 0;
-    if (strstr(path, "/../") || strstr(path, "/./") ||
-        strstr(path, "//") ||
-        (strlen(path) >= 3 && strcmp(path + strlen(path) - 3, "/..") == 0))
-        return 0;
-    return 1;
-}
-
-static int encode_game_path(const char *source, char *destination,
-                            size_t capacity)
-{
-    static const char hex[] = "0123456789ABCDEF";
-    size_t used = 0;
-    size_t i;
-
-    if (!source || !destination || capacity == 0 ||
-        !allowed_game_path(source))
-        return -1;
-
-    for (i = 0; source[i]; i++) {
-        unsigned char ch = (unsigned char)source[i];
-        int safe = (ch >= 'A' && ch <= 'Z') ||
-                   (ch >= 'a' && ch <= 'z') ||
-                   (ch >= '0' && ch <= '9') ||
-                   ch == '-' || ch == '_' || ch == '.' ||
-                   ch == '~' || ch == '/';
-        size_t needed = safe ? 1u : 3u;
-        if (used + needed >= capacity)
-            return -1;
-        if (safe) {
-            destination[used++] = (char)ch;
-        } else {
-            destination[used++] = '%';
-            destination[used++] = hex[ch >> 4];
-            destination[used++] = hex[ch & 0x0f];
-        }
-    }
-    destination[used] = '\0';
-    return 0;
-}
-
 int ps3scale_webman_start_game(const ps3scale_game_t *game)
 {
     char request_path[WEBMAN_HTTP_PATH_MAX + 1];
-    char encoded_path[PS3SCALE_PATH_MAX * 3 + 1];
     char response[1024];
-    int written;
 
-    if (!game || !game->title_id[0])
-        return -1;
-
-    if (game->kind == PS3SCALE_GAME_PS3_HDD) {
-        if (!valid_title_id(game->title_id))
-            return -1;
-        written = snprintf(request_path, sizeof(request_path),
-                           "/play.ps3?%s", game->title_id);
-    } else if (game->kind == PS3SCALE_GAME_PS3_FOLDER ||
-               game->kind == PS3SCALE_GAME_PS3_ISO) {
-        if (strcmp(game->path, "/dev_bdvd") == 0) {
-            written = snprintf(request_path, sizeof(request_path),
-                               "/play.ps3");
-        } else {
-            if (encode_game_path(game->path, encoded_path,
-                                 sizeof(encoded_path)) != 0)
-                return -1;
-            written = snprintf(request_path, sizeof(request_path),
-                               "/play.ps3%s", encoded_path);
-        }
-    } else {
-        return -1;
-    }
-
-    if (written < 0 || (size_t)written >= sizeof(request_path))
+    if (ps3scale_webman_build_start_path(game, request_path,
+                                         sizeof(request_path)) != 0)
         return -1;
 
     return webman_http_get(request_path, response, sizeof(response));
