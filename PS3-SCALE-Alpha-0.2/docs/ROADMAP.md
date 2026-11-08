@@ -18,7 +18,7 @@
 - ICON0/PIC1 extraction
 - User profile storage under `/dev_hdd0/game/PS3SCALE1/USRDIR/`
 - Per-title compatibility status
-- Local backup/restore manifest (no automatic game-file edits)\n- [ ] Add online catalog/download, per-title backups and rollback\n- [ ] Add startup MP3 playback after PS3 audio decoder integration\n- [ ] Add CFW runtime plugin for verified game-start patching and notification
+- Local backup/restore manifest (no automatic game-file edits)\n- [ ] Add online catalog/download, per-title backups and rollback\n- [x] Add startup MP3 streaming playback with mpg123 + native PSL1GHT audio output (hardware verification and PKG asset bundling remain)\n- [ ] Add CFW runtime plugin for verified game-start patching and notification
 
 ## Alpha 0.3 — PS2 configuration manager
 - [x] Add a restricted in-memory PS2 netemu CONFIG builder for commands 0x44/0x46, with host tests
@@ -64,3 +64,12 @@ verified on physical hardware. The host SFO tests do not substitute for console 
 - [x] Artifacts uploaded: Run #66, artifact ID `13617318299`.
 - [ ] Install, launch and test on the physical CECH-2504A.
 - [ ] Confirm game scan results against the user's actual HDD and USB layout.
+
+
+## Startup audio implementation — 8 Nov 2026
+- [x] Add streaming MP3 decode using the LGPL mpg123 decoder.
+- [x] Add native PSL1GHT 48 kHz stereo audio-port output.
+- [x] Start the supplied music automatically when PS3 SCALE opens and loop it.
+- [x] Add Settings controls for music mute and volume.
+- [ ] Bundle the user's MP3 into the PKG; current build reads `theme.mp3` from the installed USRDIR path or the documented USB fallback.
+- [ ] Verify real playback, looping, volume and clean shutdown on CECH-2504A / CEX CFW 4.93.
