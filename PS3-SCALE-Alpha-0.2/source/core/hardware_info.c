@@ -43,6 +43,16 @@ const char *ps3scale_hardware_family_name(ps3scale_hardware_family_t family)
     }
 }
 
+const char *ps3scale_console_type_name(ps3scale_console_type_t type)
+{
+    switch (type) {
+        case PS3SCALE_CONSOLE_CEX: return "CEX";
+        case PS3SCALE_CONSOLE_DEX: return "DEX";
+        case PS3SCALE_CONSOLE_DEH: return "DEH";
+        default: return "UNKNOWN";
+    }
+}
+
 int ps3scale_hardware_info_parse(const uint8_t *raw, size_t raw_size,
                                  ps3scale_hardware_info_t *out)
 {
