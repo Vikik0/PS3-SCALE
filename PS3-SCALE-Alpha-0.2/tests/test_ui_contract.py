@@ -65,7 +65,8 @@ assert "ps3scale_locale_glyphs_joined(glyph, next_glyph)" in draw_text_impl
 assert "ps3scale_locale_is_arabic_glyph" in draw_text_impl
 assert "cursor -= scale_x * 4.0f" in draw_text_impl
 assert "cursor = DrawString(cursor, y, one) - 2.5f" not in draw_text_impl
-assert src.count("SetFontSize(") == 1  # only the tracked UI font-size wrapper may call libfont directly
+assert src.count("SetFontSize(") == 3  # wrapper plus Arabic-size set/restore
+assert draw_text_impl.count("SetFontSize(") == 2
 
 # Layout contract: compact font, independent list/metadata/cover columns.
 scan = section("static void draw_scan(void)", "static void draw_details(void)")
