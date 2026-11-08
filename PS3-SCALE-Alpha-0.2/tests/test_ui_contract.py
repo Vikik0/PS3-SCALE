@@ -70,5 +70,6 @@ assert "g_artemis_installed" in src
 assert "g_webman_installed" in src
 assert "shutdown_audio_backend();" in main
 assert "PLAYBACK NOW USES INTERNAL HDD" in src
+assert "MUSIC ALREADY ON HDD; PLAYBACK SWITCHED TO INTERNAL" in src
 
 print("PS3 SCALE UI contract tests: PASS")
