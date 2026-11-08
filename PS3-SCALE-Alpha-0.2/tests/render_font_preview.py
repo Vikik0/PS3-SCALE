@@ -193,7 +193,7 @@ def glyph_bounds(glyph: int) -> tuple[int, int]:
 
 
 WIDTH = 1024 * ZOOM
-HEIGHT = 720 * ZOOM
+HEIGHT = 780 * ZOOM
 BACKGROUND = (7, 20, 36)
 INK = (226, 245, 255)
 ACCENT = (139, 212, 80)
@@ -305,15 +305,24 @@ draw_runtime_text("سلام", 40, 338, 8)
 draw_rule(374)
 
 draw_ascii("ARABIC SAMPLE / SETTINGS", 40, 388)
-draw_runtime_text("الإعدادات", 40, 412, 6)
+draw_runtime_text("الإعدادات", 40, 412, 4)
 draw_rule(448)
 
 draw_ascii("ARABIC SAMPLE / GAME LIBRARY", 40, 462)
-draw_runtime_text("مكتبة الألعاب", 40, 486, 6)
+draw_runtime_text("مكتبة الألعاب", 40, 486, 4)
 draw_rule(522)
 
 draw_ascii("ARABIC SAMPLE / VOLUME", 40, 536)
-draw_runtime_text("مستوى الصوت", 40, 560, 6)
+draw_runtime_text("مستوى الصوت", 40, 560, 4)
+draw_rule(596)
+
+draw_ascii("ARABIC SAMPLE / GAME SEARCH", 40, 610)
+draw_runtime_text("البحث عن الألعاب", 40, 634, 4)
+draw_rule(670)
+
+draw_ascii("ARABIC SAMPLE / MUSIC", 40, 684)
+draw_runtime_text("تشغيل الموسيقى", 40, 708, 4)
+draw_rule(744)
 
 
 def png_chunk(kind: bytes, data: bytes) -> bytes:
@@ -351,6 +360,17 @@ assert glyphs_joined(224, 179)
 assert not glyphs_joined(225, 142)
 assert len(shape_text("الإعدادات")) == 9
 assert all(is_arabic_glyph(g) for g in shape_text("الإعدادات"))
+required_arabic = (
+    "الإعدادات",
+    "مكتبة الألعاب",
+    "البحث عن الألعاب",
+    "مستوى الصوت",
+    "تشغيل الموسيقى",
+)
+for sample in required_arabic:
+    shaped = shape_text(sample)
+    assert shaped, f"Arabic sample did not shape: {sample}"
+    assert all(g == 32 or is_arabic_glyph(g) for g in shaped), sample
 assert shape_text("PS3 SCALE 4.92") == list(map(ord, "PS3 SCALE 4.92"))
 assert 32 in shape_text("مستوى الصوت")
 
