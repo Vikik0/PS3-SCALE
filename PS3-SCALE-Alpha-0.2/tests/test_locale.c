@@ -58,6 +58,29 @@ int main(void)
     assert(length == 11);
     assert(memchr(glyphs, ' ', (size_t)length) != NULL);
 
+    /* Every required Arabic UI label must map to embedded Arabic glyphs. */
+    {
+        static const char *const required_arabic[] = {
+            "الإعدادات",
+            "مكتبة الألعاب",
+            "البحث عن الألعاب",
+            "مستوى الصوت",
+            "تشغيل الموسيقى"
+        };
+        size_t sample;
+        for (sample = 0; sample < sizeof(required_arabic) /
+                                  sizeof(required_arabic[0]); sample++) {
+            int glyph_index;
+            length = ps3scale_locale_to_glyphs(required_arabic[sample],
+                                               glyphs, sizeof(glyphs));
+            assert(length > 0);
+            for (glyph_index = 0; glyph_index < length; glyph_index++) {
+                unsigned char glyph = (unsigned char)glyphs[glyph_index];
+                assert(glyph == ' ' || ps3scale_locale_is_arabic_glyph(glyph));
+            }
+        }
+    }
+
     length = ps3scale_locale_to_glyphs("Configuración", glyphs,
                                        sizeof(glyphs));
     assert(length == (int)strlen("Configuración") - 1);
