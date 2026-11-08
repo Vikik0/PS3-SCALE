@@ -2174,8 +2174,8 @@ static void boot_tick(void)
                 (void)sysThreadJoin(g_boot_scan_thread, &thread_result);
                 g_boot_scan_thread_started = 0;
             }
-            if (catalog_cache_is_stale())
-                start_catalog_sync_worker(0);
+            /* Keep boot/local game use offline; refresh when the user opens
+             * Online Graphics Database instead of starting network I/O at boot. */
             g_boot_stage = 3;
             g_boot_stage_frames = 0;
         }
