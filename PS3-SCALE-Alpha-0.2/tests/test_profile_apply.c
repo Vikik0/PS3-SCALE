@@ -149,6 +149,10 @@ int main(void)
     assert(read_text(TEST_SCRIPT_PATH, script, sizeof(script)) == 0);
     assert(strcmp(script, "# USER WEBMAN SCRIPT\n") == 0);
 
+    strcpy(profile.trust, "B_COMMUNITY_MANUAL");
+    assert(ps3scale_profile_script_install(&profile) == -1);
+    strcpy(profile.trust, "B_COMMUNITY");
+
     /* Multi-write, non-community and unsafe source entries are refused. */
     profile.patch_count = 2;
     assert(ps3scale_profile_script_install(&profile) == -3);
