@@ -30,7 +30,7 @@ typedef struct ps3scale_catalog {
     size_t count;
 } ps3scale_catalog_t;
 
-/* Returns 0 only when the entire catalogue is valid. */
+/* Returns the loaded profile count (>0), or -1 when the entire file is invalid. */
 int ps3scale_catalog_load(const char *path, ps3scale_catalog_t *catalog);
 
 /* Exact Title ID + APP_VER match only. Missing versions never match. */
