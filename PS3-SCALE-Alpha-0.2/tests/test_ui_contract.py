@@ -60,7 +60,8 @@ draw_text_impl = section("static void draw_text", "static int open_background_mu
 assert "SetCurrentFont(font_index)" in draw_text_impl
 assert "DrawChar(cursor - ((float)min_x * scale_x)" in draw_text_impl
 assert "g_ui_font_height * 27 + 10" in draw_text_impl
-assert "SetFontSize(g_ui_font_width, arabic_height)" in draw_text_impl
+assert "arabic_width = (g_ui_font_width * 18 + 7) / 14;" in draw_text_impl
+assert "SetFontSize(arabic_width, arabic_height)" in draw_text_impl
 assert "ps3scale_locale_glyphs_joined(glyph, next_glyph)" in draw_text_impl
 assert "ps3scale_locale_is_arabic_glyph" in draw_text_impl
 assert "cursor -= scale_x * 4.0f" in draw_text_impl

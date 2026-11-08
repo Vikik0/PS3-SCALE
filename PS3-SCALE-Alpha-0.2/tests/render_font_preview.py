@@ -9,6 +9,7 @@ import base64
 import binascii
 import re
 import struct
+import statistics
 import zlib
 from pathlib import Path
 
@@ -22,7 +23,7 @@ FONT_WIDTH = 32
 FONT_HEIGHT = 32
 FONT_FIRST = 32
 FONT_EXTENDED_FIRST = 128
-UI_WIDTH = 14
+UI_WIDTH = 18  # Arabic cells are wider than the Latin bitmap font.
 UI_HEIGHT = 22
 ARABIC_CELL_HEIGHT = (UI_HEIGHT * 27 + 10) // 20
 ARABIC_Y_OFFSET = (ARABIC_CELL_HEIGHT - UI_HEIGHT) / 2.0
@@ -387,6 +388,23 @@ assert 32 in shape_text("مستوى الصوت")
 
 missing = [glyph for glyph in ARABIC_GLYPHS if glyph_bounds(glyph)[1] <= 0]
 assert not missing, f"Arabic glyphs missing from bitmap atlas: {missing}"
+
+def glyph_ink_height(glyph: int) -> int:
+    ys = [
+        y
+        for y in range(FONT_HEIGHT)
+        for x in range(FONT_WIDTH)
+        if glyph_pixel(glyph, x, y)
+    ]
+    return max(ys) - min(ys) + 1 if ys else 0
+
+
+median_ink_height = statistics.median(
+    glyph_ink_height(glyph) for glyph in ARABIC_GLYPHS
+)
+assert median_ink_height >= 14, (
+    f"Arabic glyph atlas is too small: median ink height {median_ink_height}"
+)
 
 write_png(OUT)
 print("Arabic font preview: PASS")
