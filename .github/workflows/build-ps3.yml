@@ -73,6 +73,11 @@ jobs:
           test -s "$PORTLIBS/lib/libmpg123.a"
           test -s "$PORTLIBS/include/soundlib/mpg123.h"
 
+      - name: Build verified HTTPS dependencies
+        run: |
+          set -eu
+          sh PS3-SCALE-Alpha-0.2/scripts/build_online_deps.sh
+
       - name: Assemble embedded background theme
         run: |
           set -eu
