@@ -23,25 +23,24 @@ static int valid_title_id(const char *value)
 {
     size_t i;
 
-    if (!value)
+    if (!value || strlen(value) != 9)
         return 0;
     for (i = 0; i < 9; i++) {
         if (!((value[i] >= 'A' && value[i] <= 'Z') ||
               (value[i] >= '0' && value[i] <= '9')))
             return 0;
     }
-    return value[9] == '\0';
+    return 1;
 }
 
 static int valid_app_version(const char *value)
 {
-    return value &&
+    return value && strlen(value) == 5 &&
            isdigit((unsigned char)value[0]) &&
            isdigit((unsigned char)value[1]) &&
            value[2] == '.' &&
            isdigit((unsigned char)value[3]) &&
-           isdigit((unsigned char)value[4]) &&
-           value[5] == '\0';
+           isdigit((unsigned char)value[4]);
 }
 
 static int valid_source_url(const char *value)
@@ -134,7 +133,7 @@ int ps3scale_profile_script_state(const char *title_id, const char *app_ver,
         return -2;
 
     if (!valid_app_version(app_ver) || !patches || !patches[0] ||
-        !memchr(patches, '\0', PS3SCALE_PROFILE_PATCHES_MAX))
+        strlen(patches) >= PS3SCALE_PROFILE_PATCHES_MAX)
         return -2;
 
     if (snprintf(expected_header, sizeof(expected_header),
