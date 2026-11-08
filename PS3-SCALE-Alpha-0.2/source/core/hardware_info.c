@@ -25,7 +25,7 @@ static const platform_model_entry_t platform_models[] = {
     {"CokM20", "PS3 Super Slim (CECH-40xx B/C)", PS3SCALE_HARDWARE_SUPER_SLIM},
     {"CokM30", "PS3 Super Slim (CECH-40xx A)", PS3SCALE_HARDWARE_SUPER_SLIM},
     {"CokM40", "PS3 Super Slim (CokM40; exact retail model unconfirmed)", PS3SCALE_HARDWARE_SUPER_SLIM},
-    {"CokN10", "PS3 Super Slim (CokN10; exact retail model unconfirmed)", PS3SCALE_HARDWARE_SUPER_SLIM},
+    {"CokN10", "PS3 Super Slim (CECH-40xx B/C; NPX-001)", PS3SCALE_HARDWARE_SUPER_SLIM},
     {"CokN20", "PS3 Super Slim (CokN20; exact retail model unconfirmed)", PS3SCALE_HARDWARE_SUPER_SLIM},
     {"CokN30", "PS3 Super Slim (CokN30; exact retail model unconfirmed)", PS3SCALE_HARDWARE_SUPER_SLIM},
     {"CokN40", "PS3 Super Slim (CokN40; exact retail model unconfirmed)", PS3SCALE_HARDWARE_SUPER_SLIM},
@@ -34,7 +34,7 @@ static const platform_model_entry_t platform_models[] = {
     {"CokP30", "PS3 Super Slim (CECH-42xx A)", PS3SCALE_HARDWARE_SUPER_SLIM},
     {"CokP40", "PS3 Super Slim (CECH-42xx A)", PS3SCALE_HARDWARE_SUPER_SLIM},
     {"CokR10", "PS3 Super Slim (CECH-43xx B/C)", PS3SCALE_HARDWARE_SUPER_SLIM},
-    {"CokR20", "PS3 Super Slim (CECH-43xx B/C)", PS3SCALE_HARDWARE_SUPER_SLIM},
+    {"CokR20", "PS3 Super Slim (CokR20; exact retail mapping unconfirmed)", PS3SCALE_HARDWARE_SUPER_SLIM},
     {"CokR30", "PS3 Super Slim (CECH-43xx A)", PS3SCALE_HARDWARE_SUPER_SLIM},
     {"CokR40", "PS3 Super Slim (CECH-43xx A)", PS3SCALE_HARDWARE_SUPER_SLIM}
 };
