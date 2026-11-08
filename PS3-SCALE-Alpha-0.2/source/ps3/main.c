@@ -2113,6 +2113,8 @@ static void boot_tick(void)
                 (void)sysThreadJoin(g_boot_scan_thread, &thread_result);
                 g_boot_scan_thread_started = 0;
             }
+            if (catalog_cache_is_stale())
+                start_catalog_sync_worker(0);
             g_boot_stage = 3;
             g_boot_stage_frames = 0;
         }
@@ -2229,6 +2231,7 @@ int main(int argc, char *argv[])
 
     ps3scale_game_list_init(&g_games);
     load_app_settings();
+    load_catalog_cache();
     g_hardware_info_valid =
         (ps3scale_hardware_detect(&g_hardware_info) == 0);
 
@@ -2272,6 +2275,7 @@ int main(int argc, char *argv[])
         u16 left = 0, right = 0, start = 0;
 
         sysUtilCheckCallback();
+        service_catalog_sync();
         g_frame_counter++;
 
         if (pad_ready && ioPadGetInfo(&pad_info) == 0) {
@@ -2319,16 +2323,21 @@ int main(int argc, char *argv[])
             if (circle && !old_circle) keyboard_cancel();
         } else if (g_screen == SCREEN_HOME) {
             if (up && !old_up)
-                g_home_selected = (g_home_selected + 3) % 4;
+                g_home_selected = (g_home_selected + 4) % 5;
             if (down && !old_down)
-                g_home_selected = (g_home_selected + 1) % 4;
+                g_home_selected = (g_home_selected + 1) % 5;
             if (cross && !old_cross) {
                 if (g_home_selected == 0) {
                     g_screen = SCREEN_SCAN;
                     g_selected = 0;
                 } else if (g_home_selected == 1) {
-                    g_screen = SCREEN_SETTINGS;
+                    g_screen = SCREEN_ONLINE_DB;
+                    g_online_selected = 0;
+                    if (catalog_cache_is_stale())
+                        start_catalog_sync_worker(0);
                 } else if (g_home_selected == 2) {
+                    g_screen = SCREEN_SETTINGS;
+                } else if (g_home_selected == 3) {
                     g_screen = SCREEN_TOOLS;
                     refresh_companion_tool_status();
                 } else {
@@ -2361,19 +2370,76 @@ int main(int argc, char *argv[])
             if (triangle && !old_triangle && g_library == LIBRARY_PS2)
                 g_config_preview = !g_config_preview;
             if (cross && !old_cross && selected_game()) {
-                set_details_message("NO VERIFIED GRAPHICS PROFILE FOR THIS VERSION.");
+                const ps3scale_profile_t *profile = profile_for_game(selected_game());
+                g_profile_confirm_pending = 0;
+                if (profile)
+                    set_details_message("EXACT ONLINE PROFILE FOUND. REVIEW BEFORE INSTALL.");
+                else
+                    set_details_message("NO EXACT ONLINE PROFILE FOR THIS GAME UPDATE.");
                 g_screen = SCREEN_DETAILS;
             }
             if (circle && !old_circle)
                 g_screen = SCREEN_HOME;
         } else if (g_screen == SCREEN_DETAILS) {
-            if (triangle && !old_triangle && selected_game() &&
-                selected_game()->kind == PS3SCALE_GAME_PS2_ISO)
-                g_config_preview = !g_config_preview;
-            if ((cross && !old_cross) || (start && !old_start))
+            const ps3scale_game_t *game = selected_game();
+            const ps3scale_profile_t *profile = profile_for_game(game);
+            if (square && !old_square && game && game_is_ps3(game)) {
+                if (!profile) {
+                    set_details_message("NO EXACT ONLINE PROFILE FOR THIS GAME UPDATE.");
+                } else if (profile->patch_count != 1) {
+                    set_details_message("MULTI-WRITE PROFILE: AUTO APPLY DISABLED FOR SAFETY.");
+                } else {
+                    int state = ps3scale_profile_script_state(
+                        profile->title_id, profile->app_ver);
+                    if (state == 1) {
+                        if (ps3scale_profile_script_remove(profile->title_id) == 0)
+                            set_details_message("AUTO PROFILE REMOVED FROM WEBMAN.");
+                        else
+                            set_details_message("COULD NOT REMOVE THE PS3 SCALE PROFILE SCRIPT.");
+                    } else if (state == -1) {
+                        set_details_message("A USER WEBMAN SCRIPT EXISTS. IT WAS NOT OVERWRITTEN.");
+                    } else {
+                        g_profile_confirm_pending = 1;
+                        set_details_message("COMMUNITY PATCH. TRIANGLE TO CONFIRM INSTALL.");
+                    }
+                }
+            }
+            if (triangle && !old_triangle) {
+                if (g_profile_confirm_pending) {
+                    confirm_profile_install();
+                } else if (game && game->kind == PS3SCALE_GAME_PS2_ISO) {
+                    g_config_preview = !g_config_preview;
+                }
+            }
+            if (((cross && !old_cross) || (start && !old_start)) &&
+                !g_profile_confirm_pending)
                 start_selected_game();
+            if (circle && !old_circle) {
+                if (g_profile_confirm_pending) {
+                    g_profile_confirm_pending = 0;
+                    set_details_message("PROFILE INSTALL CANCELLED.");
+                } else {
+                    g_screen = SCREEN_SCAN;
+                }
+            }
+        } else if (g_screen == SCREEN_ONLINE_DB) {
+            size_t matches = online_match_count();
+            if (up && !old_up && matches) {
+                g_online_selected = (g_online_selected > 0) ?
+                    g_online_selected - 1 : (int)matches - 1;
+            }
+            if (down && !old_down && matches)
+                g_online_selected = (g_online_selected + 1) % (int)matches;
+            if (cross && !old_cross)
+                open_selected_online_match();
+            if (square && !old_square)
+                cache_selected_online_profile();
+            if (triangle && !old_triangle)
+                cache_all_online_profiles();
+            if (start && !old_start)
+                start_catalog_sync_worker(1);
             if (circle && !old_circle)
-                g_screen = SCREEN_SCAN;
+                g_screen = SCREEN_HOME;
         } else if (g_screen == SCREEN_SETTINGS) {
             if (up && !old_up)
                 g_settings_selected = (g_settings_selected + SETTINGS_COUNT - 1) % SETTINGS_COUNT;
@@ -2481,6 +2547,11 @@ int main(int argc, char *argv[])
         u64 thread_result = 0;
         (void)sysThreadJoin(g_boot_scan_thread, &thread_result);
         g_boot_scan_thread_started = 0;
+    }
+    if (g_catalog_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_catalog_thread, &thread_result);
+        g_catalog_thread_started = 0;
     }
     shutdown_audio_backend();
     sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
