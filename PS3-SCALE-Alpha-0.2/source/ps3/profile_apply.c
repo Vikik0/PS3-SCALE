@@ -18,6 +18,9 @@
 
 #define PS3SCALE_SCRIPT_HEADER_V1 "# PS3 SCALE AUTO PROFILE V1"
 #define PS3SCALE_SCRIPT_HEADER_V2 "# PS3 SCALE AUTO PROFILE V2"
+#define PS3SCALE_PROFILE_SCRIPT_MAX 1024u
+#define PS3SCALE_PROFILE_SEARCH_WINDOW 0x20ul
+#define PS3SCALE_PROFILE_SEARCH_STEP 64ul
 
 static int valid_title_id(const char *value)
 {
@@ -54,7 +57,7 @@ static int valid_source_url(const char *value)
         strncmp(value, "https://", 8) != 0)
         return 0;
 
-    /* The URL is written into a webMAN comment; reject control characters. */
+    /* The URL is not executed; reject control characters before accepting it. */
     for (i = 0; i < length; i++) {
         unsigned char ch = (unsigned char)value[i];
         if (ch <= 0x20u || ch >= 0x7fu)
@@ -96,6 +99,48 @@ static int read_script_header(const char *path, char *header, size_t capacity)
     return 1;
 }
 
+/* Return 0 when absent, 1 when read, and -1/-2 for read/size errors. */
+static int read_script_contents(const char *path, char *contents,
+                                size_t capacity)
+{
+    FILE *file;
+    size_t used;
+    int extra;
+
+    if (!path || !contents || capacity < 2)
+        return -1;
+    contents[0] = '\0';
+    file = fopen(path, "rb");
+    if (!file)
+        return errno == ENOENT ? 0 : -1;
+
+    used = fread(contents, 1, capacity - 1, file);
+    if (ferror(file)) {
+        fclose(file);
+        contents[0] = '\0';
+        return -1;
+    }
+    if (used == capacity - 1) {
+        extra = fgetc(file);
+        if (extra != EOF) {
+            fclose(file);
+            contents[0] = '\0';
+            return -2;
+        }
+        if (ferror(file)) {
+            fclose(file);
+            contents[0] = '\0';
+            return -1;
+        }
+    }
+    contents[used] = '\0';
+    if (fclose(file) != 0) {
+        contents[0] = '\0';
+        return -1;
+    }
+    return 1;
+}
+
 static int header_is_owned(const char *header)
 {
     return header &&
@@ -103,46 +148,6 @@ static int header_is_owned(const char *header)
                  strlen(PS3SCALE_SCRIPT_HEADER_V1)) == 0 ||
          strncmp(header, PS3SCALE_SCRIPT_HEADER_V2,
                  strlen(PS3SCALE_SCRIPT_HEADER_V2)) == 0);
-}
-
-/*
- * Returns 1 only when the installed one-launch script matches the current
- * Title ID, APP_VER and exact catalog patch data. A legacy or stale PS3 SCALE
- * script returns -2 so the UI can remove or replace it before launch.
- */
-int ps3scale_profile_script_state(const char *title_id, const char *app_ver,
-                                  const char *patches)
-{
-    char path[256];
-    char header[384];
-    char expected_header[384];
-    int exists;
-
-    if (make_script_path(path, sizeof(path), title_id) != 0)
-        return -1;
-
-    exists = read_script_header(path, header, sizeof(header));
-    if (exists == 0)
-        return 0;
-    if (exists < 0 || !header_is_owned(header))
-        return -1;
-
-    /* V1 scripts did not fingerprint patch data and could remain installed. */
-    if (strncmp(header, PS3SCALE_SCRIPT_HEADER_V1,
-                strlen(PS3SCALE_SCRIPT_HEADER_V1)) == 0)
-        return -2;
-
-    if (!valid_app_version(app_ver) || !patches || !patches[0] ||
-        strlen(patches) >= PS3SCALE_PROFILE_PATCHES_MAX)
-        return -2;
-
-    if (snprintf(expected_header, sizeof(expected_header),
-            PS3SCALE_SCRIPT_HEADER_V2
-            " TITLE_ID=%s APP_VER=%s PATCHES=%s",
-            title_id, app_ver, patches) >= (int)sizeof(expected_header))
-        return -2;
-
-    return strcmp(header, expected_header) == 0 ? 1 : -2;
 }
 
 static int valid_hex_string(const char *value, size_t max_length, int even)
@@ -161,21 +166,21 @@ static int valid_hex_string(const char *value, size_t max_length, int even)
     return 1;
 }
 
-static int parse_single_patch(const ps3scale_profile_t *profile,
-                              unsigned long *address,
-                              char *expected, size_t expected_capacity,
-                              char *replacement, size_t replacement_capacity)
+static int parse_single_patch_string(const char *patches,
+                                     unsigned long *address,
+                                     char *expected, size_t expected_capacity,
+                                     char *replacement,
+                                     size_t replacement_capacity)
 {
     char copy[PS3SCALE_PROFILE_PATCHES_MAX];
     char *first, *second, *third, *end = NULL;
     unsigned long parsed;
 
-    if (!profile || profile->patch_count != 1 ||
-        !memchr(profile->patches, '\0', sizeof(profile->patches)) ||
-        strlen(profile->patches) >= sizeof(copy))
+    if (!patches || !patches[0] ||
+        strlen(patches) >= sizeof(copy))
         return -1;
 
-    memcpy(copy, profile->patches, strlen(profile->patches) + 1);
+    memcpy(copy, patches, strlen(patches) + 1);
     first = copy;
     second = strchr(first, ',');
     if (!second)
@@ -207,17 +212,104 @@ static int parse_single_patch(const ps3scale_profile_t *profile,
     return 0;
 }
 
-int ps3scale_profile_script_install(const ps3scale_profile_t *profile)
+/*
+ * webMAN rounds its safe upper search bound down to a 16-byte boundary.
+ * With signatures limited to 1-16 bytes, stop=address+0x20 and step=64
+ * leave exactly one candidate start address: the requested address.
+ */
+static int format_profile_script(char *output, size_t capacity,
+                                 const char *title_id, const char *app_ver,
+                                 const char *patches)
 {
     char path[256];
-    char temporary_path[272];
     char header[384];
     char expected[34];
     char replacement[34];
     unsigned long address;
-    FILE *file;
-    int state;
     int written;
+
+    if (!output || !capacity ||
+        !valid_title_id(title_id) || !valid_app_version(app_ver) ||
+        parse_single_patch_string(patches, &address, expected,
+                                  sizeof(expected), replacement,
+                                  sizeof(replacement)) != 0 ||
+        make_script_path(path, sizeof(path), title_id) != 0)
+        return -1;
+
+    if (snprintf(header, sizeof(header),
+            PS3SCALE_SCRIPT_HEADER_V2
+            " TITLE_ID=%s APP_VER=%s PATCHES=%s",
+            title_id, app_ver, patches) >= (int)sizeof(header))
+        return -1;
+
+    /*
+     * The source URL stays in the catalogue/UI, not in the executable script.
+     * This makes the complete generated script deterministic so its full body
+     * can be compared before PS3 SCALE allows the game to launch.
+     */
+    written = snprintf(output, capacity,
+        "%s\n"
+        "# One launch only. No success notification is shown because this "
+        "batch command cannot verify the post-write memory value.\n"
+        "if titleid %s\n"
+        "if ingame\n"
+        "/patch.ps3?addr=%08lX&stop=%08lX&step=%lu&find=%s&rep=1&val=%s\n"
+        "end if\n"
+        "end if\n"
+        "del %s\n\n",
+        header, title_id, address, address + PS3SCALE_PROFILE_SEARCH_WINDOW,
+        PS3SCALE_PROFILE_SEARCH_STEP, expected, replacement, path);
+    return written < 0 || (size_t)written >= capacity ? -1 : 0;
+}
+
+/*
+ * Returns 1 only when the entire installed script exactly matches the
+ * deterministic PS3 SCALE V2 script for this Title ID, APP_VER and patch.
+ * A stale, legacy or modified PS3 SCALE script returns -2.
+ */
+int ps3scale_profile_script_state(const char *title_id, const char *app_ver,
+                                  const char *patches)
+{
+    char path[256];
+    char header[384];
+    char expected_script[PS3SCALE_PROFILE_SCRIPT_MAX];
+    char actual_script[PS3SCALE_PROFILE_SCRIPT_MAX];
+    int exists;
+    int content_state;
+
+    if (make_script_path(path, sizeof(path), title_id) != 0)
+        return -1;
+
+    exists = read_script_header(path, header, sizeof(header));
+    if (exists == 0)
+        return 0;
+    if (exists < 0 || !header_is_owned(header))
+        return -1;
+
+    if (strncmp(header, PS3SCALE_SCRIPT_HEADER_V1,
+                strlen(PS3SCALE_SCRIPT_HEADER_V1)) == 0)
+        return -2;
+
+    if (format_profile_script(expected_script, sizeof(expected_script),
+                              title_id, app_ver, patches) != 0)
+        return -2;
+
+    content_state = read_script_contents(path, actual_script,
+                                         sizeof(actual_script));
+    if (content_state != 1)
+        return -2;
+
+    return strcmp(actual_script, expected_script) == 0 ? 1 : -2;
+}
+
+int ps3scale_profile_script_install(const ps3scale_profile_t *profile)
+{
+    char path[256];
+    char temporary_path[272];
+    char script[PS3SCALE_PROFILE_SCRIPT_MAX];
+    FILE *file;
+    size_t script_length;
+    int state;
 
     if (!profile || strcmp(profile->trust, "B_COMMUNITY") != 0 ||
         !valid_title_id(profile->title_id) ||
@@ -226,10 +318,9 @@ int ps3scale_profile_script_install(const ps3scale_profile_t *profile)
         return -1;
     if (profile->patch_count != 1)
         return -3; /* Multi-write profiles remain manual-only in this build. */
-    if (parse_single_patch(profile, &address, expected, sizeof(expected),
-                           replacement, sizeof(replacement)) != 0)
-        return -4;
-    if (make_script_path(path, sizeof(path), profile->title_id) != 0)
+    if (format_profile_script(script, sizeof(script), profile->title_id,
+                              profile->app_ver, profile->patches) != 0 ||
+        make_script_path(path, sizeof(path), profile->title_id) != 0)
         return -4;
 
     state = ps3scale_profile_script_state(profile->title_id, profile->app_ver,
@@ -252,41 +343,8 @@ int ps3scale_profile_script_install(const ps3scale_profile_t *profile)
     if (!file)
         return -5;
 
-    /*
-     * webMAN runs this per-title script when the game starts. The search
-     * webMAN rounds its safe upper search bound down to a 16-byte boundary.
-     * With signatures limited to 1-16 bytes, stop=address+0x20 and step=64
-     * leave exactly one candidate start address: the requested address.
-     * The expected bytes must match before /patch.ps3 writes the replacement.
-     * The script deletes itself after this single launch to avoid stale reuse.
-     *
-     * webMAN batch scripts require a blank line at EOF; keep the final empty
-     * line so the last command is not silently ignored.
-     */
-    if (snprintf(header, sizeof(header),
-            PS3SCALE_SCRIPT_HEADER_V2
-            " TITLE_ID=%s APP_VER=%s PATCHES=%s",
-            profile->title_id, profile->app_ver, profile->patches) >=
-        (int)sizeof(header)) {
-        fclose(file);
-        unlink(temporary_path);
-        return -4;
-    }
-
-    written = fprintf(file,
-        "%s\n"
-        "# Source: %s\n"
-        "# One launch only. No success notification is shown because this "
-        "batch command cannot verify the post-write memory value.\n"
-        "if titleid %s\n"
-        "if ingame\n"
-        "/patch.ps3?addr=%08lX&stop=%08lX&step=64&find=%s&rep=1&val=%s\n"
-        "end if\n"
-        "end if\n"
-        "del %s\n\n",
-        header, profile->source_url, profile->title_id,
-        address, address + 0x20ul, expected, replacement, path);
-    if (written < 0) {
+    script_length = strlen(script);
+    if (fwrite(script, 1, script_length, file) != script_length) {
         (void)fclose(file);
         unlink(temporary_path);
         return -5;
