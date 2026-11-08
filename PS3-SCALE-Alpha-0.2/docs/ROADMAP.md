@@ -71,5 +71,13 @@ verified on physical hardware. The host SFO tests do not substitute for console 
 - [x] Add native PSL1GHT 48 kHz stereo audio-port output.
 - [x] Start the supplied music automatically when PS3 SCALE opens and loop it.
 - [x] Add Settings controls for music mute and volume.
-- [ ] Bundle the user's MP3 into the PKG; current build reads `theme.mp3` from the installed USRDIR path or the documented USB fallback.
+- [x] Prepare a companion USB bundle containing the finalized PKG and the MP3 at `PS3SCALE/theme.mp3`; the PKG itself remains separate from the audio asset.
 - [ ] Verify real playback, looping, volume and clean shutdown on CECH-2504A / CEX CFW 4.93.
+
+
+## Run #94 milestone — 8 Nov 2026
+- [x] Latest PS3 build and host tests pass in GitHub Actions (Run #94).
+- [x] Vector icons for Scan Games, Settings and About are included in the build.
+- [x] Startup MP3 streaming decoder and native audio output are linked.
+- [x] Companion USB install bundle prepared with PKG + `PS3SCALE/theme.mp3`.
+- [ ] Verify the icons and music on the physical CECH-2504A / CEX CFW 4.93 / Cobra 8.5.
