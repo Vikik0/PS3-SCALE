@@ -1,25 +1,32 @@
 # PS3 SCALE Alpha 0.2 — Build status
 
-Date: 2026-11-08
+Date: 2026-11-09
 
-## Latest verified CI build
+## Latest feature-branch CI build
 
-- Workflow run: [#119 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42494932138)
-- Source commit: `7a984e43c279d33c5e5056883c27b21b40a5870f`
-- Artifact ID: `13622478698`
-- Artifact ZIP size: 1,203,134 bytes
-- Artifact ZIP SHA-256: `3be24fe4d3b93cc8dd2f538da2c1ea1aaa9995e216a9f3a52d64a7f2044705ee`
+- Workflow run: [#170 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42531978769)
+- Pull request: [#6 — draft, not merged](https://github.com/Vikik0/PS3-SCALE/pull/6)
+- Source branch: feature/online-graphics-database
+- Source commit: df067135d9c1584c18e14889fa3b141af2e5c97f
+- Artifact: PS3-SCALE-Alpha-0.2-build-with-embedded-theme
+- Artifact ID: 13637648225
+- Artifact ZIP size: 14,164,983 bytes
+- Artifact ZIP SHA-256: a4a550e63bc63b68b92d52e226893c41a8f9a098db3b7b337da3731a781f751e
 
 ## Build outputs
 
 | File | Size | SHA-256 |
 |---|---:|---|
-| `ps3scale.elf` | 1,646,258 bytes | `d57b00e2e86983dc1d7e38099890acd788e8ced6426b416b809b2d6162b73f5c` |
-| `ps3scale.self` | 220,544 bytes | `185b2e9e010dced8736c97089218f215bc2f78248e87791c8980cf8bb4c47573` |
-| `ps3scale.pkg` | 262,032 bytes | `aeacb3af5aa427f3d3406235647d45c33ab39bfd29ebd6ce82251a6da7d68bb2` |
-| `ps3scale.gnpdrm.pkg` | 262,032 bytes | `8a0f86d8bfaa139d5828b80336196bea55f15e2d0200b92e420b4a0cdc301add` |
+| ps3scale.elf | 3,402,847 bytes | 663db96cbf7333958162c6518b41f66e5af3f3a6a483196ce285a39cf4528371 |
+| ps3scale.self | 726,048 bytes | d02bf3ba7fb71a48ed32f3fd394b7afcdee4d2ebb6fc7d0f45ad392cdf9f32d4 |
+| ps3scale.pkg | 6,196,320 bytes | 2f346a312930bec763c6cb60dae341990b84c1042a259cd6a397d80eaf3c7951 |
+| ps3scale.gnpdrm.pkg | 6,196,320 bytes | b4f5979ab836cb0c9f1546b1910ceed3afcf4f482b3aead2de05440e4fbadec1 |
 
-The finalized package header is `7f504b47 8000 0001` (PS3 package, finalized revision).
+Package headers:
+- Debug PKG: 7f504b47 00000001
+- GNPDRM PKG: 7f504b47 80000001
+
+The GNPDRM package is the intended install package for the user's CFW console. The ZIP artifact contains both packages plus the ELF and SELF build outputs.
 
 ## CI tests
 
@@ -27,43 +34,51 @@ The finalized package header is `7f504b47 8000 0001` (PS3 package, finalized rev
 - Host scanner tests: PASS.
 - Host ISO metadata tests: PASS.
 - Host PS2 CONFIG builder tests: PASS.
+- Host catalog parsing and invalid patch rejection tests: PASS.
+- One-launch webMAN script tests: PASS, including aligned/unaligned address guards, V1 stale-script removal, and preservation of user-owned scripts.
 - Host locale / UTF-8 glyph mapping / keyboard layout tests: PASS.
 - Static UI contract tests: PASS.
-- PPU ELF, CEX SELF, debug PKG and finalized NPDRM PKG: built successfully.
+- PPU ELF, CEX SELF, debug PKG and finalized GNPDRM PKG: built successfully.
+- Embedded theme assembly and asset integrity check: PASS.
 
-## Implemented in Run #119
+## Implemented in Run #170
 
-- First-run language selection: English, Arabic and Spanish; saved in `USRDIR/settings.cfg`.
+- First-run language selection: English, Arabic and Spanish; saved in USRDIR/settings.cfg.
 - Spanish translations and an embedded compact Arabic bitmap glyph atlas derived from Noto Sans Arabic.
 - Focused Arabic contextual letter shaping and right-to-left run ordering for translated UI strings.
 - In-app controller keyboard with English, Spanish and Arabic layouts; SELECT and START open it. Native PS3 OSK is no longer used.
 - UTF-8 search input and code-point-aware backspace.
 - Staged startup/loading screen with local app-file check, companion-tool detection and worker-thread game-library scan.
 - Slow low-poly 3D wireframe home emblem with two orbit rings; can be disabled in Settings.
-- Settings persist language, music, volume and animation.
-- Existing scanner, cover-art layout, companion-tool discovery and music streaming remain in the build. The music is assembled into `USRDIR/theme.mp3` during the package build; the Settings screen no longer exposes a copy-to-HDD action.
+- Settings persist language, music ON/OFF, volume and animation ON/OFF.
+- The user-supplied MP3 is assembled into USRDIR/theme.mp3 inside the PKG; no USB copy-to-HDD action is needed.
+- PS3/PS2 library scanning, PARAM.SFO metadata, cover layout, companion-tool discovery and webMAN Start Game support.
+- Online catalogue with 40 starter PS3 profiles, HTTPS verification, 64 KiB response cap, strict parsing and safe cache replacement.
+- Exact Title ID + APP_VER profile matching; profile data is not selected by title name alone.
+- One-launch webMAN scripts for single-write B_COMMUNITY profiles after explicit confirmation. Script headers fingerprint Title ID, APP_VER and patch data.
+- Runtime check of Title ID, in-game state, exact memory address and expected original bytes. The search step is constrained to one candidate address.
+- Legacy V1 and stale PS3 SCALE scripts are detected; user-owned webMAN scripts are never overwritten or deleted.
+- Multi-write profiles remain disabled for automatic application. The one-launch script deletes itself after the launch attempt.
+- No success popup is shown because the current webMAN batch path cannot verify the post-write memory value.
 
-## Localization scope
+## Profile trust and limitations
 
-Arabic rendering is tailored to the app's translated interface and common Arabic letters. This is not a full Unicode shaping/bidi stack; advanced mixed-direction cases, diacritics and unsupported characters in arbitrary game titles may fall back or render imperfectly. See `docs/LOCALIZATION_AND_STARTUP.md` and `docs/THIRD_PARTY_LICENSES.txt`.
+All 40 starter catalogue entries are B_COMMUNITY: community-reported and not independently hardware-verified by PS3 SCALE. A successful CI build verifies compilation and host-side contracts, not that a specific profile works on every console or game revision.
 
-## Music
+The webMAN batch language does not expose a direct APP_VER condition. PS3 SCALE checks APP_VER before arming and against the mounted game when Start Game is used. Do not update a game between arming and launching the profile. The patch changes only the running game process memory; original game files remain unchanged. Exiting the game clears the process-memory patch.
 
-The user-supplied MP3 is embedded inside the PKG at `USRDIR/theme.mp3`. The build reconstructs it from ordered binary chunks and verifies its SHA-256. Playback reads only `/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`; no USB fallback or copy-to-HDD setting remains.
-
-## Update and download policy
-
-Startup performs local checks only. It does not need internet access and does not download arbitrary files. The USB update check only discovers a PKG with PS3 package magic; it does not verify a signed release manifest or auto-install. A secure online updater remains future work.
+No universal AI upscaler or frame generation is provided, and no fixed 60 FPS result is guaranteed.
 
 ## Physical console validation
 
-A previous Alpha build was confirmed by the user to launch, scan the library, display cover art and play the supplied music. Run #119 passes host CI and builds the final PKG, but the new Arabic glyph rendering, language persistence, custom keyboard navigation, 3D frame pacing, startup scan behavior and audio still need a fresh physical-console smoke test on the target PS3. Host CI does not replace hardware validation.
+The target device information currently available is PS3 Slim with CFW 4.92; the exact CECH model, CEX/DEX type and Cobra version are not yet confirmed. A previous Alpha build was confirmed by the user to launch, scan the library, display cover art and play the supplied music. **This feature-branch package has not yet been installed or smoke-tested on the physical console.**
+
+Recommended first hardware check: install the GNPDRM PKG, verify launch/library scan/music/settings, then test only one reversible single-write profile after confirming the exact game Title ID and APP_VER. Keep the original game files untouched and exit the game to clear the in-memory patch.
 
 ## Not implemented
 
-- No verified online graphics-profile catalog or automatic patch download/application.
-- No game-file backup/rollback workflow because the current app does not modify game files.
-- No verified graphics-profile catalogue or automatic graphics memory patch is enabled yet.
-- The Start Game action uses webMAN MOD to launch a matching mounted PS3 title and play a sound popup; the in-game success notification remains disabled until a patch is verified.
-- No universal AI upscaler or frame generation.
-- USB update discovery does not verify a signed release manifest and does not install packages automatically.
+- No universal AI upscaler, frame generation or guaranteed 60 FPS.
+- No automatic multi-write profile application.
+- No post-write memory verification or success popup.
+- No game-file backup/rollback workflow because this implementation does not modify game files.
+- No signed online updater or automatic package installation; USB update discovery remains a separate local feature.
