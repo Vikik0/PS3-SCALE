@@ -49,5 +49,13 @@ cc -std=c99 -Wall -Wextra -Werror \
   -o "$OUT/test_hardware_info"
 "$OUT/test_hardware_info"
 
+cc -std=c99 -Wall -Wextra -Werror \
+  -I"$ROOT/include" \
+  "$ROOT/source/core/game.c" \
+  "$ROOT/source/core/catalog.c" \
+  "$ROOT/tests/test_catalog.c" \
+  -o "$OUT/test_catalog"
+"$OUT/test_catalog"
+
 python3 "$ROOT/tests/test_ui_contract.py" "$ROOT/source/ps3/main.c"
 python3 "$ROOT/tests/test_theme_bundle.py" "$ROOT"
