@@ -17,8 +17,9 @@ PS3 SCALE uses webMAN MOD as an optional bridge for title-specific, in-memory PS
 - Load the bundled or HTTPS-synchronized catalogue.
 - Match exact Title ID and APP_VER.
 - Display the community trust level, reported effect, source and patch count.
-- Require the exact game version to be mounted at /dev_bdvd before arming; the mounted Title ID and APP_VER must match the selected library entry. Explicit controller confirmation is still required.
+- For installed PS3 HDD/NPDRM titles, re-scan /dev_hdd0 and require the same installed path, Title ID and APP_VER from PARAM.SFO. For disc/folder titles, require the exact mounted /dev_bdvd Title ID and APP_VER. Explicit controller confirmation is still required.
 - Multi-write profiles remain disabled for automatic application in this build. Profiles tagged B_COMMUNITY_MANUAL are also refused by the installer when the source requires an in-game timing/reapply step.
+- Start Game is dispatched on a worker thread with a bounded webMAN HTTP connect/read timeout. HDD titles use /play.ps3?<TITLE_ID>; PS3 folder/ISO entries use /play.ps3<URL-encoded-path>. A missing enhancement profile does not block a normal unmodified game launch.
 
 ### Stage 3 — one-launch guarded memory profile
 
