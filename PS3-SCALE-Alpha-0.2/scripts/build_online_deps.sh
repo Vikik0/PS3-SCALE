@@ -48,9 +48,10 @@ export CPPFLAGS="-I$PORTLIBS/include -I$PSL1GHT/ppu/include"
 export CFLAGS="-O2 -mcpu=cell -I$PORTLIBS/include -I$PSL1GHT/ppu/include"
 # Keep the PPU sysroot libraries visible to configure's link probes. The
 # socket resolver lives in the PSL1GHT/PS3 net libraries, not in portlibs.
-export LDFLAGS="-L$PS3DEV/ppu/powerpc64-ps3-elf/lib -L$PS3DEV/ppu/lib -L$PSL1GHT/ppu/lib -L$PORTLIBS/lib -lrt -llv2"
-# Match the application's final link order while configure probes gethostbyname.
-export LIBS="-lnetctl -lnet"
+export LDFLAGS="-L$PS3DEV/ppu/powerpc64-ps3-elf/lib -L$PS3DEV/ppu/lib -L$PSL1GHT/ppu/lib -L$PORTLIBS/lib"
+# Keep static dependencies after the network archives so configure's link probes
+# resolve sysModuleLoad/sysModuleUnload pulled in by libnet.a.
+export LIBS="-lnetctl -lnet -llv2 -lrt"
 if ! ./configure \
   --host=powerpc64-ps3-elf \
   --prefix="$PORTLIBS" \
