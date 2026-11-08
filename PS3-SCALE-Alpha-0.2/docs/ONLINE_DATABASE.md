@@ -10,7 +10,7 @@ The TSV fields are:
 2. **APP_VER** — exact game update version in NN.NN format.
 3. **TITLE** — display name only; never used as the identity key.
 4. **EFFECT** — reported effect, such as an FPS cap change.
-5. **TRUST** — currently B_COMMUNITY only.
+5. **TRUST** — B_COMMUNITY for community-reported profiles; B_COMMUNITY_MANUAL for source entries that require in-game timing/reapplication and are excluded from one-launch automation.
 6. **PATCHES** — semicolon-separated address,expected_hex,replacement_hex records.
 7. **NOTES** — source confidence and limitations.
 8. **SOURCE_URL** — HTTPS source reference.
