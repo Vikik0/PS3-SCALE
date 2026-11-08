@@ -21,7 +21,10 @@ int main(void)
     assert(ps3scale_locale_glyph_font_index((unsigned char)'A') == 0);
     assert(ps3scale_locale_glyph_font_index((unsigned char)'9') == 0);
     assert(ps3scale_locale_glyph_font_index(128u) == 1);
-    assert(ps3scale_locale_glyph_font_index(254u) == 1);
+    assert(ps3scale_locale_glyph_font_index(244u) == 1);
+    assert(ps3scale_locale_glyph_font_index(246u) == 2);
+    assert(ps3scale_locale_glyph_font_index(254u) == 2);
+    assert(ps3scale_locale_glyph_font_index(245u) == 0);
 
     length = ps3scale_locale_to_glyphs("سلام", glyphs, sizeof(glyphs));
     assert(length == 4);
