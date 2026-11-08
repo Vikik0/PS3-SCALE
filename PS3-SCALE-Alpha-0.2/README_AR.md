@@ -8,7 +8,7 @@
 <summary>Build status</summary>
 
 - GitHub Actions Run: #61 — **Success**
-- Commit: `38e7c0203d1534caff9365336ad965cc8628c7dd`
+- Commit: `94deb82f4097dfe5b2a6fd7d1345736dc8462642`
 - Host-side tests: PASS
 - PS3 ELF: built
 - PS3 SELF: built
@@ -49,13 +49,13 @@
 ## ملفات البناء
 
 GitHub Actions artifact:
-- [PS3-SCALE-Alpha-0.2-build — Run #61](https://github.com/Vikik0/PS3-SCALE/actions/runs/42481903926/artifacts/13617497295)
+- [PS3-SCALE-Alpha-0.2-build — Run #61](https://github.com/Vikik0/PS3-SCALE/actions/runs/42482158416/artifacts/13617318299)
 - Artifact ID: `13617497295`
 - يحتوي على `ps3scale.elf`, `ps3scale.self`, `ps3scale.pkg`, `ps3scale.gnpdrm.pkg`.
 
 SHA-256 للحزمة النهائية:
 ```
-3404302611866ec713f09924335188f2220d86d75f060ae036ff2411ec4b0e47
+4449df80aa8763fdc330db2668b70b2ef3e54f861583a10e45a8f1cff38272f6
 ```
 
 Content ID:
