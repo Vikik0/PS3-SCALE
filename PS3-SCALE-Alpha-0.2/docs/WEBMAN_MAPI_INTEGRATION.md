@@ -40,7 +40,7 @@ The webMAN batch command language exposes Title ID and in-game conditions, but n
 - webMAN MOD remains optional for scanning and catalogue browsing.
 - Never use PS3 SCALE to fetch, display, store or modify IDPS/PSID.
 - Never disable syscalls, spoof console identity, change fan settings, or change CPU/RSX clocks as part of a graphics profile.
-- Community reports are not hardware verification. The starter catalogue is Tier B only.
+- Community reports are not hardware verification. The starter catalogue is Tier B only; B_COMMUNITY_MANUAL entries remain manual-only and cannot be armed by the one-launch installer.
 - Do not apply a profile with a Title ID, APP_VER, address or expected-byte mismatch.
 
 ## Test requirements
