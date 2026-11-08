@@ -190,7 +190,12 @@ int ps3scale_profile_script_install(const ps3scale_profile_t *profile)
         profile->title_id, profile->app_ver, profile->source_url,
         profile->title_id, address - 1, address + 1,
         expected, replacement);
-    if (written < 0 || fclose(file) != 0) {
+    if (written < 0) {
+        (void)fclose(file);
+        unlink(temporary_path);
+        return -5;
+    }
+    if (fclose(file) != 0) {
         unlink(temporary_path);
         return -5;
     }
