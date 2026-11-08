@@ -259,7 +259,7 @@ static void update_selected_cover(void)
         ya2d_freeTexture(g_cover_texture);
         g_cover_texture = NULL;
     }
-    g_cover_path[0] = '\\0';
+    g_cover_path[0] = '\0';
 
     if (path[0]) {
         g_cover_texture = ya2d_loadPNGfromFile(path);
@@ -633,7 +633,11 @@ int main(int argc, char *argv[])
         old_triangle = triangle;
         old_select = select;
 
-        if (!g_osk_active) {\n            if (g_screen == SCREEN_SCAN || g_screen == SCREEN_DETAILS)\n                update_selected_cover();\n            draw_ui();\n        }
+        if (!g_osk_active) {
+            if (g_screen == SCREEN_SCAN || g_screen == SCREEN_DETAILS)
+                update_selected_cover();
+            draw_ui();
+        }
     }
 
     if (g_osk_active)
