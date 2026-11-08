@@ -4,7 +4,7 @@
 
 PS3 SCALE uses two read-only GameOS queries when the running firmware allows them:
 
-- LV2 syscall 387 (`sys_sm_get_system_info`) supplies the 24-byte `platform_info_s` record: a 7-byte firmware field, a 9-byte Platform ID field beginning at byte offset 7, a 32-bit build number, and a reserved 32-bit field.
+- LV2 syscall 387 (`sys_sm_get_system_info`) supplies the 24-byte `platform_info_s` record: a 7-byte firmware field, a 9-byte Platform ID field (numeric code at offset 7, ASCII name beginning at offset 8), a 32-bit build number, and a reserved 32-bit field.
 - LV2 syscall 985 (`sys_dbg_get_console_type`) is an optional best-effort query. It writes the console type through its output pointer: CEX=1, DEX=2, DEH=3.
 
 The app does not read or display IDPS, PSID, account identifiers, or other console-unique identifiers.
@@ -13,11 +13,12 @@ The app does not read or display IDPS, PSID, account identifiers, or other conso
 
 The Platform ID identifies a hardware platform / board revision. PS3 SCALE maps known IDs to a retail model family and series:
 
-- FAT families: Cok14, CokB10, CokC12, CokD10, CokE10, CokF10
-- Slim families: CokG11 (20xx), CokH11 (21xx), CokJ13/J20 (25xx), CokK10 (30xx)
-- Super Slim families: CokM10/M20/M30/M40 (40xx), CokP10/P20/P30/P40 (42xx), CokR10 (43xx)
+- FAT: Cok14 (CECHA/B), CokB10 (CECHC/E), CokC12 (CECHG), CokD10 (CECHH), CokE10 (CECHJ/K), CokF10 (CECHL/M/P/Q)
+- Slim: CokG11 (20xx), CokH11 (21xx), CokJ13/J20 (25xx), CokK10 (30xx)
+- Super Slim: CokM10/M20/M30 (40xx), CokP10/P20/P30/P40 (42xx), CokR10/R20/R30/R40 (43xx)
+- Additional N-series IDs (CokN10/N20/N30/N40) are identified as Super Slim platform revisions, but their exact retail model mapping is not asserted.
 
-This is a series-level identification, not a guaranteed exact retail SKU. It cannot reliably determine the region letter or every A/B suffix from Platform ID alone. Unknown IDs are shown as unknown rather than guessed.
+This is a series-level identification, not a guaranteed exact retail SKU. Some board revisions (for example M40, N-series, and later R-series variants) have incomplete public retail mappings; the app displays the raw Platform ID so the user can distinguish them. It cannot reliably determine the region letter or every A/B suffix from Platform ID alone. Unknown IDs are shown as unknown rather than guessed.
 
 ## Failure behavior
 
