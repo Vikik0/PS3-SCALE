@@ -21,7 +21,7 @@
 - Local backup/restore manifest (no automatic game-file edits)
 
 ## Alpha 0.3 — PS2 configuration manager
-- PS2 Classics/PS2 ISO metadata enrichment
+- [x] Add a restricted in-memory PS2 netemu CONFIG builder for commands 0x44/0x46, with host tests\n- PS2 Classics/PS2 ISO metadata enrichment
 - Match known `ps2_netemu` CONFIG files by title ID and region
 - Hash verification and backup/restore
 - No automatic config writes until hardware tests pass
