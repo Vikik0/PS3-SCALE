@@ -39,6 +39,10 @@ int main(void)
         "BLUS30464\t01.05\tSkate 3\t60 FPS\tB_COMMUNITY\t"
         "94713A,06,06\tNo-op patch.\t"
         "https://github.com/example/profiles\n";
+    static const char invalid_source_url[] =
+        "BLUS30464\\t01.05\\tSkate 3\\t60 FPS\\tB_COMMUNITY\\t"
+        "94713A,06,00\\tControl character in source.\\t"
+        "https://example.com/\nmalicious\n";
     static const char invalid_high_address[] =
         "BLUS30464\t01.05\tSkate 3\t60 FPS\tB_COMMUNITY\t"
         "FFFFFFE0,06,00\tAddress overflows safe search window.\t"
@@ -106,6 +110,13 @@ int main(void)
         return 20;
     if (catalog.count != 2)
         return 21;
+
+    if (write_catalog(path, invalid_source_url) != 0)
+        return 22;
+    if (ps3scale_catalog_load(path, &catalog) >= 0)
+        return 23;
+    if (catalog.count != 2)
+        return 24;
 
     unlink(path);
     puts("PS3 SCALE online catalog tests: PASS");
