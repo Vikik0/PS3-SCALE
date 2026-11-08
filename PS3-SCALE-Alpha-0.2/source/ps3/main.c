@@ -687,10 +687,15 @@ static void draw_menu_icon(int index, float x, float y, int selected)
         draw_icon_line(x + 11.0f, y + 12.0f, x + 17.0f, y + 12.0f, ink);
         draw_icon_line(x + 11.0f, y + 16.0f, x + 16.0f, y + 16.0f, ink);
     } else if (index == 1) {
+        draw_circle_outline(x + 19.0f, y + 19.0f, 13.0f, ink);
+        draw_circle_outline(x + 19.0f, y + 19.0f, 5.0f, ink);
+        draw_icon_line(x + 6.0f, y + 19.0f, x + 32.0f, y + 19.0f, ink);
+        draw_icon_line(x + 19.0f, y + 6.0f, x + 19.0f, y + 32.0f, ink);
+    } else if (index == 2) {
         draw_gear_outline(x + 19.0f, y + 19.0f, 13.0f, ink);
         draw_circle_outline(x + 19.0f, y + 19.0f, 5.0f, ink);
         draw_solid_rect(x + 17.5f, y + 17.5f, 3.0f, 3.0f, ink);
-    } else if (index == 2) {
+    } else if (index == 3) {
         draw_icon_line(x + 10.0f, y + 28.0f, x + 27.0f, y + 11.0f, ink);
         draw_icon_line(x + 11.0f, y + 10.0f, x + 28.0f, y + 27.0f, ink);
         draw_circle_outline(x + 10.0f, y + 10.0f, 4.0f, ink);
@@ -1553,11 +1558,13 @@ static void draw_keyboard(void)
 static void draw_home(void)
 {
     static char *items[] = {
-        "SCAN GAMES", "SETTINGS", "COMPANION TOOLS", "ABOUT PS3 SCALE"
+        "SCAN GAMES", "ONLINE GRAPHICS DATABASE", "SETTINGS",
+        "COMPANION TOOLS", "ABOUT PS3 SCALE"
     };
     char line[128];
     size_t ps3_count = library_total_count(LIBRARY_PS3);
     size_t ps2_count = library_total_count(LIBRARY_PS2);
+    size_t matches = online_match_count();
     int i;
     set_ui_font_size(12, 18);
 
@@ -1565,7 +1572,7 @@ static void draw_home(void)
     draw_text(34, 58, 0x9aa6adff,
               "GAME LIBRARY  /  GRAPHICS PROFILES  /  SAFE TOOLS");
     draw_text(34, 112, 0xffffffff, "MAIN MENU");
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < 5; i++) {
         float row_y = 154.0f + (float)i * 58.0f;
         int selected = (i == g_home_selected);
         if (selected) draw_solid_rect(48.0f, row_y, 408.0f, 44.0f, 0x111e18ff);
@@ -1589,11 +1596,92 @@ static void draw_home(void)
     snprintf(line, sizeof(line), "HOME ANIMATION: %s",
              g_animation_enabled ? "ON" : "OFF");
     draw_text(520, 362, 0xdce3e8ff, line);
-    draw_text(520, 392, 0x9aa6adff, "GAME FILES: READ-ONLY");
+    snprintf(line, sizeof(line), "ONLINE MATCHES: %u", (unsigned)matches);
+    draw_text(520, 392, g_catalog_ready ? 0x9ee56aff : 0xffcc66ff, line);
     draw_text(34, 448, 0x9aa6adff,
               "UP/DOWN: SELECT   CROSS: OPEN   CIRCLE: EXIT");
     draw_text(34, 478, 0x6f7b83ff,
-              "LOCAL LIBRARY SCAN  |  NO INTERNET REQUIRED");
+              "LOCAL SCAN + OPTIONAL ONLINE PROFILE SYNC");
+    set_ui_font_size(14, 22);
+}
+
+static void draw_online_database(void)
+{
+    char line[192];
+    size_t count = online_match_count();
+    size_t start, i;
+    const ps3scale_profile_t *selected_profile = NULL;
+    const ps3scale_game_t *selected = NULL;
+
+    set_ui_font_size(9, 14);
+    if (count == 0)
+        g_online_selected = 0;
+    else if ((size_t)g_online_selected >= count)
+        g_online_selected = (int)count - 1;
+
+    selected = online_match_at((size_t)g_online_selected, &selected_profile);
+
+    draw_text(28, 16, 0xcaff39ff, "PS3 SCALE");
+    draw_text(190, 16, 0xffffffff, "ONLINE GRAPHICS DATABASE");
+    snprintf(line, sizeof(line), "DATABASE: %.42s", g_catalog_status);
+    draw_text(28, 48, g_catalog_ready ? 0x9ee56aff : 0xffcc66ff, line);
+    snprintf(line, sizeof(line), "PROFILES: %u  |  EXACT LIBRARY MATCHES: %u",
+             (unsigned)(g_catalog_ready ? g_catalog.count : 0),
+             (unsigned)count);
+    draw_text(28, 76, 0xdce3e8ff, line);
+
+    draw_outline_rect(22.0f, 106.0f, 402.0f, 322.0f, 0x26445cff);
+    draw_outline_rect(440.0f, 106.0f, 382.0f, 322.0f, 0x26445cff);
+    draw_text(32, 116, 0xffffffff, "MATCHED GAMES");
+    draw_text(452, 116, 0xffffffff, "PROFILE DETAILS");
+
+    start = (g_online_selected > 8) ? (size_t)(g_online_selected - 8) : 0;
+    for (i = 0; i < 9 && start + i < count; i++) {
+        const ps3scale_profile_t *profile = NULL;
+        const ps3scale_game_t *game = online_match_at(start + i, &profile);
+        int is_selected = ((int)(start + i) == g_online_selected);
+        float y = 148.0f + (float)i * 28.0f;
+        if (!game || !profile)
+            continue;
+        if (is_selected)
+            draw_solid_rect(28.0f, y - 3.0f, 390.0f, 24.0f, 0x14261dff);
+        snprintf(line, sizeof(line), "%.30s", game->title);
+        draw_text(36, y, is_selected ? 0xcaff39ff : 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "%.9s / %.5s",
+                 profile->title_id, profile->app_ver);
+        draw_text(300, y, is_selected ? 0xcaff39ff : 0x9aa6adff, line);
+    }
+
+    if (selected && selected_profile) {
+        snprintf(line, sizeof(line), "TITLE: %.38s", selected_profile->title);
+        draw_text(452, 152, 0xffffffff, line);
+        snprintf(line, sizeof(line), "TITLE ID: %s", selected_profile->title_id);
+        draw_text(452, 188, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "APP VERSION: %s", selected_profile->app_ver);
+        draw_text(452, 216, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "EFFECT: %.44s", selected_profile->effect);
+        draw_text(452, 244, 0xcaff39ff, line);
+        draw_text(452, 278, 0xffcc66ff, "TRUST: COMMUNITY-REPORTED");
+        snprintf(line, sizeof(line), "MEMORY WRITES: %u",
+                 selected_profile->patch_count);
+        draw_text(452, 306, 0xdce3e8ff, line);
+        if (selected_profile->patch_count == 1)
+            draw_text(452, 340, 0x9ee56aff,
+                      "AUTO APPLY: AVAILABLE AFTER CONFIRMATION");
+        else
+            draw_text(452, 340, 0xffcc66ff,
+                      "AUTO APPLY: DISABLED FOR MULTI-WRITE SAFETY");
+        draw_text(452, 374, 0x9aa6adff, "MATCH: EXACT TITLE ID + APP_VER");
+        draw_text(452, 402, 0x9aa6adff, "SOURCE: COMMUNITY MAPI PATCH NOTES");
+    } else {
+        draw_text(452, 160, 0xffcc66ff, "NO EXACT MATCHES IN YOUR PS3 LIBRARY.");
+        draw_text(452, 196, 0x9aa6adff, "THE DATABASE IS VERSION-SPECIFIC.");
+        draw_text(452, 224, 0x9aa6adff, "RESCAN GAMES AFTER INSTALLING UPDATES.");
+    }
+
+    draw_text(28, 448, 0xdce3e8ff, g_online_message);
+    draw_text(28, 478, 0x9aa6adff,
+              "UP/DOWN: SELECT  CROSS: OPEN  SQUARE: CACHE  TRIANGLE: CACHE ALL  START: SYNC  CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
 
