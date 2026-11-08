@@ -277,6 +277,10 @@ static void draw_text(float x, float y, u32 color, const char *text)
     const char *source = text ? text : "";
     size_t i, length;
     int contains_arabic = 0;
+    int arabic_width = (g_ui_font_width * 18 + 7) / 14;
+
+    if (arabic_width < g_ui_font_width)
+        arabic_width = g_ui_font_width;
 
     if (g_language == LANGUAGE_ARABIC || g_language == LANGUAGE_SPANISH) {
         (void)ps3scale_locale_translate(g_language, source, translated,
@@ -307,7 +311,7 @@ static void draw_text(float x, float y, u32 color, const char *text)
 
             if (glyph == ' ') {
                 cursor += contains_arabic ?
-                    ((float)g_ui_font_width * 0.5f) :
+                    ((float)arabic_width * 0.5f) :
                     (float)g_ui_font_width;
                 continue;
             }
@@ -315,7 +319,7 @@ static void draw_text(float x, float y, u32 color, const char *text)
             SetCurrentFont(font_index);
             if (ps3scale_locale_is_arabic_glyph(glyph)) {
                 float scale_x =
-                    (float)g_ui_font_width / (float)PS3SCALE_FONT_WIDTH;
+                    (float)arabic_width / (float)PS3SCALE_FONT_WIDTH;
                 float ink_width =
                     (float)g_extended_glyph_ink_width[glyph];
                 unsigned min_x = g_extended_glyph_min_x[glyph];
@@ -337,7 +341,7 @@ static void draw_text(float x, float y, u32 color, const char *text)
                         (g_ui_font_height * 27 + 10) / 20;
                     float y_offset =
                         (float)(arabic_height - g_ui_font_height) * 0.5f;
-                    SetFontSize(g_ui_font_width, arabic_height);
+                    SetFontSize(arabic_width, arabic_height);
                     DrawChar(cursor - ((float)min_x * scale_x),
                              y - y_offset, 0.0f, glyph);
                     SetFontSize(g_ui_font_width, g_ui_font_height);
