@@ -7,7 +7,7 @@
 - **Tier C — Emulator converted / unverified:** imported from RPCS3 or another source without real-hardware confirmation.
 - **Blocked:** known to freeze, corrupt, mismatch the game version, or have an unresolved safety issue.
 
-The current starter catalogue contains only B_COMMUNITY records. None should be described as verified on the user's console.
+The current starter catalogue contains 33 one-launch-eligible B_COMMUNITY records, 6 multi-write B_COMMUNITY records disabled for automation, and 1 B_COMMUNITY_MANUAL record. None should be described as verified on the user's console.
 
 ## Before a profile can be armed
 
