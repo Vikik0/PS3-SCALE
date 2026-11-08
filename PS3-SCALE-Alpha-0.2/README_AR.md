@@ -7,14 +7,14 @@
 <details>
 <summary>Build status</summary>
 
-- GitHub Actions Run: #70 — **Success**
-- Commit: `8450929cbd30f597fb022c780eb76dcecba7690d`
+- GitHub Actions Run: #84 — **Success**
+- Commit: `f5642796325333ee8c5af44d1295f76657998c48`
 - Host-side tests: PASS
 - PS3 ELF: built
 - PS3 SELF: built
 - Debug PKG: built
 - Finalized NPDRM PKG: built and structurally validated
-- Previous Alpha build launched successfully on the user's CECH-2504A / CFW 4.93 console; Scan Games and Game Details were photographed. The new icon build still needs a quick visual check.
+- Previous Alpha build launched successfully on the user's CECH-2504A / CFW 4.93 console. The vector-icon and startup-audio build has passed CI and still needs physical visual/audio verification.
 
 </details>
 
@@ -42,15 +42,27 @@
 - لا يوجد حتى الآن محرك تحسين رسومي عام أثناء اللعب.
 - لا توجد بعد إدارة فعلية لتثبيت PS2 CONFIG أو PS3 patches.
 - لا يوجد استخراج للأغلفة ICON0/PIC1 أو ملفات metadata الداخلية من PS3 ISO.
-- لم يتم تثبيت التطبيق أو تشغيله على جهاز PS3 فعلي بعد.
+- تم تشغيل إصدار Alpha سابق على الجهاز؛ إصدار الأيقونات والصوت الجديد يحتاج إعادة تثبيت واختبار على الجهاز.
 
 تطبيق GameOS عادي لا يبقى مسؤولاً عن رسم اللعبة بعد إغلاقه. لذلك يجب أن يكون تحسين PS3 حقيقياً عبر patch أو plugin خاص باللعبة ومطابقاً لإصدارها، أما PS2 فيمكن دراسة إعدادات `ps2_netemu CONFIG` الخاصة بكل لعبة. لن نعرض أزرار AI Upscale أو Frame Generation كأنها تعمل قبل وجود backend واختبار قابل للقياس.
+
+## الصوت عند فتح التطبيق
+
+تم دمج مشغل MP3 المتدفق، ويبدأ تلقائياً عند تشغيل PS3 SCALE ويستمر بين الصفحات ويعيد الأغنية من البداية عند نهايتها. من Settings:
+- UP/DOWN: اختيار Music أو Volume.
+- CROSS: تشغيل/كتم الموسيقى.
+- LEFT/RIGHT: خفض/رفع الصوت.
+
+ملف الأغنية لم يُضمّن داخل PKG بعد. انسخه مرة واحدة إلى:
+`/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`
+
+ويبحث التطبيق أيضاً عن الاسم الأصلي للملف في المجلد نفسه، ثم عن `/dev_usb000/PS3SCALE/theme.mp3`. بعد وضعه في المسار، يعمل تلقائياً دون إنترنت.
 
 ## ملفات البناء
 
 GitHub Actions artifact:
-- [PS3-SCALE-Alpha-0.2-build — Run #70](https://github.com/Vikik0/PS3-SCALE/actions/runs/42484129338/artifacts/13618701383)
-- Artifact ID: `13618701383`
+- [PS3-SCALE-Alpha-0.2-build — Run #84](https://github.com/Vikik0/PS3-SCALE/actions/runs/42485612038)
+- Artifact ID: `13619000000` (افتح Run #84 ثم Artifacts لتنزيل الحزمة).
 - يحتوي على `ps3scale.elf`, `ps3scale.self`, `ps3scale.pkg`, `ps3scale.gnpdrm.pkg`.
 
 SHA-256 للحزمة النهائية:
@@ -131,4 +143,4 @@ Alpha 0.2 لا تطبّق patches ولا تغيّر أي ملف لعبة. قبل
 5. عرض المصدر ومستوى الثقة والمشاكل المعروفة.
 6. اختبار التعديل على الجهاز المستهدف قبل تصنيفه Hardware Verified.
 
-راجع `docs/RESEARCH_NOTES.md`, `docs/GRAPHICS_ENGINE_REALITY.md`, `docs/PS2_ENGINE.md`, `docs/PATCH_TRUST_POLICY.md`، `docs/WEBMAN_MAPI_INTEGRATION.md`، `docs/UI_FLOW.md`، و`docs/GAME_ENHANCEMENT_WORKFLOW.md`.\n\nتم استلام ملف موسيقى GTA V Greyhound Pause Menu Remix، لكن تشغيل MP3 داخل التطبيق لم يُدمج بعد. التفاصيل في `docs/AUDIO_THEME.md`.
+راجع `docs/RESEARCH_NOTES.md`, `docs/GRAPHICS_ENGINE_REALITY.md`, `docs/PS2_ENGINE.md`, `docs/PATCH_TRUST_POLICY.md`، `docs/WEBMAN_MAPI_INTEGRATION.md`، `docs/UI_FLOW.md`، و`docs/GAME_ENHANCEMENT_WORKFLOW.md`.\n\nتم دمج محرك تشغيل MP3، لكن ملف الأغنية نفسه ما زال يحتاج نسخاً مرة واحدة إلى المسار الموضح أعلاه. التفاصيل في `docs/AUDIO_THEME.md` و`third_party/mpg123/README.md`.
