@@ -132,4 +132,39 @@ assert "refresh_companion_tool_status" in src
 assert "shutdown_audio_backend();" in main
 assert "PS3SCALE_MUSIC_PATH" in src
 
+# Online graphics database: HTTPS sync, exact version matching, and a dedicated UI.
+assert "ONLINE GRAPHICS DATABASE" in src
+assert "SCREEN_ONLINE_DB" in src
+assert "PS3SCALE_CATALOG_URL" in src
+assert "start_catalog_sync_worker(0)" in src
+assert "start_catalog_sync_worker(1)" in main
+assert "ps3scale_catalog_match_game" in src
+assert "EXACT ONLINE PROFILE FOUND" in src
+assert "AUTO PROFILE INSTALLED" in src
+assert "MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY" in src
+assert "PROFILE DATA SAVED TO INTERNAL HDD. NOT APPLIED YET." in src
+
+online_source = source_path.with_name("online_catalog.c").read_text(encoding="utf-8")
+assert "CURLOPT_SSL_VERIFYPEER, 1L" in online_source
+assert "CURLOPT_SSL_VERIFYHOST, 2L" in online_source
+assert "CURLOPT_CAINFO" in online_source
+assert "write_catalog_data" in online_source
+
+catalog_source = source_path.parent.parent / "core" / "catalog.c"
+catalog_src = catalog_source.read_text(encoding="utf-8")
+assert "valid_title_id" in catalog_src
+assert "valid_app_version" in catalog_src
+assert "valid_patch_list" in catalog_src
+assert "Duplicate exact identity is ambiguous" in catalog_src
+
+profile_source = source_path.with_name("profile_apply.c").read_text(encoding="utf-8")
+assert "/dev_hdd0/tmp/wm_ingame" in profile_source
+assert "/patch.ps3?addr=" in profile_source
+assert "&find=%s&rep=1&val=%s" in profile_source
+assert "profile->patch_count != 1" in profile_source
+assert "Exact byte mismatches are skipped" in profile_source
+
+webman_header = source_path.parent.parent / "include" / "ps3scale" / "webman.h"
+assert "ps3scale_webman_ps3mapi_available" in webman_header.read_text(encoding="utf-8")
+
 print("PS3 SCALE UI contract tests: PASS")
