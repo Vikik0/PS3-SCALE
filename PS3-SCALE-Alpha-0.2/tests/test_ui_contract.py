@@ -89,7 +89,13 @@ assert "g_music_path" not in src
 assert "mpg123_open(g_mpg123, PS3SCALE_MUSIC_PATH)" in src
 assert "START GAME" in src
 assert "start_selected_game()" in main
-assert "ps3scale_webman_start_mounted_game()" in src
+assert "ps3scale_webman_start_game(&g_game_launch_target)" in src
+assert "game_launch_worker" in src
+assert "service_game_launch();" in main
+assert "sysThreadCreate(&g_game_launch_thread" in src
+assert "find_installed_game(game)" in src
+assert "NO PROFILE FOR THIS TITLE. GAME WILL START UNMODIFIED." in src
+assert "START UNMODIFIED" in src
 assert "APP VERSION:" in src
 assert "if (g_music_enabled)\n        (void)initialize_audio_backend();" in main
 assert "set_background_music_enabled(0);" in main
@@ -195,5 +201,13 @@ assert "beep" not in profile_source
 
 webman_header = source_path.parent.parent.parent / "include" / "ps3scale" / "webman.h"
 assert "ps3scale_webman_ps3mapi_available" in webman_header.read_text(encoding="utf-8")
+
+webman_source = source_path.with_name("webman_control.c").read_text(encoding="utf-8")
+assert "connect_with_timeout" in webman_source
+assert "select(sock + 1" in webman_source
+assert '"/play.ps3?%s"' in webman_source
+assert '"/play.ps3%s"' in webman_source
+assert "encode_game_path" in webman_source
+assert "sleep(1)" not in webman_source
 
 print("PS3 SCALE UI contract tests: PASS")
