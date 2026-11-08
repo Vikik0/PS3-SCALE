@@ -20,7 +20,7 @@ See [the latest successful build](https://github.com/Vikik0/PS3-SCALE/actions/ru
 
 ## Documentation
 
-- [Arabic setup and install notes](PS3-SCALE-Alpha-0.2/README_AR.md)
+- [Arabic setup and install notes](PS3-SCALE-Alpha-0.2/README_AR.md)\n- [UI flow](PS3-SCALE-Alpha-0.2/docs/UI_FLOW.md)\n- [Game enhancement lifecycle](PS3-SCALE-Alpha-0.2/docs/GAME_ENHANCEMENT_WORKFLOW.md)\n- [Startup theme audio](PS3-SCALE-Alpha-0.2/docs/AUDIO_THEME.md)
 - [Roadmap](PS3-SCALE-Alpha-0.2/docs/ROADMAP.md)
 - [Verified build report](PS3-SCALE-Alpha-0.2/docs/BUILD_STATUS.md)
 - [Graphics engine feasibility](PS3-SCALE-Alpha-0.2/docs/GRAPHICS_ENGINE_REALITY.md)
