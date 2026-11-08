@@ -327,7 +327,6 @@ draw_rule(670)
 draw_ascii("ARABIC SAMPLE / MUSIC", 40, 684)
 draw_runtime_text("تشغيل الموسيقى", 40, 708, 4)
 draw_rule(744)
-draw_rule(744)
 
 draw_ascii("MIXED ARABIC + ENGLISH + NUMBERS", 40, 760)
 draw_runtime_text("إصدار PS3 4.92", 40, 784, 4)
