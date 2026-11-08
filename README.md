@@ -24,7 +24,7 @@ See [the latest successful build](https://github.com/Vikik0/PS3-SCALE/actions/ru
 - [Roadmap](PS3-SCALE-Alpha-0.2/docs/ROADMAP.md)
 - [Verified build report](PS3-SCALE-Alpha-0.2/docs/BUILD_STATUS.md)
 - [Graphics engine feasibility](PS3-SCALE-Alpha-0.2/docs/GRAPHICS_ENGINE_REALITY.md)
-- [PS2 CONFIG route](PS3-SCALE-Alpha-0.2/docs/PS2_ENGINE.md)
+- [PS2 CONFIG route](PS3-SCALE-Alpha-0.2/docs/PS2_ENGINE.md)\n- [Optional webMAN MOD / PS3MAPI integration](PS3-SCALE-Alpha-0.2/docs/WEBMAN_MAPI_INTEGRATION.md)
 - [Patch trust and rollback policy](PS3-SCALE-Alpha-0.2/docs/PATCH_TRUST_POLICY.md)
 - [Developer research notes](PS3-SCALE-Alpha-0.2/docs/RESEARCH_NOTES.md)
 
