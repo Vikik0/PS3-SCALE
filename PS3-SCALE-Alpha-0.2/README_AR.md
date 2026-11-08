@@ -62,12 +62,12 @@
 
 GitHub Actions artifact:
 - [PS3-SCALE-Alpha-0.2-build — Run #84](https://github.com/Vikik0/PS3-SCALE/actions/runs/42485612038)
-- Artifact ID: `13619000000` (افتح Run #84 ثم Artifacts لتنزيل الحزمة).
+- Artifact ID: `13619530789` (افتح Run #84 ثم Artifacts لتنزيل الحزمة).
 - يحتوي على `ps3scale.elf`, `ps3scale.self`, `ps3scale.pkg`, `ps3scale.gnpdrm.pkg`.
 
 SHA-256 للحزمة النهائية:
 ```
-1e59e37b4200275d511f45bd0fc32e31a30e3ec9ac3839ec355a7938e16a0e1d
+cd7810f4ad88bf3d7d086a1ec8203eb847988b1abc4516af09e71f680a8249fb
 ```
 
 Content ID:
