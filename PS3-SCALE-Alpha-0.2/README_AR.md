@@ -7,8 +7,8 @@
 <details>
 <summary>Build status</summary>
 
-- GitHub Actions Run: #8 — **Success**
-- Commit: `20b5ef24badbcea53882ee98cb86379eb302958c`
+- GitHub Actions Run: #15 — **Success**
+- Commit: `cb0474eaf290d53c0a3984b8689947282f1b27e1`
 - Host-side tests: PASS
 - PS3 ELF: built
 - PS3 SELF: built
@@ -33,7 +33,7 @@
 - استخراج PS3 Title ID كتلميح من أسماء ISO الشائعة.
 - قراءة قرص Blu-ray المركّب مباشرة من `/dev_bdvd/PS3_GAME/PARAM.SFO`.
 - مسح `/dev_hdd0` و`/dev_bdvd` و`/dev_usb000` إلى `/dev_usb007`.
-- واجهة أولية لعرض المكتبة ومعلومات اللعبة.
+- واجهة أولية تعرض مكتبتين منفصلتين لـ PS3 وPS2 مع عدّاد لكل منهما، والتبديل بينهما من L1/R1.
 - الفحص Read-Only؛ لا يكتب أو يحذف أو يعيد تسمية ملفات الألعاب.
 
 ## ما الذي لم يُنفّذ بعد؟
@@ -48,13 +48,13 @@
 ## ملفات البناء
 
 GitHub Actions artifact:
-- [PS3-SCALE-Alpha-0.2-build — Run #8](https://github.com/Vikik0/PS3-SCALE/actions/runs/42479563035/artifacts/13616618869)
-- Artifact ID: `13616618869`
+- [PS3-SCALE-Alpha-0.2-build — Run #8](https://github.com/Vikik0/PS3-SCALE/actions/runs/42479967093/artifacts/13616694376)
+- Artifact ID: `13616694376`
 - يحتوي على `ps3scale.elf`, `ps3scale.self`, `ps3scale.pkg`, `ps3scale.gnpdrm.pkg`.
 
 SHA-256 للحزمة النهائية:
 ```
-862cb81a30eceedb5fce5cc04f8309d60f920b48ba7a9455610857b63d6994f9
+4a8572b30602af3dcc11831a94c2acc9dfc30b68b6e8a748524e8a2a6f31cea8
 ```
 
 Content ID:
