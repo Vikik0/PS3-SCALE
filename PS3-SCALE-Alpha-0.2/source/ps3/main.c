@@ -41,7 +41,7 @@ static void draw_ui(void)
 
     /* Header */
     draw_text(28, 22, 0xcaff39ff, "PS3 SCALE");
-    draw_text(180, 25, 0x9aa6adff, "GRAPHICS ENHANCEMENT MANAGER  |  ALPHA 0.1");
+    draw_text(180, 25, 0x9aa6adff, "PS3 GAME LIBRARY  |  ALPHA 0.2");
     draw_text(28, 58, 0xffffffff, "LIBRARY");
     snprintf(line, sizeof(line), "PLATFORM: PS3 GAMEOS  |  SCAN MODE: READ-ONLY");
     draw_text(28, 82, 0x9aa6adff, line);
