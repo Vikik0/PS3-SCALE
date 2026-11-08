@@ -112,10 +112,20 @@ int main(void)
         strstr(translated, "40") == NULL || strstr(translated, "2") == NULL)
         return 9;
     if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
-            "PS3 SCALE PROFILE CHECK COMPLETE. ONLY EXACT BYTE MATCHES ARE CHANGED.",
+            "ONE-LAUNCH PROFILE ARMED. START THE MOUNTED GAME.",
             translated, sizeof(translated)) != 1 ||
-        strstr(translated, "PS3 SCALE") == NULL)
+        strstr(translated, "مرة واحدة") == NULL)
         return 10;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "STALE PROFILE SCRIPT. REMOVE IT BEFORE STARTING.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "قديم") == NULL)
+        return 11;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "ONE-LAUNCH PROFILE WILL CHECK THE EXACT ADDRESS AND ORIGINAL BYTES.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "البايتات الأصلية") == NULL)
+        return 12;
 
     puts("PS3 SCALE locale tests: PASS");
     return 0;
