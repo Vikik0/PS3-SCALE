@@ -4,23 +4,23 @@ Date: 2026-11-09
 
 ## Latest feature-branch CI build
 
-- Workflow run: [#215 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42534237391)
+- Workflow run: [#239 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42537211772)
 - Pull request: [#6 — draft, not merged](https://github.com/Vikik0/PS3-SCALE/pull/6)
 - Source branch: feature/online-graphics-database
-- Source commit: 633d8e7326c0f88c8a90e64a428ee0e643da2a5c
+- Source commit: ae1ec64611a074568e095dcf35b38e9c0dd713a0
 - Artifact: PS3-SCALE-Alpha-0.2-build-with-embedded-theme
-- Artifact ID: 13638538498
-- Artifact ZIP size: 14,172,537 bytes
-- Artifact ZIP SHA-256: c27d4f5e61569ccbabf01eec8b9707806feb97db43fde3d30b1bfd2045853e79
+- Artifact ID: 13640415092
+- Artifact ZIP size: 14,187,873 bytes
+- Artifact ZIP SHA-256: 84c2116d8ffee7eb0f805158520748a0bb76b14c1a8008312d97d9aad00bf4c8
 
 ## Build outputs
 
 | File | Size | SHA-256 |
 |---|---:|---|
-| ps3scale.elf | 3,413,234 bytes | 578de0b83eaf87ee6508fd615f896f59ee0d7f0d632d4dc9bf3080514c776479 |
-| ps3scale.self | 727,696 bytes | 0a4231ba290aa54ed1bcc46ce6a32751133a41185894e3bc85ad347ca9ac765f |
-| ps3scale.pkg | 6,198,048 bytes | 7717fc859e797fbe8251260c71e8bf208c664cc25c152ea4062988542b02842b |
-| ps3scale.gnpdrm.pkg | 6,198,048 bytes | dac5ad6f66896cece80d0a88167cbaf37b5cf72620ce587d1fc5be66c7bb33dc |
+| ps3scale.elf | 3,414,232 bytes | 9dbcdae1341b51966a61a2084b9d6adea4d570d1d8ddc3817aa3ad00ec6086c4 |
+| ps3scale.self | 731,408 bytes | 4b8f9b05b8baad9331d4d5af9d1375d66ad124513566d55de42f4e5b5b42ffa2 |
+| ps3scale.pkg | 6,201,760 bytes | b15f4a30bc46d42c9357083e9d978b919c8f840be3076697ae0c499046db59c2 |
+| ps3scale.gnpdrm.pkg | 6,201,760 bytes | 3ffea66bbe7a0d18e59135fe75a7110632ab0314fcb268ef69ea5c4de3a5fce9 |
 
 Package headers:
 - Debug PKG: 7f504b47 00000001
@@ -36,12 +36,13 @@ The GNPDRM package is the intended install package for the user's CFW console. T
 - Host PS2 CONFIG builder tests: PASS.
 - Host catalog parsing, duplicate detection and invalid patch rejection tests: PASS.
 - One-launch webMAN script tests: PASS, including aligned/unaligned address guards, V1 stale-script removal, full-body tamper detection/repair and preservation of user-owned scripts.
+- webMAN launch command tests: PASS for PS3 HDD Title ID routes, folder/ISO URL encoding, mounted-disc launch, and rejection of unsafe paths/invalid IDs.
 - Host locale / UTF-8 glyph mapping / keyboard layout tests: PASS.
 - Static UI contract tests: PASS.
 - PPU ELF, CEX SELF, debug PKG and finalized GNPDRM PKG: built successfully.
 - Embedded theme assembly and asset integrity check: PASS.
 
-## Implemented in Run #215
+## Implemented in Run #239
 
 - First-run language selection: English, Arabic and Spanish; saved in USRDIR/settings.cfg.
 - Spanish translations and an embedded compact Arabic bitmap glyph atlas derived from Noto Sans Arabic.
@@ -55,6 +56,9 @@ The GNPDRM package is the intended install package for the user's CFW console. T
 - Online catalogue refresh is deferred until the user opens Online Graphics Database; normal startup and game launching remain offline.
 - The supplied MP3 is assembled into USRDIR/theme.mp3 inside the PKG; no USB copy-to-HDD action is needed.
 - PS3/PS2 library scanning, PARAM.SFO metadata, cover layout, companion-tool discovery and webMAN Start Game support.
+- Start Game now launches installed PS3 HDD/NPDRM titles with webMAN's `/play.ps3?<TITLE_ID>` route and folder/ISO titles with `/play.ps3<URL-encoded-path>`; no pre-mounted disc is required for installed HDD games.
+- Start Game and profile readiness/arming run in worker threads. The local webMAN HTTP client uses a 3-second connect timeout and bounded readable waits, so a failed webMAN request does not block controller input.
+- If no exact Title ID + APP_VER profile exists, the game still starts unmodified. Before arming an HDD profile, the installed PARAM.SFO is re-scanned and its Title ID, APP_VER and path are revalidated.
 - Online catalogue with 40 starter PS3 profiles, HTTPS verification, 64 KiB response cap, strict parsing and safe cache replacement.
 - Exact Title ID + APP_VER profile matching; profile data is not selected by title name alone.
 - One-launch webMAN scripts for single-write B_COMMUNITY profiles after explicit confirmation. Script headers fingerprint Title ID, APP_VER and patch data.
@@ -75,6 +79,8 @@ No universal AI upscaler or frame generation is provided, and no fixed 60 FPS re
 ## Physical console validation
 
 The target device information currently available is PS3 Slim with CFW 4.92; the exact CECH model, CEX/DEX type and Cobra version are not yet confirmed. A previous Alpha build was confirmed by the user to launch, scan the library, display cover art and play the supplied music. **This feature-branch package has not yet been installed or smoke-tested on the physical console.**
+
+The latest console screenshots show the installed title `RXKIR1131` (Kirby - Nightmare in Dream Land), APP_VER 01.00. This Title ID is not present in the 40-entry starter catalogue, so the correct result is **0 exact enhancement matches**; the title should launch normally without a graphics profile.
 
 Recommended first hardware check: install the GNPDRM PKG, verify launch/library scan/music/settings, then test only one reversible single-write profile after confirming the exact game Title ID and APP_VER. Keep the original game files untouched and exit the game to clear the in-memory patch.
 
