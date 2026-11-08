@@ -129,6 +129,17 @@ int main(void)
     assert(ps3scale_profile_script_state(profile.title_id, profile.app_ver,
                                          profile.patches) == 0);
 
+    /* A marker-prefix collision is still a user-owned script, not ours. */
+    assert(write_text(TEST_SCRIPT_PATH,
+        "# PS3 SCALE AUTO PROFILE V2X TITLE_ID=BLUS30464\\n") == 0);
+    assert(ps3scale_profile_script_state(profile.title_id, profile.app_ver,
+                                         profile.patches) == -1);
+    assert(ps3scale_profile_script_install(&profile) == -2);
+    assert(ps3scale_profile_script_remove(profile.title_id) == -2);
+    assert(read_text(TEST_SCRIPT_PATH, script, sizeof(script)) == 0);
+    assert(strcmp(script,
+        "# PS3 SCALE AUTO PROFILE V2X TITLE_ID=BLUS30464\\n") == 0);
+
     /* A script that is not owned by PS3 SCALE must never be overwritten/deleted. */
     assert(write_text(TEST_SCRIPT_PATH, "# USER WEBMAN SCRIPT\n") == 0);
     assert(ps3scale_profile_script_state(profile.title_id, profile.app_ver,
