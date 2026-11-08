@@ -122,7 +122,13 @@ static const locale_entry_t locale_entries[] = {
     {"UP/DOWN: MOVE  CROSS: SELECT  LEFT/RIGHT: ADJUST  CIRCLE: BACK", "أعلى/أسفل: تنقل | X: اختيار | يمين/يسار: تعديل | دائرة: رجوع", "Arriba/abajo: mover | X: elegir | izquierda/derecha: ajustar | círculo: volver"},
     {"NO COVER", "لا توجد صورة غلاف", "Sin carátula"},
     {"CIRCLE: BACK", "دائرة: رجوع", "Círculo: volver"},
-    {"UPDATE PKG FOUND. INSTALL VIA PACKAGE MANAGER.", "تم العثور على تحديث PKG. ثبّته عبر مدير الحزم.", "Actualización PKG encontrada. Instálala desde Package Manager."}
+    {"UPDATE PKG FOUND. INSTALL VIA PACKAGE MANAGER.", "تم العثور على تحديث PKG. ثبّته عبر مدير الحزم.", "Actualización PKG encontrada. Instálala desde Package Manager."},
+    {"HARDWARE INFORMATION", "معلومات الجهاز", "Información del hardware"},
+    {"DETECTED MODEL:", "الموديل المكتشف:", "Modelo detectado:"},
+    {"FIRMWARE:", "إصدار النظام:", "Firmware:"},
+    {"PLATFORM ID:", "معرّف المنصة:", "ID de plataforma:"},
+    {"HARDWARE INFO UNAVAILABLE.", "معلومات الجهاز غير متاحة.", "Información de hardware no disponible."},
+    {"TARGET HARDWARE: PS3 FAT / SLIM / SUPER SLIM.", "الأجهزة المستهدفة: PS3 FAT وSLIM وSUPER SLIM.", "Hardware objetivo: PS3 FAT / SLIM / SUPER SLIM."}
 };
 
 typedef struct locale_prefix {
