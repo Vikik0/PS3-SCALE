@@ -168,6 +168,10 @@ static const locale_entry_t locale_entries[] = {
     {"WAIT FOR ONLINE DATABASE SYNC TO FINISH.", "انتظر حتى تنتهي مزامنة قاعدة البيانات.", "Espera a que termine la sincronización de la base de datos."},
     {"WAIT FOR ONLINE DATABASE SYNC TO FINISH BEFORE STARTING.", "انتظر انتهاء مزامنة قاعدة البيانات قبل التشغيل.", "Espera a que termine la sincronización antes de iniciar."},
     {"MOUNT THE EXACT GAME VERSION BEFORE ARMING THIS PROFILE.", "ركّب إصدار اللعبة المطابق قبل تجهيز ملف التحسين.", "Monta la versión exacta del juego antes de preparar el perfil."},
+    {"MANUAL-ONLY PROFILE. ONE-LAUNCH APPLY IS NOT SUPPORTED.", "هذا الملف يدوي فقط؛ التطبيق لمرة واحدة غير مدعوم له.", "Perfil manual; la aplicación de un solo inicio no está disponible."},
+    {"TRUST: COMMUNITY-REPORTED / MANUAL ONLY", "الثقة: تقرير مجتمعي / يدوي فقط", "Confianza: informe comunitario / solo manual"},
+    {"MANUAL ONLY: RE-APPLY REQUIRED IN GAME", "يدوي فقط: يجب إعادة التطبيق داخل اللعبة", "Solo manual: hay que volver a aplicarlo dentro del juego"},
+
     {"ONE-LAUNCH PROFILE ARMED. START THE MOUNTED GAME.", "تم تجهيز ملف التحسين للتشغيل مرة واحدة؛ شغّل اللعبة المركّبة.", "Perfil de un solo inicio preparado; inicia el juego montado."},
     {"MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY.", "الملف يتطلب تعديلات متعددة؛ التطبيق التلقائي متوقف للأمان.", "Perfil de varias escrituras; aplicación automática desactivada."},
     {"PROFILE SCRIPT INSTALL FAILED. NO GAME FILES CHANGED.", "فشل تثبيت السكربت؛ لم تتغير ملفات اللعبة.", "Falló el script; no se modificaron archivos del juego."},
