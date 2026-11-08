@@ -26,6 +26,9 @@ int main(void)
         "https://github.com/example/profiles\n"
         "BCUS98174\t01.11\tThe Last of Us\t60 FPS\tB_COMMUNITY\t"
         "1571A6F,02,01;1571A70,04,05\tTwo writes.\t"
+        "https://github.com/example/profiles\n"
+        "BLUS30330\t01.02\tBrutal Legend\tManual only\tB_COMMUNITY_MANUAL\t"
+        "C479F,02,01\tReapply required in the main menu.\t"
         "https://github.com/example/profiles\n";
     static const char invalid[] =
         "BLUS30464\t01.05\tSkate 3\t60 FPS\tB_COMMUNITY\t"
@@ -55,10 +58,11 @@ int main(void)
     memset(&catalog, 0, sizeof(catalog));
     if (write_catalog(path, valid) != 0)
         return 1;
-    if (ps3scale_catalog_load(path, &catalog) != 2)
+    if (ps3scale_catalog_load(path, &catalog) != 3)
         return 2;
-    if (catalog.count != 2 || catalog.items[0].patch_count != 1 ||
-        catalog.items[1].patch_count != 2)
+    if (catalog.count != 3 || catalog.items[0].patch_count != 1 ||
+        catalog.items[1].patch_count != 2 ||
+        strcmp(catalog.items[2].trust, "B_COMMUNITY_MANUAL") != 0)
         return 3;
     if (!ps3scale_catalog_match(&catalog, "BLUS30464", "01.05"))
         return 4;
