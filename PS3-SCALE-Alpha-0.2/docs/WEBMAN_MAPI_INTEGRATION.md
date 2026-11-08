@@ -23,7 +23,7 @@ PS3 SCALE uses webMAN MOD as an optional bridge for title-specific, in-memory PS
 ### Stage 3 — one-launch guarded memory profile
 
 - PS3 SCALE creates /dev_hdd0/tmp/wm_ingame/<TITLE_ID>.bat only after confirmation.
-- The script is tagged with a PS3 SCALE V2 header containing Title ID, APP_VER and exact patch data. Legacy V1 scripts are detected as stale and can be removed/replaced.
+- The script is tagged with a PS3 SCALE V2 header containing Title ID, APP_VER and exact patch data. Before allowing Start Game, PS3 SCALE compares the complete script file with the deterministic expected content; edited/appended commands are stale even if the header remains unchanged. Legacy V1 scripts are detected as stale and can be removed/replaced.
 - On game start, webMAN checks the Title ID and in-game state.
 - /patch.ps3 is called with addr=<address>, stop=<address+0x20>, step=64, find=<expected bytes>, rep=1 and val=<replacement bytes>. With the current 1-16-byte signature limit, this leaves only the requested address as a candidate despite webMAN's 16-byte upper-bound rounding, and requires the original bytes to match.
 - The script deletes itself after the launch attempt. It does not persist as a permanent per-title auto-run patch.
