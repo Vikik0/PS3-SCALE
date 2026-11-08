@@ -4,12 +4,12 @@
 
 ## آخر بناء ناجح
 
-- GitHub Actions: [Run #154 — Success](https://github.com/Vikik0/PS3-SCALE/actions/runs/42516679059)
-- Commit: `51bd48e91a5a3b80bc4d95a6915284812326cf1e`
-- Build artifact ID: `13631508032`
-- Artifact ZIP SHA-256: `ac0556c4e8a498f81caaddaae359a72a2019306a02a00b96be625131aefe9f06`
-- SHA-256 للحزمة `ps3scale.gnpdrm.pkg`: `573dfe22195280a4293336794c3c05c4c18fcbe9954c3e1a61cf4dbd1cbe1bd7`
-- Arabic preview artifact ID: `13630614892`
+- GitHub Actions: [Run #155 — Success](https://github.com/Vikik0/PS3-SCALE/actions/runs/42516785463)
+- Commit: `577956edaf0a5705ecfe1cdb4b2b9b4dbb5f7ed3`
+- Build artifact ID: `13632110217`
+- Artifact ZIP SHA-256: `a2d863ca1ff38660a7d680ab073b9a40450f3081956d34dcf4f93b717ca60693`
+- SHA-256 للحزمة `ps3scale.gnpdrm.pkg`: `fd5c9820d0f598d1c89bd1ec40f22f66b9bff7ca3f565dbc0be9996eee9c3a0a`
+- Arabic preview artifact ID: `13631334172`
 - الاختبارات: Host tests PASS، واختبارات الجمل العربية والمختلط العربي/الإنجليزي والأرقام، ومعاينة الخط، وبناء ELF وSELF وPKG النهائي PASS.
 
 ## الميزات الموجودة
@@ -77,7 +77,7 @@ Apollo Save Tool وArtemis PS3 وwebMAN MOD تطبيقات مستقلة. PS3 SCA
 
 ## التثبيت
 
-1. افتح [GitHub Actions Run #154](https://github.com/Vikik0/PS3-SCALE/actions/runs/42516679059).
+1. افتح [GitHub Actions Run #155](https://github.com/Vikik0/PS3-SCALE/actions/runs/42516785463).
 2. من Artifacts نزّل `PS3-SCALE-Alpha-0.2-build`.
 3. من داخل الأرشيف استخدم **ps3scale.gnpdrm.pkg فقط** للتثبيت.
 4. انسخ PKG إلى USB FAT32.
