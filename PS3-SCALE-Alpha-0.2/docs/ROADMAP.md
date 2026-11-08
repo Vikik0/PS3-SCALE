@@ -33,7 +33,7 @@
 - First supported title only after repeatable hardware test
 
 ## Later research
-- CFW PRX/per-title runtime hook feasibility
+- [x] Document optional webMAN MOD / PS3MAPI route and read-only-first safety boundary\n- CFW PRX/per-title runtime hook feasibility
 - RSX resource/memory budget
 - Game-specific framebuffer or shader experiments
 - Frame interpolation feasibility and performance cost
