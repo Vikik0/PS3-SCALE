@@ -1,87 +1,131 @@
-# PS3 SCALE — Alpha 0.2 (Source Build)
+# PS3 SCALE — Alpha 0.2
 
-**هدف هذه الحزمة:** أول أساس برمجي حقيقي للمشروع: قراءة معلومات الألعاب وبناء مكتبة آمنة للـ PS3 وPS2 على جهاز الاختبار CECH-2504A / CFW 4.93.
+**هدف النسخة:** بناء أساس آمن لإدارة مكتبة ألعاب PS3 وPS2، تمهيداً لإضافة تحسينات رسومية خاصة بكل لعبة. جهاز الاختبار الأول هو CECH-2504A Slim / CEX CFW 4.93 / Cobra 8.5.
 
-## ما الموجود فعلياً في هذه النسخة؟
-- محلّل PARAM.SFO مكتوب بلغة C مع فحوص حدود الذاكرة.
+## الحالة الحالية
+
+<details>
+<summary>Build status</summary>
+
+- GitHub Actions Run: #8 — **Success**
+- Commit: `20b5ef24badbcea53882ee98cb86379eb302958c`
+- Host-side tests: PASS
+- PS3 ELF: built
+- PS3 SELF: built
+- Debug PKG: built
+- Finalized NPDRM PKG: built and structurally validated
+- Physical console installation: **not tested yet**
+
+</details>
+
+ملف التثبيت النهائي هو `ps3scale.gnpdrm.pkg`، وليس نسخة `ps3scale.pkg` غير النهائية.
+
+## ما الموجود فعلياً؟
+
+- محلّل `PARAM.SFO` بلغة C مع فحوص حدود الذاكرة.
 - ماسح مجلدات PS3 في `GAMES` و`GAMEZ`.
 - قراءة الألعاب المثبتة من `/dev_hdd0/game/` حسب CATEGORY:
-  - `HG`: لعبة PS3 مثبتة على HDD.
+  - `HG`: عناوين PS3 المثبتة.
   - `2P`: PS2 Classics.
-  - `2G`: تثبيت PS2 من قرص على الأجهزة/الأنظمة التي تدعمه.
-- اكتشاف ملفات `.iso` في `PS3ISO` و`PS2ISO`.
-- استخراج PS2 serial من ISO9660 عبر `SYSTEM.CNF` إن كان موجوداً.
-- محاولة استخراج PS3 Title ID من أسماء ISO الشائعة.
-- قراءة القرص المركّب مباشرة من `/dev_bdvd/PS3_GAME/PARAM.SFO`.
-- دعم مجلدات التخزين المباشرة والمجلدات داخل `PS3/`.
+  - `2G`: تثبيت PS2 على الأنظمة التي تدعمه.
+- اكتشاف ملفات ISO في `PS3ISO` و`PS2ISO`.
+- استخراج PS2 serial من ISO9660 عبر `SYSTEM.CNF` عند توفره.
+- استخراج PS3 Title ID كتلميح من أسماء ISO الشائعة.
+- قراءة قرص Blu-ray المركّب مباشرة من `/dev_bdvd/PS3_GAME/PARAM.SFO`.
 - مسح `/dev_hdd0` و`/dev_bdvd` و`/dev_usb000` إلى `/dev_usb007`.
-- فحص Read-Only: لا يوجد كود يكتب أو يحذف أو يعيد تسمية ملفات الألعاب.
-- واجهة أولية تعرض المكتبة ومعلومات اللعبة.
+- واجهة أولية لعرض المكتبة ومعلومات اللعبة.
+- الفحص Read-Only؛ لا يكتب أو يحذف أو يعيد تسمية ملفات الألعاب.
 
 ## ما الذي لم يُنفّذ بعد؟
-هذه ليست PKG جاهزة للتثبيت بعد، ولم يتم اختبارها على جهاز PS3 فعلي. بيئة التنفيذ الحالية لا تحتوي على PPU cross-compiler ولا أدوات توقيع/تغليف PS3؛ لذلك لن أقدّم ملف PKG وهمياً أو أقول إنه اختُبر.
 
-كذلك محرك تحسين الرسومات أثناء اللعب غير موجود في Alpha 0.2. سنبنيه بعد إثبات مسار تقني قابل للتطبيق على CFW، غالباً كتعديلات خاصة بكل لعبة أو PRX per-title. تطبيق مدير عادي لا يستطيع وحده فرض فلتر على صورة كل لعبة بعد إغلاقه.
+- لا يوجد حتى الآن محرك تحسين رسومي عام أثناء اللعب.
+- لا توجد بعد إدارة فعلية لتثبيت PS2 CONFIG أو PS3 patches.
+- لا يوجد استخراج للأغلفة ICON0/PIC1 أو ملفات metadata الداخلية من PS3 ISO.
+- لم يتم تثبيت التطبيق أو تشغيله على جهاز PS3 فعلي بعد.
 
-## جهاز الاختبار المعتمد
+تطبيق GameOS عادي لا يبقى مسؤولاً عن رسم اللعبة بعد إغلاقه. لذلك يجب أن يكون تحسين PS3 حقيقياً عبر patch أو plugin خاص باللعبة ومطابقاً لإصدارها، أما PS2 فيمكن دراسة إعدادات `ps2_netemu CONFIG` الخاصة بكل لعبة. لن نعرض أزرار AI Upscale أو Frame Generation كأنها تعمل قبل وجود backend واختبار قابل للقياس.
+
+## ملفات البناء
+
+GitHub Actions artifact:
+- [PS3-SCALE-Alpha-0.2-build — Run #8](https://github.com/Vikik0/PS3-SCALE/actions/runs/42479563035/artifacts/13616618869)
+- Artifact ID: `13616618869`
+- يحتوي على `ps3scale.elf`, `ps3scale.self`, `ps3scale.pkg`, `ps3scale.gnpdrm.pkg`.
+
+SHA-256 للحزمة النهائية:
+```
+862cb81a30eceedb5fce5cc04f8309d60f920b48ba7a9455610857b63d6994f9
+```
+
+Content ID:
+```
+UP0001-PS3SCALE1_00-0000000000000000
+```
+
+## التثبيت التجريبي على CFW
+
+1. نزّل `ps3scale.gnpdrm.pkg` من GitHub Actions artifact.
+2. انسخ الملف إلى USB بنظام FAT32.
+3. من XMB افتح **Game → Package Manager → Install Package Files → Standard**.
+4. اختر `ps3scale.gnpdrm.pkg`.
+5. بعد التثبيت شغّل PS3 SCALE من قائمة الألعاب.
+
+هذا تثبيت للتطبيق فقط. لا تثبّت أي game patch أو CONFIG في هذه المرحلة. بعد التشغيل نختبر الخروج إلى XMB، والفحص مرتين، وعدم وجود تكرار، وبقاء ملفات الألعاب دون تغيير.
+
+## جهاز الاختبار
+
 - Model: CECH-2504A (Slim)
-- Firmware: 4.93 (الصور المرسلة تؤكد 4.93، وليس 4.92)
+- Firmware: 4.93
 - CFW: CEX
 - Cobra: 8.5
-- مساحة فارغة ظاهرة: قرابة 10 GB
+- المساحة الفارغة التي أبلغ عنها المستخدم: قرابة 10 GB
 
-لا نحتاج IDPS أو PSID أو MAC أو الرقم التسلسلي لتطوير التطبيق. لا تشارك هذه المعرفات علناً.
+لا يحتاج المشروع إلى PSN. ولا نحتاج IDPS أو PSID أو MAC أو الرقم التسلسلي لتطويره؛ لا تشارك هذه المعرفات.
 
-## اختبار من الكمبيوتر (لا يحتاج PS3)
-```sh
-chmod +x scripts/test_host.sh
-./scripts/test_host.sh
-```
-الاختبار يفحص محلّل PARAM.SFO على الكمبيوتر فقط.
+## بناء محلياً
 
-## بناء PKG بدون تثبيت أدوات على جهازك (GitHub Actions)
-أضفت Workflow في `.github/workflows/build-ps3.yml`:
-- يختبر محلّل SFO والماسح وقراءة ISO على Linux.
-- يستخدم صورة `ghcr.io/02900/ps3-toolchain-tiny3d` التي تجمع PS3 toolchain وPSL1GHT وTiny3D.
-- يبني ELF وSELF وPKG ثم يرفعها كـ Artifact إذا نجح البناء.
+المشروع يعتمد على PS3DEV / PSL1GHT وTiny3D وlibfont3d. في بيئة PS3 toolchain:
 
-لم يتم تشغيل Workflow على مستودعك بعد لأن المستودع ما زال فارغاً ولا أملك صلاحية Push إليه. لن أصف ملف PKG بأنه جاهز قبل نجاح البناء ثم اختباره على جهازك.
-
-## بناء PKG محلياً عند توفر بيئة PS3DEV
-المشروع يعتمد على:
-- PS3DEV / PSL1GHT
-- Tiny3D + libfont (لواجهة RSX)
-- أدوات SELF/PKG التي يوفرها PSL1GHT
-
-راجع `docs/RESEARCH_NOTES.md` لملخص أبحاث المطورين ومصادر multiMAN/webMAN MOD/IRISMAN وPS2 CONFIG وFPS patches.
-
-بعد إعداد البيئة:
 ```sh
 export PS3DEV=/usr/local/ps3dev
 export PSL1GHT=$PS3DEV
 export PATH=$PATH:$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin
+make clean
 make pkg
 ```
 
+اختبار الكمبيوتر فقط:
+
+```sh
+chmod +x scripts/test_host.sh
+./scripts/test_host.sh
+```
+
 ## مسارات البحث
+
 - PS3 folder games: `/dev_hdd0/GAMES`, `/dev_hdd0/GAMEZ`
 - PS3 installed titles: `/dev_hdd0/game`
 - PS3 ISO: `/dev_hdd0/PS3ISO`
 - PS2 ISO: `/dev_hdd0/PS2ISO`
 - USB: `/dev_usb000` إلى `/dev_usb007`
 
-ملاحظة: PS2 ISO يحاول استخراج رقم اللعبة من `SYSTEM.CNF`، أما PS3 ISO فيُستخرج Title ID من اسم الملف فقط إذا كان مكتوباً فيه. قراءة بيانات PS3 ISO الداخلية واستخراج ICON0/PIC1 مرحلة لاحقة.
+ملاحظة: PS2 ISO يحاول استخراج الرقم التسلسلي من `SYSTEM.CNF`. أما PS3 ISO فيُستخرج Title ID من اسم الملف فقط إذا كان مكتوباً فيه. قراءة بيانات PS3 ISO الداخلية واستخراج ICON0/PIC1 مرحلة لاحقة.
 
 ## التحكم في Alpha
+
 - D-Pad Up/Down: اختيار لعبة.
 - Square: إعادة الفحص.
 - Cross: عرض التفاصيل (تظهر في اللوحة اليمنى).
 - Circle: خروج.
 
-## حماية البيانات
-Alpha 0.2 لا تطبّق patches ولا تغيّر أي ملف لعبة. لا تفعّل أي تعديل تلقائي في النسخ القادمة قبل:
+## سياسة حماية الملفات
+
+Alpha 0.2 لا تطبّق patches ولا تغيّر أي ملف لعبة. قبل تفعيل أي تعديل مستقبلي يجب:
 1. مطابقة Title ID والمنطقة وإصدار التحديث.
-2. التحقق من SHA-256.
-3. أخذ نسخة احتياطية.
+2. التحقق من SHA-256 والحجم.
+3. إنشاء نسخة احتياطية قابلة للاستعادة.
 4. توفير Rollback.
-5. اختبار الملف على الجهاز المستهدف.
+5. عرض المصدر ومستوى الثقة والمشاكل المعروفة.
+6. اختبار التعديل على الجهاز المستهدف قبل تصنيفه Hardware Verified.
+
+راجع `docs/RESEARCH_NOTES.md`, `docs/GRAPHICS_ENGINE_REALITY.md`, `docs/PS2_ENGINE.md`, و`docs/PATCH_TRUST_POLICY.md`.
