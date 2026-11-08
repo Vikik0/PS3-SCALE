@@ -91,35 +91,35 @@ int main(void)
         return 10;
     if (ps3scale_catalog_load(path, &catalog) >= 0)
         return 11;
-    if (catalog.count != 2) /* failed loads do not replace the last good cache */
+    if (catalog.count != 3) /* failed loads do not replace the last good cache */
         return 12;
 
     if (write_catalog(path, invalid_zero_address) != 0)
         return 13;
     if (ps3scale_catalog_load(path, &catalog) >= 0)
         return 14;
-    if (catalog.count != 2)
+    if (catalog.count != 3)
         return 15;
 
     if (write_catalog(path, invalid_noop) != 0)
         return 16;
     if (ps3scale_catalog_load(path, &catalog) >= 0)
         return 17;
-    if (catalog.count != 2)
+    if (catalog.count != 3)
         return 18;
 
     if (write_catalog(path, invalid_high_address) != 0)
         return 19;
     if (ps3scale_catalog_load(path, &catalog) >= 0)
         return 20;
-    if (catalog.count != 2)
+    if (catalog.count != 3)
         return 21;
 
     if (write_catalog(path, invalid_source_url) != 0)
         return 22;
     if (ps3scale_catalog_load(path, &catalog) >= 0)
         return 23;
-    if (catalog.count != 2)
+    if (catalog.count != 3)
         return 24;
 
     unlink(path);
