@@ -1923,6 +1923,14 @@ int main(int argc, char *argv[])
             if (cross && !old_cross) {
                 if (g_settings_selected == 0) {
                     set_background_music_enabled(!g_music_enabled);
+                    if (g_music_enabled && !g_music_playing) {
+                        if (initialize_audio_backend() == 0)
+                            set_settings_message("BACKGROUND MUSIC STARTED.");
+                        else
+                            set_settings_message("MUSIC FILE NOT FOUND OR AUDIO INIT FAILED.");
+                    } else if (!g_music_enabled) {
+                        set_settings_message("BACKGROUND MUSIC PAUSED.");
+                    }
                     (void)save_app_settings();
                 } else if (g_settings_selected == 2) {
                     g_animation_enabled = !g_animation_enabled;
