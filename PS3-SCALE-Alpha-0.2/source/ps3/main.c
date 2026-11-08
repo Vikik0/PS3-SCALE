@@ -32,6 +32,7 @@ typedef enum app_screen {
     SCREEN_SCAN,
     SCREEN_DETAILS,
     SCREEN_SETTINGS,
+    SCREEN_TOOLS,
     SCREEN_ABOUT
 } app_screen_t;
 
@@ -70,6 +71,11 @@ static volatile int g_music_enabled = 1;
 static volatile int g_music_volume = 180;
 static int g_music_playing = 0;
 static int g_settings_selected = 0;
+static int g_animation_enabled = 1;
+static unsigned long g_frame_counter = 0;
+static char g_settings_message[128] = "SETTINGS ARE STORED ON THE PS3 HDD.";
+#define SETTINGS_COUNT 6
+#define PS3SCALE_SETTINGS_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/settings.cfg"
 static char g_music_path[PS3SCALE_PATH_MAX] = "";
 
 /* PS3 system on-screen keyboard state used by the Scan Games search field. */
@@ -78,6 +84,9 @@ static sys_mem_container_t g_osk_container;
 static u16 g_osk_title[64];
 static u16 g_osk_start[64];
 static u16 g_osk_text[64];
+static int g_osk_input_received = 0;
+static int g_osk_cancelled = 0;
+static int g_osk_unload_requested = 0;
 static oskInputFieldInfo g_osk_input;
 static oskParam g_osk_params;
 static oskCallbackReturnParam g_osk_result;
@@ -104,36 +113,67 @@ static void utf16_to_ascii(const u16 *src, char *dst, size_t capacity)
     dst[i] = '\0';
 }
 
+static void clamp_selection(void);
+static void scan_library(void);
+
 static void app_sysutil_callback(u64 status, u64 param, void *userdata)
 {
-    (void)param;
-    (void)userdata;
+    (void)param; (void)userdata;
+    if (status == SYSUTIL_EXIT_GAME) g_exit_requested = 1;
+}
 
-    if (status == SYSUTIL_EXIT_GAME) {
-        g_exit_requested = 1;
-    } else if (status == SYSUTIL_OSK_DONE) {
-        (void)oskUnloadAsync(&g_osk_result);
-    } else if (status == SYSUTIL_OSK_INPUT_CANCELED) {
-        (void)oskAbort();
-    } else if (status == SYSUTIL_OSK_UNLOADED) {
-        g_osk_active = 0;
-        if (g_osk_result.res == OSK_OK)
-            utf16_to_ascii(g_osk_result.str, g_search, sizeof(g_search));
-        (void)sysMemContainerDestroy(g_osk_container);
-        g_selected = 0;
-        g_config_preview = 0;
+static void osk_sysutil_callback(u64 status, u64 param, void *userdata)
+{
+    (void)param; (void)userdata;
+    switch ((u32)status) {
+        case SYSUTIL_OSK_INPUT_ENTERED:
+            if (oskGetInputText(&g_osk_result) == 0) g_osk_input_received = 1;
+            break;
+        case SYSUTIL_OSK_DONE:
+            if (!g_osk_input_received && oskGetInputText(&g_osk_result) == 0)
+                g_osk_input_received = 1;
+            if (!g_osk_unload_requested) {
+                g_osk_unload_requested = 1;
+                (void)oskUnloadAsync(&g_osk_result);
+            }
+            break;
+        case SYSUTIL_OSK_INPUT_CANCELED:
+            g_osk_cancelled = 1;
+            if (!g_osk_unload_requested) {
+                g_osk_unload_requested = 1;
+                (void)oskAbort();
+                (void)oskUnloadAsync(&g_osk_result);
+            }
+            break;
+        case SYSUTIL_OSK_UNLOADED:
+            if (!g_osk_cancelled && g_osk_input_received &&
+                (g_osk_result.res == OSK_OK || g_osk_result.res == OSK_NO_TEXT)) {
+                utf16_to_ascii(g_osk_result.str, g_search, sizeof(g_search));
+                g_selected = 0;
+                g_config_preview = 0;
+                clamp_selection();
+            }
+            g_osk_active = 0;
+            (void)sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT1);
+            (void)sysMemContainerDestroy(g_osk_container);
+            break;
+        default: break;
     }
 }
 
 static int open_search_keyboard(void)
 {
     int rc;
-
+    int max_length = (int)(sizeof(g_osk_text) / sizeof(g_osk_text[0])) - 1;
     if (g_osk_active) return 0;
 
     memset(g_osk_title, 0, sizeof(g_osk_title));
     memset(g_osk_start, 0, sizeof(g_osk_start));
     memset(g_osk_text, 0, sizeof(g_osk_text));
+    memset(&g_osk_input, 0, sizeof(g_osk_input));
+    memset(&g_osk_params, 0, sizeof(g_osk_params));
+    memset(&g_osk_result, 0, sizeof(g_osk_result));
+
     ascii_to_utf16("Search games by title:", g_osk_title,
                    sizeof(g_osk_title) / sizeof(g_osk_title[0]));
     ascii_to_utf16(g_search, g_osk_start,
@@ -141,32 +181,44 @@ static int open_search_keyboard(void)
 
     g_osk_input.message = g_osk_title;
     g_osk_input.startText = g_osk_start;
-    g_osk_input.maxLength = (s32)(sizeof(g_osk_text) / sizeof(g_osk_text[0])) - 1;
-
-    g_osk_params.allowedPanels = OSK_PANEL_TYPE_DEFAULT;
-    g_osk_params.firstViewPanel = OSK_PANEL_TYPE_DEFAULT;
+    g_osk_input.maxLength = max_length;
+    g_osk_params.allowedPanels = OSK_PANEL_TYPE_ALPHABET |
+        OSK_PANEL_TYPE_NUMERAL | OSK_PANEL_TYPE_ENGLISH | OSK_PANEL_TYPE_URL;
+    g_osk_params.firstViewPanel = OSK_PANEL_TYPE_ALPHABET_FULL_WIDTH;
     g_osk_params.controlPoint.x = 0.0f;
     g_osk_params.controlPoint.y = 0.0f;
     g_osk_params.prohibitFlags = OSK_PROHIBIT_RETURN;
 
-    g_osk_result.res = OSK_OK;
-    g_osk_result.len = g_osk_input.maxLength;
+    g_osk_result.res = OSK_NO_TEXT;
+    g_osk_result.len = max_length;
     g_osk_result.str = g_osk_text;
+    g_osk_input_received = 0;
+    g_osk_cancelled = 0;
+    g_osk_unload_requested = 0;
 
     rc = sysMemContainerCreate(&g_osk_container, 4 * 1024 * 1024);
     if (rc != 0) return rc;
 
-    (void)oskSetInitialInputDevice(OSK_DEVICE_PAD);
-    (void)oskSetKeyLayoutOption(OSK_FULLKEY_PANEL);
-    (void)oskSetLayoutMode(OSK_LAYOUTMODE_HORIZONTAL_ALIGN_CENTER |
-                           OSK_LAYOUTMODE_VERTICAL_ALIGN_CENTER);
+    if (oskSetKeyLayoutOption(OSK_10KEY_PANEL | OSK_FULLKEY_PANEL) != 0 ||
+        oskAddSupportLanguage(g_osk_params.allowedPanels) != 0 ||
+        oskSetInitialInputDevice(OSK_DEVICE_PAD) != 0 ||
+        oskSetLayoutMode(OSK_LAYOUTMODE_HORIZONTAL_ALIGN_CENTER |
+                         OSK_LAYOUTMODE_VERTICAL_ALIGN_CENTER) != 0) {
+        (void)sysMemContainerDestroy(g_osk_container);
+        return -1;
+    }
 
-    rc = oskLoadAsync(g_osk_container, &g_osk_params, &g_osk_input);
+    rc = sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT1, osk_sysutil_callback, NULL);
     if (rc != 0) {
         (void)sysMemContainerDestroy(g_osk_container);
         return rc;
     }
-
+    rc = oskLoadAsync(g_osk_container, &g_osk_params, &g_osk_input);
+    if (rc != 0) {
+        (void)sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT1);
+        (void)sysMemContainerDestroy(g_osk_container);
+        return rc;
+    }
     g_osk_active = 1;
     return 0;
 }
@@ -233,44 +285,34 @@ static int open_background_music(void)
 static void fill_audio_block(float *output)
 {
     short pcm[AUDIO_BLOCK_SAMPLES * 2];
-    size_t total = 0;
-    size_t target = sizeof(pcm);
-    size_t i;
+    size_t total = 0, target = sizeof(pcm), i;
     float gain = g_music_enabled ? ((float)g_music_volume / 255.0f) : 0.0f;
 
+    if (gain <= 0.0f) {
+        memset(output, 0, sizeof(float) * AUDIO_BLOCK_SAMPLES * 2);
+        return;
+    }
     memset(pcm, 0, sizeof(pcm));
-
     while (total < target && g_audio_thread_running) {
         size_t decoded = 0;
-        int rc = mpg123_read(g_mpg123,
-                             ((unsigned char *)pcm) + total,
+        int rc = mpg123_read(g_mpg123, ((unsigned char *)pcm) + total,
                              target - total, &decoded);
         total += decoded;
-
         if (rc == MPG123_NEW_FORMAT) {
-            long rate = 0;
-            int channels = 0;
-            int encoding = 0;
+            long rate = 0; int channels = 0, encoding = 0;
             if (mpg123_getformat(g_mpg123, &rate, &channels, &encoding) != MPG123_OK ||
                 rate != 48000 || channels != MPG123_STEREO ||
-                encoding != MPG123_ENC_SIGNED_16)
-                break;
+                encoding != MPG123_ENC_SIGNED_16) break;
             continue;
         }
-
         if (rc == MPG123_DONE) {
-            if (mpg123_seek(g_mpg123, 0, SEEK_SET) < 0)
-                break;
+            if (mpg123_seek(g_mpg123, 0, SEEK_SET) < 0) break;
             continue;
         }
-
-        if (rc == MPG123_ERR || (decoded == 0 && rc == MPG123_OK))
-            break;
+        if (rc == MPG123_ERR || (decoded == 0 && rc == MPG123_OK)) break;
     }
-
-    for (i = 0; i < AUDIO_BLOCK_SAMPLES * 2; i++) {
+    for (i = 0; i < AUDIO_BLOCK_SAMPLES * 2; i++)
         output[i] = ((float)pcm[i] / 32768.0f) * gain;
-    }
 }
 
 static void audio_output_thread(void *arg)
@@ -488,23 +530,23 @@ static void draw_menu_icon(int index, float x, float y, int selected)
     u32 ink = selected ? 0xcaff39ff : 0x9eb2c0ff;
     u32 tile = selected ? 0x1b2b1dff : 0x111b25ff;
     u32 border = selected ? 0x8cbd35ff : 0x344654ff;
-
     draw_solid_rect(x, y, 38.0f, 38.0f, tile);
     draw_outline_rect(x, y, 38.0f, 38.0f, border);
-
     if (index == 0) {
-        /* Scan Games: magnifier with short library lines. */
         draw_circle_outline(x + 15.0f, y + 14.0f, 8.0f, ink);
         draw_icon_line(x + 21.0f, y + 21.0f, x + 29.0f, y + 29.0f, ink);
         draw_icon_line(x + 11.0f, y + 12.0f, x + 17.0f, y + 12.0f, ink);
         draw_icon_line(x + 11.0f, y + 16.0f, x + 16.0f, y + 16.0f, ink);
     } else if (index == 1) {
-        /* Settings: compact gear and center hub. */
         draw_gear_outline(x + 19.0f, y + 19.0f, 13.0f, ink);
         draw_circle_outline(x + 19.0f, y + 19.0f, 5.0f, ink);
         draw_solid_rect(x + 17.5f, y + 17.5f, 3.0f, 3.0f, ink);
+    } else if (index == 2) {
+        draw_icon_line(x + 10.0f, y + 28.0f, x + 27.0f, y + 11.0f, ink);
+        draw_icon_line(x + 11.0f, y + 10.0f, x + 28.0f, y + 27.0f, ink);
+        draw_circle_outline(x + 10.0f, y + 10.0f, 4.0f, ink);
+        draw_circle_outline(x + 28.0f, y + 28.0f, 4.0f, ink);
     } else {
-        /* About: information mark inside a ring. */
         draw_circle_outline(x + 19.0f, y + 19.0f, 13.0f, ink);
         draw_solid_rect(x + 17.5f, y + 16.0f, 3.0f, 10.0f, ink);
         draw_solid_rect(x + 17.5f, y + 10.0f, 3.0f, 3.0f, ink);
@@ -562,6 +604,17 @@ static size_t library_count(int library)
                                      : game_is_ps2(&g_games.items[i]);
         if (platform_match && text_contains_ci(g_games.items[i].title, g_search))
             count++;
+    }
+    return count;
+}
+
+static size_t library_total_count(int library)
+{
+    size_t i, count = 0;
+    for (i = 0; i < g_games.count; i++) {
+        int match = (library == LIBRARY_PS3) ?
+            game_is_ps3(&g_games.items[i]) : game_is_ps2(&g_games.items[i]);
+        if (match) count++;
     }
     return count;
 }
@@ -633,265 +686,414 @@ static void update_selected_cover(void)
     }
 }
 
+static void draw_home_ambient(void)
+{
+    float phase = g_animation_enabled ? (float)g_frame_counter * 0.0024f : 0.0f;
+    float cx = 670.0f, cy = 275.0f;
+    int i;
+    draw_circle_outline(cx, cy, 112.0f + 3.0f * sinf(phase), 0x1b3b56ff);
+    draw_circle_outline(cx, cy, 78.0f + 2.0f * cosf(phase * 0.7f), 0x173149ff);
+    for (i = 0; i < 4; i++) {
+        float angle = phase + (float)i * 1.57079632679f;
+        float px = cx + cosf(angle) * 112.0f;
+        float py = cy + sinf(angle) * 112.0f;
+        draw_solid_rect(px - 2.0f, py - 2.0f, 4.0f, 4.0f, 0x477b9cff);
+    }
+    draw_icon_line(500.0f, 400.0f, 808.0f, 400.0f, 0x18334aff);
+}
+
+static void set_settings_message(const char *message)
+{
+    if (!message) message = "";
+    snprintf(g_settings_message, sizeof(g_settings_message), "%s", message);
+}
+
+static void load_app_settings(void)
+{
+    FILE *fp = fopen(PS3SCALE_SETTINGS_PATH, "r");
+    char line[64]; int value;
+    if (!fp) return;
+    while (fgets(line, sizeof(line), fp)) {
+        if (sscanf(line, "music=%d", &value) == 1)
+            g_music_enabled = value ? 1 : 0;
+        else if (sscanf(line, "volume=%d", &value) == 1)
+            set_background_music_volume(value);
+        else if (sscanf(line, "animation=%d", &value) == 1)
+            g_animation_enabled = value ? 1 : 0;
+    }
+    fclose(fp);
+}
+
+static int save_app_settings(void)
+{
+    FILE *fp = fopen(PS3SCALE_SETTINGS_PATH, "w");
+    if (!fp) {
+        set_settings_message("SETTINGS COULD NOT BE SAVED TO INTERNAL HDD.");
+        return -1;
+    }
+    fprintf(fp, "music=%d\n", g_music_enabled ? 1 : 0);
+    fprintf(fp, "volume=%d\n", g_music_volume);
+    fprintf(fp, "animation=%d\n", g_animation_enabled ? 1 : 0);
+    if (fclose(fp) != 0) {
+        set_settings_message("SETTINGS SAVE FAILED.");
+        return -1;
+    }
+    set_settings_message("SETTINGS SAVED TO INTERNAL HDD.");
+    return 0;
+}
+
+static int find_usb_update_package(char *found_path, size_t capacity)
+{
+    static const char *relative_paths[] = {
+        "PS3SCALE/update/ps3scale.gnpdrm.pkg",
+        "PS3SCALE/update/ps3scale.pkg",
+        "PS3SCALE/ps3scale.gnpdrm.pkg"
+    };
+    unsigned char expected[4] = { 0x7f, 'P', 'K', 'G' };
+    int device, item;
+    for (device = 0; device < 8; device++) {
+        char root[32];
+        snprintf(root, sizeof(root), "/dev_usb%03d", device);
+        for (item = 0; item < 3; item++) {
+            char candidate[PS3SCALE_PATH_MAX];
+            unsigned char magic[4];
+            FILE *fp;
+            if (snprintf(candidate, sizeof(candidate), "%s/%s",
+                         root, relative_paths[item]) >= (int)sizeof(candidate))
+                continue;
+            fp = fopen(candidate, "rb");
+            if (!fp) continue;
+            if (fread(magic, 1, sizeof(magic), fp) == sizeof(magic) &&
+                memcmp(magic, expected, sizeof(expected)) == 0) {
+                fclose(fp);
+                if (found_path && capacity > 0)
+                    snprintf(found_path, capacity, "%s", candidate);
+                return 1;
+            }
+            fclose(fp);
+        }
+    }
+    return 0;
+}
+
 static void draw_home(void)
 {
     static char *items[] = {
-        "SCAN GAMES",
-        "SETTINGS",
-        "ABOUT PS3 SCALE"
+        "SCAN GAMES", "SETTINGS", "COMPANION TOOLS", "ABOUT PS3 SCALE"
     };
+    char line[128];
+    size_t ps3_count = library_total_count(LIBRARY_PS3);
+    size_t ps2_count = library_total_count(LIBRARY_PS2);
     int i;
-
-    draw_text(34, 28, 0xcaff39ff, "PS3 SCALE");
-    draw_text(34, 62, 0x9aa6adff, "GAME LIBRARY AND GRAPHICS MANAGER");
-    draw_text(34, 122, 0xffffffff, "MAIN MENU");
-
-    for (i = 0; i < 3; i++) {
-        float row_y = 170.0f + (float)i * 58.0f;
+    SetFontSize(12, 18);
+    draw_home_ambient();
+    draw_text(34, 26, 0xcaff39ff, "PS3 SCALE");
+    draw_text(34, 58, 0x9aa6adff,
+              "GAME LIBRARY  /  GRAPHICS PROFILES  /  SAFE TOOLS");
+    draw_text(34, 112, 0xffffffff, "MAIN MENU");
+    for (i = 0; i < 4; i++) {
+        float row_y = 154.0f + (float)i * 58.0f;
         int selected = (i == g_home_selected);
-        if (selected)
-            draw_solid_rect(48.0f, row_y, 430.0f, 44.0f, 0x111e18ff);
+        if (selected) draw_solid_rect(48.0f, row_y, 408.0f, 44.0f, 0x111e18ff);
         draw_menu_icon(i, 66.0f, row_y + 3.0f, selected);
-        if (selected)
-            draw_text(44, row_y + 13.0f, 0xcaff39ff, ">");
+        if (selected) draw_text(44, row_y + 13.0f, 0xcaff39ff, ">");
         draw_text(124, row_y + 13.0f,
                   selected ? 0xcaff39ff : 0xdce3e8ff, items[i]);
     }
-
-    draw_text(34, 430, 0x9aa6adff, "UP/DOWN: SELECT   CROSS: OPEN   CIRCLE: EXIT");
-    draw_text(34, 468, 0x6f7b83ff,
-              "PS3 AND PS2 GAME SCANNING IS READ-ONLY.");
+    draw_outline_rect(490.0f, 126.0f, 326.0f, 302.0f, 0x26445cff);
+    draw_text(520, 148, 0xffffffff, "LIBRARY OVERVIEW");
+    snprintf(line, sizeof(line), "PS3 TITLES: %u", (unsigned)ps3_count);
+    draw_text(520, 188, 0xdce3e8ff, line);
+    snprintf(line, sizeof(line), "PS2 TITLES: %u", (unsigned)ps2_count);
+    draw_text(520, 218, 0xdce3e8ff, line);
+    snprintf(line, sizeof(line), "TOTAL TITLES: %u",
+             (unsigned)(ps3_count + ps2_count));
+    draw_text(520, 248, 0xcaff39ff, line);
+    draw_text(520, 302, 0xffffffff, "SYSTEM STATUS");
+    snprintf(line, sizeof(line), "MUSIC: %s", g_music_enabled ? "ON" : "OFF");
+    draw_text(520, 332, 0xdce3e8ff, line);
+    snprintf(line, sizeof(line), "HOME ANIMATION: %s",
+             g_animation_enabled ? "ON" : "OFF");
+    draw_text(520, 362, 0xdce3e8ff, line);
+    draw_text(520, 392, 0x9aa6adff, "GAME FILES: READ-ONLY");
+    draw_text(34, 448, 0x9aa6adff,
+              "UP/DOWN: SELECT   CROSS: OPEN   CIRCLE: EXIT");
+    draw_text(34, 478, 0x6f7b83ff,
+              "LOCAL LIBRARY SCAN  |  NO INTERNET REQUIRED");
+    SetFontSize(14, 22);
 }
 
 static void draw_scan(void)
 {
     char line[256];
     size_t i, count, start;
-    size_t ps3_count = library_count(LIBRARY_PS3);
-    size_t ps2_count = library_count(LIBRARY_PS2);
-    const ps3scale_game_t *selected = selected_game();
-
-    count = library_count(g_library);
+    size_t ps3_count = library_total_count(LIBRARY_PS3);
+    size_t ps2_count = library_total_count(LIBRARY_PS2);
+    const ps3scale_game_t *selected;
+    SetFontSize(10, 16);
     clamp_selection();
+    count = library_count(g_library);
+    selected = selected_game();
 
-    draw_text(28, 22, 0xcaff39ff, "PS3 SCALE");
-    draw_text(180, 25, 0x9aa6adff, "SCAN GAMES");
-    draw_text(28, 62, 0xffffffff, "PLATFORM");
-
-    draw_text(28, 88, g_library == LIBRARY_PS3 ? 0xcaff39ff : 0x9aa6adff,
-              "L1  PS3");
-    draw_text(150, 88, g_library == LIBRARY_PS2 ? 0xcaff39ff : 0x9aa6adff,
-              "R1  PS2");
-
-    snprintf(line, sizeof(line), "SEARCH: %s", g_search[0] ? g_search : "ALL GAMES");
-    draw_text(28, 120, 0x9aa6adff, line);
+    draw_text(28, 18, 0xcaff39ff, "PS3 SCALE");
+    draw_text(178, 18, 0x9aa6adff, "SCAN GAMES");
+    draw_text(28, 52, 0xffffffff, "PLATFORM");
+    draw_text(150, 52, g_library == LIBRARY_PS3 ? 0xcaff39ff : 0x9aa6adff, "L1: PS3");
+    draw_text(250, 52, g_library == LIBRARY_PS2 ? 0xcaff39ff : 0x9aa6adff, "R1: PS2");
+    draw_text(360, 52, 0x9aa6adff, "SELECT: SEARCH");
+    snprintf(line, sizeof(line), "SEARCH: %.48s",
+             g_search[0] ? g_search : "ALL GAMES");
+    draw_text(28, 82, 0xdce3e8ff, line);
     snprintf(line, sizeof(line), "PS3: %u  |  PS2: %u  |  RESULTS: %u",
              (unsigned)ps3_count, (unsigned)ps2_count, (unsigned)count);
-    draw_text(28, 148, 0x9aa6adff, line);
-
-    draw_text(28, 184, 0xffffffff,
+    draw_text(28, 110, 0x9aa6adff, line);
+    draw_text(28, 146, 0xffffffff,
               g_library == LIBRARY_PS3 ? "PS3 GAME LIST" : "PS2 GAME LIST");
-    start = (g_selected > 7) ? (size_t)(g_selected - 7) : 0;
+    draw_text(530, 146, 0xffffffff, "SELECTED GAME");
 
+    start = (g_selected > 7) ? (size_t)(g_selected - 7) : 0;
     for (i = 0; i < 8 && start + i < count; i++) {
         const ps3scale_game_t *game = library_game_at(start + i);
+        int is_selected = ((int)(start + i) == g_selected);
+        float row_y = 174.0f + (float)i * 30.0f;
         if (!game) continue;
-        snprintf(line, sizeof(line), "%c %-12s %.44s",
-                 ((int)(start + i) == g_selected) ? '>' : ' ',
+        if (is_selected) draw_solid_rect(24.0f, row_y - 2.0f, 478.0f, 24.0f, 0x14261dff);
+        snprintf(line, sizeof(line), "%c %-10s %.32s",
+                 is_selected ? '>' : ' ',
                  ps3scale_game_kind_name(game->kind), game->title);
-        draw_text(34, 214 + (float)i * 27.0f,
-                  ((int)(start + i) == g_selected) ? 0xcaff39ff : 0xdce3e8ff,
-                  line);
+        draw_text(30, row_y, is_selected ? 0xcaff39ff : 0xdce3e8ff, line);
     }
 
-    draw_text(570, 184, 0xffffffff, "SELECTED GAME");
     if (selected) {
-        snprintf(line, sizeof(line), "TITLE: %.68s", selected->title);
-        draw_text(570, 218, 0xdce3e8ff, line);
-        snprintf(line, sizeof(line), "TYPE: %.28s",
-                 ps3scale_game_kind_name(selected->kind));
-        draw_text(570, 248, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "TITLE: %.28s", selected->title);
+        draw_text(530, 176, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "TYPE: %.20s", ps3scale_game_kind_name(selected->kind));
+        draw_text(530, 204, 0xdce3e8ff, line);
         if (g_library == LIBRARY_PS3) {
-            snprintf(line, sizeof(line), "TITLE ID: %.12s",
+            snprintf(line, sizeof(line), "TITLE ID: %.16s",
                      selected->title_id[0] ? selected->title_id : "NOT READ");
         } else {
-            snprintf(line, sizeof(line), "PS2 SERIAL: %.12s",
+            snprintf(line, sizeof(line), "PS2 SERIAL: %.16s",
                      selected->disc_id[0] ? selected->disc_id :
                      (selected->title_id[0] ? selected->title_id : "NOT READ"));
         }
-        draw_text(570, 278, 0xdce3e8ff, line);
-        draw_text(570, 320, 0x9aa6adff, "CROSS: OPEN GAME DETAILS");
+        draw_text(530, 232, 0xdce3e8ff, line);
+        draw_text(530, 260, 0x9aa6adff, "CROSS: OPEN DETAILS");
         if (g_cover_texture)
-            ya2d_drawTextureEx(g_cover_texture, 690.0f, 220.0f, 0.5f, 120.0f, 160.0f);
-        else
-            draw_text(690, 230, 0x6f7b83ff, "NO LOCAL COVER");
+            ya2d_drawTextureEx(g_cover_texture, 690.0f, 286.0f, 0.5f, 112.0f, 148.0f);
+        else {
+            draw_solid_rect(690.0f, 286.0f, 112.0f, 148.0f, 0x101b27ff);
+            draw_outline_rect(690.0f, 286.0f, 112.0f, 148.0f, 0x344654ff);
+            draw_text(700, 350, 0x6f7b83ff, "NO COVER");
+        }
     } else {
-        draw_text(570, 218, 0x9aa6adff, "No matching games found.");
-        draw_text(570, 248, 0x9aa6adff, "Press SELECT to search.");
+        draw_text(530, 180, 0x9aa6adff, "NO MATCHING GAMES FOUND.");
+        draw_text(530, 208, 0x9aa6adff, "PRESS SELECT TO SEARCH.");
     }
 
     if (g_config_preview && selected && selected->kind == PS3SCALE_GAME_PS2_ISO) {
-        uint8_t config_data[32];
-        size_t config_size = 0;
-        if (ps3scale_ps2_config_build(
-                config_data, sizeof(config_data),
+        uint8_t config_data[32]; size_t config_size = 0;
+        if (ps3scale_ps2_config_build(config_data, sizeof(config_data),
                 PS3SCALE_PS2_CFG_DISABLE_SMOOTHING |
                 PS3SCALE_PS2_CFG_ENABLE_L2H, &config_size) == 0) {
-            draw_text(570, 388, 0xcaff39ff, "PS2 CONFIG PREVIEW ONLY");
-            snprintf(line, sizeof(line), "SIZE: %u BYTES",
-                     (unsigned)config_size);
-            draw_text(570, 416, 0xdce3e8ff, line);
+            draw_text(530, 440, 0xcaff39ff, "PS2 CONFIG PREVIEW ONLY");
+            snprintf(line, sizeof(line), "SIZE: %u BYTES", (unsigned)config_size);
+            draw_text(530, 458, 0xdce3e8ff, line);
         }
     }
-
     if (g_games.truncated)
-        draw_text(28, 442, 0xffcc66ff, "WARNING: LIBRARY LIMIT REACHED (256 TITLES)");
-
+        draw_text(28, 420, 0xffcc66ff, "WARNING: LIBRARY LIMIT REACHED (256 TITLES)");
     draw_text(28, 470, 0x9aa6adff,
-              "L1/R1: PLATFORM  SELECT: SEARCH  UP/DOWN: SELECT  CROSS: DETAILS  SQUARE: RESCAN");
-    draw_text(28, 498, 0x6f7b83ff,
-              "TRIANGLE: PS2 CONFIG PREVIEW  CIRCLE: BACK");
+              "L1/R1: PLATFORM  SELECT: SEARCH  UP/DOWN: MOVE  CROSS: DETAILS");
+    draw_text(28, 492, 0x6f7b83ff,
+              "SQUARE: RESCAN  TRIANGLE: PS2 PREVIEW  CIRCLE: BACK");
+    SetFontSize(14, 22);
 }
 
 static void draw_details(void)
 {
     char line[256];
     const ps3scale_game_t *game = selected_game();
-
+    SetFontSize(11, 17);
     draw_text(28, 22, 0xcaff39ff, "PS3 SCALE");
     draw_text(180, 25, 0x9aa6adff, "GAME DETAILS");
-
     if (!game) {
-        draw_text(34, 120, 0x9aa6adff, "No game selected.");
-        draw_text(34, 470, 0x9aa6adff, "CIRCLE: BACK");
+        draw_text(34, 120, 0x9aa6adff, "NO GAME SELECTED.");
+        draw_text(34, 478, 0x9aa6adff, "CIRCLE: BACK");
+        SetFontSize(14, 22);
         return;
     }
-
-    snprintf(line, sizeof(line), "TITLE: %.100s", game->title);
-    draw_text(34, 100, 0xffffffff, line);
-    snprintf(line, sizeof(line), "TYPE: %.50s", ps3scale_game_kind_name(game->kind));
-    draw_text(34, 140, 0xdce3e8ff, line);
-
-    if (game_is_ps3(game)) {
+    snprintf(line, sizeof(line), "TITLE: %.48s", game->title);
+    draw_text(34, 96, 0xffffffff, line);
+    snprintf(line, sizeof(line), "TYPE: %.42s", ps3scale_game_kind_name(game->kind));
+    draw_text(34, 132, 0xdce3e8ff, line);
+    if (game_is_ps3(game))
         snprintf(line, sizeof(line), "TITLE ID: %.16s",
                  game->title_id[0] ? game->title_id : "NOT READ");
-        draw_text(34, 180, 0xdce3e8ff, line);
-    } else {
+    else
         snprintf(line, sizeof(line), "PS2 SERIAL: %.16s",
                  game->disc_id[0] ? game->disc_id :
                  (game->title_id[0] ? game->title_id : "NOT READ"));
-        draw_text(34, 180, 0xdce3e8ff, line);
+    draw_text(34, 168, 0xdce3e8ff, line);
+    snprintf(line, sizeof(line), "PATH: %.48s", game->path);
+    draw_text(34, 204, 0x9aa6adff, line);
+    draw_text(34, 260, 0xffffffff, "GRAPHICS PROFILE");
+    draw_text(34, 296, 0xffcc66ff, "NO VERIFIED PATCH MATCHED YET");
+    draw_text(34, 328, 0x9aa6adff, "ORIGINAL GAME FILES HAVE NOT BEEN CHANGED.");
+    draw_text(34, 360, 0x9aa6adff,
+              "PROFILE DOWNLOAD / BACKUP / ROLLBACK ARE NOT ACTIVE YET.");
+    if (g_cover_texture)
+        ya2d_drawTextureEx(g_cover_texture, 690.0f, 112.0f, 0.5f, 120.0f, 160.0f);
+    else {
+        draw_solid_rect(690.0f, 112.0f, 120.0f, 160.0f, 0x101b27ff);
+        draw_outline_rect(690.0f, 112.0f, 120.0f, 160.0f, 0x344654ff);
+        draw_text(702, 180, 0x6f7b83ff, "NO COVER");
     }
-
-    snprintf(line, sizeof(line), "PATH: %.110s", game->path);
-    draw_text(34, 220, 0x9aa6adff, line);
-
-    draw_text(34, 292, 0xffffffff, "GRAPHICS PROFILE");
-    draw_text(34, 330, 0xffcc66ff, "NO VERIFIED PATCH MATCHED YET");
-    draw_text(34, 362, 0x9aa6adff,
-              "The original game files have not been changed.");
-    draw_text(34, 394, 0x9aa6adff,
-              "Online matching, verified download and rollback are next stages.");
-
     if (game->kind == PS3SCALE_GAME_PS2_ISO) {
-        draw_text(34, 430, 0xcaff39ff, "TRIANGLE: PREVIEW PS2 CONFIG (NO FILE WRITES)");
+        draw_text(34, 408, 0xcaff39ff,
+                  g_config_preview ? "PS2 CONFIG PREVIEW - NOT APPLIED" :
+                                     "TRIANGLE: PREVIEW PS2 CONFIG");
         if (g_config_preview) {
-            uint8_t config_data[32];
-            size_t config_size = 0;
-            char hex[96];
-            if (ps3scale_ps2_config_build(
-                    config_data, sizeof(config_data),
+            uint8_t config_data[32]; size_t config_size = 0; char hex[96];
+            if (ps3scale_ps2_config_build(config_data, sizeof(config_data),
                     PS3SCALE_PS2_CFG_DISABLE_SMOOTHING |
                     PS3SCALE_PS2_CFG_ENABLE_L2H, &config_size) == 0) {
                 format_hex(hex, sizeof(hex), config_data, config_size);
-                draw_text(34, 454, 0xdce3e8ff, hex);
+                draw_text(34, 434, 0xdce3e8ff, hex);
             }
         }
     }
-
-    if (g_cover_texture)
-        ya2d_drawTextureEx(g_cover_texture, 690.0f, 120.0f, 0.5f, 120.0f, 160.0f);
-    else
-        draw_text(690, 140, 0x6f7b83ff, "NO LOCAL COVER");
-    if (g_config_preview && game->kind == PS3SCALE_GAME_PS2_ISO) {
-        uint8_t config_data[32];
-        size_t config_size = 0;
-        if (ps3scale_ps2_config_build(
-                config_data, sizeof(config_data),
-                PS3SCALE_PS2_CFG_DISABLE_SMOOTHING |
-                PS3SCALE_PS2_CFG_ENABLE_L2H, &config_size) == 0) {
-            char hex[96];
-            draw_text(34, 430, 0xcaff39ff, "PS2 CONFIG PREVIEW ONLY - NOT APPLIED");
-            format_hex(hex, sizeof(hex), config_data, config_size);
-            draw_text(34, 454, 0xdce3e8ff, hex);
-        }
-    }
-    draw_text(34, 478, 0x9aa6adff, "TRIANGLE: CONFIG PREVIEW   CIRCLE: BACK TO GAME LIST");
+    draw_text(34, 478, 0x9aa6adff,
+              "TRIANGLE: CONFIG PREVIEW  |  CIRCLE: BACK TO GAME LIST");
+    SetFontSize(14, 22);
 }
 
 static void draw_settings(void)
 {
-    char line[160];
-    u32 music_color = (g_settings_selected == 0) ? 0xcaff39ff : 0xdce3e8ff;
-    u32 volume_color = (g_settings_selected == 1) ? 0xcaff39ff : 0xdce3e8ff;
-
-    draw_text(34, 28, 0xcaff39ff, "PS3 SCALE");
-    draw_text(34, 70, 0xffffffff, "SETTINGS");
-    draw_text(34, 116, 0x9aa6adff, "STARTUP MUSIC");
-
-    snprintf(line, sizeof(line), "%c  MUSIC: %s",
-             (g_settings_selected == 0) ? '>' : ' ',
-             g_music_enabled ? "ON" : "OFF");
-    draw_text(48, 164, music_color, line);
-
-    snprintf(line, sizeof(line), "%c  VOLUME: %d / 255",
-             (g_settings_selected == 1) ? '>' : ' ',
-             g_music_volume);
-    draw_text(48, 216, volume_color, line);
-
-    draw_text(34, 278, 0x9aa6adff,
-              "TRACK: GTA V - Greyhound Pause Menu Remix");
-
-    if (g_music_playing) {
-        draw_text(34, 326, 0x9ee56aff, "MUSIC STATUS: PLAYING / LOOP");
-    } else {
-        draw_text(34, 326, 0xffcc66ff,
-                  "MUSIC FILE NOT FOUND OR AUDIO INIT FAILED");
+    static char *labels[SETTINGS_COUNT] = {
+        "BACKGROUND MUSIC", "MUSIC VOLUME", "HOME ANIMATION",
+        "CHECK FOR USB UPDATE", "RESCAN GAME LIBRARY",
+        "RESTORE DEFAULT SETTINGS"
+    };
+    char value[96];
+    int i;
+    SetFontSize(12, 18);
+    draw_text(34, 24, 0xcaff39ff, "PS3 SCALE");
+    draw_text(34, 58, 0xffffffff, "SETTINGS");
+    draw_text(34, 92, 0x9aa6adff,
+              "PERSONALIZE THE APP AND RUN SAFE MAINTENANCE TASKS.");
+    for (i = 0; i < SETTINGS_COUNT; i++) {
+        float y = 128.0f + (float)i * 43.0f;
+        int selected = (i == g_settings_selected);
+        if (selected) draw_solid_rect(28.0f, y - 4.0f, 780.0f, 34.0f, 0x14261dff);
+        value[0] = '\0';
+        if (i == 0) snprintf(value, sizeof(value), "%s", g_music_enabled ? "ON" : "OFF");
+        else if (i == 1) snprintf(value, sizeof(value), "%d%%", (g_music_volume * 100) / 255);
+        else if (i == 2) snprintf(value, sizeof(value), "%s", g_animation_enabled ? "ON" : "OFF");
+        else if (i == 3) snprintf(value, sizeof(value), "SCAN USB000 - USB007");
+        else if (i == 4) snprintf(value, sizeof(value), "CURRENT LIBRARY");
+        else snprintf(value, sizeof(value), "DEFAULTS");
+        draw_text(48, y, selected ? 0xcaff39ff : 0xdce3e8ff, labels[i]);
+        draw_text(590, y, selected ? 0xcaff39ff : 0x9aa6adff, value);
     }
-
-    draw_text(34, 366, 0xdce3e8ff,
-              "Game files remain read-only unless a verified profile is available.");
+    if (g_music_playing) {
+        const char *source = strstr(g_music_path, "/dev_usb") ? "USB" : "INTERNAL HDD";
+        snprintf(value, sizeof(value), "AUDIO ENGINE: READY  |  SOURCE: %s", source);
+        draw_text(34, 398, 0x9ee56aff, value);
+    } else {
+        draw_text(34, 398, 0xffcc66ff,
+                  "AUDIO ENGINE: MUSIC FILE NOT FOUND OR INIT FAILED");
+    }
+    draw_text(34, 428, 0xdce3e8ff, g_settings_message);
     draw_text(34, 478, 0x9aa6adff,
-              "UP/DOWN: SELECT  CROSS: MUSIC ON/OFF  LEFT/RIGHT: VOLUME  CIRCLE: BACK");
+              "UP/DOWN: MOVE  CROSS: SELECT  LEFT/RIGHT: ADJUST  CIRCLE: BACK");
+    SetFontSize(14, 22);
+}
+
+static void draw_tools(void)
+{
+    SetFontSize(11, 17);
+    draw_text(34, 24, 0xcaff39ff, "PS3 SCALE");
+    draw_text(34, 62, 0xffffffff, "COMPANION TOOLS");
+    draw_text(34, 112, 0xcaff39ff, "APOLLO SAVE TOOL");
+    draw_text(34, 140, 0xdce3e8ff,
+              "Save data management, backups, resigning, trophies and licenses.");
+    draw_text(34, 190, 0xcaff39ff, "ARTEMIS PS3");
+    draw_text(34, 218, 0xdce3e8ff,
+              "Cheat database and in-game code attachment through its own plugin.");
+    draw_text(34, 268, 0xcaff39ff, "webMAN MOD");
+    draw_text(34, 296, 0xdce3e8ff,
+              "Game mounting, FTP/web tools, fan control and temperature monitoring.");
+    draw_text(34, 354, 0xffffffff, "INTEGRATION POLICY");
+    draw_text(34, 384, 0x9aa6adff,
+              "These are separate homebrew apps; PS3 SCALE does not replace them.");
+    draw_text(34, 414, 0x9aa6adff,
+              "This build does not load their plugins or alter their data.");
+    draw_text(34, 478, 0x9aa6adff, "CIRCLE: BACK");
+    SetFontSize(14, 22);
 }
 
 static void draw_about(void)
 {
-    draw_text(34, 28, 0xcaff39ff, "PS3 SCALE");
-    draw_text(34, 70, 0xffffffff, "ABOUT");
-    draw_text(34, 132, 0xdce3e8ff, "PS3 and PS2 game library and graphics profile manager.");
-    draw_text(34, 172, 0xdce3e8ff, "Target: PS3 Slim / CEX CFW.");
-    draw_text(34, 212, 0x9aa6adff, "Alpha 0.2 - experimental homebrew build.");
-    draw_text(34, 252, 0x9aa6adff,
-              "No universal upscaler or frame generation is claimed.");
+    SetFontSize(11, 17);
+    draw_text(34, 24, 0xcaff39ff, "PS3 SCALE");
+    draw_text(34, 62, 0xffffffff, "ABOUT");
+    draw_text(34, 112, 0xdce3e8ff,
+              "PS3 / PS2 GAME LIBRARY AND GRAPHICS PROFILE MANAGER.");
+    draw_text(34, 152, 0xdce3e8ff,
+              "TARGET TEST DEVICE: PS3 SLIM / CEX CFW.");
+    draw_text(34, 192, 0x9aa6adff,
+              "ALPHA 0.2 - EXPERIMENTAL HOMEBREW SOFTWARE.");
+    draw_text(34, 232, 0x9aa6adff,
+              "SCANNING IS READ-ONLY. ORIGINAL GAME FILES ARE PRESERVED.");
+    draw_text(34, 272, 0x9aa6adff,
+              "NO UNIVERSAL UPSCALER OR FRAME GENERATION IS CLAIMED.");
+    draw_text(34, 312, 0x9aa6adff,
+              "PROFILES NEED EXACT TITLE / UPDATE MATCHING.");
     draw_text(34, 478, 0x9aa6adff, "CIRCLE: BACK");
+    SetFontSize(14, 22);
 }
 
 static void draw_ui(void)
 {
     tiny3d_Clear(0xff070a0d, TINY3D_CLEAR_ALL);
     tiny3d_Project2D();
-
     switch (g_screen) {
-        case SCREEN_HOME:     draw_home(); break;
-        case SCREEN_SCAN:     draw_scan(); break;
-        case SCREEN_DETAILS:  draw_details(); break;
+        case SCREEN_HOME: draw_home(); break;
+        case SCREEN_SCAN: draw_scan(); break;
+        case SCREEN_DETAILS: draw_details(); break;
         case SCREEN_SETTINGS: draw_settings(); break;
-        case SCREEN_ABOUT:    draw_about(); break;
-        default:              draw_home(); break;
+        case SCREEN_TOOLS: draw_tools(); break;
+        case SCREEN_ABOUT: draw_about(); break;
+        default: draw_home(); break;
     }
-
     tiny3d_Flip();
+}
+
+static int compare_game_titles(const void *left, const void *right)
+{
+    const ps3scale_game_t *a = (const ps3scale_game_t *)left;
+    const ps3scale_game_t *b = (const ps3scale_game_t *)right;
+    const unsigned char *pa = (const unsigned char *)a->title;
+    const unsigned char *pb = (const unsigned char *)b->title;
+    while (*pa && *pb) {
+        int ca = tolower(*pa), cb = tolower(*pb);
+        if (ca != cb) return ca - cb;
+        pa++; pb++;
+    }
+    if (*pa) return 1;
+    if (*pb) return -1;
+    return strcmp(a->path, b->path);
+}
+
+static void scan_library(void)
+{
+    (void)ps3scale_scan_all(&g_games);
+    if (g_games.count > 1)
+        qsort(g_games.items, g_games.count, sizeof(g_games.items[0]),
+              compare_game_titles);
+    g_selected = 0;
+    clamp_selection();
 }
 
 static void scan_library(void)
@@ -914,6 +1116,7 @@ int main(int argc, char *argv[])
     (void)argv;
 
     ps3scale_game_list_init(&g_games);
+    load_app_settings();
 
     if (!ya2d_init()) return 1;
     pad_ready = 1;
@@ -940,6 +1143,7 @@ int main(int argc, char *argv[])
         u16 left = 0, right = 0;
 
         sysUtilCheckCallback();
+        g_frame_counter++;
 
         if (!g_osk_active && pad_ready && ioPadGetInfo(&pad_info) == 0) {
             int p;
@@ -965,15 +1169,17 @@ int main(int argc, char *argv[])
         if (!g_osk_active) {
             if (g_screen == SCREEN_HOME) {
                 if (up && !old_up)
-                    g_home_selected = (g_home_selected + 2) % 3;
+                    g_home_selected = (g_home_selected + 3) % 4;
                 if (down && !old_down)
-                    g_home_selected = (g_home_selected + 1) % 3;
+                    g_home_selected = (g_home_selected + 1) % 4;
                 if (cross && !old_cross) {
                     if (g_home_selected == 0) {
                         g_screen = SCREEN_SCAN;
                         g_selected = 0;
                     } else if (g_home_selected == 1) {
                         g_screen = SCREEN_SETTINGS;
+                    } else if (g_home_selected == 2) {
+                        g_screen = SCREEN_TOOLS;
                     } else {
                         g_screen = SCREEN_ABOUT;
                     }
@@ -1015,18 +1221,53 @@ int main(int argc, char *argv[])
                     g_screen = SCREEN_SCAN;
             } else if (g_screen == SCREEN_SETTINGS) {
                 if (up && !old_up)
-                    g_settings_selected = (g_settings_selected + 1) % 2;
+                    g_settings_selected = (g_settings_selected + SETTINGS_COUNT - 1) % SETTINGS_COUNT;
                 if (down && !old_down)
-                    g_settings_selected = (g_settings_selected + 1) % 2;
+                    g_settings_selected = (g_settings_selected + 1) % SETTINGS_COUNT;
 
-                if (cross && !old_cross && g_settings_selected == 0)
-                    set_background_music_enabled(!g_music_enabled);
+                if (cross && !old_cross) {
+                    if (g_settings_selected == 0) {
+                        set_background_music_enabled(!g_music_enabled);
+                        (void)save_app_settings();
+                    } else if (g_settings_selected == 2) {
+                        g_animation_enabled = !g_animation_enabled;
+                        (void)save_app_settings();
+                    } else if (g_settings_selected == 3) {
+                        char update_path[PS3SCALE_PATH_MAX];
+                        if (find_usb_update_package(update_path, sizeof(update_path))) {
+                            const char *usb = strstr(update_path, "/dev_usb");
+                            if (usb)
+                                snprintf(g_settings_message, sizeof(g_settings_message),
+                                         "UPDATE PKG FOUND ON USB%.3s. INSTALL VIA PACKAGE MANAGER.",
+                                         usb + 8);
+                            else
+                                set_settings_message("UPDATE PKG FOUND. INSTALL VIA PACKAGE MANAGER.");
+                        } else {
+                            set_settings_message("NO VALID PS3 SCALE UPDATE PKG FOUND ON USB.");
+                        }
+                    } else if (g_settings_selected == 4) {
+                        scan_library();
+                        snprintf(g_settings_message, sizeof(g_settings_message),
+                                 "SCAN COMPLETE: %u PS3 / %u PS2 TITLES.",
+                                 (unsigned)library_total_count(LIBRARY_PS3),
+                                 (unsigned)library_total_count(LIBRARY_PS2));
+                    } else if (g_settings_selected == 5) {
+                        g_music_enabled = 1;
+                        g_music_volume = 180;
+                        g_animation_enabled = 1;
+                        (void)save_app_settings();
+                    }
+                }
 
                 if (g_settings_selected == 1) {
-                    if (left && !old_left)
-                        set_background_music_volume(g_music_volume - 16);
-                    if (right && !old_right)
-                        set_background_music_volume(g_music_volume + 16);
+                    if (left && !old_left) {
+                        set_background_music_volume(g_music_volume - 13);
+                        (void)save_app_settings();
+                    }
+                    if (right && !old_right) {
+                        set_background_music_volume(g_music_volume + 13);
+                        (void)save_app_settings();
+                    }
                 }
 
                 if (circle && !old_circle)
@@ -1056,8 +1297,11 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (g_osk_active)
+    if (g_osk_active) {
         (void)oskAbort();
+        (void)oskUnloadAsync(&g_osk_result);
+        (void)sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT1);
+    }
     shutdown_audio_backend();
     sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
     if (g_cover_texture) ya2d_freeTexture(g_cover_texture);
