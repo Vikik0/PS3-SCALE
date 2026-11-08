@@ -2,10 +2,12 @@
 
 ## Main menu
 
-The application opens to three primary destinations:
-1. Scan Games
-2. Settings
-3. About PS3 SCALE
+The application opens to three primary destinations, each with a native Tiny3D vector icon:
+1. Scan Games — magnifying glass / library search icon.
+2. Settings — gear icon.
+3. About PS3 SCALE — information-in-circle icon.
+
+The icons are drawn from Tiny3D line and quad primitives, so they do not depend on external PNG assets or a font glyph being present.
 
 ## Scan Games
 
@@ -34,4 +36,4 @@ The user-supplied GTA V Greyhound pause-menu remix is the requested startup them
 
 ## Current implementation boundary
 
-The home menu, PS3/PS2 scan pages, title search through the PS3 OSK, game details, Settings and About pages are implemented in the UI source. Local ICON0 covers are supported for folder/installed titles. ISO/online cover lookup, remote catalog integration, profile application and actual audio playback remain pending and must be built/tested separately.
+The home menu, including native vector icons for Scan Games, Settings and About, PS3/PS2 scan pages, title search through the PS3 OSK, game details, Settings and About pages are implemented in the UI source. Local ICON0 covers are supported for folder/installed titles. ISO/online cover lookup, remote catalog integration, profile application and actual audio playback remain pending and must be built/tested separately.
