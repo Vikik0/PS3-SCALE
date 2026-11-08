@@ -32,8 +32,8 @@ No "Applied" status may be displayed merely because a profile was downloaded or 
 
 ## Settings
 
-The user-supplied GTA V Greyhound pause-menu remix is the requested startup theme. The current Alpha build displays its intended selection, but MP3 playback is not yet wired into the PS3 audio backend.
+The user-supplied GTA V Greyhound pause-menu remix is started automatically at app launch using the mpg123 decoder and native PSL1GHT audio output. It continues across menu screens and loops. Music ON/OFF and volume are controlled from Settings. The MP3 itself is currently read from `/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3` (with documented fallbacks); it is not yet embedded in the PKG, and real-console audio playback still needs verification.
 
 ## Current implementation boundary
 
-The home menu, including native vector icons for Scan Games, Settings and About, PS3/PS2 scan pages, title search through the PS3 OSK, game details, Settings and About pages are implemented in the UI source. Local ICON0 covers are supported for folder/installed titles. ISO/online cover lookup, remote catalog integration, profile application and actual audio playback remain pending and must be built/tested separately.
+The home menu, including native vector icons for Scan Games, Settings and About, PS3/PS2 scan pages, title search through the PS3 OSK, game details, Settings and About pages are implemented in the UI source. Local ICON0 covers are supported for folder/installed titles. The MP3 streaming player and Settings controls are implemented, but require the one-time MP3 file placement and hardware verification. ISO/online cover lookup, remote catalog integration, verified profile application, the exit beep and the in-game success notification remain future milestones.
