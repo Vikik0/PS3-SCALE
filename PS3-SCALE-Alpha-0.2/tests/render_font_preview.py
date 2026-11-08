@@ -193,7 +193,7 @@ def glyph_bounds(glyph: int) -> tuple[int, int]:
 
 
 WIDTH = 1024 * ZOOM
-HEIGHT = 390 * ZOOM
+HEIGHT = 720 * ZOOM
 BACKGROUND = (7, 20, 36)
 INK = (226, 245, 255)
 ACCENT = (139, 212, 80)
@@ -249,7 +249,7 @@ def draw_ascii(value: str, x: float, y: float):
             cursor += UI_WIDTH
 
 
-def draw_runtime_text(value: str, x: float, y: float):
+def draw_runtime_text(value: str, x: float, y: float, join_overlap_source_px: float = 2.0):
     glyphs = shape_text(value)
     contains_arabic = any(is_arabic_glyph(glyph) for glyph in glyphs)
     cursor = x
@@ -269,7 +269,7 @@ def draw_runtime_text(value: str, x: float, y: float):
 
             if is_arabic_glyph(next_glyph):
                 if glyphs_joined(glyph, next_glyph):
-                    cursor -= scale_x * 2.0
+                    cursor -= scale_x * join_overlap_source_px
                 else:
                     cursor += scale_x * 2.0
             elif next_glyph not in (0, 32):
@@ -288,20 +288,32 @@ draw_ascii("ENGLISH / LATIN FONT", 40, 18)
 draw_runtime_text("PS3 SCALE 4.92", 40, 42)
 draw_rule(78)
 
-draw_ascii("ARABIC SAMPLE 1", 40, 92)
-draw_runtime_text("سلام", 40, 116)
+draw_ascii("JOIN OVERLAP 2 SOURCE PIXELS", 40, 92)
+draw_runtime_text("سلام", 40, 116, 2)
 draw_rule(152)
 
-draw_ascii("ARABIC SAMPLE 2", 40, 166)
-draw_runtime_text("الإعدادات", 40, 190)
+draw_ascii("JOIN OVERLAP 4 SOURCE PIXELS", 40, 166)
+draw_runtime_text("سلام", 40, 190, 4)
 draw_rule(226)
 
-draw_ascii("ARABIC SAMPLE 3", 40, 240)
-draw_runtime_text("مكتبة الألعاب", 40, 264)
+draw_ascii("JOIN OVERLAP 6 SOURCE PIXELS", 40, 240)
+draw_runtime_text("سلام", 40, 264, 6)
 draw_rule(300)
 
-draw_ascii("ARABIC SAMPLE 4", 40, 314)
-draw_runtime_text("مستوى الصوت", 40, 338)
+draw_ascii("JOIN OVERLAP 8 SOURCE PIXELS", 40, 314)
+draw_runtime_text("سلام", 40, 338, 8)
+draw_rule(374)
+
+draw_ascii("ARABIC SAMPLE / SETTINGS", 40, 388)
+draw_runtime_text("الإعدادات", 40, 412, 6)
+draw_rule(448)
+
+draw_ascii("ARABIC SAMPLE / GAME LIBRARY", 40, 462)
+draw_runtime_text("مكتبة الألعاب", 40, 486, 6)
+draw_rule(522)
+
+draw_ascii("ARABIC SAMPLE / VOLUME", 40, 536)
+draw_runtime_text("مستوى الصوت", 40, 560, 6)
 
 
 def png_chunk(kind: bytes, data: bytes) -> bytes:
