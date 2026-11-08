@@ -23,17 +23,22 @@ for token in (
 ):
     assert token in osk, f"Missing OSK handling: {token}"
 
-# Search must remain wired to SELECT on the Scan Games screen.
+# Search must be wired to both SELECT and START, and the initial OSK panel
+# must be included in the allowed panel mask.
 main = src[src.index("int main(int argc, char *argv[])"):]
-assert "if (select && !old_select)" in main
+assert "(select && !old_select) || (start && !old_start)" in main
 assert "(void)open_search_keyboard();" in main
+osk_open = section("static int open_search_keyboard", "static void draw_text")
+assert "OSK_PANEL_TYPE_ALPHABET_FULL_WIDTH" in osk_open
+assert "g_osk_params.firstViewPanel = OSK_PANEL_TYPE_ALPHABET_FULL_WIDTH" in osk_open
 
-# Layout contract: compact font, independent metadata column and lower cover.
+# Layout contract: smaller font, fixed columns and cover art separated from text.
 scan = section("static void draw_scan(void)", "static void draw_details(void)")
-assert "SetFontSize(10, 16)" in scan
-assert "draw_text(530, 176" in scan
-assert "ya2d_drawTextureEx(g_cover_texture, 690.0f, 286.0f" in scan
+assert "SetFontSize(9, 14)" in scan
+assert "draw_text(452, 178" in scan
+assert "ya2d_drawTextureEx(g_cover_texture, 680.0f, 282.0f" in scan
 assert "draw_text(28, 470" in scan
+assert "SELECT/START: SEARCH" in scan
 
 # Settings are persistent and expose all intended actions.
 settings = section("static void draw_settings(void)", "static void draw_tools(void)")
@@ -59,5 +64,11 @@ assert "SCREEN_TOOLS" in src
 assert "APOLLO SAVE TOOL" in src
 assert "ARTEMIS PS3" in src
 assert "webMAN MOD" in src
+assert "refresh_companion_tool_status" in src
+assert "g_apollo_installed" in src
+assert "g_artemis_installed" in src
+assert "g_webman_installed" in src
+assert "shutdown_audio_backend();" in main
+assert "PLAYBACK NOW USES INTERNAL HDD" in src
 
 print("PS3 SCALE UI contract tests: PASS")
