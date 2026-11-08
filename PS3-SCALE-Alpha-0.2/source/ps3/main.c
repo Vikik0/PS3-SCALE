@@ -1293,7 +1293,10 @@ static int find_mounted_game(const ps3scale_game_t *selected, ps3scale_game_t *m
 static void start_selected_game(void)
 {
     const ps3scale_game_t *game = selected_game();
+    const ps3scale_profile_t *profile = profile_for_game(game);
     ps3scale_game_t mounted;
+    int script_state = profile ?
+        ps3scale_profile_script_state(profile->title_id, profile->app_ver) : 0;
 
     if (!game || !game_is_ps3(game)) {
         set_details_message("START GAME SUPPORTS PS3 TITLES ONLY.");
@@ -1301,6 +1304,10 @@ static void start_selected_game(void)
     }
     if (!game->title_id[0]) {
         set_details_message("TITLE ID NOT AVAILABLE. RESCAN THE GAME.");
+        return;
+    }
+    if (script_state == -2) {
+        set_details_message("PROFILE UPDATE MISMATCH. REVIEW / REINSTALL THE PROFILE.");
         return;
     }
     if (!find_mounted_game(game, &mounted)) {
@@ -1311,8 +1318,18 @@ static void start_selected_game(void)
         set_details_message("WEBMAN MOD IS REQUIRED FOR ONE-BUTTON START.");
         return;
     }
+    if (script_state == 1 && ps3scale_webman_ps3mapi_available() != 0) {
+        set_details_message("PS3MAPI IS NOT ACTIVE. ENABLE IT IN WEBMAN SETTINGS.");
+        return;
+    }
 
-    set_details_message("NO VERIFIED GRAPHICS PROFILE. STARTING UNMODIFIED GAME.");
+    if (script_state == 1)
+        set_details_message("AUTO PROFILE CHECK WILL RUN. MISMATCHED BYTES ARE SKIPPED.");
+    else if (profile)
+        set_details_message("EXACT PROFILE FOUND, BUT AUTO APPLY IS OFF. STARTING UNMODIFIED.");
+    else
+        set_details_message("NO EXACT ONLINE PROFILE. STARTING UNMODIFIED GAME.");
+
     if (ps3scale_webman_start_mounted_game() != 0) {
         set_details_message("WEBMAN COULD NOT START THE MOUNTED GAME.");
         return;
