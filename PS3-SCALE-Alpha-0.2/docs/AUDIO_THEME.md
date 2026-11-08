@@ -7,7 +7,7 @@
 - Sample rate: 44,100 Hz
 - Channels: Stereo
 - Duration: 7 minutes, 11.821 seconds
-- File size: 6,663,260 bytes
+- File size: 6,663,260 bytes\n- SHA-256: `468a33c6e85ee6b4a8966f69aeeaf82eb4a8d7d6d55bdc7891a9d5ceb958b896`
 
 ## Intended behavior
 
