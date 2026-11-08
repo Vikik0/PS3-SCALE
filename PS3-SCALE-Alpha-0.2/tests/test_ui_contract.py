@@ -147,6 +147,11 @@ assert "MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY" in src
 assert "PROFILE DATA SAVED TO INTERNAL HDD. NOT APPLIED YET." in src
 assert "profile_script_state_for_game" in src
 assert "profile ? profile->patches : NULL" in src
+assert "MOUNT THE EXACT GAME VERSION BEFORE ARMING THIS PROFILE." in src
+assert "WAIT FOR ONLINE DATABASE SYNC TO FINISH." in src
+assert "WAIT FOR ONLINE DATABASE SYNC TO FINISH BEFORE STARTING." in src
+assert "find_mounted_game(game, &mounted)" in src
+assert "if (g_catalog_sync_running)" in src
 assert "(!candidate->app_ver[0] ||" in src
 assert "feature/online-graphics-database" in src
 
