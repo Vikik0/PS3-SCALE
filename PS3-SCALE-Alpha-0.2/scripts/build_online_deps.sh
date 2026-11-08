@@ -57,6 +57,7 @@ if ! ./configure \
   --prefix="$PORTLIBS" \
   --disable-shared --enable-static \
   --disable-threaded-resolver --disable-ipv6 \
+  --disable-ntlm --disable-ntlm-wb \
   --disable-ldap --disable-ldaps --disable-ftp --disable-file \
   --disable-rtsp --disable-dict --disable-telnet --disable-tftp \
   --disable-pop3 --disable-imap --disable-smtp --disable-gopher --disable-smb \
