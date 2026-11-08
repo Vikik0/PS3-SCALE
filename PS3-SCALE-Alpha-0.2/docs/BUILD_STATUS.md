@@ -3,20 +3,20 @@
 Date: 2026-11-08
 
 ## Latest GitHub Actions build
-- Workflow run: [#61 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42481903926)
-- Source commit: `38e7c0203d1534caff9365336ad965cc8628c7dd`
-- Artifact: [PS3-SCALE-Alpha-0.2-build](https://github.com/Vikik0/PS3-SCALE/actions/runs/42481903926/artifacts/13617497295)
+- Workflow run: [#61 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42482158416)
+- Source commit: `94deb82f4097dfe5b2a6fd7d1345736dc8462642`
+- Artifact: [PS3-SCALE-Alpha-0.2-build](https://github.com/Vikik0/PS3-SCALE/actions/runs/42481903926/artifacts/13617318299)
 - Artifact ID: `13617497295`
-- Artifact ZIP SHA-256: `e74e138858729e67344e8bd7be32ad9f2567b71400e877ae04d5b348360d9df0`
+- Artifact ZIP SHA-256: `3e182971721a8e1c4e383d8bb03456cf0be0e8748623ae1fb1ed14af812c3976`
 
 ## Build outputs
 
 | File | Size | SHA-256 |
 |---|---:|---|
 | `ps3scale.elf` | 1,267,963 bytes | `9889bc52efe0b0d8d9eb48a12bab726c810f48ce0f1799907a5ed122506da7b7` |
-| `ps3scale.self` | 103,888 bytes | `05d53bc4a54c23d8cdc41d8c968f7ab2683a61334fd8351c82766481807e8de2` |
-| `ps3scale.pkg` | 112,656 bytes | `c2d18ae2c1878c70ad94a3fc11013f9b4236be01af870d97b4af4f378ba516ef` |
-| `ps3scale.gnpdrm.pkg` | 112,656 bytes | `3404302611866ec713f09924335188f2220d86d75f060ae036ff2411ec4b0e47` |
+| `ps3scale.self` | 103,888 bytes | `f3e6b4fc14ea063544f93a465a6a39543671d64f3b0350a31e2331ba5466142a` |
+| `ps3scale.pkg` | 112,656 bytes | `c6e2cfd1354f4f8e8cef2c0c33d5f4c80958836a77e5ca3adbf9f15ce7b6f5ca` |
+| `ps3scale.gnpdrm.pkg` | 112,656 bytes | `4449df80aa8763fdc330db2668b70b2ef3e54f861583a10e45a8f1cff38272f6` |
 
 ## Package validation
 - PKG magic: `7f504b47`
