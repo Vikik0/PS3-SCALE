@@ -135,7 +135,7 @@ static int g_catalog_ready = 0;
 static int g_online_selected = 0;
 static int g_profile_confirm_pending = 0;
 static char g_catalog_status[96] = "BUNDLED CATALOG NOT LOADED";
-static char g_online_message[128] = "CROSS: OPEN GAME  SQUARE: CACHE PROFILE  START: SYNC";
+static char g_online_message[128] = "SELECT A MATCHED GAME OR PRESS START TO SYNC.";
 
 static void clamp_selection(void);
 static void scan_library(void);
@@ -1031,7 +1031,7 @@ static void start_catalog_sync_worker(int force)
 {
     int rc;
 
-    if (g_catalog_sync_running) {
+    if (g_catalog_sync_running || g_catalog_sync_done) {
         snprintf(g_online_message, sizeof(g_online_message),
                  "DATABASE SYNC IS ALREADY RUNNING.");
         return;
@@ -1681,7 +1681,7 @@ static void draw_online_database(void)
 
     draw_text(28, 448, 0xdce3e8ff, g_online_message);
     draw_text(28, 478, 0x9aa6adff,
-              "UP/DOWN: SELECT  CROSS: OPEN  SQUARE: CACHE  TRIANGLE: CACHE ALL  START: SYNC  CIRCLE: BACK");
+              "UP/DOWN: SELECT  CROSS: OPEN  SQUARE: CACHE  TRIANGLE: ALL  START: SYNC  CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
 
