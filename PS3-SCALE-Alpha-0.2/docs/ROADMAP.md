@@ -21,7 +21,9 @@
 - Local backup/restore manifest (no automatic game-file edits)
 
 ## Alpha 0.3 — PS2 configuration manager
-- [x] Add a restricted in-memory PS2 netemu CONFIG builder for commands 0x44/0x46, with host tests\n- [x] Add a Triangle-triggered PS2 ISO CONFIG preview screen (preview only; no writes)\n- PS2 Classics/PS2 ISO metadata enrichment
+- [x] Add a restricted in-memory PS2 netemu CONFIG builder for commands 0x44/0x46, with host tests
+- [x] Add a Triangle-triggered PS2 ISO CONFIG preview screen (preview only; no writes)
+- PS2 Classics/PS2 ISO metadata enrichment
 - Match known `ps2_netemu` CONFIG files by title ID and region
 - Hash verification and backup/restore
 - No automatic config writes until hardware tests pass
@@ -33,7 +35,8 @@
 - First supported title only after repeatable hardware test
 
 ## Later research
-- [x] Document optional webMAN MOD / PS3MAPI route and read-only-first safety boundary\n- CFW PRX/per-title runtime hook feasibility
+- [x] Document optional webMAN MOD / PS3MAPI route and read-only-first safety boundary
+- CFW PRX/per-title runtime hook feasibility
 - RSX resource/memory budget
 - Game-specific framebuffer or shader experiments
 - Frame interpolation feasibility and performance cost
