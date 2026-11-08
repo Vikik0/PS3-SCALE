@@ -58,6 +58,13 @@ cc -std=c99 -Wall -Wextra -Werror \
 "$OUT/test_catalog"
 
 cc -std=c99 -Wall -Wextra -Werror \
+  -I"$ROOT/include" \
+  "$ROOT/source/core/webman_command.c" \
+  "$ROOT/tests/test_webman_command.c" \
+  -o "$OUT/test_webman_command"
+"$OUT/test_webman_command"
+
+cc -std=c99 -Wall -Wextra -Werror \
   -DPS3SCALE_WEBMAN_TMP_DIR='"/tmp/ps3scale-profile-apply-test"' \
   -DPS3SCALE_WEBMAN_SCRIPT_DIR='"/tmp/ps3scale-profile-apply-test/wm_ingame"' \
   -I"$ROOT/include" \
