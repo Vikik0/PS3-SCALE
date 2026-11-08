@@ -27,7 +27,7 @@
 - The webMAN script searches exactly one possible start address and checks the expected original bytes before writing.
 - Multi-write profiles are disabled for automatic application.
 - The script removes itself after one launch attempt to reduce stale reuse.
-- If a PS3 SCALE-owned script is stale or its patch fingerprint differs from the current catalogue, Start Game is blocked until the script is removed or replaced.
+- If a PS3 SCALE-owned script is stale, its patch fingerprint differs from the current catalogue, or its body has been manually edited, Start Game is blocked until the script is removed or regenerated. The full script body is checked, not only its header.
 - If a user-owned webMAN script exists, PS3 SCALE does not overwrite or delete it.
 - If no exact profile exists, the game starts unmodified.
 - The patch is process-memory-only; exiting the game clears it. Remove a pending script with SQUARE before launch.
