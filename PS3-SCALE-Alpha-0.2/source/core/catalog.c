@@ -63,6 +63,23 @@ static int valid_hex(const char *value, size_t max_bytes)
     return 1;
 }
 
+static int valid_hex_address(const char *value)
+{
+    size_t i, length;
+
+    if (!value || !value[0])
+        return 0;
+    length = strlen(value);
+    if (length > 8)
+        return 0;
+    for (i = 0; i < length; i++) {
+        if (!isxdigit((unsigned char)value[i]) ||
+            value[i] != (char)toupper((unsigned char)value[i]))
+            return 0;
+    }
+    return 1;
+}
+
 static int valid_patch_list(const char *value, unsigned *patch_count)
 {
     char copy[PS3SCALE_PROFILE_PATCHES_MAX];
@@ -98,7 +115,7 @@ static int valid_patch_list(const char *value, unsigned *patch_count)
         address_length = strlen(address);
         if (!address_length || address_length > 8)
             return -1;
-        if (!valid_hex(address, 4) ||
+        if (!valid_hex_address(address) ||
             !valid_hex(expected, PROFILE_PATCH_MAX_BYTES) ||
             !valid_hex(replacement, PROFILE_PATCH_MAX_BYTES) ||
             strlen(expected) != strlen(replacement))
