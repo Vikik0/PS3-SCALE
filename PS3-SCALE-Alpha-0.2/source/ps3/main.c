@@ -9,6 +9,7 @@
 #include <sysutil/sysutil.h>
 #include <sysutil/osk.h>
 #include <sys/memory.h>
+#include <ya2d.h>
 
 #include "ps3scale/game.h"
 #include "ps3scale/scanner.h"
@@ -37,6 +38,8 @@ static int g_home_selected = 0;
 static app_screen_t g_screen = SCREEN_HOME;
 static char g_search[64] = "";
 static u32 *g_font_texture = NULL;
+static ya2d_Texture *g_cover_texture = NULL;
+static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 
 /* PS3 system on-screen keyboard state used by the Scan Games search field. */
 static int g_osk_active = 0;
@@ -243,6 +246,28 @@ static void format_hex(char *out, size_t capacity,
     }
 }
 
+
+static void update_selected_cover(void)
+{
+    const ps3scale_game_t *game = selected_game();
+    const char *path = (game && game->cover_path[0]) ? game->cover_path : "";
+
+    if (strcmp(path, g_cover_path) == 0)
+        return;
+
+    if (g_cover_texture) {
+        ya2d_freeTexture(g_cover_texture);
+        g_cover_texture = NULL;
+    }
+    g_cover_path[0] = '\\0';
+
+    if (path[0]) {
+        g_cover_texture = ya2d_loadPNGfromFile(path);
+        if (g_cover_texture)
+            strncpy(g_cover_path, path, sizeof(g_cover_path) - 1);
+    }
+}
+
 static void draw_home(void)
 {
     static char *items[] = {
@@ -328,7 +353,10 @@ static void draw_scan(void)
         }
         draw_text(570, 278, 0xdce3e8ff, line);
         draw_text(570, 320, 0x9aa6adff, "CROSS: OPEN GAME DETAILS");
-        draw_text(570, 350, 0x6f7b83ff, "COVER: METADATA SUPPORT PENDING");
+        if (g_cover_texture)
+            ya2d_drawTextureEx(g_cover_texture, 690.0f, 220.0f, 0.5f, 120.0f, 160.0f);
+        else
+            draw_text(690, 230, 0x6f7b83ff, "NO LOCAL COVER");
     } else {
         draw_text(570, 218, 0x9aa6adff, "No matching games found.");
         draw_text(570, 248, 0x9aa6adff, "Press SELECT to search.");
@@ -400,7 +428,24 @@ static void draw_details(void)
     if (game->kind == PS3SCALE_GAME_PS2_ISO)
         draw_text(34, 430, 0xcaff39ff, "TRIANGLE: PREVIEW PS2 CONFIG (NO FILE WRITES)");
 
-    draw_text(34, 478, 0x9aa6adff, "CIRCLE: BACK TO GAME LIST");
+    if (g_cover_texture)
+        ya2d_drawTextureEx(g_cover_texture, 690.0f, 120.0f, 0.5f, 120.0f, 160.0f);
+    else
+        draw_text(690, 140, 0x6f7b83ff, "NO LOCAL COVER");
+    if (g_config_preview && game->kind == PS3SCALE_GAME_PS2_ISO) {
+        uint8_t config_data[32];
+        size_t config_size = 0;
+        if (ps3scale_ps2_config_build(
+                config_data, sizeof(config_data),
+                PS3SCALE_PS2_CFG_DISABLE_SMOOTHING |
+                PS3SCALE_PS2_CFG_ENABLE_L2H, &config_size) == 0) {
+            char hex[96];
+            draw_text(34, 430, 0xcaff39ff, "PS2 CONFIG PREVIEW ONLY - NOT APPLIED");
+            format_hex(hex, sizeof(hex), config_data, config_size);
+            draw_text(34, 454, 0xdce3e8ff, hex);
+        }
+    }
+    draw_text(34, 478, 0x9aa6adff, "TRIANGLE: CONFIG PREVIEW   CIRCLE: BACK TO GAME LIST");
 }
 
 static void draw_settings(void)
@@ -467,7 +512,8 @@ int main(int argc, char *argv[])
 
     ps3scale_game_list_init(&g_games);
 
-    tiny3d_Init(2 * 1024 * 1024);
+    if (!ya2d_init()) return 1;
+    pad_ready = 1;
     g_font_texture = tiny3d_AllocTexture(2 * 1024 * 1024);
     if (!g_font_texture) return 1;
 
@@ -478,7 +524,6 @@ int main(int argc, char *argv[])
     SetCurrentFont(0);
     SetFontSize(14, 22);
 
-    if (ioPadInit(7) == 0) pad_ready = 1;
     sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT0, app_sysutil_callback, NULL);
 
     scan_library();
@@ -575,13 +620,14 @@ int main(int argc, char *argv[])
         old_triangle = triangle;
         old_select = select;
 
-        if (!g_osk_active)
-            draw_ui();
+        if (!g_osk_active) {\n            if (g_screen == SCREEN_SCAN || g_screen == SCREEN_DETAILS)\n                update_selected_cover();\n            draw_ui();\n        }
     }
 
     if (g_osk_active)
         (void)oskAbort();
     sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
-    if (pad_ready) ioPadEnd();
+    if (g_cover_texture) ya2d_freeTexture(g_cover_texture);
+    g_cover_texture = NULL;
+    if (pad_ready) ya2d_deinit();
     return 0;
 }
