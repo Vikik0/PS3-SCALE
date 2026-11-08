@@ -51,7 +51,7 @@ verified on physical hardware. The host SFO tests do not substitute for console 
 - [x] Add PS2 ISO9660 serial metadata probe
 - [x] Preserve multiple copies of one Title ID on separate drives
 - [x] Add developer research and online catalog safety rules
-- [x] Execute GitHub Actions on the user's repository (Run #61 passed)
+- [x] Execute GitHub Actions on the user's repository (Run #66 passed)
 - [x] Inspect resulting PKG and SELF; finalized PKG header and Content ID validated
 - [ ] Install and test on physical CECH-2504A
 
@@ -61,6 +61,6 @@ verified on physical hardware. The host SFO tests do not substitute for console 
 - [x] PPU ELF and CEX SELF built with the Tiny3D toolchain.
 - [x] Debug PKG and finalized NPDRM PKG generated.
 - [x] Finalized PKG magic, revision (0x8000), PS3 package type and declared file size validated.
-- [x] Artifacts uploaded: Run #61, artifact ID `13617497295`.
+- [x] Artifacts uploaded: Run #66, artifact ID `13617318299`.
 - [ ] Install, launch and test on the physical CECH-2504A.
 - [ ] Confirm game scan results against the user's actual HDD and USB layout.
