@@ -127,6 +127,7 @@ static const locale_entry_t locale_entries[] = {
     {"DETECTED MODEL:", "الموديل المكتشف:", "Modelo detectado:"},
     {"FIRMWARE:", "إصدار النظام:", "Firmware:"},
     {"PLATFORM ID:", "معرّف المنصة:", "ID de plataforma:"},
+    {"CONSOLE TYPE:", "نوع الجهاز:", "Tipo de consola:"},
     {"HARDWARE INFO UNAVAILABLE.", "معلومات الجهاز غير متاحة.", "Información de hardware no disponible."},
     {"TARGET HARDWARE: PS3 FAT / SLIM / SUPER SLIM.", "الأجهزة المستهدفة: PS3 FAT وSLIM وSUPER SLIM.", "Hardware objetivo: PS3 FAT / SLIM / SUPER SLIM."}
 };
