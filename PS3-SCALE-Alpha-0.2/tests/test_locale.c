@@ -122,6 +122,17 @@ int main(void)
         strstr(translated, "إصدار اللعبة المطابق") == NULL)
         return 14;
     if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "MANUAL-ONLY PROFILE. ONE-LAUNCH APPLY IS NOT SUPPORTED.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "يدوي فقط") == NULL)
+        return 15;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "MANUAL ONLY: RE-APPLY REQUIRED IN GAME",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "إعادة التطبيق") == NULL)
+        return 16;
+
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
             "ONE-LAUNCH PROFILE ARMED. START THE MOUNTED GAME.",
             translated, sizeof(translated)) != 1 ||
         strstr(translated, "مرة واحدة") == NULL)
