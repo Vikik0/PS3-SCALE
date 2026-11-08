@@ -923,7 +923,7 @@ static void draw_scan(void)
     }
 
     if (selected) {
-        snprintf(line, sizeof(line), "TITLE: %.28s", selected->title);
+        snprintf(line, sizeof(line), "TITLE: %.24s", selected->title);
         draw_text(530, 176, 0xdce3e8ff, line);
         snprintf(line, sizeof(line), "TYPE: %.20s", ps3scale_game_kind_name(selected->kind));
         draw_text(530, 204, 0xdce3e8ff, line);

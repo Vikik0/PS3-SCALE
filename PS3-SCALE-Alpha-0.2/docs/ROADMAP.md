@@ -93,3 +93,16 @@ verified on physical hardware. The host SFO tests do not substitute for console 
 - [x] Add offline USB update-package discovery and a library rescan action.
 - [x] Add static UI contract tests to the host test suite.
 - [ ] Build and install this UI revision on CECH-2504A; verify OSK, settings persistence and smooth animation on hardware.
+
+
+## UI polish and utility actions — 8 Nov 2026
+- [x] Add four main-menu destinations and a lightweight, slow-moving vector background.
+- [x] Add a library overview panel and Companion Tools reference page.
+- [x] Separate scan list, selected-game metadata and cover-art regions; reduce scan font size.
+- [x] Sort the scanned game library by title.
+- [x] Fix PS3 OSK input collection and callback lifecycle.
+- [x] Persist audio and animation settings to the app's internal USRDIR.
+- [x] Add offline USB update-package discovery, library rescan and restore defaults.
+- [x] Add a USB-to-HDD music import action; restart app to switch to the internal copy.
+- [x] Add UI contract checks to host tests.
+- [ ] Verify all new UI and settings behavior on CECH-2504A hardware.
