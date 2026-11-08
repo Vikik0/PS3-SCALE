@@ -24,6 +24,8 @@ FONT_FIRST = 32
 FONT_EXTENDED_FIRST = 128
 UI_WIDTH = 14
 UI_HEIGHT = 22
+ARABIC_CELL_HEIGHT = (UI_HEIGHT * 27 + 10) // 20
+ARABIC_Y_OFFSET = (ARABIC_CELL_HEIGHT - UI_HEIGHT) / 2.0
 ZOOM = 4
 
 
@@ -213,8 +215,10 @@ def fill_rect(x: int, y: int, width: int, height: int, color):
 
 
 def draw_scaled_arabic_cell(glyph: int, x: float, y: float):
-    for dy in range(UI_HEIGHT):
-        source_y = min(FONT_HEIGHT - 1, int(dy * FONT_HEIGHT / UI_HEIGHT))
+    for dy in range(ARABIC_CELL_HEIGHT):
+        source_y = min(
+            FONT_HEIGHT - 1, int(dy * FONT_HEIGHT / ARABIC_CELL_HEIGHT)
+        )
         for dx in range(UI_WIDTH):
             source_x = min(FONT_WIDTH - 1, int(dx * FONT_WIDTH / UI_WIDTH))
             if glyph_pixel(glyph, source_x, source_y):
@@ -264,7 +268,7 @@ def draw_runtime_text(value: str, x: float, y: float, join_overlap_source_px: fl
         if is_arabic_glyph(glyph):
             min_x, ink_width = glyph_bounds(glyph)
             draw_runtime_x = cursor - min_x * scale_x
-            draw_scaled_arabic_cell(glyph, draw_runtime_x, y)
+            draw_scaled_arabic_cell(glyph, draw_runtime_x, y - ARABIC_Y_OFFSET)
             cursor += ink_width * scale_x
 
             if is_arabic_glyph(next_glyph):
@@ -372,6 +376,7 @@ for sample in required_arabic:
     assert shaped, f"Arabic sample did not shape: {sample}"
     assert all(g == 32 or is_arabic_glyph(g) for g in shaped), sample
 assert shape_text("PS3 SCALE 4.92") == list(map(ord, "PS3 SCALE 4.92"))
+assert ARABIC_CELL_HEIGHT > UI_HEIGHT
 assert 32 in shape_text("مستوى الصوت")
 
 missing = [glyph for glyph in ARABIC_GLYPHS if glyph_bounds(glyph)[1] <= 0]
