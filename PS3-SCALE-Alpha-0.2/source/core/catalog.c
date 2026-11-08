@@ -53,6 +53,13 @@ static int valid_source_url(const char *value)
     return 1;
 }
 
+static int valid_trust(const char *value)
+{
+    return value &&
+           (strcmp(value, "B_COMMUNITY") == 0 ||
+            strcmp(value, "B_COMMUNITY_MANUAL") == 0);
+}
+
 static int valid_app_version(const char *value)
 {
     return value && strlen(value) == 5 &&
@@ -191,7 +198,7 @@ static int parse_profile_line(char *line, ps3scale_profile_t *profile)
 
     if (!valid_title_id(profile->title_id) ||
         !valid_app_version(profile->app_ver) ||
-        strcmp(profile->trust, "B_COMMUNITY") != 0 ||
+        !valid_trust(profile->trust) ||
         !valid_source_url(profile->source_url) ||
         valid_patch_list(profile->patches, &profile->patch_count) != 0)
         return -1;
