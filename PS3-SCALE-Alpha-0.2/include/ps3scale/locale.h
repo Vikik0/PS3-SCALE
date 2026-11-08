@@ -17,6 +17,9 @@ int ps3scale_locale_translate(int language, const char *source,
 int ps3scale_locale_to_glyphs(const char *source, char *output,
                               size_t output_size);
 
+/* Font 0 contains ASCII; font 1 contains the extended glyph atlas. */
+int ps3scale_locale_glyph_font_index(unsigned char glyph);
+
 const char *ps3scale_locale_language_name(int language);
 const char *ps3scale_locale_keyboard_key(int language, int index);
 

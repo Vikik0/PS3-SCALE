@@ -39,11 +39,20 @@ assert "start_boot_scan" in src
 assert "SCANNING LOCAL GAME LIBRARY" in src
 assert "APP FILE CHECK: OK" in src
 
-# Arabic/Spanish text uses the extended glyph atlas and translation module.
+# Arabic/Spanish text uses a dedicated extended font while ASCII keeps
+# the original readable bitmap font. Mixed strings switch font per glyph.
 assert "ps3scale_locale_translate" in src
 assert "ps3scale_locale_to_glyphs" in src
+assert "ps3scale_locale_glyph_font_index" in src
 assert "font_bitmap_z.h" in src
 assert "arabic_glyph_map.h" not in src  # mapping is isolated in locale.c
+font_loader = section("static int load_extended_font(void)", "static void draw_text")
+assert "ps3scale_font8x12" in font_loader
+assert "PS3SCALE_FONT_EXTENDED_FIRST" in font_loader
+assert "g_extended_font_bitmap + extended_offset" in font_loader
+draw_text_impl = section("static void draw_text", "static int open_background_music")
+assert "SetCurrentFont(ps3scale_locale_glyph_font_index(glyph))" in draw_text_impl
+assert "cursor = DrawString(cursor, y, one)" in draw_text_impl
 
 # Layout contract: compact font, independent list/metadata/cover columns.
 scan = section("static void draw_scan(void)", "static void draw_details(void)")

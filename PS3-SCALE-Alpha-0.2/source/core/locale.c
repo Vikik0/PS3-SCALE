@@ -416,6 +416,11 @@ finished:
     return (int)out;
 }
 
+int ps3scale_locale_glyph_font_index(unsigned char glyph)
+{
+    return glyph >= 128u ? 1 : 0;
+}
+
 const char *ps3scale_locale_language_name(int language)
 {
     switch (language) {

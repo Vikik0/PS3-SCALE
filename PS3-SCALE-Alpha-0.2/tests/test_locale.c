@@ -18,6 +18,11 @@ int main(void)
                                      translated, sizeof(translated)) == 1);
     assert(strcmp(translated, "Configuración") == 0);
 
+    assert(ps3scale_locale_glyph_font_index((unsigned char)'A') == 0);
+    assert(ps3scale_locale_glyph_font_index((unsigned char)'9') == 0);
+    assert(ps3scale_locale_glyph_font_index(128u) == 1);
+    assert(ps3scale_locale_glyph_font_index(254u) == 1);
+
     length = ps3scale_locale_to_glyphs("سلام", glyphs, sizeof(glyphs));
     assert(length == 4);
     assert((unsigned char)glyphs[0] >= 128);

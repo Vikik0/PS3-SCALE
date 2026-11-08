@@ -159,6 +159,15 @@ static int load_extended_font(void)
     unsigned char compressed[2048];
     int compressed_size;
     uLongf output_size = (uLongf)sizeof(g_extended_font_bitmap);
+    u8 *texture_cursor;
+    const size_t bytes_per_glyph =
+        (PS3SCALE_FONT_WIDTH * PS3SCALE_FONT_HEIGHT) / 8u;
+    const size_t extended_offset =
+        (size_t)(PS3SCALE_FONT_EXTENDED_FIRST - PS3SCALE_FONT_FIRST) *
+        bytes_per_glyph;
+    const size_t extended_size =
+        (size_t)(PS3SCALE_FONT_LAST - PS3SCALE_FONT_EXTENDED_FIRST + 1u) *
+        bytes_per_glyph;
 
     compressed_size = decode_base64(ps3scale_font_z64, compressed,
                                      sizeof(compressed));
@@ -167,11 +176,25 @@ static int load_extended_font(void)
                    (uLong)compressed_size) != Z_OK ||
         output_size != sizeof(g_extended_font_bitmap))
         return -1;
+    if (extended_offset + extended_size > sizeof(g_extended_font_bitmap))
+        return -1;
 
+    /*
+     * libfont keeps each bitmap range as a separate font.  Register the
+     * original ASCII bitmap as font 0, then the Arabic/extended atlas as
+     * font 1.  The compressed atlas starts at codepoint 32, so skip its
+     * first 96 ASCII slots before registering codepoints 128..255.
+     */
     ResetFont();
-    (void)AddFontFromBitmapArray(g_extended_font_bitmap,
-        (u8 *)g_font_texture, PS3SCALE_FONT_FIRST, PS3SCALE_FONT_LAST,
+    texture_cursor = (u8 *)g_font_texture;
+    texture_cursor = AddFontFromBitmapArray((u8 *)ps3scale_font8x12,
+        texture_cursor, 32, 126, 8, 12, 1, BIT7_FIRST_PIXEL);
+    texture_cursor = AddFontFromBitmapArray(
+        g_extended_font_bitmap + extended_offset, texture_cursor,
+        PS3SCALE_FONT_EXTENDED_FIRST, PS3SCALE_FONT_LAST,
         PS3SCALE_FONT_WIDTH, PS3SCALE_FONT_HEIGHT, 1, BIT7_FIRST_PIXEL);
+    if (!texture_cursor) return -1;
+
     SetCurrentFont(0);
     g_extended_font_ready = 1;
     return 0;
@@ -191,9 +214,24 @@ static void draw_text(float x, float y, u32 color, const char *text)
         (g_language == LANGUAGE_ARABIC || g_language == LANGUAGE_SPANISH))
         source = text ? text : "";
     (void)ps3scale_locale_to_glyphs(source, glyph_text, sizeof(glyph_text));
-    SetCurrentFont(0);
     SetFontColor(color, 0x00000000);
-    DrawString(x, y, glyph_text);
+
+    if (g_extended_font_ready) {
+        size_t i;
+        float cursor = x;
+        for (i = 0; glyph_text[i] != '\0'; i++) {
+            unsigned char glyph = (unsigned char)glyph_text[i];
+            char one[2];
+            one[0] = (char)glyph;
+            one[1] = '\0';
+            SetCurrentFont(ps3scale_locale_glyph_font_index(glyph));
+            cursor = DrawString(cursor, y, one);
+        }
+        SetCurrentFont(0);
+    } else {
+        SetCurrentFont(0);
+        DrawString(x, y, glyph_text);
+    }
 }
 
 static int open_background_music(void)
