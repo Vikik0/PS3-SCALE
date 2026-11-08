@@ -1,0 +1,13 @@
+# Generated PS3 build outputs
+build/
+build-host/
+*.o
+*.d
+*.map
+
+# PS3 binaries and packages
+ps3scale.elf
+ps3scale.self
+ps3scale.fake.self
+ps3scale.pkg
+ps3scale.gnpdrm.pkg
