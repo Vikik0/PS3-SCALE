@@ -25,3 +25,15 @@ References:
 - [PS3 Developer Wiki — PS2 Emulation / Game CONFIG](https://www.psdevwiki.com/ps3/PS2_Emulation)
 - [PS3 Classics — CONFIG Guide](https://github.com/ps3classics/ps2/blob/main/config-guide.html)
 - [PS2 Classics compatibility resource](https://ps3classics.github.io/ps2/)
+
+
+## Alpha 0.2 CONFIG builder (generation only)
+
+A small C module now builds a restricted CONFIG template in memory and has host unit tests:
+- Command `0x44`: disables the netemu smoothing filter. This can make the output appear less blurred, but may also make aliasing more visible; it is not anti-aliasing.
+- Command `0x46`: enables the documented L2H improvement option, which may help performance in some titles but is not guaranteed.
+- The generated file uses the documented 8-byte CONFIG header and is checked against the 16,384-byte netemu limit.
+
+The builder does **not** write a sidecar file, alter an ISO, or apply a config to a game. The UI integration, per-game confirmation, backup and rollback are still pending. These commands must be tested on the exact PS2 title before being described as beneficial on the CECH-2504A.
+
+The public PS2 Classics guide and the developer wiki do not describe every command identically (notably command 0x21), so that command is deliberately excluded from the initial builder until the mapping is reconciled and tested.
