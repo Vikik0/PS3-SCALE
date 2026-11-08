@@ -143,4 +143,4 @@ Alpha 0.2 لا تطبّق patches ولا تغيّر أي ملف لعبة. قبل
 5. عرض المصدر ومستوى الثقة والمشاكل المعروفة.
 6. اختبار التعديل على الجهاز المستهدف قبل تصنيفه Hardware Verified.
 
-راجع `docs/RESEARCH_NOTES.md`, `docs/GRAPHICS_ENGINE_REALITY.md`, `docs/PS2_ENGINE.md`, `docs/PATCH_TRUST_POLICY.md`، `docs/WEBMAN_MAPI_INTEGRATION.md`، `docs/UI_FLOW.md`، و`docs/GAME_ENHANCEMENT_WORKFLOW.md`.\n\nتم دمج محرك تشغيل MP3، لكن ملف الأغنية نفسه ما زال يحتاج نسخاً مرة واحدة إلى المسار الموضح أعلاه. التفاصيل في `docs/AUDIO_THEME.md` و`third_party/mpg123/README.md`.
+راجع `docs/RESEARCH_NOTES.md`, `docs/GRAPHICS_ENGINE_REALITY.md`, `docs/PS2_ENGINE.md`, `docs/PATCH_TRUST_POLICY.md`، `docs/WEBMAN_MAPI_INTEGRATION.md`، `docs/UI_FLOW.md`، و`docs/GAME_ENHANCEMENT_WORKFLOW.md`.\n\nتم دمج محرك تشغيل MP3. جهزنا حزمة USB فيها ملف التثبيت والأغنية داخل `PS3SCALE/theme.mp3`؛ اترك USB موصولاً عند تشغيل البرنامج ليقرأها تلقائياً. ويمكن نسخ الأغنية إلى مجلد USRDIR الداخلي للتشغيل دون USB. التفاصيل في `docs/AUDIO_THEME.md` و`docs/BUILD_STATUS.md`.
