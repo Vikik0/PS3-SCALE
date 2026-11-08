@@ -12,7 +12,6 @@ import argparse
 import base64
 import hashlib
 import re
-import statistics
 import unicodedata
 import zlib
 from pathlib import Path
@@ -36,8 +35,8 @@ RAW_SIZE = (FONT_LAST - FONT_FIRST + 1) * (FONT_WIDTH * FONT_HEIGHT // 8)
 def read_arabic_map():
     text = MAP_PATH.read_text(encoding="utf-8")
     rows = re.findall(
-        r"\\{\\s*0x([0-9a-fA-F]+)\\s*,\\s*(\\d+)\\s*,"
-        r"\\s*(\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\s*\\}",
+        r"\{\s*0x([0-9a-fA-F]+)\s*,\s*(\d+)\s*,"
+        r"\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\}",
         text,
     )
     forms = {
@@ -125,7 +124,7 @@ def render_atlas(font_path: Path) -> bytes:
 def make_header(atlas: bytes) -> str:
     encoded = base64.b64encode(zlib.compress(atlas, 9)).decode("ascii")
     lines = [encoded[i:i + 70] for i in range(0, len(encoded), 70)]
-    body = "\\n".join(f'    "{line}"' for line in lines)
+    body = "\n".join(f'    "{line}"' for line in lines)
     return f"""#ifndef PS3SCALE_FONT_BITMAP_Z_H
 #define PS3SCALE_FONT_BITMAP_Z_H
 #define PS3SCALE_FONT_RAW_SIZE {RAW_SIZE}u
