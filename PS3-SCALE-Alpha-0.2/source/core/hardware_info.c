@@ -75,17 +75,23 @@ int ps3scale_hardware_info_parse(const uint8_t *raw, size_t raw_size,
                    "%u.%u%u", major, minor_tens, minor_ones);
 
     /*
-     * syscall 387 returns a 9-byte platform field: one numeric platform code
-     * followed by an ASCII Platform ID such as CokJ13 or CokM30.
+     * The syscall's documented platform_info_s layout is:
+     * firmware_version[7], platform_id[9], build_number, unknown.
+     * Platform ID therefore starts at byte 7 (not byte 8).
      */
-    out->platform_id_code = raw[7];
     for (i = 0; i < sizeof(out->platform_id) - 1u; i++) {
-        unsigned char ch = raw[8u + i];
+        unsigned char ch = raw[7u + i];
         if (ch == 0) break;
         if (ch < 0x20u || ch > 0x7eu) break;
         out->platform_id[i] = (char)ch;
     }
     out->platform_id[i] = '\0';
+
+    out->build_number =
+        ((uint32_t)raw[16] << 24) |
+        ((uint32_t)raw[17] << 16) |
+        ((uint32_t)raw[18] << 8) |
+        (uint32_t)raw[19];
 
     for (i = 0; i < sizeof(platform_models) /
                     sizeof(platform_models[0]); i++) {
