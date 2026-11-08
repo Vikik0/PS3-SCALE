@@ -39,30 +39,33 @@ assert "start_boot_scan" in src
 assert "SCANNING LOCAL GAME LIBRARY" in src
 assert "APP FILE CHECK: OK" in src
 
-# Arabic/Spanish text uses a dedicated extended font while ASCII keeps
-# the original readable bitmap font. Mixed strings switch font per glyph.
+# Arabic uses a pinned Noto Sans Arabic UI TTF with FreeType advances;
+# ASCII and Spanish extras retain their compact bitmap fonts.
 assert "ps3scale_locale_translate" in src
 assert "ps3scale_locale_to_glyphs" in src
 assert "ps3scale_locale_glyph_font_index" in src
+assert "NotoSansArabicUI.ttf" in src
 assert "font_bitmap_z.h" in src
-assert "arabic_glyph_map.h" not in src  # mapping is isolated in locale.c
+assert "arabic_glyph_map.h" not in src  # shaping map is isolated in locale.c
 font_loader = section("static int load_extended_font(void)", "static void draw_text")
 assert "ps3scale_font8x12" in font_loader
-assert "PS3SCALE_FONT_EXTENDED_FIRST" in font_loader
-assert "g_extended_font_bitmap + extended_offset" in font_loader
-assert "build_extended_font_metrics();" in font_loader
+assert "AddFontFromTTF(texture_cursor, 128, 244, 32, 32" in font_loader
+assert "g_extended_font_bitmap + spanish_offset" in font_loader
+assert "FT_New_Face" in font_loader
+assert "FT_Set_Pixel_Sizes" in font_loader
+assert "FT_Get_Char_Index" in font_loader
 assert "BIT7_FIRST_PIXEL" in font_loader
-metrics = section("static void build_extended_font_metrics(void)", "static void set_ui_font_size")
-assert "0x80u >> (col & 7u)" in metrics
-assert "g_extended_glyph_min_x" in metrics
-assert "g_extended_glyph_ink_width" in metrics
+arabic_callback = section("static void arabic_ttf_glyph_callback", "static void close_arabic_ttf")
+assert "0xfe80u + (uint32_t)(chr - 128u)" in arabic_callback
+assert "FT_Load_Glyph" in arabic_callback
+assert "FT_Render_Glyph" in arabic_callback
+assert "FT_PIXEL_MODE_GRAY" in arabic_callback
 draw_text_impl = section("static void draw_text", "static int open_background_music")
 assert "SetCurrentFont(font_index)" in draw_text_impl
-assert "DrawChar(cursor - ((float)min_x * scale_x)" in draw_text_impl
-assert "ps3scale_locale_glyphs_joined(glyph, next_glyph)" in draw_text_impl
+assert "cursor = DrawString(cursor, y, one)" in draw_text_impl
+assert "g_ui_font_width * 0.5f" in draw_text_impl
 assert "ps3scale_locale_is_arabic_glyph" in draw_text_impl
-assert "cursor -= scale_x * 2.0f" in draw_text_impl
-assert "cursor = DrawString(cursor, y, one) - 2.5f" not in draw_text_impl
+assert "DrawChar(" not in draw_text_impl
 assert src.count("SetFontSize(") == 1  # only the tracked UI font-size wrapper may call libfont directly
 
 # Layout contract: compact font, independent list/metadata/cover columns.
