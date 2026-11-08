@@ -162,9 +162,9 @@ assert "/dev_hdd0/tmp/wm_ingame" in profile_source
 assert "/patch.ps3?addr=" in profile_source
 assert "&find=%s&rep=1&val=%s" in profile_source
 assert "profile->patch_count != 1" in profile_source
-assert "Exact byte mismatches are skipped" in profile_source
+assert "Only exact byte matches are changed" in profile_source
 
-webman_header = source_path.parent.parent / "include" / "ps3scale" / "webman.h"
+webman_header = source_path.parent.parent.parent / "include" / "ps3scale" / "webman.h"
 assert "ps3scale_webman_ps3mapi_available" in webman_header.read_text(encoding="utf-8")
 
 print("PS3 SCALE UI contract tests: PASS")
