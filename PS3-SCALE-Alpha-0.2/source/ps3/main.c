@@ -1805,6 +1805,9 @@ static void draw_details(void)
 {
     char line[256];
     const ps3scale_game_t *game = selected_game();
+    const ps3scale_profile_t *profile = profile_for_game(game);
+    int script_state = profile ?
+        ps3scale_profile_script_state(profile->title_id, profile->app_ver) : 0;
     set_ui_font_size(11, 17);
     draw_text(28, 22, 0xcaff39ff, "PS3 SCALE");
     draw_text(180, 25, 0x9aa6adff, "GAME DETAILS");
@@ -1838,14 +1841,40 @@ static void draw_details(void)
 
     draw_text(34, 282, 0xffffffff, "GRAPHICS PROFILE");
     if (game_is_ps3(game)) {
-        draw_text(34, 316, 0xffcc66ff,
-                  "NO VERIFIED PROFILE FOR THIS TITLE / UPDATE.");
-        draw_text(34, 348, 0x9aa6adff,
-                  "NO GAME FILES ARE MODIFIED BY THIS BUILD.");
-        draw_solid_rect(34.0f, 388.0f, 224.0f, 44.0f, 0x173a35ff);
-        draw_outline_rect(34.0f, 388.0f, 224.0f, 44.0f, 0x8bd450ff);
-        draw_text(58, 400, 0xcaff39ff, "START GAME");
-        draw_text(34, 448, 0x9aa6adff, g_details_message);
+        if (profile) {
+            snprintf(line, sizeof(line), "ONLINE PROFILE: %.46s", profile->effect);
+            draw_text(34, 316, 0xcaff39ff, line);
+            draw_text(34, 348, 0xffcc66ff,
+                      "TRUST: COMMUNITY-REPORTED - REVIEW BEFORE USE.");
+            if (profile->patch_count == 1) {
+                if (script_state == 1)
+                    snprintf(line, sizeof(line), "AUTO APPLY: ENABLED");
+                else if (script_state == -2)
+                    snprintf(line, sizeof(line), "AUTO APPLY: UPDATE MISMATCH");
+                else if (script_state == -1)
+                    snprintf(line, sizeof(line), "AUTO APPLY: USER SCRIPT EXISTS");
+                else
+                    snprintf(line, sizeof(line), "AUTO APPLY: DISABLED");
+            } else {
+                snprintf(line, sizeof(line), "AUTO APPLY: MULTI-WRITE MANUAL ONLY");
+            }
+            draw_text(34, 376, 0xdce3e8ff, line);
+        } else {
+            draw_text(34, 316, 0xffcc66ff,
+                      "NO EXACT ONLINE PROFILE FOR THIS UPDATE.");
+            draw_text(34, 348, 0x9aa6adff,
+                      "TITLE ID AND APP VERSION MUST BOTH MATCH.");
+            draw_text(34, 376, 0x9aa6adff,
+                      "OPEN ONLINE DATABASE TO CHECK SUPPORTED PROFILES.");
+        }
+        draw_solid_rect(34.0f, 396.0f, 224.0f, 40.0f, 0x173a35ff);
+        draw_outline_rect(34.0f, 396.0f, 224.0f, 40.0f, 0x8bd450ff);
+        draw_text(58, 407, 0xcaff39ff, "START GAME");
+        if (g_profile_confirm_pending)
+            draw_text(34, 448, 0xffcc66ff,
+                      "COMMUNITY PATCH: TRIANGLE CONFIRMS INSTALL; CIRCLE CANCELS.");
+        else
+            draw_text(34, 448, 0x9aa6adff, g_details_message);
     } else {
         draw_text(34, 316, 0xffcc66ff,
                   "PS2 CONFIG PREVIEW IS SEPARATE FROM PS3 GRAPHICS PATCHES.");
@@ -1875,7 +1904,7 @@ static void draw_details(void)
 
     draw_text(34, 478, 0x9aa6adff,
               game_is_ps3(game) ?
-              "CROSS / START: START GAME  |  CIRCLE: BACK" :
+              "CROSS/START: START GAME  SQUARE: AUTO PROFILE  CIRCLE: BACK" :
               "TRIANGLE: CONFIG PREVIEW  |  CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
@@ -2006,6 +2035,7 @@ static void draw_ui(void)
         case SCREEN_HOME: draw_home(); break;
         case SCREEN_SCAN: draw_scan(); break;
         case SCREEN_DETAILS: draw_details(); break;
+        case SCREEN_ONLINE_DB: draw_online_database(); break;
         case SCREEN_SETTINGS: draw_settings(); break;
         case SCREEN_TOOLS: draw_tools(); break;
         case SCREEN_ABOUT: draw_about(); break;
