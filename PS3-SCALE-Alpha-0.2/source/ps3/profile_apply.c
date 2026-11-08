@@ -23,24 +23,25 @@ static int valid_title_id(const char *value)
 {
     size_t i;
 
-    if (!value || strlen(value) != 9)
+    if (!value)
         return 0;
     for (i = 0; i < 9; i++) {
         if (!((value[i] >= 'A' && value[i] <= 'Z') ||
               (value[i] >= '0' && value[i] <= '9')))
             return 0;
     }
-    return 1;
+    return value[9] == '\0';
 }
 
 static int valid_app_version(const char *value)
 {
-    return value && strlen(value) == 5 &&
+    return value &&
            isdigit((unsigned char)value[0]) &&
            isdigit((unsigned char)value[1]) &&
            value[2] == '.' &&
            isdigit((unsigned char)value[3]) &&
-           isdigit((unsigned char)value[4]);
+           isdigit((unsigned char)value[4]) &&
+           value[5] == '\0';
 }
 
 static int valid_source_url(const char *value)
@@ -83,7 +84,7 @@ static int read_script_header(const char *path, char *header, size_t capacity)
     header[0] = '\0';
     file = fopen(path, "rb");
     if (!file)
-        return 0;
+        return errno == ENOENT ? 0 : -1;
     if (!fgets(header, (int)capacity, file)) {
         fclose(file);
         return -1;
@@ -198,7 +199,7 @@ static int parse_single_patch(const ps3scale_profile_t *profile,
         return -1;
 
     parsed = strtoul(first, &end, 16);
-    if (!end || *end || parsed == 0 || parsed > 0xFFFFFFFEul)
+    if (!end || *end || parsed == 0 || parsed > 0xFFFFFFDFul)
         return -1;
 
     *address = parsed;
@@ -254,7 +255,9 @@ int ps3scale_profile_script_install(const ps3scale_profile_t *profile)
 
     /*
      * webMAN runs this per-title script when the game starts. The search
-     * window contains exactly one possible start address: [address, address+1).
+     * webMAN rounds its safe upper search bound down to a 16-byte boundary.
+     * With signatures limited to 1-16 bytes, stop=address+0x20 and step=64
+     * leave exactly one candidate start address: the requested address.
      * The expected bytes must match before /patch.ps3 writes the replacement.
      * The script deletes itself after this single launch to avoid stale reuse.
      *
@@ -278,12 +281,12 @@ int ps3scale_profile_script_install(const ps3scale_profile_t *profile)
         "batch command cannot verify the post-write memory value.\n"
         "if titleid %s\n"
         "if ingame\n"
-        "/patch.ps3?addr=%08lX&stop=%08lX&step=1&find=%s&rep=1&val=%s\n"
+        "/patch.ps3?addr=%08lX&stop=%08lX&step=64&find=%s&rep=1&val=%s\n"
         "end if\n"
         "end if\n"
         "del %s\n\n",
         header, profile->source_url, profile->title_id,
-        address, address + 1, expected, replacement, path);
+        address, address + 0x20ul, expected, replacement, path);
     if (written < 0) {
         (void)fclose(file);
         unlink(temporary_path);
