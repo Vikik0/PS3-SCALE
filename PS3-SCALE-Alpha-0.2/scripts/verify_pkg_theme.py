@@ -21,7 +21,7 @@ def main() -> int:
 
     package_path = Path(sys.argv[1])
     package = package_path.read_bytes()
-    if len(package) < 0xC0 or package[:4] != b"\\x7fPKG":
+    if len(package) < 0xC0 or package[:4] != bytes.fromhex("7f504b47"):
         raise SystemExit("ERROR: invalid PS3 PKG header")
 
     revision = struct.unpack_from(">H", package, 0x04)[0]
