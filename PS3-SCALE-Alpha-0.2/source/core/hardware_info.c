@@ -77,10 +77,12 @@ int ps3scale_hardware_info_parse(const uint8_t *raw, size_t raw_size,
     /*
      * The syscall's documented platform_info_s layout is:
      * firmware_version[7], platform_id[9], build_number, unknown.
-     * Platform ID therefore starts at byte 7 (not byte 8).
+     * platform_id[0] is the numeric code (e.g. 0x40); the ASCII name
+     * follows at byte offset 8 (e.g. "CokB10").
      */
+    out->platform_id_code = raw[7];
     for (i = 0; i < sizeof(out->platform_id) - 1u; i++) {
-        unsigned char ch = raw[7u + i];
+        unsigned char ch = raw[8u + i];
         if (ch == 0) break;
         if (ch < 0x20u || ch > 0x7eu) break;
         out->platform_id[i] = (char)ch;
