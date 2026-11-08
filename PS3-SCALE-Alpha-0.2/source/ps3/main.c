@@ -1025,8 +1025,10 @@ static void catalog_sync_worker(void *arg)
         g_catalog_sync_result = -1;
     }
 
-    g_catalog_sync_running = 0;
+    /* Publish completion before clearing running so UI actions never
+     * overlap the final network teardown window. */
     g_catalog_sync_done = 1;
+    g_catalog_sync_running = 0;
 }
 
 static void start_catalog_sync_worker(int force)
@@ -1261,7 +1263,7 @@ static void confirm_profile_install(void)
         g_profile_confirm_pending = 0;
         return;
     }
-    if (g_catalog_sync_running) {
+    if (g_catalog_sync_running || g_catalog_sync_done) {
         set_details_message("WAIT FOR ONLINE DATABASE SYNC TO FINISH.");
         g_profile_confirm_pending = 0;
         return;
@@ -1339,7 +1341,7 @@ static void start_selected_game(void)
         set_details_message("STALE PROFILE SCRIPT. REMOVE IT BEFORE STARTING.");
         return;
     }
-    if (g_catalog_sync_running) {
+    if (g_catalog_sync_running || g_catalog_sync_done) {
         set_details_message("WAIT FOR ONLINE DATABASE SYNC TO FINISH BEFORE STARTING.");
         return;
     }
