@@ -141,13 +141,21 @@ static int read_script_contents(const char *path, char *contents,
     return 1;
 }
 
+static int header_has_marker(const char *header, const char *marker)
+{
+    size_t length;
+
+    if (!header || !marker)
+        return 0;
+    length = strlen(marker);
+    return strncmp(header, marker, length) == 0 &&
+           (header[length] == '\\0' || header[length] == ' ');
+}
+
 static int header_is_owned(const char *header)
 {
-    return header &&
-        (strncmp(header, PS3SCALE_SCRIPT_HEADER_V1,
-                 strlen(PS3SCALE_SCRIPT_HEADER_V1)) == 0 ||
-         strncmp(header, PS3SCALE_SCRIPT_HEADER_V2,
-                 strlen(PS3SCALE_SCRIPT_HEADER_V2)) == 0);
+    return header_has_marker(header, PS3SCALE_SCRIPT_HEADER_V1) ||
+           header_has_marker(header, PS3SCALE_SCRIPT_HEADER_V2);
 }
 
 static int valid_hex_string(const char *value, size_t max_length, int even)
