@@ -140,9 +140,15 @@ assert "start_catalog_sync_worker(0)" in src
 assert "start_catalog_sync_worker(1)" in main
 assert "ps3scale_catalog_match_game" in src
 assert "EXACT ONLINE PROFILE FOUND" in src
-assert "AUTO PROFILE INSTALLED" in src
+assert "ONE-LAUNCH PROFILE ARMED. START THE MOUNTED GAME." in src
+assert "ONE-LAUNCH APPLY: AVAILABLE AFTER CONFIRMATION" in src
+assert "STALE PROFILE SCRIPT. REMOVE IT BEFORE STARTING." in src
 assert "MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY" in src
 assert "PROFILE DATA SAVED TO INTERNAL HDD. NOT APPLIED YET." in src
+assert "profile_script_state_for_game" in src
+assert "profile ? profile->patches : NULL" in src
+assert "(!candidate->app_ver[0] ||" in src
+assert "feature/online-graphics-database" in src
 
 online_source = source_path.with_name("online_catalog.c").read_text(encoding="utf-8")
 assert "CURLOPT_SSL_VERIFYPEER, 1L" in online_source
@@ -158,11 +164,17 @@ assert "valid_patch_list" in catalog_src
 assert "Duplicate exact identity is ambiguous" in catalog_src
 
 profile_source = source_path.with_name("profile_apply.c").read_text(encoding="utf-8")
-assert "/dev_hdd0/tmp/wm_ingame" in profile_source
+assert "PS3SCALE_SCRIPT_HEADER_V1" in profile_source
+assert "PS3SCALE_SCRIPT_HEADER_V2" in profile_source
+assert "TITLE_ID=%s APP_VER=%s PATCHES=%s" in profile_source
 assert "/patch.ps3?addr=" in profile_source
-assert "&find=%s&rep=1&val=%s" in profile_source
+assert "&stop=%08lX&step=1&find=%s&rep=1&val=%s" in profile_source
+assert "address + 1" in profile_source
+assert '"del %s\\n\\n"' in profile_source
+assert "No success notification is shown" in profile_source
 assert "profile->patch_count != 1" in profile_source
-assert "Only exact byte matches are changed" in profile_source
+assert "popup" not in profile_source
+assert "beep" not in profile_source
 
 webman_header = source_path.parent.parent.parent / "include" / "ps3scale" / "webman.h"
 assert "ps3scale_webman_ps3mapi_available" in webman_header.read_text(encoding="utf-8")
