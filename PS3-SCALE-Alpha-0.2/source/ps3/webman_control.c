@@ -95,6 +95,21 @@ int ps3scale_webman_available(void)
     return webman_http_get("/cpursx.ps3", response, sizeof(response));
 }
 
+int ps3scale_webman_ps3mapi_available(void)
+{
+    char response[2048];
+
+    if (webman_http_get("/ps3mapi.ps3?SERVER%20GETVERSION",
+                        response, sizeof(response)) != 0)
+        return -1;
+
+    /* A live PS3MAPI endpoint returns a JSON response with server version. */
+    if (!strstr(response, "200 OK") ||
+        (!strstr(response, "version") && !strstr(response, "response")))
+        return -1;
+    return 0;
+}
+
 int ps3scale_webman_start_mounted_game(void)
 {
     char response[1024];
