@@ -421,6 +421,42 @@ int ps3scale_locale_glyph_font_index(unsigned char glyph)
     return glyph >= 128u ? 1 : 0;
 }
 
+int ps3scale_locale_is_arabic_glyph(unsigned char glyph)
+{
+    size_t i;
+    for (i = 0; i < sizeof(ps3scale_arabic_forms) /
+                    sizeof(ps3scale_arabic_forms[0]); i++) {
+        const ps3scale_arabic_form_t *form = &ps3scale_arabic_forms[i];
+        if (form->isolated == glyph ||
+            (form->final_form && form->final_form == glyph) ||
+            (form->initial && form->initial == glyph) ||
+            (form->medial && form->medial == glyph))
+            return 1;
+    }
+    return 0;
+}
+
+int ps3scale_locale_glyphs_joined(unsigned char left_glyph,
+                                  unsigned char right_glyph)
+{
+    const ps3scale_arabic_form_t *left_form = NULL;
+    const ps3scale_arabic_form_t *right_form = NULL;
+    size_t i;
+
+    for (i = 0; i < sizeof(ps3scale_arabic_forms) /
+                    sizeof(ps3scale_arabic_forms[0]); i++) {
+        const ps3scale_arabic_form_t *form = &ps3scale_arabic_forms[i];
+        if ((form->final_form && form->final_form == left_glyph) ||
+            (form->medial && form->medial == left_glyph))
+            left_form = form;
+        if ((form->initial && form->initial == right_glyph) ||
+            (form->medial && form->medial == right_glyph))
+            right_form = form;
+    }
+
+    return left_form != NULL && right_form != NULL;
+}
+
 const char *ps3scale_locale_language_name(int language)
 {
     switch (language) {
