@@ -8,9 +8,11 @@
 - Existing settings for music, volume and home animation are preserved.
 
 ## Text rendering
-- The app uses an embedded 1-bit bitmap glyph atlas derived from Noto Sans Arabic.
-- Latin ASCII, common Spanish accents and the Arabic letters used by the translated UI are included in the atlas.
+- The app uses two embedded bitmap fonts: a compact Latin ASCII font and a separate extended atlas derived from Noto Sans Arabic.
+- Latin ASCII, common Spanish accents and the Arabic letters used by the translated UI are included in the corresponding font ranges.
 - Arabic UI strings are shaped into isolated/final/initial/medial forms and reordered for a right-to-left display run before drawing.
+- At startup, the app measures each extended glyph's visible bitmap bounds. Arabic glyphs are positioned by their visible ink width, and spacing is adjusted per adjacent pair: connected forms overlap by a controlled source-pixel amount while non-joining letters retain a small gap. Space width scales with the active UI font size.
+- Font-size changes are tracked by the UI renderer so Arabic spacing remains proportional on the loading screen, menus, settings, scanner, details and controller keyboard.
 - The embedded Arabic mapping is intentionally small and tailored to the app UI. It is not a complete Unicode, HarfBuzz or ICU implementation. Unsupported characters in arbitrary game titles fall back to a question mark; vowel marks/diacritics and advanced mixed-direction edge cases are not promised.
 - The bitmap atlas is uploaded once during initialization. Text drawing uses the RSX bitmap font rather than rasterizing text every frame.
 
