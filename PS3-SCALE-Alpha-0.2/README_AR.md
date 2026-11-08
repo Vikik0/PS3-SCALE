@@ -128,4 +128,4 @@ Alpha 0.2 لا تطبّق patches ولا تغيّر أي ملف لعبة. قبل
 5. عرض المصدر ومستوى الثقة والمشاكل المعروفة.
 6. اختبار التعديل على الجهاز المستهدف قبل تصنيفه Hardware Verified.
 
-راجع `docs/RESEARCH_NOTES.md`, `docs/GRAPHICS_ENGINE_REALITY.md`, `docs/PS2_ENGINE.md`, و`docs/PATCH_TRUST_POLICY.md`.
+راجع `docs/RESEARCH_NOTES.md`, `docs/GRAPHICS_ENGINE_REALITY.md`, `docs/PS2_ENGINE.md`, `docs/PATCH_TRUST_POLICY.md`، و`docs/WEBMAN_MAPI_INTEGRATION.md`.
