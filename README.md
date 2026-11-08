@@ -15,13 +15,13 @@ The main branch has a successful embedded-theme build. The development branch **
 
 **Safety status:** the catalogue entries are community-reported, not independently verified on the user's PS3. The webMAN batch path cannot report a verified post-write memory value, so PS3 SCALE does not show a success popup. The patch changes the running game's memory only; original game files remain unchanged. Exiting the game clears the process-memory change.
 
-The feature branch must pass host tests and the PS3 package build, then receive a physical-console smoke test, before it is considered ready for normal use. There is no universal AI upscaler or frame generation.
+The feature branch passed host tests and the PS3 package build in [Run #170](https://github.com/Vikik0/PS3-SCALE/actions/runs/42531978769). Its GNPDRM PKG is available in the run's Artifacts. The branch is still a draft PR and has not yet received a physical-console smoke test. There is no universal AI upscaler or frame generation.
 
 ## Latest verified main build
 
 [GitHub Actions Run #162 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42524757054)
 
-This build is from main and **does not yet include** the online graphics-profile branch. Wait for the feature-branch CI result before installing a build that includes the online profile work.
+This build is from main and **does not yet include** the online graphics-profile branch. The feature-branch CI result is available in Run #170. Use that run's GNPDRM PKG for a first hardware smoke test; it is not yet hardware-validated.
 
 ## Build and install
 
