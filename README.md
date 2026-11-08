@@ -10,18 +10,18 @@ The main branch has a successful embedded-theme build. The development branch **
 - HTTPS catalogue synchronization with certificate verification, a download-size cap and validated cache replacement.
 - Exact Title ID + APP_VER matching.
 - A guarded, one-launch webMAN MOD script for single-write profiles, requiring explicit confirmation.
-- Exact-address/original-byte checks, script fingerprinting, stale-script handling and self-removal after the launch attempt.
+- Exact-address/original-byte checks, Title ID + APP_VER fingerprinting, full script-body integrity verification, stale-script handling and self-removal after the launch attempt.
 - Multi-write profiles remain disabled for automatic application.
 
 **Safety status:** the catalogue entries are community-reported, not independently verified on the user's PS3. The webMAN batch path cannot report a verified post-write memory value, so PS3 SCALE does not show a success popup. The patch changes the running game's memory only; original game files remain unchanged. Exiting the game clears the process-memory change.
 
-The feature branch passed host tests and the PS3 package build in [Run #170](https://github.com/Vikik0/PS3-SCALE/actions/runs/42531978769). Its GNPDRM PKG is available in the run's Artifacts. The branch is still a draft PR and has not yet received a physical-console smoke test. There is no universal AI upscaler or frame generation.
+The feature branch passed host tests and the PS3 package build in [Run #178](https://github.com/Vikik0/PS3-SCALE/actions/runs/42532501388). Its GNPDRM PKG is available in the run's Artifacts. The branch is still [Draft PR #6](https://github.com/Vikik0/PS3-SCALE/pull/6) and has not yet received a physical-console smoke test. There is no universal AI upscaler or frame generation.
 
 ## Latest verified main build
 
 [GitHub Actions Run #162 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42524757054)
 
-This build is from main and **does not yet include** the online graphics-profile branch. The feature-branch CI result is available in Run #170. Use that run's GNPDRM PKG for a first hardware smoke test; it is not yet hardware-validated.
+This build is from main and **does not yet include** the online graphics-profile branch. The feature-branch CI result is available in Run #178. Use that run's GNPDRM PKG for a first hardware smoke test; it is not yet hardware-validated.
 
 ## Build and install
 
