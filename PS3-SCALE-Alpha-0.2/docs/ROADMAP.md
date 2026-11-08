@@ -21,7 +21,7 @@
 - Local backup/restore manifest (no automatic game-file edits)
 
 ## Alpha 0.3 — PS2 configuration manager
-- [x] Add a restricted in-memory PS2 netemu CONFIG builder for commands 0x44/0x46, with host tests\n- PS2 Classics/PS2 ISO metadata enrichment
+- [x] Add a restricted in-memory PS2 netemu CONFIG builder for commands 0x44/0x46, with host tests\n- [x] Add a Triangle-triggered PS2 ISO CONFIG preview screen (preview only; no writes)\n- PS2 Classics/PS2 ISO metadata enrichment
 - Match known `ps2_netemu` CONFIG files by title ID and region
 - Hash verification and backup/restore
 - No automatic config writes until hardware tests pass
@@ -48,7 +48,7 @@ verified on physical hardware. The host SFO tests do not substitute for console 
 - [x] Add PS2 ISO9660 serial metadata probe
 - [x] Preserve multiple copies of one Title ID on separate drives
 - [x] Add developer research and online catalog safety rules
-- [x] Execute GitHub Actions on the user's repository (Run #15 passed)
+- [x] Execute GitHub Actions on the user's repository (Run #34 passed)
 - [x] Inspect resulting PKG and SELF; finalized PKG header and Content ID validated
 - [ ] Install and test on physical CECH-2504A
 
