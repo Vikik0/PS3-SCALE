@@ -34,6 +34,17 @@ jobs:
           chmod +x scripts/test_host.sh
           ./scripts/test_host.sh
 
+      - name: Render embedded Arabic bitmap preview
+        working-directory: PS3-SCALE-Alpha-0.2
+        run: python3 tests/render_font_preview.py
+
+      - name: Upload Arabic bitmap preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: PS3-SCALE-Alpha-0.2-arabic-font-preview
+          if-no-files-found: error
+          path: PS3-SCALE-Alpha-0.2/build-host/arabic-font-preview.png
+
   ps3-build:
     name: Build PS3 ELF, SELF, and PKG
     runs-on: ubuntu-latest
