@@ -3,12 +3,11 @@
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
-#include <malloc.h>
-#include <unistd.h>
-#include <sys/spu.h>
-#include <lv2/spu.h>
-#include <soundlib/spu_soundlib.h>
-#include <soundlib/audioplayer.h>
+#include <stdint.h>
+#include <audio/audio.h>
+#include <sys/event_queue.h>
+#include <sys/thread.h>
+#include <soundlib/mpg123.h>
 
 #include <tiny3d.h>
 #include <libfont.h>
@@ -22,7 +21,6 @@
 #include "ps3scale/scanner.h"
 #include "ps3scale/ps2_config.h"
 #include "font8x12.h"
-#include "spu_soundmodule_bin.h"
 
 enum {
     LIBRARY_PS3 = 0,
@@ -53,15 +51,24 @@ static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 #define PS3SCALE_MUSIC_ORIGINAL_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/GTA V - Greyhound Pause Menu Theme Remix.mp3"
 #define PS3SCALE_MUSIC_USB_PATH "/dev_usb000/PS3SCALE/theme.mp3"
 
-static u32 g_spu = 0;
-static sysSpuImage g_spu_image;
-static int g_spu_ready = 0;
-static int g_spu_image_ready = 0;
-static int g_soundlib_ready = 0;
+static audioPortParam g_audio_params;
+static audioPortConfig g_audio_config;
+static sys_event_queue_t g_audio_queue;
+static sys_ipc_key_t g_audio_queue_key;
+static sys_ppu_thread_t g_audio_thread;
+static mpg123_handle *g_mpg123 = NULL;
+static u32 g_audio_port = 0;
+static int g_audio_initialized = 0;
+static int g_audio_port_open = 0;
+static int g_audio_port_started = 0;
+static int g_audio_queue_ready = 0;
+static int g_audio_notify_ready = 0;
+static int g_audio_thread_started = 0;
+static int g_mpg123_initialized = 0;
+static volatile int g_audio_thread_running = 0;
+static volatile int g_music_enabled = 1;
+static volatile int g_music_volume = 180;
 static int g_music_playing = 0;
-static int g_music_attempted = 0;
-static int g_music_enabled = 1;
-static int g_music_volume = 180;
 static int g_settings_selected = 0;
 static char g_music_path[PS3SCALE_PATH_MAX] = "";
 
@@ -170,51 +177,126 @@ static void draw_text(float x, float y, u32 color, char *text)
     DrawString(x, y, text);
 }
 
-static void stop_background_music(void)
+static int open_background_music(void)
 {
-    if (g_music_playing) {
-        StopAudio();
-        g_music_playing = 0;
-    }
-}
-
-static int start_background_music(void)
-{
-    char path_primary[] = PS3SCALE_MUSIC_PATH;
-    char path_original[] = PS3SCALE_MUSIC_ORIGINAL_PATH;
-    char path_usb[] = PS3SCALE_MUSIC_USB_PATH;
-    char *paths[] = { path_primary, path_original, path_usb };
+    static const char *paths[] = {
+        PS3SCALE_MUSIC_PATH,
+        PS3SCALE_MUSIC_ORIGINAL_PATH,
+        PS3SCALE_MUSIC_USB_PATH
+    };
+    int error = 0;
     size_t i;
 
-    if (!g_soundlib_ready || !g_music_enabled)
+    if (mpg123_init() != MPG123_OK)
+        return -1;
+    g_mpg123_initialized = 1;
+
+    g_mpg123 = mpg123_new(NULL, &error);
+    if (!g_mpg123)
         return -1;
 
-    stop_background_music();
-    g_music_attempted = 1;
-    g_music_path[0] = '\0';
+    if (mpg123_format_none(g_mpg123) != MPG123_OK ||
+        mpg123_param(g_mpg123, MPG123_FORCE_RATE, 48000, 0.0) != MPG123_OK ||
+        mpg123_format(g_mpg123, 48000, MPG123_STEREO,
+                      MPG123_ENC_SIGNED_16) != MPG123_OK)
+        return -1;
 
     for (i = 0; i < sizeof(paths) / sizeof(paths[0]); i++) {
-        if (PlayAudio(paths[i], 0, AUDIO_INFINITE_TIME) == 0) {
-            g_music_playing = 1;
+        long rate = 0;
+        int channels = 0;
+        int encoding = 0;
+
+        if (mpg123_open(g_mpg123, paths[i]) != MPG123_OK)
+            continue;
+
+        if (mpg123_getformat(g_mpg123, &rate, &channels, &encoding) == MPG123_OK &&
+            rate == 48000 && channels == MPG123_STEREO &&
+            encoding == MPG123_ENC_SIGNED_16) {
             strncpy(g_music_path, paths[i], sizeof(g_music_path) - 1);
             g_music_path[sizeof(g_music_path) - 1] = '\0';
-            SetVolumeAudio(g_music_volume);
             return 0;
         }
+
+        mpg123_close(g_mpg123);
     }
 
     return -1;
 }
 
+static void fill_audio_block(float *output)
+{
+    short pcm[AUDIO_BLOCK_SAMPLES * 2];
+    size_t total = 0;
+    size_t target = sizeof(pcm);
+    size_t i;
+    float gain = g_music_enabled ? ((float)g_music_volume / 255.0f) : 0.0f;
+
+    memset(pcm, 0, sizeof(pcm));
+
+    while (total < target && g_audio_thread_running) {
+        size_t decoded = 0;
+        int rc = mpg123_read(g_mpg123,
+                             ((unsigned char *)pcm) + total,
+                             target - total, &decoded);
+        total += decoded;
+
+        if (rc == MPG123_NEW_FORMAT) {
+            long rate = 0;
+            int channels = 0;
+            int encoding = 0;
+            if (mpg123_getformat(g_mpg123, &rate, &channels, &encoding) != MPG123_OK ||
+                rate != 48000 || channels != MPG123_STEREO ||
+                encoding != MPG123_ENC_SIGNED_16)
+                break;
+            continue;
+        }
+
+        if (rc == MPG123_DONE) {
+            if (mpg123_seek(g_mpg123, 0, SEEK_SET) < 0)
+                break;
+            continue;
+        }
+
+        if (rc == MPG123_ERR || (decoded == 0 && rc == MPG123_OK))
+            break;
+    }
+
+    for (i = 0; i < AUDIO_BLOCK_SAMPLES * 2; i++) {
+        output[i] = ((float)pcm[i] / 32768.0f) * gain;
+    }
+}
+
+static void audio_output_thread(void *arg)
+{
+    (void)arg;
+
+    while (g_audio_thread_running) {
+        sys_event_t event;
+        u64 current_block;
+        u32 next_block;
+        float *audio_data;
+        float *destination;
+        s32 rc = sysEventQueueReceive(g_audio_queue, &event, 20 * 1000);
+
+        if (rc != 0)
+            continue;
+        if (!g_audio_thread_running)
+            break;
+
+        current_block = *(volatile u64 *)(uintptr_t)g_audio_config.readIndex;
+        next_block = (u32)((current_block + 1) % g_audio_config.numBlocks);
+        audio_data = (float *)(uintptr_t)g_audio_config.audioDataStart;
+        destination = audio_data +
+            ((size_t)next_block * (size_t)g_audio_config.channelCount *
+             AUDIO_BLOCK_SAMPLES);
+
+        fill_audio_block(destination);
+    }
+}
+
 static void set_background_music_enabled(int enabled)
 {
     g_music_enabled = enabled ? 1 : 0;
-
-    if (!g_music_enabled) {
-        stop_background_music();
-    } else if (g_soundlib_ready) {
-        (void)start_background_music();
-    }
 }
 
 static void set_background_music_volume(int volume)
@@ -222,78 +304,111 @@ static void set_background_music_volume(int volume)
     if (volume < 0) volume = 0;
     if (volume > 255) volume = 255;
     g_music_volume = volume;
-
-    if (g_soundlib_ready)
-        SetVolumeAudio(g_music_volume);
-}
-
-static void update_background_music(void)
-{
-    int status;
-
-    if (!g_music_enabled || !g_music_playing)
-        return;
-
-    status = StatusAudio();
-    if (status == AUDIO_STATUS_EOF || status == AUDIO_STATUS_ERR) {
-        g_music_playing = 0;
-        (void)start_background_music();
-    }
 }
 
 static void shutdown_audio_backend(void)
 {
-    stop_background_music();
+    u64 thread_result = 0;
 
-    if (g_soundlib_ready) {
-        SND_End();
-        g_soundlib_ready = 0;
+    g_audio_thread_running = 0;
+
+    if (g_audio_thread_started) {
+        (void)sysThreadJoin(g_audio_thread, &thread_result);
+        g_audio_thread_started = 0;
     }
 
-    if (g_spu_ready) {
-        (void)sysSpuRawDestroy(g_spu);
-        g_spu_ready = 0;
+    if (g_audio_port_started) {
+        (void)audioPortStop(g_audio_port);
+        g_audio_port_started = 0;
     }
 
-    if (g_spu_image_ready) {
-        sysSpuImageClose(&g_spu_image);
-        g_spu_image_ready = 0;
+    if (g_audio_notify_ready) {
+        (void)audioRemoveNotifyEventQueue(g_audio_queue_key);
+        g_audio_notify_ready = 0;
     }
+
+    if (g_audio_port_open) {
+        (void)audioPortClose(g_audio_port);
+        g_audio_port_open = 0;
+    }
+
+    if (g_audio_queue_ready) {
+        (void)sysEventQueueDestroy(g_audio_queue, 0);
+        g_audio_queue_ready = 0;
+    }
+
+    if (g_audio_initialized) {
+        (void)audioQuit();
+        g_audio_initialized = 0;
+    }
+
+    if (g_mpg123) {
+        (void)mpg123_close(g_mpg123);
+        mpg123_delete(g_mpg123);
+        g_mpg123 = NULL;
+    }
+
+    if (g_mpg123_initialized) {
+        mpg123_exit();
+        g_mpg123_initialized = 0;
+    }
+
+    g_music_playing = 0;
 }
 
 static int initialize_audio_backend(void)
 {
     int rc;
 
-    rc = sysSpuInitialize(6, 5);
-    if (rc != 0)
-        return -1;
-
-    rc = sysSpuRawCreate(&g_spu, NULL);
-    if (rc != 0)
-        return -1;
-    g_spu_ready = 1;
-
-    rc = sysSpuImageImport(&g_spu_image, spu_soundmodule_bin, 0);
-    if (rc != 0)
-        goto fail;
-    g_spu_image_ready = 1;
-
-    rc = sysSpuRawImageLoad(g_spu, &g_spu_image);
-    if (rc != 0)
+    if (open_background_music() != 0)
         goto fail;
 
-    rc = SND_Init(g_spu);
+    rc = audioInit();
     if (rc != 0)
         goto fail;
-    g_soundlib_ready = 1;
+    g_audio_initialized = 1;
 
-    /* The sound library starts muted; unmute before starting the MP3 player. */
-    SND_Pause(0);
-    SetVolumeAudio(g_music_volume);
-    if (g_music_enabled)
-        (void)start_background_music();
+    g_audio_params.numChannels = AUDIO_PORT_2CH;
+    g_audio_params.numBlocks = AUDIO_BLOCK_8;
+    g_audio_params.attrib = AUDIO_PORT_INITLEVEL;
+    g_audio_params.level = 1.0f;
 
+    rc = audioPortOpen(&g_audio_params, &g_audio_port);
+    if (rc != 0)
+        goto fail;
+    g_audio_port_open = 1;
+
+    rc = audioGetPortConfig(g_audio_port, &g_audio_config);
+    if (rc != 0)
+        goto fail;
+
+    rc = audioCreateNotifyEventQueue(&g_audio_queue, &g_audio_queue_key);
+    if (rc != 0)
+        goto fail;
+    g_audio_queue_ready = 1;
+
+    rc = audioSetNotifyEventQueue(g_audio_queue_key);
+    if (rc != 0)
+        goto fail;
+    g_audio_notify_ready = 1;
+
+    (void)sysEventQueueDrain(g_audio_queue);
+
+    rc = audioPortStart(g_audio_port);
+    if (rc != 0)
+        goto fail;
+    g_audio_port_started = 1;
+
+    g_audio_thread_running = 1;
+    rc = sysThreadCreate(&g_audio_thread, audio_output_thread, NULL,
+                         1000, 0x4000, THREAD_JOINABLE, "PS3 SCALE Music");
+    if (rc != 0) {
+        g_audio_thread_running = 0;
+        goto fail;
+    }
+
+    g_audio_thread_started = 1;
+    g_music_playing = 1;
     return 0;
 
 fail:
@@ -730,14 +845,11 @@ static void draw_settings(void)
     draw_text(34, 278, 0x9aa6adff,
               "TRACK: GTA V - Greyhound Pause Menu Remix");
 
-    if (!g_soundlib_ready) {
-        draw_text(34, 326, 0xffcc66ff,
-                  "Audio engine failed to initialize.");
-    } else if (g_music_playing) {
+    if (g_music_playing) {
         draw_text(34, 326, 0x9ee56aff, "MUSIC STATUS: PLAYING / LOOP");
     } else {
         draw_text(34, 326, 0xffcc66ff,
-                  "MUSIC FILE NOT FOUND - SEE AUDIO SETUP");
+                  "MUSIC FILE NOT FOUND OR AUDIO INIT FAILED");
     }
 
     draw_text(34, 366, 0xdce3e8ff,
@@ -929,8 +1041,6 @@ int main(int argc, char *argv[])
         old_select = select;
         old_left = left;
         old_right = right;
-
-        update_background_music();
 
         if (!g_osk_active) {
             if (g_screen == SCREEN_SCAN || g_screen == SCREEN_DETAILS)
