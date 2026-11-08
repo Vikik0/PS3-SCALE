@@ -6,9 +6,10 @@
 #define PS3SCALE_FONT_FIRST 32
 #define PS3SCALE_FONT_LAST 255
 #define PS3SCALE_FONT_EXTENDED_FIRST 128
-/* Noto Sans Arabic glyph atlas, generated as a compact 1bpp bitmap.
- * Arabic presentation forms are mapped in arabic_glyph_map.h.
- * The uncompressed atlas is 224 glyphs x 32 x 32 pixels (1bpp). */
+/* Legacy Noto Sans Arabic atlas retained for the Spanish accent extras.
+ * Arabic presentation forms are now rasterized from the pinned Noto Sans
+ * Arabic UI TTF using FreeType so the runtime receives real glyph advances.
+ * The uncompressed atlas remains 224 glyphs x 32 x 32 pixels (1bpp). */
 static const char ps3scale_font_z64[] =
     "eNrtXM9u40QcHsfZcdBaSTlh1LSJxAt4VQlyiJogXsRspb2SYw4VNRKCC0Ic9waPwAsgDVqOSHDkhPwEbCQO7QE1fD/P2HEcZ9vS"
     "GU9YzUjfxvGm+WZ+f2cmvzFjB9689A6wDZh69dX/6WiDFWO9o4eB/kZXc/yO3/E7flv8+2IyxVifSXRazAd+JmE9L2nOM4eq/0Aw"
