@@ -24,7 +24,7 @@ static void app_sysutil_callback(u64 status, u64 param, void *userdata)
         g_exit_requested = 1;
 }
 
-static void draw_text(float x, float y, u32 color, const char *text)
+static void draw_text(float x, float y, u32 color, char *text)
 {
     SetFontColor(color, 0x00000000);
     DrawString(x, y, text);
