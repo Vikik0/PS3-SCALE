@@ -72,6 +72,15 @@ static char g_ps2_config_download_url[512];
 static char g_ps2_config_download_path[PS3SCALE_PATH_MAX];
 static char g_ps2_config_download_temp_path[PS3SCALE_PATH_MAX];
 static char g_ps2_config_download_type[PS3SCALE_PS2_CONFIG_TYPE_MAX];
+static sys_ppu_thread_t g_ps2_config_download_thread;
+static int g_ps2_config_download_thread_started = 0;
+static volatile int g_ps2_config_download_running = 0;
+static volatile int g_ps2_config_download_done = 0;
+static volatile int g_ps2_config_download_result = 0;
+static char g_ps2_config_download_url[512];
+static char g_ps2_config_download_path[PS3SCALE_PATH_MAX];
+static char g_ps2_config_download_temp_path[PS3SCALE_PATH_MAX];
+static char g_ps2_config_download_type[PS3SCALE_PS2_CONFIG_TYPE_MAX];
 static char g_search[64] = "";
 static u32 *g_font_texture = NULL;
 static ya2d_Texture *g_cover_texture = NULL;
@@ -212,6 +221,9 @@ static int find_mounted_game(const ps3scale_game_t *selected,
 static int find_installed_game(const ps3scale_game_t *selected);
 static void service_game_launch(void);
 static void service_profile_arm(void);
+static void service_ps2_config_download(void);
+static void start_ps2_config_download(void);
+static const ps3scale_ps2_config_entry_t *ps2_config_for_game(const ps3scale_game_t *game);
 static void service_ps2_config_download(void);
 static void start_ps2_config_download(void);
 static const ps3scale_ps2_config_entry_t *ps2_config_for_game(const ps3scale_game_t *game);
@@ -1732,22 +1744,24 @@ static void service_game_launch(void)
 static void start_selected_game(void)
 {
     const ps3scale_game_t *game = selected_game();
-    const ps3scale_profile_t *profile;
+    const ps3scale_profile_t *profile = NULL;
     ps3scale_game_t mounted;
-    int script_state;
+    int script_state = 0;
     int rc;
+    int is_ps2_iso = game && game->kind == PS3SCALE_GAME_PS2_ISO;
 
-    if (!game || !game_is_ps3(game)) {
-        set_details_message("START GAME SUPPORTS PS3 TITLES ONLY.");
+    if (!game || (!game_is_ps3(game) && !is_ps2_iso)) {
+        set_details_message("PS2 CLASSICS MUST BE STARTED WITH THEIR COMPATIBLE LAUNCHER.");
         return;
     }
-    if (!game->title_id[0]) {
+    if (!is_ps2_iso && !game->title_id[0]) {
         set_details_message("TITLE ID NOT AVAILABLE. RESCAN THE GAME.");
         return;
     }
     if (g_game_launch_running || g_game_launch_done ||
-        g_profile_arm_running || g_profile_arm_done) {
-        set_details_message("GAME OR PROFILE ACTION IS ALREADY RUNNING.");
+        g_profile_arm_running || g_profile_arm_done ||
+        g_ps2_config_download_running || g_ps2_config_download_done) {
+        set_details_message("WAIT FOR THE CURRENT GAME OR CONFIG TASK TO FINISH.");
         return;
     }
     if (g_catalog_sync_running || g_catalog_sync_done) {
@@ -1755,33 +1769,37 @@ static void start_selected_game(void)
         return;
     }
 
-    profile = profile_for_game(game);
-    script_state = profile_script_state_for_game(game, profile);
-    if (script_state == -2) {
-        set_details_message("STALE PROFILE SCRIPT. REMOVE IT BEFORE STARTING.");
-        return;
-    }
+    if (!is_ps2_iso) {
+        profile = profile_for_game(game);
+        script_state = profile_script_state_for_game(game, profile);
+        if (script_state == -2) {
+            set_details_message("STALE PROFILE SCRIPT. REMOVE IT BEFORE STARTING.");
+            return;
+        }
 
-    /* A one-launch patch must still target the exact selected game revision. */
-    if (script_state == 1) {
-        if (game->kind == PS3SCALE_GAME_PS3_HDD) {
-            if (!find_installed_game(game)) {
-                set_details_message("GAME UPDATE CHANGED. RESCAN BEFORE STARTING PROFILE.");
+        /* A one-launch patch must still target the exact selected game revision. */
+        if (script_state == 1) {
+            if (game->kind == PS3SCALE_GAME_PS3_HDD) {
+                if (!find_installed_game(game)) {
+                    set_details_message("GAME UPDATE CHANGED. RESCAN BEFORE STARTING PROFILE.");
+                    return;
+                }
+            } else if (!find_mounted_game(game, &mounted)) {
+                set_details_message("MOUNT THE EXACT GAME VERSION BEFORE STARTING PROFILE.");
                 return;
             }
-        } else if (!find_mounted_game(game, &mounted)) {
-            set_details_message("MOUNT THE EXACT GAME VERSION BEFORE STARTING PROFILE.");
-            return;
         }
     }
 
     g_game_launch_target = *game;
-    g_game_launch_profile_armed = (script_state == 1);
+    g_game_launch_profile_armed = !is_ps2_iso && (script_state == 1);
     g_game_launch_result = -1;
     g_game_launch_done = 0;
     g_game_launch_running = 1;
 
-    if (script_state == 1)
+    if (is_ps2_iso)
+        set_details_message("MOUNTING PS2 ISO VIA WEBMAN. WAIT FOR THE RESPONSE.");
+    else if (script_state == 1)
         set_details_message("STARTING GAME WITH ONE-LAUNCH PROFILE.");
     else if (profile)
         set_details_message("PROFILE NOT ARMED. STARTING GAME UNMODIFIED.");
@@ -3054,6 +3072,8 @@ int main(int argc, char *argv[])
     ps3scale_game_list_init(&g_games);
     load_app_settings();
     load_catalog_cache();
+    (void)ps3scale_ps2_config_db_load(PS3SCALE_PS2_CONFIG_INDEX_PATH,
+                                     &g_ps2_config_db);
     g_hardware_info_valid =
         (ps3scale_hardware_detect(&g_hardware_info) == 0);
 
@@ -3103,6 +3123,7 @@ int main(int argc, char *argv[])
         service_catalog_sync();
         service_game_launch();
         service_profile_arm();
+        service_ps2_config_download();
         g_frame_counter++;
 
         if (pad_ready && ioPadGetInfo(&pad_info) == 0) {
@@ -3436,6 +3457,12 @@ int main(int argc, char *argv[])
         (void)sysThreadJoin(g_profile_arm_thread, &thread_result);
         g_profile_arm_thread_started = 0;
     }
+    if (g_ps2_config_download_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_ps2_config_download_thread, &thread_result);
+        g_ps2_config_download_thread_started = 0;
+    }
+    ps3scale_ps2_config_db_free(&g_ps2_config_db);
     shutdown_audio_backend();
     sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
     if (g_cover_texture) ya2d_freeTexture(g_cover_texture);
