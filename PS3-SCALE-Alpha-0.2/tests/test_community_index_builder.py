@@ -58,19 +58,23 @@ class CommunityIndexBuilderTests(unittest.TestCase):
             "Infinite Health\n0\nauthor\n0 00112233 00\n#\n"
             "Unlock FPS\n1\n0 00445566 6000\n#\n"
         )
-        self.assertEqual(
-            MODULE.graphics_description_from_ncl(content),
-            "FPS cap unlock; 60 FPS is not guaranteed.",
+        expected = (
+            "FPS cap unlock; 60 FPS is not guaranteed. "
+            "File also contains other game codes."
         )
         self.assertEqual(
-            MODULE.metadata_for_file(
-                "Nascar1243/PS3-FPS-Patches",
-                "main",
-                "Skate 3.ncl",
-                "HARDWARE_TESTED_FPS",
-                100,
+            MODULE.graphics_description_from_ncl(content),
+            expected,
+        )
+        self.assertEqual(
+            MODULE.metadata_from_ncl_content("HARDWARE_TESTED_FPS", content),
+            ("GRAPHICS_FPS", expected),
+        )
+        self.assertEqual(
+            MODULE.metadata_from_ncl_content(
+                "HARDWARE_TESTED_FPS", "Infinite Health\n0\nauthor\n"
             )[0],
-            "GRAPHICS_FPS",
+            "COMMUNITY_CODE",
         )
 
     def test_cheats_are_not_classified_as_graphics(self):

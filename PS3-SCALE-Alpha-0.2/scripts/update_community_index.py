@@ -83,13 +83,18 @@ def github_json(url: str) -> dict:
         raise RuntimeError(f"GitHub API returned HTTP {error.code}: {body}") from error
 
 
-def graphics_description_from_ncl(content: str) -> str:
-    """Extract only clearly named FPS/frame-rate sections from an NCL file."""
+def graphics_description_from_ncl(content: str) -> str | None:
+    """Extract explicit FPS/frame-rate section labels; do not guess from repo name."""
+    lines = content.splitlines()
     matches: list[str] = []
-    for raw_line in content.splitlines():
+    section_count = 0
+
+    for index, raw_line in enumerate(lines):
         line = raw_line.strip().lstrip("#/* ").strip()
         if not line or len(line) > 92:
             continue
+        if index + 1 < len(lines) and lines[index + 1].strip() in {"0", "1"}:
+            section_count += 1
         if re.search(
             r"\b(?:fps|frame[\s_-]*rate|frame[\s_-]*limit|"
             r"uncap(?:ped)?|unlock[\s_-]*fps|60[\s_-]*fps)\b",
@@ -100,19 +105,46 @@ def graphics_description_from_ncl(content: str) -> str:
                 matches.append(line)
         if len(matches) >= 2:
             break
-    if matches:
-        joined = "; ".join(matches)
-        lowered = joined.lower()
-        if "cutscene" in lowered:
-            return "60 FPS target in cutscenes only; gameplay is not covered."
-        if "60 fps" in lowered and "unlock fps" in lowered:
-            return "FPS cap unlock + 60 FPS target; actual result is not guaranteed."
-        if "60 fps" in lowered:
-            return "60 FPS target; actual frame rate depends on game/scene."
-        if "unlock fps" in lowered:
-            return "FPS cap unlock; 60 FPS is not guaranteed."
-        return joined[:127]
-    return "FPS patch; exact in-game effect is not documented in this file."
+
+    if not matches:
+        return None
+
+    joined = "; ".join(matches)
+    lowered = joined.lower()
+    if "cutscene" in lowered:
+        description = "60 FPS target in cutscenes only; gameplay is not covered."
+    elif "60 fps" in lowered and "unlock fps" in lowered:
+        description = "FPS cap unlock + 60 FPS target; actual result is not guaranteed."
+    elif "60 fps" in lowered:
+        description = "60 FPS target; actual frame rate depends on game/scene."
+    elif "unlock fps" in lowered:
+        description = "FPS cap unlock; 60 FPS is not guaranteed."
+    else:
+        description = joined[:127]
+
+    if section_count > len(matches):
+        description += " File also contains other game codes."
+    return description[:127]
+
+
+def metadata_from_ncl_content(
+    source_kind: str,
+    content: str,
+) -> tuple[str, str]:
+    if source_kind == "HARDWARE_TESTED_FPS":
+        description = graphics_description_from_ncl(content)
+        if description is None:
+            return (
+                "COMMUNITY_CODE",
+                "No explicit FPS/graphics section detected; reference only.",
+            )
+        return "GRAPHICS_FPS", description
+
+    if source_kind == "COMMUNITY_CHEATS":
+        return "GAMEPLAY_CHEAT", "Gameplay cheat code; not a graphics enhancement."
+    if source_kind == "ARTEMIS_DATABASE":
+        return "GAMEPLAY_CODE", "Artemis code entry; not verified as a graphics enhancement."
+    return "COMMUNITY_CODE", "Community NCL code; graphics effect is not confirmed."
 
 
 def metadata_for_file(
@@ -122,32 +154,31 @@ def metadata_for_file(
     source_kind: str,
     size: int,
 ) -> tuple[str, str]:
-    """Classify the file for the UI without treating cheat databases as graphics."""
-    if source_kind == "HARDWARE_TESTED_FPS":
-        description = "FPS patch; exact in-game effect is not documented in this file."
-        try:
-            url = (
-                f"https://raw.githubusercontent.com/{repository}/"
-                f"{quote(branch, safe='')}/{quote(path, safe='/')}"
-            )
-            request = urllib.request.Request(
-                url,
-                headers={"User-Agent": "PS3-SCALE-community-index"},
-            )
-            with urllib.request.urlopen(request, timeout=20) as response:
-                content = response.read(min(size, 128 * 1024)).decode(
-                    "utf-8", errors="replace"
-                )
-            description = graphics_description_from_ncl(content)
-        except (OSError, urllib.error.URLError, TimeoutError):
-            pass
-        return "GRAPHICS_FPS", description
+    """Classify from file contents, not just the repository name."""
+    if source_kind != "HARDWARE_TESTED_FPS":
+        return metadata_from_ncl_content(source_kind, "")
 
-    if source_kind == "COMMUNITY_CHEATS":
-        return "GAMEPLAY_CHEAT", "Gameplay cheat code; not a graphics enhancement."
-    if source_kind == "ARTEMIS_DATABASE":
-        return "GAMEPLAY_CODE", "Artemis code entry; not verified as a graphics enhancement."
-    return "COMMUNITY_CODE", "Community NCL code; graphics effect is not confirmed."
+    try:
+        url = (
+            f"https://raw.githubusercontent.com/{repository}/"
+            f"{quote(branch, safe='')}/{quote(path, safe='/')}"
+        )
+        request = urllib.request.Request(
+            url,
+            headers={"User-Agent": "PS3-SCALE-community-index"},
+        )
+        with urllib.request.urlopen(request, timeout=20) as response:
+            content = response.read(min(size, 128 * 1024)).decode(
+                "utf-8", errors="replace"
+            )
+        return metadata_from_ncl_content(source_kind, content)
+    except (OSError, urllib.error.URLError, TimeoutError):
+        # Preserve the source's FPS-repository classification if inspection
+        # temporarily fails; the app still treats every NCL as reference-only.
+        return (
+            "GRAPHICS_FPS",
+            "FPS-source NCL; effect could not be inspected. Reference only.",
+        )
 
 
 def build_records() -> list[tuple[str, ...]]:
