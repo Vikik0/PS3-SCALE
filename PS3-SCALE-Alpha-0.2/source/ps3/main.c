@@ -2521,6 +2521,9 @@ static void draw_online_database(void)
                   "INSTALL ONLY AFTER REVIEWING THE TARGET GAME.");
         draw_text(452, 344, 0x9aa6adff,
                   "PROFILE IS APPLIED ONLY TO THE SELECTED GAME.");
+        draw_text(452, 372, 0x9aa6adff,
+                  safe_profile ? "APPLY: REVIEW + CONFIRM IN DETAILS" :
+                                 "APPLY: NOT A GRAPHICS PROFILE");
     } else if (selected_ps2_config) {
         draw_text(452, 144, 0xcaff39ff, "PS2 COMMUNITY CONFIG");
         snprintf(line, sizeof(line), "GAME: %.54s", selected_ps2_config->title);
@@ -2578,6 +2581,8 @@ static void draw_online_database(void)
                       safe_profile ? "SAFE PROFILE: AVAILABLE" :
                                      "SAFE PROFILE: NOT AVAILABLE");
         }
+        draw_text(452, 400, 0xffcc66ff,
+                  "APPLY: REFERENCE ONLY - NOT INSTALLED");
     } else if (!g_online_result_count) {
         draw_text(452, 144, 0xffcc66ff, "NO MATCHES FOR THIS SEARCH.");
         draw_text(452, 176, 0x9aa6adff,
@@ -2598,7 +2603,7 @@ static void draw_online_database(void)
     if (g_online_message[0])
         draw_text(34, 492, 0xffcc66ff, g_online_message);
     draw_text(34, 532, 0x9aa6adff,
-              "TRIANGLE: SEARCH GAME NAME  SQUARE: FILTER  CROSS: OPEN  CIRCLE: BACK");
+              "D-PAD SELECT  L1/R1 PREV/NEXT  TRIANGLE SEARCH  SQUARE FILTER  CROSS OPEN  CIRCLE BACK");
     set_ui_font_size(14, 22);
 }
 
