@@ -215,6 +215,7 @@ static void service_profile_arm(void);
 static void service_ps2_config_download(void);
 static void start_ps2_config_download(void);
 static const ps3scale_ps2_config_entry_t *ps2_config_for_game(const ps3scale_game_t *game);
+static const char *ps2_config_preferred_type(void);
 static void service_ps2_config_download(void);
 static void start_ps2_config_download(void);
 static const ps3scale_ps2_config_entry_t *ps2_config_for_game(const ps3scale_game_t *game);
@@ -1385,62 +1386,129 @@ static int online_result_matches_query(
 
 static void rebuild_online_results(void)
 {
-    size_t i, j;
+    size_t i, j, k;
     int graphics_only = online_filter_graphics_only();
     int exact_only = online_filter_exact_only();
 
     g_online_result_count = 0;
     g_online_profile_result_count = 0;
     g_online_community_result_count = 0;
+    g_online_ps2_config_result_count = 0;
     g_online_games_searched = 0;
 
     for (i = 0; i < g_games.count; i++) {
         const ps3scale_game_t *game = &g_games.items[i];
         const ps3scale_profile_t *profile;
-        if (!game_is_ps3(game))
-            continue;
-        g_online_games_searched++;
-        if (!g_catalog_ready)
-            continue;
-        profile = ps3scale_catalog_match_game(&g_catalog, game);
-        if (!profile || !online_result_matches_query(game, profile, NULL) ||
-            g_online_result_count >= PS3SCALE_MAX_ONLINE_RESULTS)
-            continue;
-        g_online_results[g_online_result_count].game_index = (unsigned short)i;
-        g_online_results[g_online_result_count].file_index = 0;
-        g_online_results[g_online_result_count].kind = ONLINE_RESULT_PROFILE;
-        g_online_result_count++;
-        g_online_profile_result_count++;
+        if (game_is_ps3(game)) {
+            g_online_games_searched++;
+            if (!g_catalog_ready)
+                continue;
+            profile = ps3scale_catalog_match_game(&g_catalog, game);
+            if (!profile || !online_result_matches_query(game, profile, NULL) ||
+                g_online_result_count >= PS3SCALE_MAX_ONLINE_RESULTS)
+                continue;
+            g_online_results[g_online_result_count].game_index = (unsigned short)i;
+            g_online_results[g_online_result_count].file_index = 0;
+            g_online_results[g_online_result_count].kind = ONLINE_RESULT_PROFILE;
+            g_online_result_count++;
+            g_online_profile_result_count++;
+        } else if (game->kind == PS3SCALE_GAME_PS2_ISO ||
+                   game->kind == PS3SCALE_GAME_PS2_CLASSIC) {
+            g_online_games_searched++;
+        }
     }
 
-    if (!g_community_ready || !g_community_index.items)
-        return;
-
-    /* Index-first traversal keeps each GitHub file to one installed game. */
-    for (j = 0; j < g_community_index.count; j++) {
-        const ps3scale_community_file_t *file = &g_community_index.items[j];
-        if (graphics_only && strcmp(file->category, "GRAPHICS_FPS") != 0)
-            continue;
-
-        for (i = 0; i < g_games.count; i++) {
-            const ps3scale_game_t *game = &g_games.items[i];
-            int matched;
-            if (!game_is_ps3(game))
-                continue;
-            matched = exact_only ?
-                ps3scale_community_file_matches_exact_game(file, game) :
-                ps3scale_community_file_matches_game(file, game);
-            if (!matched || !online_result_matches_query(game, NULL, file))
+    if (g_community_ready && g_community_index.items) {
+        /* Installed-game matches are preferred; search-only matches are still shown. */
+        for (j = 0; j < g_community_index.count; j++) {
+            const ps3scale_community_file_t *file = &g_community_index.items[j];
+            int matched_installed_game = 0;
+            if (graphics_only && strcmp(file->category, "GRAPHICS_FPS") != 0)
                 continue;
 
-            if (g_online_result_count < PS3SCALE_MAX_ONLINE_RESULTS) {
-                g_online_results[g_online_result_count].game_index = (unsigned short)i;
-                g_online_results[g_online_result_count].file_index = (unsigned short)j;
-                g_online_results[g_online_result_count].kind = ONLINE_RESULT_COMMUNITY;
-                g_online_result_count++;
-                g_online_community_result_count++;
+            for (i = 0; i < g_games.count; i++) {
+                const ps3scale_game_t *game = &g_games.items[i];
+                int matched;
+                if (!game_is_ps3(game))
+                    continue;
+                matched = exact_only ?
+                    ps3scale_community_file_matches_exact_game(file, game) :
+                    ps3scale_community_file_matches_game(file, game);
+                if (!matched || !online_result_matches_query(game, NULL, file))
+                    continue;
+
+                if (g_online_result_count < PS3SCALE_MAX_ONLINE_RESULTS) {
+                    g_online_results[g_online_result_count].game_index = (unsigned short)i;
+                    g_online_results[g_online_result_count].file_index = (unsigned short)j;
+                    g_online_results[g_online_result_count].kind = ONLINE_RESULT_COMMUNITY;
+                    g_online_result_count++;
+                    g_online_community_result_count++;
+                }
+                matched_installed_game = 1;
+                break;
             }
-            break;
+
+            if (!matched_installed_game && g_online_query[0] &&
+                online_result_matches_query(NULL, NULL, file)) {
+                int duplicate = 0;
+                for (k = 0; k < g_online_result_count; k++) {
+                    if (g_online_results[k].kind == ONLINE_RESULT_COMMUNITY &&
+                        g_online_results[k].file_index == (unsigned short)j) {
+                        duplicate = 1;
+                        break;
+                    }
+                }
+                if (!duplicate &&
+                    g_online_result_count < PS3SCALE_MAX_ONLINE_RESULTS) {
+                    g_online_results[g_online_result_count].game_index = 0xffffu;
+                    g_online_results[g_online_result_count].file_index = (unsigned short)j;
+                    g_online_results[g_online_result_count].kind = ONLINE_RESULT_COMMUNITY;
+                    g_online_result_count++;
+                    g_online_community_result_count++;
+                }
+            }
+        }
+    }
+
+    /* PS2 CONFIG search is title-name based and does not require a local ISO. */
+    if (g_online_query[0] && g_ps2_config_db.items) {
+        for (j = 0; j < g_ps2_config_db.count; j++) {
+            const ps3scale_ps2_config_entry_t *entry = &g_ps2_config_db.items[j];
+            const ps3scale_ps2_config_entry_t *best;
+            const char *preferred;
+            int duplicate = 0;
+
+            if (!text_contains_ci(entry->title, g_online_query) &&
+                !text_contains_ci(entry->title_id, g_online_query))
+                continue;
+            if (strcmp(entry->type, "CUSTOM") != 0 &&
+                strcmp(entry->type, "NET") != 0 &&
+                strcmp(entry->type, "ENC") != 0)
+                continue;
+
+            preferred = strcmp(entry->type, "ENC") == 0 ?
+                        "ENC" : ps2_config_preferred_type();
+            best = ps3scale_ps2_config_db_find(
+                &g_ps2_config_db, entry->title_id, preferred);
+            if (best != entry)
+                continue;
+
+            for (k = 0; k < g_online_result_count; k++) {
+                if (g_online_results[k].kind == ONLINE_RESULT_PS2_CONFIG &&
+                    g_online_results[k].file_index == (unsigned short)j) {
+                    duplicate = 1;
+                    break;
+                }
+            }
+            if (duplicate ||
+                g_online_result_count >= PS3SCALE_MAX_ONLINE_RESULTS)
+                continue;
+
+            g_online_results[g_online_result_count].game_index = 0xffffu;
+            g_online_results[g_online_result_count].file_index = (unsigned short)j;
+            g_online_results[g_online_result_count].kind = ONLINE_RESULT_PS2_CONFIG;
+            g_online_result_count++;
+            g_online_ps2_config_result_count++;
         }
     }
 
@@ -1450,41 +1518,45 @@ static void rebuild_online_results(void)
         g_online_selected = (int)g_online_result_count - 1;
 }
 
-static size_t online_match_count(void)
-{
-    return g_online_result_count;
-}
 
 static const ps3scale_game_t *online_result_at(
     size_t target,
     const ps3scale_profile_t **profile_out,
-    const ps3scale_community_file_t **community_out)
+    const ps3scale_community_file_t **community_out,
+    const ps3scale_ps2_config_entry_t **ps2_config_out)
 {
     const online_result_t *result;
     const ps3scale_game_t *game;
 
-    if (profile_out)
-        *profile_out = NULL;
-    if (community_out)
-        *community_out = NULL;
+    if (profile_out) *profile_out = NULL;
+    if (community_out) *community_out = NULL;
+    if (ps2_config_out) *ps2_config_out = NULL;
     if (target >= g_online_result_count)
         return NULL;
 
     result = &g_online_results[target];
+    if (result->kind == ONLINE_RESULT_COMMUNITY) {
+        if (community_out &&
+            (size_t)result->file_index < g_community_index.count)
+            *community_out = &g_community_index.items[result->file_index];
+        if (result->game_index == 0xffffu)
+            return NULL;
+    } else if (result->kind == ONLINE_RESULT_PS2_CONFIG) {
+        if (ps2_config_out &&
+            (size_t)result->file_index < g_ps2_config_db.count)
+            *ps2_config_out = &g_ps2_config_db.items[result->file_index];
+        return NULL;
+    }
+
     if ((size_t)result->game_index >= g_games.count)
         return NULL;
     game = &g_games.items[result->game_index];
 
-    if (result->kind == ONLINE_RESULT_PROFILE) {
-        if (profile_out)
-            *profile_out = profile_for_game(game);
-    } else if (result->kind == ONLINE_RESULT_COMMUNITY &&
-               community_out &&
-               (size_t)result->file_index < g_community_index.count) {
-        *community_out = &g_community_index.items[result->file_index];
-    }
+    if (result->kind == ONLINE_RESULT_PROFILE && profile_out)
+        *profile_out = profile_for_game(game);
     return game;
 }
+
 
 static void open_selected_online_match(void)
 {
