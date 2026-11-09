@@ -60,7 +60,7 @@ class CommunityIndexBuilderTests(unittest.TestCase):
         )
         self.assertEqual(
             MODULE.graphics_description_from_ncl(content),
-            "Unlock FPS",
+            "FPS cap unlock; 60 FPS is not guaranteed.",
         )
         self.assertEqual(
             MODULE.metadata_for_file(

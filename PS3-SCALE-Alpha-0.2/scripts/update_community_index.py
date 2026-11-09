@@ -101,7 +101,17 @@ def graphics_description_from_ncl(content: str) -> str:
         if len(matches) >= 2:
             break
     if matches:
-        return "; ".join(matches)[:127]
+        joined = "; ".join(matches)
+        lowered = joined.lower()
+        if "cutscene" in lowered:
+            return "60 FPS target in cutscenes only; gameplay is not covered."
+        if "60 fps" in lowered and "unlock fps" in lowered:
+            return "FPS cap unlock + 60 FPS target; actual result is not guaranteed."
+        if "60 fps" in lowered:
+            return "60 FPS target; actual frame rate depends on game/scene."
+        if "unlock fps" in lowered:
+            return "FPS cap unlock; 60 FPS is not guaranteed."
+        return joined[:127]
     return "FPS patch; exact in-game effect is not documented in this file."
 
 
