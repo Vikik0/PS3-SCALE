@@ -28,6 +28,14 @@ class CommunityIndexBuilderTests(unittest.TestCase):
         self.assertEqual(version, "01.00")
         self.assertEqual(title, "")
 
+    def test_five_letter_classic_title_id(self):
+        self.assertEqual(
+            MODULE.parse_ncl_name(
+                "Kirby Nightmare in Dream Land RXKIR1131 01.00.ncl"
+            ),
+            ("RXKIR1131", "01.00", "Kirby Nightmare in Dream Land"),
+        )
+
     def test_multiple_versions_ignores_app_version(self):
         self.assertEqual(
             MODULE.parse_ncl_name(

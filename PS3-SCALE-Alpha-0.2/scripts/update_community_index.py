@@ -23,7 +23,7 @@ SOURCES = (
     ("PS3-Pro/Game-Cheats", "main", "COMMUNITY_CHEATS"),
 )
 
-TITLE_ID_RE = re.compile(r"(?<![A-Z0-9])[A-Z]{4}\d{5}(?![A-Z0-9])", re.I)
+TITLE_ID_RE = re.compile(r"(?<![A-Z0-9])(?:[A-Z]{4}\d{5}|[A-Z]{5}\d{4})(?![A-Z0-9])", re.I)
 VERSION_RE = re.compile(
     r"(?<![A-Z0-9])(?P<prefix>av|tv|v)?(?P<version>\d{2}\.\d{2})(?!\d)",
     re.I,
