@@ -63,6 +63,15 @@ static app_screen_t g_screen = SCREEN_HOME;
 static app_screen_t g_splash_next_screen = SCREEN_BOOT;
 static int g_splash_frames = 0;
 static ps3scale_ps2_config_db_t g_ps2_config_db;
+static sys_ppu_thread_t g_ps2_config_download_thread;
+static int g_ps2_config_download_thread_started = 0;
+static volatile int g_ps2_config_download_running = 0;
+static volatile int g_ps2_config_download_done = 0;
+static volatile int g_ps2_config_download_result = 0;
+static char g_ps2_config_download_url[512];
+static char g_ps2_config_download_path[PS3SCALE_PATH_MAX];
+static char g_ps2_config_download_temp_path[PS3SCALE_PATH_MAX];
+static char g_ps2_config_download_type[PS3SCALE_PS2_CONFIG_TYPE_MAX];
 static char g_search[64] = "";
 static u32 *g_font_texture = NULL;
 static ya2d_Texture *g_cover_texture = NULL;
@@ -203,6 +212,9 @@ static int find_mounted_game(const ps3scale_game_t *selected,
 static int find_installed_game(const ps3scale_game_t *selected);
 static void service_game_launch(void);
 static void service_profile_arm(void);
+static void service_ps2_config_download(void);
+static void start_ps2_config_download(void);
+static const ps3scale_ps2_config_entry_t *ps2_config_for_game(const ps3scale_game_t *game);
 
 static void app_sysutil_callback(u64 status, u64 param, void *userdata)
 {
@@ -839,6 +851,23 @@ static int game_is_ps2(const ps3scale_game_t *game)
     return game->kind == PS3SCALE_GAME_PS2_CLASSIC ||
            game->kind == PS3SCALE_GAME_PS2_HDD ||
            game->kind == PS3SCALE_GAME_PS2_ISO;
+}
+
+static int path_ends_with_ci(const char *value, const char *suffix)
+{
+    size_t value_length, suffix_length, i;
+    if (!value || !suffix)
+        return 0;
+    value_length = strlen(value);
+    suffix_length = strlen(suffix);
+    if (suffix_length > value_length)
+        return 0;
+    value += value_length - suffix_length;
+    for (i = 0; i < suffix_length; i++)
+        if (toupper((unsigned char)value[i]) !=
+            toupper((unsigned char)suffix[i]))
+            return 0;
+    return 1;
 }
 
 static int text_contains_ci(const char *text, const char *query)
@@ -1852,6 +1881,216 @@ static int file_exists_readonly(const char *path)
     if (!fp) return 0;
     fclose(fp);
     return 1;
+}
+
+static const char *ps2_config_preferred_type(void)
+{
+    if (g_hardware_info_valid &&
+        g_hardware_info.family == PS3SCALE_HARDWARE_FAT) {
+        if (strstr(g_hardware_info.model_series, "CECHC") ||
+            strstr(g_hardware_info.model_series, "CECHE"))
+            return "GX";
+        return "SOFT";
+    }
+    return "NET";
+}
+
+static const ps3scale_ps2_config_entry_t *ps2_config_for_game(
+    const ps3scale_game_t *game)
+{
+    const char *id;
+    if (!game || !g_ps2_config_db.items)
+        return NULL;
+
+    if (game->kind == PS3SCALE_GAME_PS2_ISO) {
+        id = game->disc_id;
+        if (!id[0])
+            return NULL;
+        return ps3scale_ps2_config_db_find(
+            &g_ps2_config_db, id, ps2_config_preferred_type());
+    }
+
+    if (game->kind == PS3SCALE_GAME_PS2_CLASSIC) {
+        id = game->disc_id[0] ? game->disc_id : game->title_id;
+        if (!id[0])
+            return NULL;
+        return ps3scale_ps2_config_db_find(&g_ps2_config_db, id, "ENC");
+    }
+    return NULL;
+}
+
+static void ps2_config_download_worker(void *arg)
+{
+    unsigned char data[PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT];
+    FILE *fp = NULL;
+    long file_size = 0;
+    int result = -1;
+    struct stat st;
+
+    (void)arg;
+    if (ps3scale_online_download_limited(
+            g_ps2_config_download_url,
+            g_ps2_config_download_temp_path,
+            PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT) == 0) {
+        fp = fopen(g_ps2_config_download_temp_path, "rb");
+        if (!fp) {
+            result = -3;
+        } else {
+            if (fseek(fp, 0, SEEK_END) == 0)
+                file_size = ftell(fp);
+            if (file_size < 0 ||
+                (size_t)file_size > sizeof(data) ||
+                fseek(fp, 0, SEEK_SET) != 0 ||
+                fread(data, 1, (size_t)file_size, fp) != (size_t)file_size) {
+                result = -3;
+            } else if (ps3scale_ps2_config_validate_external(
+                           data, (size_t)file_size,
+                           g_ps2_config_download_type) != 0) {
+                result = -4;
+            } else if (stat(g_ps2_config_download_path, &st) == 0) {
+                result = -2;
+            } else if (rename(g_ps2_config_download_temp_path,
+                              g_ps2_config_download_path) == 0) {
+                result = 0;
+            } else {
+                result = -5;
+            }
+            fclose(fp);
+            fp = NULL;
+        }
+    }
+
+    if (result != 0)
+        (void)unlink(g_ps2_config_download_temp_path);
+    g_ps2_config_download_result = result;
+    g_ps2_config_download_running = 0;
+    g_ps2_config_download_done = 1;
+}
+
+static void start_ps2_config_download(void)
+{
+    const ps3scale_game_t *game = selected_game();
+    const ps3scale_ps2_config_entry_t *entry = ps2_config_for_game(game);
+    struct stat st;
+    char url[512];
+    char target[PS3SCALE_PATH_MAX];
+    char temporary[PS3SCALE_PATH_MAX];
+    int written;
+
+    if (g_ps2_config_download_running || g_ps2_config_download_done ||
+        g_ps2_config_download_thread_started) {
+        set_details_message("WAIT FOR THE CURRENT PS2 CONFIG TASK TO FINISH.");
+        return;
+    }
+    if (!game || !entry) {
+        set_details_message("NO VERIFIED PS2 CONFIG MATCHES THIS GAME ID.");
+        return;
+    }
+    if (ps3scale_ps2_config_build_url(entry, url, sizeof(url)) != 0) {
+        set_details_message("PS2 CONFIG SOURCE URL IS INVALID.");
+        return;
+    }
+
+    if (strcmp(entry->type, "ENC") == 0) {
+        if (game->kind != PS3SCALE_GAME_PS2_CLASSIC) {
+            set_details_message("ENC CONFIGS ARE ONLY FOR PS2 CLASSICS.");
+            return;
+        }
+        if (stat(PS3SCALE_PS2_CLASSICS_CONFIG_DIR, &st) != 0 ||
+            !S_ISDIR(st.st_mode)) {
+            set_details_message("INSTALL THE WEBMAN PS2CONFIG PACKAGE FOR ENC FILES.");
+            return;
+        }
+        written = snprintf(target, sizeof(target), "%s/%s.ENC",
+                           PS3SCALE_PS2_CLASSICS_CONFIG_DIR, entry->title_id);
+    } else {
+        if (game->kind != PS3SCALE_GAME_PS2_ISO) {
+            set_details_message("THIS CONFIG TYPE REQUIRES A STANDARD PS2 ISO.");
+            return;
+        }
+        written = snprintf(target, sizeof(target), "%s.CONFIG", game->path);
+    }
+    if (written < 0 || (size_t)written >= sizeof(target)) {
+        set_details_message("PS2 CONFIG TARGET PATH IS TOO LONG.");
+        return;
+    }
+    if (stat(target, &st) == 0) {
+        set_details_message("CONFIG ALREADY EXISTS. IT WAS NOT OVERWRITTEN.");
+        return;
+    }
+
+    written = snprintf(temporary, sizeof(temporary), "%s.ps3scale.tmp", target);
+    if (written < 0 || (size_t)written >= sizeof(temporary)) {
+        set_details_message("PS2 CONFIG TEMPORARY PATH IS TOO LONG.");
+        return;
+    }
+
+    snprintf(g_ps2_config_download_url, sizeof(g_ps2_config_download_url),
+             "%s", url);
+    snprintf(g_ps2_config_download_path, sizeof(g_ps2_config_download_path),
+             "%s", target);
+    snprintf(g_ps2_config_download_temp_path,
+             sizeof(g_ps2_config_download_temp_path), "%s", temporary);
+    snprintf(g_ps2_config_download_type, sizeof(g_ps2_config_download_type),
+             "%s", entry->type);
+    g_ps2_config_download_result = -1;
+    g_ps2_config_download_done = 0;
+    g_ps2_config_download_running = 1;
+
+    if (sysThreadCreate(&g_ps2_config_download_thread,
+                        ps2_config_download_worker, NULL,
+                        1001, 64 * 1024, 0,
+                        "ps3scale_ps2cfg") != 0) {
+        g_ps2_config_download_running = 0;
+        set_details_message("COULD NOT START PS2 CONFIG DOWNLOAD WORKER.");
+        return;
+    }
+    g_ps2_config_download_thread_started = 1;
+    set_details_message("DOWNLOADING VERIFIED PS2 CONFIG. ORIGINAL GAME FILE IS UNCHANGED.");
+}
+
+static void service_ps2_config_download(void)
+{
+    if (!g_ps2_config_download_done)
+        return;
+
+    if (g_ps2_config_download_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_ps2_config_download_thread, &thread_result);
+        g_ps2_config_download_thread_started = 0;
+    }
+
+    if (g_ps2_config_download_result == 0)
+        set_details_message("PS2 CONFIG SAVED SEPARATELY. ORIGINAL GAME FILE IS UNCHANGED.");
+    else if (g_ps2_config_download_result == -2)
+        set_details_message("CONFIG ALREADY EXISTS. IT WAS NOT OVERWRITTEN.");
+    else if (g_ps2_config_download_result == -4)
+        set_details_message("DOWNLOADED CONFIG FAILED VALIDATION. FILE REMOVED.");
+    else if (g_ps2_config_download_result == -5)
+        set_details_message("COULD NOT SAVE CONFIG. CHECK THE GAME FOLDER.");
+    else
+        set_details_message("PS2 CONFIG DOWNLOAD FAILED. GAME FILES WERE NOT CHANGED.");
+
+    g_ps2_config_download_done = 0;
+}
+
+static int ps2_config_target_exists(const ps3scale_game_t *game,
+                                    const ps3scale_ps2_config_entry_t *entry)
+{
+    char target[PS3SCALE_PATH_MAX];
+    struct stat st;
+    int written;
+
+    if (!game || !entry)
+        return 0;
+    if (strcmp(entry->type, "ENC") == 0)
+        written = snprintf(target, sizeof(target), "%s/%s.ENC",
+                           PS3SCALE_PS2_CLASSICS_CONFIG_DIR, entry->title_id);
+    else
+        written = snprintf(target, sizeof(target), "%s.CONFIG", game->path);
+    if (written < 0 || (size_t)written >= sizeof(target))
+        return 0;
+    return stat(target, &st) == 0;
 }
 
 static int file_contains_text_readonly(const char *path, const char *needle)
