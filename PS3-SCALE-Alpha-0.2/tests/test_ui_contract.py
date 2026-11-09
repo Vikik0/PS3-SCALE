@@ -157,7 +157,7 @@ assert "ONLINE GRAPHICS DATABASE" in src
 assert "APPLY: REFERENCE ONLY - NOT INSTALLED" in src
 assert "SQUARE FILTER" in src
 assert "TRIANGLE SEARCH" in src
-assert "L1 PREV | R1 NEXT" in src
+assert "L1/R1 PREV/NEXT" in src
 assert "GRAPHICS + EXACT" in src
 assert "online_filter_exact_only" in src
 assert "ps3scale_community_file_matches_exact_game" in src
