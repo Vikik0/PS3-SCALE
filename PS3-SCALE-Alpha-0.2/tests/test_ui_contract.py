@@ -147,13 +147,13 @@ assert "shutdown_audio_backend();" in main
 assert "PS3SCALE_MUSIC_PATH" in src
 
 # Online graphics database: HTTPS sync, exact version matching, and a dedicated UI.
-assert "ONLINE GRAPHICS DATABASE" in src
+assert "ONLINE GAME DATABASE" in src
 assert "SCREEN_ONLINE_DB" in src
 assert "PS3SCALE_CATALOG_URL" in src
 assert "PS3SCALE_COMMUNITY_INDEX_URL" in src
 assert "ps3scale_community_index_load" in src
 assert "ps3scale_community_file_matches_game" in src
-assert "ONLINE GRAPHICS DATABASE" in src
+assert "ONLINE GAME DATABASE" in src
 assert "APPLY: REFERENCE ONLY - NOT INSTALLED" in src
 assert "SQUARE FILTER" in src
 assert "TRIANGLE SEARCH" in src
