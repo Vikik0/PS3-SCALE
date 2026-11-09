@@ -80,13 +80,21 @@ assert "SELECT/START: SEARCH" in scan
 settings = section("static void draw_settings(void)", "static void draw_tools(void)")
 for token in ("BACKGROUND MUSIC", "MUSIC VOLUME", "HOME ANIMATION",
               "CHECK FOR USB UPDATE", "RESCAN GAME LIBRARY",
-              "RESTORE DEFAULT SETTINGS", "LANGUAGE"):
+              "RESTORE DEFAULT SETTINGS", "LANGUAGE", "MUSIC PLAYLIST"):
     assert token in settings, f"Missing settings entry: {token}"
 assert "COPY MUSIC TO INTERNAL HDD" not in settings
 assert "copy_music_to_internal" not in src
 assert "AUDIO ENGINE:" not in settings
 assert "g_music_path" not in src
-assert "mpg123_open(g_mpg123, PS3SCALE_MUSIC_PATH)" in src
+assert "mpg123_open(g_mpg123, path)" in src
+assert "PS3SCALE_MUSIC1_PATH" in src
+assert "PS3SCALE_MUSIC2_PATH" in src
+assert "music_mode=%d" in src
+assert "music_next=%d" in src
+assert "open_music_track(next_track)" in src
+assert "g_music_fade_remaining = 48000u" in src
+assert "AUTO: MUSIC 1 > MUSIC 2" in settings
+assert "MUSIC 1 FILE IS NOT IN THIS BUILD" in settings
 assert "START GAME" in src
 assert "start_selected_game()" in main
 assert "ps3scale_webman_start_game(&g_game_launch_target)" in src
@@ -100,7 +108,9 @@ assert "find_installed_game(game)" in src
 assert "NO PROFILE FOR THIS TITLE. GAME WILL START UNMODIFIED." in src
 assert "START UNMODIFIED" in src
 assert "APP VERSION:" in src
-assert "if (g_music_enabled)\n        (void)initialize_audio_backend();" in main
+assert "if (g_music_enabled) {" in main
+assert "g_music_start_track = g_music_next_track;" in main
+assert "g_music_next_track = (g_music_start_track == 1) ? 2 : 1;" in main
 assert "set_background_music_enabled(0);" in main
 assert "set_background_music_enabled(1);" in main
 assert "g_language = LANGUAGE_ENGLISH;" in main
@@ -109,6 +119,24 @@ assert "shutdown_audio_backend();" in main
 assert "BACKGROUND MUSIC STARTED." in main
 assert "PS3SCALE_SETTINGS_PATH" in src
 assert "settings.cfg" in src
+
+# Six-tile home screen, Apollo Save branding, Help and local support outbox.
+home = section("static void draw_home(void)", "static void draw_online_database(void)")
+for token in ("SCAN GAMES", "ONLINE DB", "SETTINGS", "HELP & SUPPORT",
+              "COMPANION TOOLS", "ABOUT"):
+    assert token in home
+assert "for (i = 0; i < 6; i++)" in home
+assert "g_home_selected < 3" in main
+assert "SCREEN_HELP" in src and "SCREEN_SUPPORT_FORM" in src
+help_ui = section("static void draw_help(void)", "static void draw_about(void)")
+assert "REPORT AN ISSUE" in help_ui and "SEND FEEDBACK" in help_ui
+assert "HOW TO USE PS3 SCALE" in help_ui
+assert "PS3SCALE_SUPPORT_OUTBOX_PATH" in src
+assert "REPORT SAVED LOCALLY" in src
+assert "open_support_keyboard(0)" in main
+assert "open_support_keyboard(1)" in main
+assert "ya2d_loadPNGfromFile(PS3SCALE_APOLLO_LOGO_PATH)" in main
+assert "ya2d_freeTexture(g_apollo_texture)" in main
 
 # Read-only hardware detection reports firmware and the Platform ID without console IDs.
 assert "ps3scale_hardware_detect(&g_hardware_info)" in main

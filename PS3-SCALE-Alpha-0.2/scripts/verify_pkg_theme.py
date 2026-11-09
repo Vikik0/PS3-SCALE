@@ -13,6 +13,9 @@ PKG_AES_KEY = "2E7B71D7C9C9A14EA3221F188828B8F8"
 EXPECTED_SIZE = 5_182_732
 EXPECTED_SHA256 = "b8a7b1c2573ea8a397c2fbc3a6c731b25dcb71f572aedf5af8568785620d1b64"
 TARGET_NAME = "USRDIR/theme.mp3"
+LOGO_NAME = "USRDIR/apollo-save.png"
+LOGO_SIZE = 10_280
+LOGO_SHA256 = "ed1cba6f67238009a98c195853be402bf1f4fc7370baa11e29971a797bfccdfc"
 
 
 def main() -> int:
@@ -54,6 +57,7 @@ def main() -> int:
         payload = decrypted_path.read_bytes()
 
     found = False
+    logo_found = False
     for index in range(item_count):
         record_offset = index * 0x20
         if record_offset + 0x20 > len(payload):
@@ -64,22 +68,31 @@ def main() -> int:
         if name_offset + name_size > len(payload) or file_offset + file_size > len(payload):
             raise SystemExit("ERROR: PKG item points outside decrypted data")
         name = payload[name_offset:name_offset + name_size].decode("utf-8", "strict")
-        if name != TARGET_NAME:
-            continue
-
-        audio = payload[file_offset:file_offset + file_size]
-        digest = hashlib.sha256(audio).hexdigest()
-        if len(audio) != EXPECTED_SIZE:
-            raise SystemExit(f"ERROR: embedded theme size mismatch: {len(audio)}")
-        if digest != EXPECTED_SHA256:
-            raise SystemExit(f"ERROR: embedded theme SHA-256 mismatch: {digest}")
-        print(f"PASS: {TARGET_NAME} is embedded in {package_path.name}")
-        print(f"PASS: {len(audio):,} bytes; SHA-256 {digest}")
-        found = True
-        break
+        if name == TARGET_NAME:
+            audio = payload[file_offset:file_offset + file_size]
+            digest = hashlib.sha256(audio).hexdigest()
+            if len(audio) != EXPECTED_SIZE:
+                raise SystemExit(f"ERROR: embedded theme size mismatch: {len(audio)}")
+            if digest != EXPECTED_SHA256:
+                raise SystemExit(f"ERROR: embedded theme SHA-256 mismatch: {digest}")
+            print(f"PASS: {TARGET_NAME} is embedded in {package_path.name}")
+            print(f"PASS: {len(audio):,} bytes; SHA-256 {digest}")
+            found = True
+        elif name == LOGO_NAME:
+            logo = payload[file_offset:file_offset + file_size]
+            logo_digest = hashlib.sha256(logo).hexdigest()
+            if len(logo) != LOGO_SIZE:
+                raise SystemExit(f"ERROR: embedded Apollo logo size mismatch: {len(logo)}")
+            if logo_digest != LOGO_SHA256:
+                raise SystemExit(f"ERROR: embedded Apollo logo SHA-256 mismatch: {logo_digest}")
+            print(f"PASS: {LOGO_NAME} is embedded in {package_path.name}")
+            print(f"PASS: {len(logo):,} bytes; SHA-256 {logo_digest}")
+            logo_found = True
 
     if not found:
         raise SystemExit(f"ERROR: {TARGET_NAME} is missing from the PKG")
+    if not logo_found:
+        raise SystemExit(f"ERROR: {LOGO_NAME} is missing from the PKG")
     return 0
 
 

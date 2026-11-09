@@ -47,6 +47,8 @@ typedef enum app_screen {
     SCREEN_SETTINGS,
     SCREEN_TOOLS,
     SCREEN_ABOUT,
+    SCREEN_HELP,
+    SCREEN_SUPPORT_FORM,
     SCREEN_SPLASH,
     SCREEN_LANGUAGE,
     SCREEN_BOOT,
@@ -59,6 +61,13 @@ static int g_library = LIBRARY_PS3;
 static int g_config_preview = 0;
 static int g_exit_requested = 0;
 static int g_home_selected = 0;
+static int g_help_selected = 0;
+static int g_support_selected = 0;
+static int g_support_is_feedback = 0;
+static int g_keyboard_support_mode = 0;
+static char g_support_title[64] = "";
+static char g_support_details[64] = "";
+static char g_support_status[128] = "LOCAL OUTBOX READY.";
 static app_screen_t g_screen = SCREEN_HOME;
 static app_screen_t g_splash_next_screen = SCREEN_BOOT;
 static int g_splash_frames = 0;
@@ -75,9 +84,15 @@ static char g_ps2_config_download_type[PS3SCALE_PS2_CONFIG_TYPE_MAX];
 static char g_search[64] = "";
 static u32 *g_font_texture = NULL;
 static ya2d_Texture *g_cover_texture = NULL;
+static ya2d_Texture *g_apollo_texture = NULL;
 static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 
 #define PS3SCALE_MUSIC_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3"
+#define PS3SCALE_MUSIC1_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/music1.mp3"
+#define PS3SCALE_MUSIC2_PATH PS3SCALE_MUSIC_PATH
+#define PS3SCALE_APOLLO_LOGO_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/apollo-save.png"
+#define PS3SCALE_SUPPORT_DIR "/dev_hdd0/game/PS3SCALE1/USRDIR/support"
+#define PS3SCALE_SUPPORT_OUTBOX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox.txt"
 #define PS3SCALE_PS2_CONFIG_INDEX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/ps2_config_index.tsv"
 #define PS3SCALE_PS2_CLASSICS_CONFIG_DIR "/dev_hdd0/game/PS2CONFIG/USRDIR/CONFIG/ENC"
 #define PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT (PS3SCALE_PS2_CONFIG_MAX_BYTES * 2u)
@@ -100,6 +115,13 @@ static volatile int g_audio_thread_running = 0;
 static volatile int g_music_enabled = 1;
 static volatile int g_music_volume = 180;
 static int g_music_playing = 0;
+static int g_music_mode = 0; /* 0=alternate both, 1=Music 1 only, 2=Music 2 only. */
+static int g_music_next_track = 1;
+static int g_music_start_track = 1;
+static int g_music_current_track = 0;
+static int g_music_file_open = 0;
+static int g_music_track1_missing = 0;
+static unsigned int g_music_fade_remaining = 0;
 static int g_settings_selected = 0;
 static int g_animation_enabled = 1;
 static unsigned long g_frame_counter = 0;
@@ -109,7 +131,7 @@ static int g_apollo_installed = 0;
 static int g_artemis_installed = 0;
 static int g_webman_installed = 0;
 static char g_tools_message[96] = "CROSS: REFRESH TOOL STATUS.";
-#define SETTINGS_COUNT 7
+#define SETTINGS_COUNT 8
 #define PS3SCALE_SETTINGS_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/settings.cfg"
 enum {
     LANGUAGE_UNSET = -1,
@@ -241,6 +263,19 @@ static int open_online_search_keyboard(void)
     snprintf(g_search_backup, sizeof(g_search_backup), "%s", g_online_query);
     snprintf(g_search, sizeof(g_search), "%s", g_online_query);
     g_keyboard_online_mode = 1;
+    g_keyboard_selected = 0;
+    g_screen = SCREEN_KEYBOARD;
+    return 0;
+}
+
+static int open_support_keyboard(int field)
+{
+    g_keyboard_online_mode = 0;
+    g_keyboard_support_mode = 1;
+    g_support_selected = field;
+    snprintf(g_search_backup, sizeof(g_search_backup), "%s", g_search);
+    snprintf(g_search, sizeof(g_search), "%s",
+             field == 0 ? g_support_title : g_support_details);
     g_keyboard_selected = 0;
     g_screen = SCREEN_KEYBOARD;
     return 0;
@@ -528,12 +563,38 @@ static void draw_text(float x, float y, u32 color, const char *text)
     }
 }
 
-static int open_background_music(void)
+static int open_music_track(int track)
 {
-    int error = 0;
+    const char *path = (track == 1) ? PS3SCALE_MUSIC1_PATH :
+                                      PS3SCALE_MUSIC2_PATH;
     long rate = 0;
     int channels = 0;
     int encoding = 0;
+
+    if (!g_mpg123 || !path || !path[0])
+        return -1;
+    if (g_music_file_open) {
+        (void)mpg123_close(g_mpg123);
+        g_music_file_open = 0;
+    }
+    if (mpg123_open(g_mpg123, path) != MPG123_OK)
+        return -1;
+    g_music_file_open = 1;
+    if (mpg123_getformat(g_mpg123, &rate, &channels, &encoding) != MPG123_OK ||
+        rate != 48000 || channels != MPG123_STEREO ||
+        encoding != MPG123_ENC_SIGNED_16) {
+        (void)mpg123_close(g_mpg123);
+        g_music_file_open = 0;
+        return -1;
+    }
+    g_music_current_track = track;
+    return 0;
+}
+
+static int open_background_music(void)
+{
+    int error = 0;
+    int requested_track;
 
     if (mpg123_init() != MPG123_OK)
         return -1;
@@ -549,17 +610,19 @@ static int open_background_music(void)
                       MPG123_ENC_SIGNED_16) != MPG123_OK)
         return -1;
 
-    /* The theme is bundled in the PKG; never depend on USB or a manual copy. */
-    if (mpg123_open(g_mpg123, PS3SCALE_MUSIC_PATH) != MPG123_OK)
-        return -1;
-
-    if (mpg123_getformat(g_mpg123, &rate, &channels, &encoding) != MPG123_OK ||
-        rate != 48000 || channels != MPG123_STEREO ||
-        encoding != MPG123_ENC_SIGNED_16) {
-        mpg123_close(g_mpg123);
-        return -1;
+    requested_track = (g_music_mode == 1) ? 1 :
+                      (g_music_mode == 2) ? 2 : g_music_start_track;
+    g_music_track1_missing = 0;
+    if (open_music_track(requested_track) != 0) {
+        if (requested_track == 1) {
+            g_music_track1_missing = 1;
+            if (open_music_track(2) != 0)
+                return -1;
+        } else if (open_music_track(1) != 0) {
+            return -1;
+        }
     }
-
+    g_music_fade_remaining = 48000u;
     return 0;
 }
 
@@ -587,13 +650,34 @@ static void fill_audio_block(float *output)
             continue;
         }
         if (rc == MPG123_DONE) {
-            if (mpg123_seek(g_mpg123, 0, SEEK_SET) < 0) break;
+            if (g_music_mode == 0) {
+                int next_track = (g_music_current_track == 1) ? 2 : 1;
+                if (open_music_track(next_track) != 0) {
+                    if (next_track == 1) g_music_track1_missing = 1;
+                    if (open_music_track(2) != 0) break;
+                }
+                g_music_fade_remaining = 48000u;
+            } else {
+                if (mpg123_seek(g_mpg123, 0, SEEK_SET) < 0) break;
+                g_music_fade_remaining = 48000u;
+            }
             continue;
         }
         if (rc == MPG123_ERR || (decoded == 0 && rc == MPG123_OK)) break;
     }
-    for (i = 0; i < AUDIO_BLOCK_SAMPLES * 2; i++)
-        output[i] = ((float)pcm[i] / 32768.0f) * gain;
+    for (i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+        float fade = 1.0f;
+        if (g_music_fade_remaining > 0) {
+            fade = 1.0f -
+                ((float)g_music_fade_remaining / 48000.0f);
+            g_music_fade_remaining--;
+            if (fade < 0.0f) fade = 0.0f;
+        }
+        output[i * 2] =
+            ((float)pcm[i * 2] / 32768.0f) * gain * fade;
+        output[i * 2 + 1] =
+            ((float)pcm[i * 2 + 1] / 32768.0f) * gain * fade;
+    }
 }
 
 static void audio_output_thread(void *arg)
@@ -673,7 +757,9 @@ static void shutdown_audio_backend(void)
     }
 
     if (g_mpg123) {
-        (void)mpg123_close(g_mpg123);
+        if (g_music_file_open)
+            (void)mpg123_close(g_mpg123);
+        g_music_file_open = 0;
         mpg123_delete(g_mpg123);
         g_mpg123 = NULL;
     }
@@ -810,34 +896,37 @@ static void draw_gear_outline(float cx, float cy, float radius, u32 color)
 
 static void draw_menu_icon(int index, float x, float y, int selected)
 {
-    u32 ink = selected ? 0xcaff39ff : 0x9eb2c0ff;
-    u32 tile = selected ? 0x1b2b1dff : 0x111b25ff;
-    u32 border = selected ? 0x8cbd35ff : 0x344654ff;
-    draw_solid_rect(x, y, 38.0f, 38.0f, tile);
-    draw_outline_rect(x, y, 38.0f, 38.0f, border);
+    u32 ink = selected ? 0xcaff39ff : 0x7c859aff;
+    u32 tile = selected ? 0xeeeaffff : 0xf8f9fcff;
+    u32 border = selected ? 0x8068e6ff : 0xd9deebff;
+    draw_solid_rect(x, y, 42.0f, 42.0f, tile);
+    draw_outline_rect(x, y, 42.0f, 42.0f, border);
     if (index == 0) {
-        draw_circle_outline(x + 15.0f, y + 14.0f, 8.0f, ink);
-        draw_icon_line(x + 21.0f, y + 21.0f, x + 29.0f, y + 29.0f, ink);
-        draw_icon_line(x + 11.0f, y + 12.0f, x + 17.0f, y + 12.0f, ink);
-        draw_icon_line(x + 11.0f, y + 16.0f, x + 16.0f, y + 16.0f, ink);
+        draw_circle_outline(x + 16.0f, y + 16.0f, 9.0f, ink);
+        draw_icon_line(x + 23.0f, y + 23.0f, x + 33.0f, y + 33.0f, ink);
+        draw_icon_line(x + 12.0f, y + 14.0f, x + 19.0f, y + 14.0f, ink);
+        draw_icon_line(x + 12.0f, y + 18.0f, x + 18.0f, y + 18.0f, ink);
     } else if (index == 1) {
-        draw_circle_outline(x + 19.0f, y + 19.0f, 13.0f, ink);
-        draw_circle_outline(x + 19.0f, y + 19.0f, 5.0f, ink);
-        draw_icon_line(x + 6.0f, y + 19.0f, x + 32.0f, y + 19.0f, ink);
-        draw_icon_line(x + 19.0f, y + 6.0f, x + 19.0f, y + 32.0f, ink);
+        draw_solid_rect(x + 8.0f, y + 9.0f, 26.0f, 7.0f, ink);
+        draw_solid_rect(x + 8.0f, y + 18.0f, 26.0f, 7.0f, ink);
+        draw_solid_rect(x + 8.0f, y + 27.0f, 26.0f, 7.0f, ink);
     } else if (index == 2) {
-        draw_gear_outline(x + 19.0f, y + 19.0f, 13.0f, ink);
-        draw_circle_outline(x + 19.0f, y + 19.0f, 5.0f, ink);
-        draw_solid_rect(x + 17.5f, y + 17.5f, 3.0f, 3.0f, ink);
+        draw_gear_outline(x + 21.0f, y + 21.0f, 15.0f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 5.0f, ink);
     } else if (index == 3) {
-        draw_icon_line(x + 10.0f, y + 28.0f, x + 27.0f, y + 11.0f, ink);
-        draw_icon_line(x + 11.0f, y + 10.0f, x + 28.0f, y + 27.0f, ink);
-        draw_circle_outline(x + 10.0f, y + 10.0f, 4.0f, ink);
-        draw_circle_outline(x + 28.0f, y + 28.0f, 4.0f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 15.0f, ink);
+        draw_icon_line(x + 15.0f, y + 13.0f, x + 25.0f, y + 13.0f, ink);
+        draw_icon_line(x + 25.0f, y + 13.0f, x + 28.0f, y + 19.0f, ink);
+        draw_icon_line(x + 28.0f, y + 19.0f, x + 21.0f, y + 24.0f, ink);
+        draw_icon_line(x + 21.0f, y + 24.0f, x + 21.0f, y + 29.0f, ink);
+        draw_solid_rect(x + 19.5f, y + 33.0f, 3.0f, 3.0f, ink);
+    } else if (index == 4) {
+        draw_gear_outline(x + 21.0f, y + 21.0f, 14.0f, ink);
+        draw_icon_line(x + 8.0f, y + 34.0f, x + 34.0f, y + 8.0f, ink);
     } else {
-        draw_circle_outline(x + 19.0f, y + 19.0f, 13.0f, ink);
-        draw_solid_rect(x + 17.5f, y + 16.0f, 3.0f, 10.0f, ink);
-        draw_solid_rect(x + 17.5f, y + 10.0f, 3.0f, 3.0f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 15.0f, ink);
+        draw_solid_rect(x + 19.5f, y + 15.0f, 3.0f, 12.0f, ink);
+        draw_solid_rect(x + 19.5f, y + 10.0f, 3.0f, 3.0f, ink);
     }
 }
 
@@ -1929,6 +2018,12 @@ static void load_app_settings(void)
             set_background_music_volume(value);
         else if (sscanf(line, "animation=%d", &value) == 1)
             g_animation_enabled = value ? 1 : 0;
+        else if (sscanf(line, "music_mode=%d", &value) == 1 &&
+                 value >= 0 && value <= 2)
+            g_music_mode = value;
+        else if (sscanf(line, "music_next=%d", &value) == 1 &&
+                 (value == 1 || value == 2))
+            g_music_next_track = value;
         else if (sscanf(line, "language=%d", &value) == 1 &&
                  value >= LANGUAGE_ENGLISH && value <= LANGUAGE_SPANISH)
             g_language = value;
@@ -1946,6 +2041,8 @@ static int save_app_settings(void)
     fprintf(fp, "music=%d\n", g_music_enabled ? 1 : 0);
     fprintf(fp, "volume=%d\n", g_music_volume);
     fprintf(fp, "animation=%d\n", g_animation_enabled ? 1 : 0);
+    fprintf(fp, "music_mode=%d\n", g_music_mode);
+    fprintf(fp, "music_next=%d\n", g_music_next_track);
     fprintf(fp, "language=%d\n", g_language);
     if (fclose(fp) != 0) {
         set_settings_message("SETTINGS SAVE FAILED.");
@@ -2274,20 +2371,25 @@ static void draw_splash(void)
         alpha = (unsigned)((180 - frame) * 255 / 48);
     if (alpha > 255u) alpha = 255u;
 
-    set_ui_font_size(18, 27);
-    draw_text(518, 220, color_with_alpha(0x20263aff, alpha), "PS3 SCALE");
+    set_ui_font_size(20, 30);
+    draw_text(300, 184, color_with_alpha(0x20263aff, alpha), "PS3 SCALE");
     set_ui_font_size(11, 17);
-    draw_text(545, 294, color_with_alpha(0x8068e6ff, alpha),
+    draw_text(340, 246, color_with_alpha(0x8068e6ff, alpha),
+              "PS3 & PS2 ENHANCEMENT MANAGEMENT");
+    draw_text(350, 314, color_with_alpha(0x8068e6ff, alpha),
               "SPECIAL THANKS");
-    draw_solid_rect(520.0f, 330.0f, 240.0f, 3.0f,
+    draw_solid_rect(246.0f, 340.0f, 354.0f, 3.0f,
                     color_with_alpha(0x8068e6ff, alpha));
-    set_ui_font_size(16, 24);
-    draw_text(350, 378, color_with_alpha(0x20263aff, alpha), "ARTEMIS");
-    draw_text(700, 378, color_with_alpha(0x20263aff, alpha), "APOLLO SAVE");
+    set_ui_font_size(14, 21);
+    draw_text(250, 374, color_with_alpha(0x20263aff, alpha), "ARTEMIS");
+    draw_text(600, 374, color_with_alpha(0x20263aff, alpha), "APOLLO SAVE");
+    if (g_apollo_texture)
+        ya2d_drawTextureEx(g_apollo_texture, 650.0f, 288.0f,
+                           0.34f, 78.0f, 78.0f);
     set_ui_font_size(9, 14);
-    draw_text(490, 440, color_with_alpha(0x7c859aff, alpha),
+    draw_text(330, 438, color_with_alpha(0x7c859aff, alpha),
               "FOR SUPPORTING THE PS3 COMMUNITY");
-    draw_text(520, 510, color_with_alpha(0x7c859aff, alpha),
+    draw_text(340, 490, color_with_alpha(0x7c859aff, alpha),
               "PRESS X TO CONTINUE");
     set_ui_font_size(14, 22);
 }
@@ -2330,8 +2432,13 @@ static void draw_keyboard(void)
     int i;
     set_ui_font_size(12, 18);
     draw_text(34, 22, 0xcaff39ff, "PS3 SCALE");
-    draw_text(34, 56, 0xffffffff, "SEARCH GAMES");
-    draw_text(34, 88, 0x9aa6adff, "TYPE TO FILTER THE LIBRARY");
+    draw_text(34, 56, 0xffffffff,
+              g_keyboard_support_mode ?
+              (g_support_selected == 0 ? "REPORT TITLE" : "REPORT DETAILS") :
+              "SEARCH GAMES");
+    draw_text(34, 88, 0x9aa6adff,
+              g_keyboard_support_mode ? "ENTER TEXT FOR YOUR SUPPORT REPORT" :
+                                        "TYPE TO FILTER THE LIBRARY");
     draw_solid_rect(40.0f, 112.0f, 768.0f, 34.0f, 0x0d1722ff);
     draw_outline_rect(40.0f, 112.0f, 768.0f, 34.0f, 0x42647aff);
     draw_text(54, 120, 0xcaff39ff, g_search[0] ? g_search : " ");
@@ -2370,44 +2477,49 @@ static void draw_keyboard(void)
 
 static void draw_home(void)
 {
+    static const char *items[6] = {
+        "SCAN GAMES", "ONLINE DB", "SETTINGS",
+        "HELP & SUPPORT", "COMPANION TOOLS", "ABOUT"
+    };
+    static const char *descriptions[6] = {
+        "Find PS3 / PS2 games",
+        "Profiles and updates",
+        "Music and language",
+        "Guides and support",
+        "Companion tools",
+        "Hardware and safety"
+    };
     char line[192];
-    const char *items[] = {
-        "SCAN GAMES",
-        "ONLINE GAME DATABASE",
-        "SETTINGS",
-        "COMPANION TOOLS",
-        "ABOUT PS3 SCALE"
-    };
-    const char *descriptions[] = {
-        "Browse your PS3 and PS2 library",
-        "Search community graphics and compatibility files",
-        "Music, volume, animation and language",
-        "Apollo Save, Artemis and webMAN MOD",
-        "Hardware, safety and project information"
-    };
     int i;
 
     set_ui_font_size(12, 18);
-    draw_text(36, 24, 0xcaff39ff, "PS3 SCALE");
-    draw_text(36, 54, 0x9aa6adff,
-              "GAME LIBRARY  /  GRAPHICS  /  SAFE TOOLS");
-    draw_text(40, 112, 0xffffffff, "MAIN MENU");
+    draw_text(28, 16, 0xcaff39ff, "PS3 SCALE");
+    set_ui_font_size(8, 12);
+    draw_text(28, 44, 0x9aa6adff,
+              "PS3 & PS2 ENHANCEMENT MANAGEMENT");
+    draw_solid_rect(592.0f, 16.0f, 228.0f, 34.0f, 0xf8f9fcff);
+    draw_outline_rect(592.0f, 16.0f, 228.0f, 34.0f, 0xd9deebff);
+    draw_text(606, 26, 0x8068e6ff, "CFW 4.92  |  PS3 SCALE 0.2");
+    set_ui_font_size(11, 17);
 
-    for (i = 0; i < 5; i++) {
-        float y = 150.0f + (float)i * 60.0f;
+    for (i = 0; i < 6; i++) {
+        int col = i % 3;
+        int row = i / 3;
+        float x = 24.0f + (float)col * 270.0f;
+        float y = 112.0f + (float)row * 132.0f;
         int selected = (i == g_home_selected);
-        if (selected) {
-            draw_solid_rect(34.0f, y - 5.0f, 444.0f, 51.0f, 0x14261dff);
-            draw_outline_rect(34.0f, y - 5.0f, 444.0f, 51.0f, 0x8bd450ff);
-        } else {
-            draw_outline_rect(34.0f, y - 5.0f, 444.0f, 51.0f, 0x26445cff);
-        }
-        draw_menu_icon(i, 54.0f, y + 1.0f, selected);
-        draw_text(106, y + 1.0f,
+        draw_solid_rect(x, y, 254.0f, 112.0f,
+                        selected ? 0xeeeaffff : 0xf8f9fcff);
+        draw_outline_rect(x, y, 254.0f, 112.0f,
+                          selected ? 0x8068e6ff : 0xd9deebff);
+        draw_menu_icon(i, x + 16.0f, y + 18.0f, selected);
+        draw_text(x + 70.0f, y + 24.0f,
                   selected ? 0xcaff39ff : 0xffffffff, items[i]);
         set_ui_font_size(8, 12);
-        draw_text(106, y + 25.0f, 0x9aa6adff, descriptions[i]);
-        set_ui_font_size(12, 18);
+        draw_text(x + 70.0f, y + 51.0f, 0x7c859aff, descriptions[i]);
+        set_ui_font_size(11, 17);
+        if (selected)
+            draw_solid_rect(x + 16.0f, y + 88.0f, 222.0f, 3.0f, 0x8068e6ff);
     }
 
     snprintf(line, sizeof(line), "PS3: %u  |  PS2: %u  |  TOTAL: %u",
@@ -2415,9 +2527,9 @@ static void draw_home(void)
              (unsigned)library_total_count(LIBRARY_PS2),
              (unsigned)(library_total_count(LIBRARY_PS3) +
                         library_total_count(LIBRARY_PS2)));
-    draw_text(40, 472, 0xdce3e8ff, line);
-    draw_text(40, 504, 0x9aa6adff,
-              "UP/DOWN: SELECT   CROSS: OPEN   CIRCLE: EXIT");
+    draw_text(28, 400, 0xdce3e8ff, line);
+    draw_text(28, 474, 0x9aa6adff,
+              "D-PAD: MOVE  |  CROSS: SELECT  |  CIRCLE: EXIT");
     set_ui_font_size(14, 22);
 }
 
@@ -2894,38 +3006,56 @@ static void draw_details(void)
 
 static void draw_settings(void)
 {
-    static char *labels[SETTINGS_COUNT] = {
+    static const char *labels[SETTINGS_COUNT] = {
         "BACKGROUND MUSIC", "MUSIC VOLUME", "HOME ANIMATION",
         "CHECK FOR USB UPDATE", "RESCAN GAME LIBRARY",
-        "RESTORE DEFAULT SETTINGS", "LANGUAGE"
+        "RESTORE DEFAULT SETTINGS", "LANGUAGE", "MUSIC PLAYLIST"
     };
     char value[96];
     int i;
-    set_ui_font_size(12, 18);
-    draw_text(34, 24, 0xcaff39ff, "PS3 SCALE");
-    draw_text(34, 58, 0xffffffff, "SETTINGS");
-    draw_text(34, 92, 0x9aa6adff,
-              "PERSONALIZE THE APP AND RUN SAFE MAINTENANCE TASKS.");
+    set_ui_font_size(11, 17);
+    draw_text(28, 18, 0xcaff39ff, "PS3 SCALE");
+    draw_text(28, 48, 0xffffffff, "SETTINGS");
+    draw_text(28, 76, 0x9aa6adff,
+              "PERSONALIZE YOUR APP. SETTINGS ARE SAVED ON THE INTERNAL HDD.");
+    draw_solid_rect(22.0f, 104.0f, 804.0f, 300.0f, 0xf8f9fcff);
+    draw_outline_rect(22.0f, 104.0f, 804.0f, 300.0f, 0xd9deebff);
     for (i = 0; i < SETTINGS_COUNT; i++) {
-        float y = 124.0f + (float)i * 38.0f;
+        float y = 116.0f + (float)i * 35.0f;
         int selected = (i == g_settings_selected);
-        if (selected) draw_solid_rect(28.0f, y - 4.0f, 780.0f, 34.0f, 0x14261dff);
+        if (selected) {
+            draw_solid_rect(30.0f, y - 4.0f, 788.0f, 31.0f, 0xeeeaffff);
+            draw_outline_rect(30.0f, y - 4.0f, 788.0f, 31.0f, 0x8068e6ff);
+        }
         value[0] = 0;
-        if (i == 0) snprintf(value, sizeof(value), "%s", g_music_enabled ? "ON" : "OFF");
-        else if (i == 1) snprintf(value, sizeof(value), "%d%%", (g_music_volume * 100) / 255);
-        else if (i == 2) snprintf(value, sizeof(value), "%s", g_animation_enabled ? "ON" : "OFF");
-        else if (i == 3) snprintf(value, sizeof(value), "SCAN USB000 - USB007");
-        else if (i == 4) snprintf(value, sizeof(value), "CURRENT LIBRARY");
-        else if (i == 5) snprintf(value, sizeof(value), "DEFAULTS");
-        else snprintf(value, sizeof(value), "%s",
-                      ps3scale_locale_language_name(g_language));
-        draw_text(48, y, selected ? 0xcaff39ff : 0xdce3e8ff, labels[i]);
-        draw_text(590, y, selected ? 0xcaff39ff : 0x9aa6adff, value);
+        if (i == 0)
+            snprintf(value, sizeof(value), "%s", g_music_enabled ? "ON" : "OFF");
+        else if (i == 1)
+            snprintf(value, sizeof(value), "%d%%", (g_music_volume * 100) / 255);
+        else if (i == 2)
+            snprintf(value, sizeof(value), "%s", g_animation_enabled ? "ON" : "OFF");
+        else if (i == 3)
+            snprintf(value, sizeof(value), "SCAN USB000 - USB007");
+        else if (i == 4)
+            snprintf(value, sizeof(value), "CURRENT LIBRARY");
+        else if (i == 5)
+            snprintf(value, sizeof(value), "DEFAULTS");
+        else if (i == 6)
+            snprintf(value, sizeof(value), "%s",
+                     ps3scale_locale_language_name(g_language));
+        else if (g_music_mode == 0)
+            snprintf(value, sizeof(value), "AUTO: MUSIC 1 > MUSIC 2");
+        else
+            snprintf(value, sizeof(value), "MUSIC %d ONLY", g_music_mode);
+        draw_text(48, y + 2.0f, selected ? 0xcaff39ff : 0xffffffff, labels[i]);
+        draw_text(570, y + 2.0f, selected ? 0xcaff39ff : 0x9aa6adff, value);
     }
-    /* Audio diagnostics are intentionally hidden; only user-facing settings remain. */
-    draw_text(34, 398, 0xdce3e8ff, g_settings_message);
-    draw_text(34, 478, 0x9aa6adff,
-              "UP/DOWN: MOVE  CROSS: SELECT  LEFT/RIGHT: ADJUST  CIRCLE: BACK");
+    if (g_music_track1_missing)
+        draw_text(34, 418, 0xffcc6600, "MUSIC 1 FILE IS NOT IN THIS BUILD; MUSIC 2 IS USED AS FALLBACK.");
+    else
+        draw_text(34, 418, 0x9aa6adff, g_settings_message);
+    draw_text(28, 478, 0x9aa6adff,
+              "UP/DOWN MOVE  CROSS SELECT  LEFT/RIGHT ADJUST  CIRCLE BACK");
     set_ui_font_size(14, 22);
 }
 
@@ -2966,6 +3096,134 @@ static void draw_tools(void)
     draw_text(34, 478, 0x9aa6adff,
               "CROSS: REFRESH TOOL STATUS  |  CIRCLE: BACK");
     set_ui_font_size(14, 22);
+}
+
+static void draw_help(void)
+{
+    int i;
+    static const char *actions[2] = { "REPORT AN ISSUE", "SEND FEEDBACK" };
+
+    set_ui_font_size(12, 18);
+    draw_text(28, 18, 0xcaff39ff, "PS3 SCALE");
+    draw_text(28, 48, 0xffffffff, "HELP & SUPPORT");
+    draw_solid_rect(22.0f, 88.0f, 488.0f, 322.0f, 0xf8f9fcff);
+    draw_outline_rect(22.0f, 88.0f, 488.0f, 322.0f, 0xd9deebff);
+    draw_text(40, 106, 0x8068e6ff, "HOW TO USE PS3 SCALE");
+    set_ui_font_size(9, 14);
+    draw_text(42, 146, 0xffffffff, "1. SCAN TO DETECT YOUR PS3 / PS2 GAMES.");
+    draw_text(42, 184, 0xffffffff, "2. SELECT A GAME AND CHECK ITS VERSION.");
+    draw_text(42, 222, 0xffffffff, "3. REVIEW THE PROFILE AND COMPATIBILITY.");
+    draw_text(42, 260, 0xffffffff, "4. APPLY ONLY A VERIFIED MATCH.");
+    draw_text(42, 298, 0xffffffff, "5. START GAME; OTHERWISE IT STARTS UNMODIFIED.");
+    draw_text(42, 358, 0x7c859aff, "ORIGINAL GAME FILES ARE NEVER REPLACED BY A SCAN.");
+
+    draw_solid_rect(526.0f, 88.0f, 300.0f, 322.0f, 0xf8f9fcff);
+    draw_outline_rect(526.0f, 88.0f, 300.0f, 322.0f, 0xd9deebff);
+    draw_text(544, 106, 0x8068e6ff, "SUPPORT");
+    for (i = 0; i < 2; i++) {
+        float y = 154.0f + (float)i * 68.0f;
+        int selected = (i == g_help_selected);
+        draw_solid_rect(540.0f, y, 270.0f, 50.0f,
+                        selected ? 0xeeeaffff : 0xf2f4f9ff);
+        draw_outline_rect(540.0f, y, 270.0f, 50.0f,
+                          selected ? 0x8068e6ff : 0xd9deebff);
+        draw_text(556, y + 16.0f,
+                  selected ? 0xcaff39ff : 0xffffffff, actions[i]);
+    }
+    set_ui_font_size(8, 12);
+    draw_text(544, 314, 0x7c859aff, "REPORTS INCLUDE MODEL + FIRMWARE INFO.");
+    draw_text(544, 340, 0x7c859aff, "SAVED REPORTS ARE KEPT IN THE LOCAL OUTBOX.");
+    draw_text(544, 366, 0x7c859aff, g_support_status);
+    set_ui_font_size(11, 17);
+    draw_text(28, 474, 0x9aa6adff,
+              "UP/DOWN: SELECT  |  CROSS: OPEN  |  CIRCLE: BACK");
+    set_ui_font_size(14, 22);
+}
+
+static void draw_support_form(void)
+{
+    int i;
+    static const char *labels[3] = {
+        "REPORT TITLE", "PROBLEM DETAILS", "SAVE REPORT"
+    };
+
+    set_ui_font_size(12, 18);
+    draw_text(28, 18, 0xcaff39ff, "PS3 SCALE");
+    draw_text(28, 48, 0xffffffff,
+              g_support_is_feedback ? "SEND FEEDBACK" : "REPORT AN ISSUE");
+    draw_solid_rect(22.0f, 88.0f, 804.0f, 322.0f, 0xf8f9fcff);
+    draw_outline_rect(22.0f, 88.0f, 804.0f, 322.0f, 0xd9deebff);
+
+    for (i = 0; i < 3; i++) {
+        float y = 112.0f + (float)i * 82.0f;
+        int selected = (i == g_support_selected);
+        draw_solid_rect(36.0f, y, 776.0f, 66.0f,
+                        selected ? 0xeeeaffff : 0xf2f4f9ff);
+        draw_outline_rect(36.0f, y, 776.0f, 66.0f,
+                          selected ? 0x8068e6ff : 0xd9deebff);
+        draw_text(52, y + 7.0f, 0x8068e6ff, labels[i]);
+        if (i == 0)
+            draw_text(52, y + 34.0f, 0xffffffff,
+                      g_support_title[0] ? g_support_title : "PRESS CROSS TO ENTER A TITLE");
+        else if (i == 1)
+            draw_text(52, y + 34.0f, 0xffffffff,
+                      g_support_details[0] ? g_support_details : "PRESS CROSS TO DESCRIBE THE ISSUE");
+        else
+            draw_text(52, y + 34.0f, 0xcaff39ff, "SAVE THIS REPORT TO THE PS3 SCALE SUPPORT OUTBOX");
+    }
+
+    set_ui_font_size(8, 12);
+    draw_text(36, 370, 0x7c859aff,
+              "DEVICE MODEL, FIRMWARE AND APP VERSION ARE ADDED AUTOMATICALLY.");
+    draw_text(36, 390, 0x7c859aff, g_support_status);
+    draw_text(36, 406, 0x7c859aff, "ONLINE SUBMISSION IS NOT CONFIGURED YET.");
+    set_ui_font_size(11, 17);
+    draw_text(28, 474, 0x9aa6adff,
+              "UP/DOWN: MOVE  |  CROSS: EDIT / SAVE  |  CIRCLE: BACK");
+    set_ui_font_size(14, 22);
+}
+
+static int save_support_report(void)
+{
+    FILE *fp;
+    long timestamp;
+
+    if (!g_support_title[0] || !g_support_details[0]) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "ADD TITLE + DETAILS.");
+        return -1;
+    }
+
+    (void)mkdir(PS3SCALE_SUPPORT_DIR, 0777);
+    fp = fopen(PS3SCALE_SUPPORT_OUTBOX_PATH, "a");
+    if (!fp) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "REPORT SAVE FAILED.");
+        return -1;
+    }
+
+    timestamp = (long)time(NULL);
+    fprintf(fp, "\n--- PS3 SCALE %s REPORT %ld ---\n",
+            g_support_is_feedback ? "FEEDBACK" : "ISSUE", timestamp);
+    fprintf(fp, "TITLE: %s\n", g_support_title);
+    fprintf(fp, "DETAILS: %s\n", g_support_details);
+    if (g_hardware_info_valid) {
+        fprintf(fp, "MODEL: %s\n", g_hardware_info.model_series);
+        fprintf(fp, "FIRMWARE: %s\n", g_hardware_info.firmware_version);
+        fprintf(fp, "PLATFORM: %s\n", g_hardware_info.platform_id);
+    } else {
+        fprintf(fp, "MODEL: UNKNOWN\nFIRMWARE: UNKNOWN\n");
+    }
+    fprintf(fp, "APP VERSION: ALPHA 0.2\n");
+    if (fclose(fp) != 0) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "REPORT SAVE FAILED.");
+        return -1;
+    }
+
+    snprintf(g_support_status, sizeof(g_support_status),
+             "SAVED TO LOCAL OUTBOX.");
+    return 0;
 }
 
 static void draw_about(void)
@@ -3023,6 +3281,8 @@ static void draw_ui(void)
         case SCREEN_SETTINGS: draw_settings(); break;
         case SCREEN_TOOLS: draw_tools(); break;
         case SCREEN_ABOUT: draw_about(); break;
+        case SCREEN_HELP: draw_help(); break;
+        case SCREEN_SUPPORT_FORM: draw_support_form(); break;
         default: draw_home(); break;
     }
     tiny3d_Flip();
@@ -3167,6 +3427,12 @@ static void keyboard_backspace(void)
 
 static void keyboard_cancel(void)
 {
+    if (g_keyboard_support_mode) {
+        snprintf(g_search, sizeof(g_search), "%s", g_search_backup);
+        g_keyboard_support_mode = 0;
+        g_screen = SCREEN_SUPPORT_FORM;
+        return;
+    }
     if (g_keyboard_online_mode) {
         snprintf(g_search, sizeof(g_search), "%s", g_scan_search_stash);
         g_keyboard_online_mode = 0;
@@ -3181,6 +3447,16 @@ static void keyboard_cancel(void)
 
 static void keyboard_apply(void)
 {
+    if (g_keyboard_support_mode) {
+        if (g_support_selected == 0)
+            snprintf(g_support_title, sizeof(g_support_title), "%s", g_search);
+        else
+            snprintf(g_support_details, sizeof(g_support_details), "%s", g_search);
+        snprintf(g_search, sizeof(g_search), "%s", g_search_backup);
+        g_keyboard_support_mode = 0;
+        g_screen = SCREEN_SUPPORT_FORM;
+        return;
+    }
     if (g_keyboard_online_mode) {
         snprintf(g_online_query, sizeof(g_online_query), "%s", g_search);
         snprintf(g_search, sizeof(g_search), "%s", g_scan_search_stash);
@@ -3232,6 +3508,13 @@ int main(int argc, char *argv[])
 
     ps3scale_game_list_init(&g_games);
     load_app_settings();
+    if (g_music_mode == 0) {
+        g_music_start_track = g_music_next_track;
+        g_music_next_track = (g_music_start_track == 1) ? 2 : 1;
+    } else {
+        g_music_start_track = (g_music_mode == 1) ? 1 : 2;
+    }
+    (void)save_app_settings();
     load_catalog_cache();
     (void)ps3scale_ps2_config_db_load(PS3SCALE_PS2_CONFIG_INDEX_PATH,
                                      &g_ps2_config_db);
@@ -3239,6 +3522,7 @@ int main(int argc, char *argv[])
         (ps3scale_hardware_detect(&g_hardware_info) == 0);
 
     if (!ya2d_init()) return 1;
+    g_apollo_texture = ya2d_loadPNGfromFile(PS3SCALE_APOLLO_LOGO_PATH);
     pad_ready = 1;
     g_font_texture = tiny3d_AllocTexture(2 * 1024 * 1024);
     if (!g_font_texture) return 1;
@@ -3260,8 +3544,11 @@ int main(int argc, char *argv[])
         file_exists_readonly("/dev_hdd0/game/PS3SCALE1/PARAM.SFO");
 
     /* Start the bundled theme only when the saved Music setting is ON. */
-    if (g_music_enabled)
+    if (g_music_enabled) {
         (void)initialize_audio_backend();
+        if (g_music_track1_missing)
+            set_settings_message("MUSIC 1 IS NOT INSTALLED. MUSIC 2 IS PLAYING AS FALLBACK.");
+    }
 
     if (g_language == LANGUAGE_UNSET) {
         g_language_choice = LANGUAGE_ENGLISH;
@@ -3338,10 +3625,14 @@ int main(int argc, char *argv[])
             if (cross && !old_cross) keyboard_press();
             if (circle && !old_circle) keyboard_cancel();
         } else if (g_screen == SCREEN_HOME) {
-            if (up && !old_up)
-                g_home_selected = (g_home_selected + 4) % 5;
-            if (down && !old_down)
-                g_home_selected = (g_home_selected + 1) % 5;
+            if (up && !old_up && g_home_selected >= 3)
+                g_home_selected -= 3;
+            if (down && !old_down && g_home_selected < 3)
+                g_home_selected += 3;
+            if (left && !old_left && (g_home_selected % 3) > 0)
+                g_home_selected--;
+            if (right && !old_right && (g_home_selected % 3) < 2)
+                g_home_selected++;
             if (cross && !old_cross) {
                 if (g_home_selected == 0) {
                     g_screen = SCREEN_SCAN;
@@ -3365,6 +3656,9 @@ int main(int argc, char *argv[])
                 } else if (g_home_selected == 2) {
                     g_screen = SCREEN_SETTINGS;
                 } else if (g_home_selected == 3) {
+                    g_screen = SCREEN_HELP;
+                    g_help_selected = 0;
+                } else if (g_home_selected == 4) {
                     g_screen = SCREEN_TOOLS;
                     refresh_companion_tool_status();
                 } else {
@@ -3373,6 +3667,35 @@ int main(int argc, char *argv[])
             }
             if (circle && !old_circle)
                 g_exit_requested = 1;
+        } else if (g_screen == SCREEN_HELP) {
+            if (up && !old_up) g_help_selected = 0;
+            if (down && !old_down) g_help_selected = 1;
+            if (cross && !old_cross) {
+                g_support_is_feedback = (g_help_selected == 1);
+                g_support_selected = 0;
+                g_support_title[0] = '\0';
+                g_support_details[0] = '\0';
+                snprintf(g_support_status, sizeof(g_support_status),
+                         "ENTER TITLE + DETAILS.");
+                g_screen = SCREEN_SUPPORT_FORM;
+            }
+            if (circle && !old_circle)
+                g_screen = SCREEN_HOME;
+        } else if (g_screen == SCREEN_SUPPORT_FORM) {
+            if (up && !old_up)
+                g_support_selected = (g_support_selected + 2) % 3;
+            if (down && !old_down)
+                g_support_selected = (g_support_selected + 1) % 3;
+            if (cross && !old_cross) {
+                if (g_support_selected == 0)
+                    (void)open_support_keyboard(0);
+                else if (g_support_selected == 1)
+                    (void)open_support_keyboard(1);
+                else
+                    (void)save_support_report();
+            }
+            if (circle && !old_circle)
+                g_screen = SCREEN_HELP;
         } else if (g_screen == SCREEN_SCAN) {
             if (l1 && !old_l1) {
                 g_library = LIBRARY_PS3;
@@ -3551,6 +3874,9 @@ int main(int argc, char *argv[])
                 } else if (g_settings_selected == 5) {
                     g_music_enabled = 1;
                     g_music_volume = 180;
+                    g_music_mode = 0;
+                    g_music_next_track = 1;
+                    g_music_start_track = 1;
                     g_animation_enabled = 1;
                     g_language = LANGUAGE_ENGLISH;
                     g_language_choice = LANGUAGE_ENGLISH;
@@ -3562,6 +3888,18 @@ int main(int argc, char *argv[])
                 } else if (g_settings_selected == 6) {
                     g_language = (g_language + 1) % 3;
                     g_language_choice = g_language;
+                    (void)save_app_settings();
+                } else if (g_settings_selected == 7) {
+                    g_music_mode = (g_music_mode + 1) % 3;
+                    g_music_start_track = (g_music_mode == 1) ? 1 :
+                                          (g_music_mode == 2) ? 2 :
+                                          (g_music_current_track ? g_music_current_track :
+                                                                   g_music_next_track);
+                    if (g_music_playing) {
+                        shutdown_audio_backend();
+                        if (initialize_audio_backend() != 0)
+                            set_settings_message("MUSIC RESTART FAILED. CHECK TRACK FILES.");
+                    }
                     (void)save_app_settings();
                 }
             }
@@ -3585,6 +3923,34 @@ int main(int argc, char *argv[])
                 }
                 if (right && !old_right) {
                     set_background_music_volume(g_music_volume + 13);
+                    (void)save_app_settings();
+                }
+            }
+            if (g_settings_selected == 7) {
+                if (left && !old_left) {
+                    g_music_mode = (g_music_mode + 2) % 3;
+                    g_music_start_track = (g_music_mode == 1) ? 1 :
+                                          (g_music_mode == 2) ? 2 :
+                                          (g_music_current_track ? g_music_current_track :
+                                                                   g_music_next_track);
+                    if (g_music_playing) {
+                        shutdown_audio_backend();
+                        if (initialize_audio_backend() != 0)
+                            set_settings_message("MUSIC RESTART FAILED. CHECK TRACK FILES.");
+                    }
+                    (void)save_app_settings();
+                }
+                if (right && !old_right) {
+                    g_music_mode = (g_music_mode + 1) % 3;
+                    g_music_start_track = (g_music_mode == 1) ? 1 :
+                                          (g_music_mode == 2) ? 2 :
+                                          (g_music_current_track ? g_music_current_track :
+                                                                   g_music_next_track);
+                    if (g_music_playing) {
+                        shutdown_audio_backend();
+                        if (initialize_audio_backend() != 0)
+                            set_settings_message("MUSIC RESTART FAILED. CHECK TRACK FILES.");
+                    }
                     (void)save_app_settings();
                 }
             }
@@ -3647,6 +4013,8 @@ int main(int argc, char *argv[])
     sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
     if (g_cover_texture) ya2d_freeTexture(g_cover_texture);
     g_cover_texture = NULL;
+    if (g_apollo_texture) ya2d_freeTexture(g_apollo_texture);
+    g_apollo_texture = NULL;
     if (pad_ready) ya2d_deinit();
     return 0;
 }

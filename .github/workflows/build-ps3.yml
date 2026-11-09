@@ -91,7 +91,13 @@ jobs:
         run: |
           set -eu
           test -s "PS3-SCALE-Alpha-0.2/pkgfiles/USRDIR/theme.mp3"
-          echo "Verified embedded theme MP3 in pkgfiles/USRDIR."
+          test -s "PS3-SCALE-Alpha-0.2/pkgfiles/USRDIR/apollo-save.png"
+          if [ -s "PS3-SCALE-Alpha-0.2/pkgfiles/USRDIR/music1.mp3" ]; then
+            echo "Music 1 asset found and will be packaged."
+          else
+            echo "Music 1 asset is not yet in the source tree; runtime fallback remains Music 2."
+          fi
+          echo "Verified embedded theme MP3 and Apollo Save logo in pkgfiles/USRDIR."
 
       - name: Build and validate PS3 packages
         working-directory: PS3-SCALE-Alpha-0.2

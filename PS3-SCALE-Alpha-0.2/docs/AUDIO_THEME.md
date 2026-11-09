@@ -1,49 +1,34 @@
-# Startup theme audio asset
+# PS3 SCALE startup music
 
-## Supplied track and packaged copy
-
+## Music 2 — existing bundled theme
 - Track: GTA V - Greyhound Pause Menu Theme Remix
-- Source format: MP3, stereo, 44.1 kHz, 6,663,260 bytes
 - Packaged format: MP3, stereo, 44.1 kHz, 96 kbps CBR
 - Packaged size: 5,182,732 bytes
 - Duration: approximately 7 minutes, 11.856 seconds
-- Packaged SHA-256: `b8a7b1c2573ea8a397c2fbc3a6c731b25dcb71f572aedf5af8568785620d1b64`
+- SHA-256: `b8a7b1c2573ea8a397c2fbc3a6c731b25dcb71f572aedf5af8568785620d1b64`
+- Installed path: `/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`
 
-The full track is retained. It is re-encoded at 96 kbps stereo to reduce the installer size while keeping the complete music.
+## Music 1 — requested Zorrovian BIOS track
+- Intended installed path: `/dev_hdd0/game/PS3SCALE1/USRDIR/music1.mp3`
+- The current branch contains the two-track playback code, but the Music 1 binary is not yet present in the repository build inputs. Until it is added, the app detects the missing file and safely falls back to Music 2.
+- `scripts/prepare_theme.py` packages Music 1 automatically when `audio-source/music1.mp3` or ordered `audio-source/music1.mp3.part-*` files are present.
 
-## Installed location
-
-The theme is included inside the PS3 SCALE PKG at:
-
-`USRDIR/theme.mp3`
-
-After installation it is available at:
-
-`/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`
-
-The app can therefore start the theme without a USB drive or a manual copy step.
-
-## Intended behavior
-
-- Start automatically when PS3 SCALE opens if Music is enabled.
-- Continue while moving between app screens.
-- Loop continuously.
-- Settings exposes Music ON/OFF and volume. If Music is OFF in saved settings, the audio decoder/port/thread are not initialized at startup; switching OFF closes them immediately, and switching ON initializes them again.
-- Stop the audio thread and close the audio port cleanly when the app exits.
+## Playlist behavior
+- **Auto:** first app launch starts Music 1, then Music 2 when Music 1 ends. The next app launch starts Music 2 first, then Music 1. The starting order alternates on every app launch.
+- **Music 1 only:** loops Music 1.
+- **Music 2 only:** loops Music 2.
+- The Settings page exposes Auto, Music 1 only and Music 2 only.
+- A one-second fade-in is applied at startup and when switching tracks after the previous track ends.
+- Music ON/OFF and volume remain available; Music OFF shuts down the decoder, audio port and worker thread.
 
 ## Implementation
-
-PS3 SCALE links the LGPL mpg123 decoder and uses the native PSL1GHT audio-port API. MP3 is streamed in 48 kHz stereo PCM blocks; the complete track is not loaded into RAM.
-
-The app retains USB fallback paths for recovery or alternate user-provided themes, but the standard installer now carries the startup track internally.
+PS3 SCALE uses the LGPL mpg123 decoder and the native PSL1GHT audio-port API. MP3 is decoded in 48 kHz stereo PCM blocks; the full track is not loaded into RAM. The track switch occurs in the audio worker, not the controller/UI loop.
 
 ## Build and verification
+The build reconstructs Music 2 from ordered source chunks and verifies its exact SHA-256 inside the finalized PKG. The package verifier also checks that the Apollo Save logo is present with its expected size and SHA-256.
 
-The repository stores the MP3 as ordered binary source chunks under `audio-source/`. The PS3 build workflow joins them into `pkgfiles/USRDIR/theme.mp3` before packaging.
-
-The workflow then decrypts the finalized PKG data table and verifies that the exact `USRDIR/theme.mp3` entry and SHA-256 are present in the installable package.
-
-- [x] Full track included in the PKG build input.
-- [x] 96 kbps stereo packaged copy prepared.
-- [x] Build-time PKG-content verification added.
-- [ ] Verify real playback, loop continuity, volume, and clean shutdown on the user's PS3 hardware.
+- [x] Existing Music 2 theme is embedded and verified.
+- [x] Two-track playback and persisted alternating launch order are implemented.
+- [x] Playlist selector and fade-in are implemented.
+- [ ] Add the requested Zorrovian BIOS MP3 to the repository build inputs.
+- [ ] Verify both tracks, transitions, volume and clean shutdown on the user's PS3 hardware.
