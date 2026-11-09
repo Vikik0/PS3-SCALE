@@ -190,7 +190,7 @@ online_ui = section("static void draw_online_database(void)", "static void draw_
 assert "UP/DOWN" not in online_ui
 assert "L1 PREV | R1 NEXT" in online_ui
 assert "%.84s" in online_ui
-assert "EFFECT: %.34s" in online_ui
+assert "EFFECT: %.32s" in online_ui
 online_input = section("} else if (g_screen == SCREEN_ONLINE_DB) {", "} else if (g_screen == SCREEN_SETTINGS) {")
 assert "up && !old_up" not in online_input
 assert "down && !old_down" not in online_input
