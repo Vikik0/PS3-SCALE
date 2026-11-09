@@ -188,12 +188,13 @@ assert "if (g_catalog_sync_running || g_catalog_sync_done)" in src
 assert "(!candidate->app_ver[0] ||" in src
 online_ui = section("static void draw_online_database(void)", "static void draw_scan(void)")
 assert "UP/DOWN" not in online_ui
-assert "L1 PREV | R1 NEXT" in online_ui
+assert "D-PAD SELECT" in online_ui
+assert "L1/R1 PREV/NEXT" in online_ui
 assert "%.84s" in online_ui
 assert "EFFECT: %.32s" in online_ui
 online_input = section("} else if (g_screen == SCREEN_ONLINE_DB) {", "} else if (g_screen == SCREEN_SETTINGS) {")
-assert "up && !old_up" not in online_input
-assert "down && !old_down" not in online_input
+assert "up && !old_up" in online_input
+assert "down && !old_down" in online_input
 assert "open_online_search_keyboard" in online_input
 assert "ONLINE_FILTER_MODE_COUNT" in online_input
 assert "feature/online-graphics-database" in src

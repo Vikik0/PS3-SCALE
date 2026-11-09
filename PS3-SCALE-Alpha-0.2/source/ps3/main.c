@@ -2137,7 +2137,7 @@ static void draw_online_database(void)
     snprintf(line, sizeof(line), "%.84s", g_online_message);
     draw_text(28, 444, 0xdce3e8ff, line);
     draw_text(28, 474, 0x9aa6adff,
-              "L1 PREV | R1 NEXT | SQUARE FILTER | TRIANGLE SEARCH | X OPEN | START SYNC | CIRCLE BACK");
+              "D-PAD SELECT | L1/R1 PREV/NEXT | SQUARE FILTER | TRIANGLE SEARCH | X OPEN | START SYNC | CIRCLE BACK");
     set_ui_font_size(14, 22);
 }
 static void draw_scan(void)
@@ -2939,6 +2939,12 @@ int main(int argc, char *argv[])
             }
         } else if (g_screen == SCREEN_ONLINE_DB) {
             size_t matches = online_match_count();
+            /* Keep the standard D-pad selection; L1/R1 are optional shortcuts. */
+            if (up && !old_up && matches)
+                g_online_selected = g_online_selected > 0 ?
+                    g_online_selected - 1 : (int)matches - 1;
+            if (down && !old_down && matches)
+                g_online_selected = (g_online_selected + 1) % (int)matches;
             if (l1 && !old_l1 && matches) {
                 g_online_selected = g_online_selected > 0 ?
                     g_online_selected - 1 : (int)matches - 1;
