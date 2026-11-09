@@ -55,8 +55,8 @@ class CommunityIndexBuilderTests(unittest.TestCase):
 
     def test_graphics_metadata_is_specific_and_conservative(self):
         content = (
-            "Infinite Health\\n0\\nauthor\\n0 00112233 00\\n#\\n"
-            "Unlock FPS\\n1\\n0 00445566 6000\\n#\\n"
+            "Infinite Health\n0\nauthor\n0 00112233 00\n#\n"
+            "Unlock FPS\n1\n0 00445566 6000\n#\n"
         )
         self.assertEqual(
             MODULE.graphics_description_from_ncl(content),

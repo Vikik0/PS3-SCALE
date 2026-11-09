@@ -91,8 +91,8 @@ def graphics_description_from_ncl(content: str) -> str:
         if not line or len(line) > 92:
             continue
         if re.search(
-            r"\\b(?:fps|frame[\\s_-]*rate|frame[\\s_-]*limit|"
-            r"uncap(?:ped)?|unlock[\\s_-]*fps|60[\\s_-]*fps)\\b",
+            r"\b(?:fps|frame[\s_-]*rate|frame[\s_-]*limit|"
+            r"uncap(?:ped)?|unlock[\s_-]*fps|60[\s_-]*fps)\b",
             line,
             re.I,
         ):
