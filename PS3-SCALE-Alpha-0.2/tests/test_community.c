@@ -37,7 +37,11 @@ int main(void)
         "BLES00016\t01.02\tCall Of Duty 3\tCOMMUNITY_UNVERIFIED\t"
         "DoSpamu/RPCS3toArtemisPatches\tmaster\t"
         "USERLIST/Call Of Duty 3 BLES00016 BLES00021 v01.02.ncl\t394\t"
-        "COMMUNITY_CODE\tCommunity code; graphics effect not confirmed.\n";
+        "COMMUNITY_CODE\tCommunity code; graphics effect not confirmed.\n"
+        "BLES00517\t01.02\tJust Cause 2\tHARDWARE_TESTED_FPS\t"
+        "Nascar1243/PS3-FPS-Patches\tmain\t"
+        "Just Cause 2 BLES00517 BLUS30400 01.02.ncl\t440\t"
+        "GRAPHICS_FPS\tUnlock FPS\n";
     static const char invalid[] =
         "BLUS30464\t01.05\tSkate 3\tUNKNOWN_SOURCE\t"
         "Nascar1243/PS3-FPS-Patches\tmain\t"
@@ -54,9 +58,9 @@ int main(void)
     memset(&index, 0, sizeof(index));
     if (write_index(path, valid) != 0)
         return 1;
-    if (ps3scale_community_index_load(path, &index) != 5)
+    if (ps3scale_community_index_load(path, &index) != 6)
         return 2;
-    if (index.count != 5)
+    if (index.count != 6)
         return 3;
 
     memset(&game, 0, sizeof(game));
@@ -83,6 +87,12 @@ int main(void)
     if (strcmp(ps3scale_community_region_label("BLES00016"), "EU") != 0 ||
         strcmp(ps3scale_community_region_label("BLUS30012"), "US") != 0)
         return 19;
+
+    strcpy(game.title, "Just Cause 2");
+    strcpy(game.title_id, "BLUS30400");
+    strcpy(game.app_ver, "01.02");
+    if (!ps3scale_community_file_matches_exact_game(&index.items[5], &game))
+        return 23;
 
     strcpy(game.title, "Call of Duty: Modern Warfare 3");
     strcpy(game.title_id, "BLES01428");
@@ -122,14 +132,14 @@ int main(void)
         return 9;
     if (ps3scale_community_index_load(path, &index) >= 0)
         return 10;
-    if (index.count != 5)
+    if (index.count != 6)
         return 11;
 
     if (write_index(path, invalid_path) != 0)
         return 12;
     if (ps3scale_community_index_load(path, &index) >= 0)
         return 13;
-    if (index.count != 5)
+    if (index.count != 6)
         return 14;
 
     ps3scale_community_index_free(&index);

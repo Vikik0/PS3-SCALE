@@ -1251,10 +1251,10 @@ static int profile_script_state_for_game(const ps3scale_game_t *game,
 static const char *online_filter_label(void)
 {
     switch (g_online_filter_mode) {
-    case ONLINE_FILTER_GRAPHICS_ANY: return "GRAPHICS + ANY VERSION";
-    case ONLINE_FILTER_ALL_EXACT: return "ALL FILES + EXACT";
-    case ONLINE_FILTER_ALL_ANY: return "ALL FILES + ANY VERSION";
-    default: return "GRAPHICS + EXACT";
+    case ONLINE_FILTER_GRAPHICS_ANY: return "GRAPHICS + ANY REGION/VER";
+    case ONLINE_FILTER_ALL_EXACT: return "ALL FILES + EXACT REGION/VER";
+    case ONLINE_FILTER_ALL_ANY: return "ALL FILES + ANY REGION/VER";
+    default: return "GRAPHICS + EXACT REGION/VER";
     }
 }
 
@@ -2076,9 +2076,8 @@ static void draw_online_database(void)
         draw_text(452, 402, 0x9aa6adff, "SOURCE: PS3 SCALE GRAPHICS PROFILE DB");
     } else if (selected && selected_community) {
         const char *filename = strrchr(selected_community->path, '/');
-        const char *region = ps3scale_community_region_label(
-            selected_community->title_id[0] ?
-            selected_community->title_id : selected->title_id);
+        const char *region =
+            ps3scale_community_region_label(selected->title_id);
         const ps3scale_profile_t *safe_profile = profile_for_game(selected);
         int exact_match = ps3scale_community_file_matches_exact_game(
             selected_community, selected);
@@ -2102,8 +2101,7 @@ static void draw_online_database(void)
             draw_text(452, 206, 0x9aa6adff, "DETAIL: SOURCE DESCRIPTION");
         }
         snprintf(line, sizeof(line), "TITLE ID: %.9s",
-                 selected_community->title_id[0] ?
-                 selected_community->title_id : selected->title_id);
+                 selected->title_id);
         draw_text(452, 234, 0xdce3e8ff, line);
         snprintf(line, sizeof(line), "VERSION: %.5s | REGION: %.5s",
                  selected_community->app_ver[0] ?
@@ -2132,7 +2130,7 @@ static void draw_online_database(void)
         draw_text(452, 216, 0x9aa6adff, "PROFILE DATABASE IS LOCAL + SEPARATE.");
     } else {
         draw_text(452, 160, 0xffcc66ff, "NO MATCHING FILES FOUND.");
-        draw_text(452, 188, 0x9aa6adff, "TRY ALL FILES OR ANY VERSION FILTER.");
+        draw_text(452, 188, 0x9aa6adff, "TRY ALL FILES OR ANY REGION/VER FILTER.");
         draw_text(452, 216, 0x9aa6adff, "SEARCH BY GAME NAME OR TITLE ID.");
     }
 
