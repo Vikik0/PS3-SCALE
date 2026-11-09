@@ -132,7 +132,7 @@ help_ui = section("static void draw_help(void)", "static void draw_about(void)")
 assert "REPORT AN ISSUE" in help_ui and "SEND FEEDBACK" in help_ui
 assert "HOW TO USE PS3 SCALE" in help_ui
 assert "PS3SCALE_SUPPORT_OUTBOX_PATH" in src
-assert "REPORT SAVED LOCALLY" in src
+assert "SAVED TO LOCAL OUTBOX" in src
 assert "open_support_keyboard(0)" in main
 assert "open_support_keyboard(1)" in main
 assert "ya2d_loadPNGfromFile(PS3SCALE_APOLLO_LOGO_PATH)" in main
