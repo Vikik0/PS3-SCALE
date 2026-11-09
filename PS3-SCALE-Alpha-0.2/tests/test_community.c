@@ -24,7 +24,7 @@ int main(void)
         "# PS3 SCALE community index test\n"
         "BLUS30464\t01.05\tSkate 3\tHARDWARE_TESTED_FPS\t"
         "Nascar1243/PS3-FPS-Patches\tmain\t"
-        "Skate 3 BLUS30464 v01.05.ncl\t31\n"
+        "Skate 3 BLUS30464 v01.05.ncl\t31\tGRAPHICS_FPS\tUnlock FPS\n"
         "\t\tKirby Nightmare in Dream Land\tCOMMUNITY_CONFIRMED\t"
         "DoSpamu/RPCS3toArtemisPatches\tmaster\t"
         "PSXPlace Confirmed/Kirby Nightmare in Dream Land.ncl\t200\n"
@@ -63,6 +63,28 @@ int main(void)
     if (!ps3scale_community_file_matches_game(&index.items[0], &game))
         return 4;
 
+    game.kind = PS3SCALE_GAME_PS3_FOLDER;
+    strcpy(game.title, "Skate 3");
+    strcpy(game.title_id, "BLUS30464");
+    strcpy(game.app_ver, "01.05");
+    if (!ps3scale_community_file_matches_exact_game(&index.items[0], &game))
+        return 16;
+    strcpy(game.app_ver, "01.06");
+    if (ps3scale_community_file_matches_exact_game(&index.items[0], &game))
+        return 17;
+    strcpy(game.app_ver, "01.05");
+    strcpy(game.title_id, "BLES30464");
+    if (ps3scale_community_file_matches_exact_game(&index.items[0], &game))
+        return 18;
+    if (strcmp(ps3scale_community_region_label("BLES00016"), "EU") != 0 ||
+        strcmp(ps3scale_community_region_label("BLUS30012"), "US") != 0)
+        return 19;
+
+    strcpy(game.title, "Call of Duty: Modern Warfare 3");
+    strcpy(game.title_id, "BLES01428");
+    if (ps3scale_community_file_matches_game(&index.items[1], &game))
+        return 20;
+
     game.title_id[0] = '\0';
     strcpy(game.title, "Kirby's Nightmare in Dream Land");
     if (!ps3scale_community_file_matches_game(&index.items[1], &game))
@@ -86,6 +108,11 @@ int main(void)
     if (strcmp(ps3scale_community_source_label("HARDWARE_TESTED_FPS"),
                "HARDWARE-TESTED FPS PATCH") != 0)
         return 8;
+    if (strcmp(index.items[0].category, "GRAPHICS_FPS") != 0 ||
+        strcmp(index.items[0].description, "Unlock FPS") != 0)
+        return 21;
+    if (strcmp(index.items[1].category, "COMMUNITY_CODE") != 0)
+        return 22;
 
     if (write_index(path, invalid) != 0)
         return 9;
