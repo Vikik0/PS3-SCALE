@@ -3183,7 +3183,7 @@ static void keyboard_apply(void)
         g_online_selected = 0;
         rebuild_online_results();
         snprintf(g_online_message, sizeof(g_online_message),
-                 "SEARCH COMPLETE: %u MATCHES.", (unsigned)online_match_count());
+                 "SEARCH COMPLETE: %u MATCHES.", (unsigned)g_online_result_count);
         g_screen = SCREEN_ONLINE_DB;
         return;
     }
@@ -3471,7 +3471,7 @@ int main(int argc, char *argv[])
                 }
             }
         } else if (g_screen == SCREEN_ONLINE_DB) {
-            size_t matches = online_match_count();
+            size_t matches = g_online_result_count;
             /* Keep the standard D-pad selection; L1/R1 are optional shortcuts. */
             if (up && !old_up && matches)
                 g_online_selected = g_online_selected > 0 ?
@@ -3491,7 +3491,7 @@ int main(int argc, char *argv[])
                 rebuild_online_results();
                 snprintf(g_online_message, sizeof(g_online_message),
                          "FILTER: %.54s | %u RESULTS.",
-                         online_filter_label(), (unsigned)online_match_count());
+                         online_filter_label(), (unsigned)g_online_result_count);
             }
             if (triangle && !old_triangle)
                 (void)open_online_search_keyboard();
