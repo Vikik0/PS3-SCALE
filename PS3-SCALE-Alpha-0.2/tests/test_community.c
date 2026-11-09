@@ -33,7 +33,11 @@ int main(void)
         "PSXPlace Confirmed/RXKIR1131 01.00.ncl\t100\n"
         "BLUS30253\t01.02\tSkate 2\tARTEMIS_DATABASE\t"
         "RobertoTorino/ArtemisPS3Offline\tmain\t"
-        "codes/Skate 2 BLUS30253 01.02.ncl\t500\n";
+        "codes/Skate 2 BLUS30253 01.02.ncl\t500\n"
+        "BLES00016\t01.02\tCall Of Duty 3\tCOMMUNITY_UNVERIFIED\t"
+        "DoSpamu/RPCS3toArtemisPatches\tmaster\t"
+        "USERLIST/Call Of Duty 3 BLES00016 BLES00021 v01.02.ncl\t394\t"
+        "COMMUNITY_CODE\tCommunity code; graphics effect not confirmed.\n";
     static const char invalid[] =
         "BLUS30464\t01.05\tSkate 3\tUNKNOWN_SOURCE\t"
         "Nascar1243/PS3-FPS-Patches\tmain\t"
@@ -52,7 +56,7 @@ int main(void)
         return 1;
     if (ps3scale_community_index_load(path, &index) != 4)
         return 2;
-    if (index.count != 4)
+    if (index.count != 5)
         return 3;
 
     memset(&game, 0, sizeof(game));
@@ -82,7 +86,7 @@ int main(void)
 
     strcpy(game.title, "Call of Duty: Modern Warfare 3");
     strcpy(game.title_id, "BLES01428");
-    if (ps3scale_community_file_matches_game(&index.items[1], &game))
+    if (ps3scale_community_file_matches_game(&index.items[4], &game))
         return 20;
 
     game.title_id[0] = '\0';
@@ -118,14 +122,14 @@ int main(void)
         return 9;
     if (ps3scale_community_index_load(path, &index) >= 0)
         return 10;
-    if (index.count != 4)
+    if (index.count != 5)
         return 11;
 
     if (write_index(path, invalid_path) != 0)
         return 12;
     if (ps3scale_community_index_load(path, &index) >= 0)
         return 13;
-    if (index.count != 4)
+    if (index.count != 5)
         return 14;
 
     ps3scale_community_index_free(&index);

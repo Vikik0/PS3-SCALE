@@ -2054,7 +2054,7 @@ static void draw_online_database(void)
             ps3scale_community_region_label(selected_profile->title_id);
         snprintf(line, sizeof(line), "GAME: %.35s", selected_profile->title);
         draw_text(452, 150, 0xffffffff, line);
-        snprintf(line, sizeof(line), "EFFECT: %.39s", selected_profile->effect);
+        snprintf(line, sizeof(line), "EFFECT: %.34s", selected_profile->effect);
         draw_text(452, 178, 0xcaff39ff, line);
         snprintf(line, sizeof(line), "TITLE ID: %.9s", selected_profile->title_id);
         draw_text(452, 206, 0xdce3e8ff, line);
@@ -2091,12 +2091,12 @@ static void draw_online_database(void)
         snprintf(line, sizeof(line), "GAME: %.35s", selected_community->title[0] ?
                  selected_community->title : selected->title);
         draw_text(452, 150, 0xffffffff, line);
-        snprintf(line, sizeof(line), "EFFECT: %.38s",
+        snprintf(line, sizeof(line), "EFFECT: %.34s",
                  selected_community->description);
         draw_text(452, 178, 0xcaff39ff, line);
-        if (strlen(selected_community->description) > 38) {
-            snprintf(line, sizeof(line), "DETAIL: %.38s",
-                     selected_community->description + 38);
+        if (strlen(selected_community->description) > 34) {
+            snprintf(line, sizeof(line), "DETAIL: %.34s",
+                     selected_community->description + 34);
             draw_text(452, 206, 0xcaff39ff, line);
         } else {
             draw_text(452, 206, 0x9aa6adff, "DETAIL: SOURCE DESCRIPTION");

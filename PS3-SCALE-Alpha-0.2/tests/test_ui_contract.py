@@ -153,8 +153,16 @@ assert "PS3SCALE_CATALOG_URL" in src
 assert "PS3SCALE_COMMUNITY_INDEX_URL" in src
 assert "ps3scale_community_index_load" in src
 assert "ps3scale_community_file_matches_game" in src
-assert "GITHUB GAME FILE SEARCH" in src
+assert "ONLINE GRAPHICS DATABASE" in src
 assert "REFERENCE ONLY - NOT AUTO-APPLIED" in src
+assert "SQUARE FILTER" in src
+assert "TRIANGLE SEARCH" in src
+assert "L1 PREV | R1 NEXT" in src
+assert "GRAPHICS + EXACT" in src
+assert "online_filter_exact_only" in src
+assert "ps3scale_community_file_matches_exact_game" in src
+assert "ps3scale_community_region_label" in src
+assert "APPLY: NOT A GRAPHICS PROFILE" in src
 assert "start_catalog_sync_worker(0)" in src
 assert "start_catalog_sync_worker(1)" in main
 assert "ps3scale_catalog_match_game" in src
@@ -164,7 +172,8 @@ assert "CHECKING WEBMAN AND ARMING PROFILE." in src
 assert "ONE-LAUNCH APPLY: AVAILABLE AFTER CONFIRMATION" in src
 assert "STALE PROFILE SCRIPT. REMOVE IT BEFORE STARTING." in src
 assert "MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY" in src
-assert "PROFILE DATA SAVED TO INTERNAL HDD. NOT APPLIED YET." in src
+assert "cache_selected_online_profile" not in src
+assert "cache_all_online_profiles" not in src
 assert "profile_script_state_for_game" in src
 assert "profile ? profile->patches : NULL" in src
 assert "MOUNT THE EXACT GAME VERSION BEFORE ARMING THIS PROFILE." in src
@@ -177,6 +186,16 @@ assert "WAIT FOR ONLINE DATABASE SYNC TO FINISH BEFORE STARTING." in src
 assert "find_mounted_game(game, &mounted)" in src
 assert "if (g_catalog_sync_running || g_catalog_sync_done)" in src
 assert "(!candidate->app_ver[0] ||" in src
+online_ui = section("static void draw_online_database(void)", "static void draw_scan(void)")
+assert "UP/DOWN" not in online_ui
+assert "L1 PREV | R1 NEXT" in online_ui
+assert "%.84s" in online_ui
+assert "EFFECT: %.34s" in online_ui
+online_input = section("} else if (g_screen == SCREEN_ONLINE_DB) {", "} else if (g_screen == SCREEN_SETTINGS) {")
+assert "up && !old_up" not in online_input
+assert "down && !old_down" not in online_input
+assert "open_online_search_keyboard" in online_input
+assert "ONLINE_FILTER_MODE_COUNT" in online_input
 assert "feature/online-graphics-database" in src
 
 online_source = source_path.with_name("online_catalog.c").read_text(encoding="utf-8")
