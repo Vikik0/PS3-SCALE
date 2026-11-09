@@ -1,0 +1,99 @@
+#include "ps3scale/community.h"
+
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
+static int write_index(const char *path, const char *contents)
+{
+    FILE *file = fopen(path, "wb");
+    size_t length;
+    if (!file)
+        return -1;
+    length = strlen(contents);
+    if (fwrite(contents, 1, length, file) != length) {
+        fclose(file);
+        return -1;
+    }
+    return fclose(file) == 0 ? 0 : -1;
+}
+
+int main(void)
+{
+    static const char valid[] =
+        "# PS3 SCALE community index test\n"
+        "BLUS30464\t01.05\tSkate 3\tHARDWARE_TESTED_FPS\t"
+        "Nascar1243/PS3-FPS-Patches\tmain\t"
+        "Skate 3 BLUS30464 v01.05.ncl\t31\n"
+        "\t\tKirby Nightmare in Dream Land\tCOMMUNITY_CONFIRMED\t"
+        "DoSpamu/RPCS3toArtemisPatches\tmaster\t"
+        "PSXPlace Confirmed/Kirby Nightmare in Dream Land.ncl\t200\n"
+        "BLUS30253\t01.02\tSkate 2\tARTEMIS_DATABASE\t"
+        "RobertoTorino/ArtemisPS3Offline\tmain\t"
+        "codes/Skate 2 BLUS30253 01.02.ncl\t500\n";
+    static const char invalid[] =
+        "BLUS30464\t01.05\tSkate 3\tUNKNOWN_SOURCE\t"
+        "Nascar1243/PS3-FPS-Patches\tmain\t"
+        "Skate 3 BLUS30464 v01.05.ncl\t31\n";
+    static const char invalid_path[] =
+        "BLUS30464\t01.05\tSkate 3\tHARDWARE_TESTED_FPS\t"
+        "Nascar1243/PS3-FPS-Patches\tmain\t"
+        "../outside/Skate 3.ncl\t31\n";
+
+    const char *path = "/tmp/ps3scale_community_test.tsv";
+    ps3scale_community_index_t index;
+    ps3scale_game_t game;
+
+    memset(&index, 0, sizeof(index));
+    if (write_index(path, valid) != 0)
+        return 1;
+    if (ps3scale_community_index_load(path, &index) != 3)
+        return 2;
+    if (index.count != 3)
+        return 3;
+
+    memset(&game, 0, sizeof(game));
+    game.kind = PS3SCALE_GAME_PS3_FOLDER;
+    strcpy(game.title, "Skate 3");
+    strcpy(game.title_id, "BLUS30464");
+    strcpy(game.app_ver, "01.06");
+    if (!ps3scale_community_file_matches_game(&index.items[0], &game))
+        return 4;
+
+    game.title_id[0] = '\0';
+    strcpy(game.title, "Kirby's Nightmare in Dream Land");
+    if (!ps3scale_community_file_matches_game(&index.items[1], &game))
+        return 5;
+
+    strcpy(game.title, "Skate 3");
+    if (ps3scale_community_file_matches_game(&index.items[2], &game))
+        return 6;
+
+    game.kind = PS3SCALE_GAME_PS2_ISO;
+    strcpy(game.title, "Kirby's Nightmare in Dream Land");
+    if (ps3scale_community_file_matches_game(&index.items[1], &game))
+        return 7;
+
+    if (strcmp(ps3scale_community_source_label("HARDWARE_TESTED_FPS"),
+               "HARDWARE-TESTED FPS PATCH") != 0)
+        return 8;
+
+    if (write_index(path, invalid) != 0)
+        return 9;
+    if (ps3scale_community_index_load(path, &index) >= 0)
+        return 10;
+    if (index.count != 3)
+        return 11;
+
+    if (write_index(path, invalid_path) != 0)
+        return 12;
+    if (ps3scale_community_index_load(path, &index) >= 0)
+        return 13;
+    if (index.count != 3)
+        return 14;
+
+    ps3scale_community_index_free(&index);
+    unlink(path);
+    puts("PS3 SCALE community index tests: PASS");
+    return 0;
+}

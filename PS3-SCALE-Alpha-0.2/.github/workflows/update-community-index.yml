@@ -1,0 +1,38 @@
+name: Refresh PS3 SCALE community game index
+
+on:
+  schedule:
+    - cron: "15 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-community-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Refresh public GitHub NCL index
+        env:
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+        run: python3 PS3-SCALE-Alpha-0.2/scripts/update_community_index.py
+
+      - name: Commit updated index when changed
+        run: |
+          if git diff --quiet -- PS3-SCALE-Alpha-0.2/data/community_game_files.tsv; then
+            echo "Community index is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PS3-SCALE-Alpha-0.2/data/community_game_files.tsv
+          git commit -m "Refresh PS3 community game index"
+          git push
