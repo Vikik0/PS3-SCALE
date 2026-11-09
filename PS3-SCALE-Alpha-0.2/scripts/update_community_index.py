@@ -101,10 +101,8 @@ def graphics_description_from_ncl(content: str) -> str | None:
             line,
             re.I,
         ):
-            if line not in matches:
+            if line not in matches and len(matches) < 2:
                 matches.append(line)
-        if len(matches) >= 2:
-            break
 
     if not matches:
         return None
