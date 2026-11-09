@@ -3,18 +3,18 @@
 # Fields: TITLE_ID APP_VER TITLE SOURCE_KIND REPOSITORY BRANCH PATH SIZE CATEGORY DESCRIPTION
 BLES00467		Destroy All Humans! Path of the Furon	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Destroy All Humans! Path of the Furon BLES00467.ncl	33	GRAPHICS_FPS	FPS cap unlock; 60 FPS is not guaranteed.
 BLUS30117	01.00	Dragon Ball Z Burst Limit	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Dragon Ball Z Burst Limit BLUS30117 v01.00.ncl	57	GRAPHICS_FPS	60 FPS target in cutscenes only; gameplay is not covered.
-BLUS31197	01.01	Drakengard 3	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Drakengard 3 BLUS31197 01.01.ncl	180	GRAPHICS_FPS	FPS patch; exact effect not documented in this file.
+BLUS31197	01.01	Drakengard 3	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Drakengard 3 BLUS31197 01.01.ncl	180	COMMUNITY_CODE	No explicit FPS/graphics section detected; reference only.
 BLUS30185	01.61	Fallout 3	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Fallout 3 BLUS30185 01.61.ncl	30	GRAPHICS_FPS	FPS cap unlock; 60 FPS is not guaranteed.
 BLES01475	01.00	Fallout New Vegas Ultimate Edition	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Fallout New Vegas Ultimate Edition BLES01475 01.00.ncl	288	GRAPHICS_FPS	FPS cap unlock; 60 FPS is not guaranteed.
 MRTC00003	01.00	Final Fantasy XIII	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Final Fantasy XIII MRTC00003 v01.00.ncl	30	GRAPHICS_FPS	60 FPS target; actual frame rate depends on game/scene.
 BCAS20013	01.00	Folklore	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Folklore BCAS20013 BCES00050 BCUS98147 01.00.ncl	483	GRAPHICS_FPS	FPS cap unlock; 60 FPS is not guaranteed.
-BCUS98232	01.00	God Of War Ascension	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	God Of War Ascension BCUS98232 v01.00 av01.12.ncl	19355	GRAPHICS_FPS	FPS patch; exact effect not documented in this file.
+BCUS98232	01.00	God Of War Ascension	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	God Of War Ascension BCUS98232 v01.00 av01.12.ncl	19355	COMMUNITY_CODE	No explicit FPS/graphics section detected; reference only.
 BLUS30127	01.00	Grand Theft Auto IV	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Grand Theft Auto IV BLUS30127 v01.00 av01.08.ncl	1703	GRAPHICS_FPS	FPS cap unlock; 60 FPS is not guaranteed.
 BLUS31319	01.00	Hatsune Miku Project Diva F	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Hatsune Miku Project Diva F BLUS31319 01.00.ncl	78	GRAPHICS_FPS	60 FPS target; actual frame rate depends on game/scene.
 BLUS31431	01.00	Hatsune Miku Project Diva F 2nd	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Hatsune Miku Project Diva F 2nd BLUS31431 01.00.ncl	2323	GRAPHICS_FPS	FPS cap unlock; 60 FPS is not guaranteed.
 BLES00517	01.02	Just Cause 2	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Just Cause 2 BLES00517 BLUS30400 01.02.ncl	440	GRAPHICS_FPS	FPS cap unlock; 60 FPS is not guaranteed.
 BLUS31212	01.00	Kingdom Hearts 1.5 HD ReMIX	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Kingdom Hearts 1.5 HD ReMIX BLUS31212 01.00.ncl	2544	GRAPHICS_FPS	60 FPS target; actual frame rate depends on game/scene.
-BLUS31460	01.00	Kingdom Hearts 2.5 HD ReMIX	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Kingdom Hearts 2.5 HD ReMIX BLUS31460 01.00.ncl	845101	GRAPHICS_FPS	FPS patch; exact effect not documented in this file.
+BLUS31460	01.00	Kingdom Hearts 2.5 HD ReMIX	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Kingdom Hearts 2.5 HD ReMIX BLUS31460 01.00.ncl	845101	COMMUNITY_CODE	No explicit FPS/graphics section detected; reference only.
 BLUS30710	01.02	Kingdoms of Amalur Reckoning	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Kingdoms of Amalur Reckoning BLUS30710 v01.02.ncl	29	GRAPHICS_FPS	60 FPS target; actual frame rate depends on game/scene.
 BLUS31554	01.00	Lost Dimension	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Lost Dimension BLUS31554 v01.00.ncl	31	GRAPHICS_FPS	FPS cap unlock; 60 FPS is not guaranteed.
 MRTC00002	01.02	Lost Planet 2	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Lost Planet 2 MRTC00002 v01.02.ncl	54	GRAPHICS_FPS	FPS cap unlock; 60 FPS is not guaranteed.
@@ -26,8 +26,8 @@ BLUS30029	01.00	Pirates of the Caribbean At World's End	HARDWARE_TESTED_FPS	Nasc
 BLUS30270	02.00	Resident Evil 5	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Resident Evil 5 BLUS30270 v02.00.ncl	27	GRAPHICS_FPS	60 FPS target; actual frame rate depends on game/scene.
 BLUS98120	01.60	Resistance 2	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Resistance 2 BLUS98120 01.60.ncl	30	GRAPHICS_FPS	FPS cap unlock; 60 FPS is not guaranteed.
 BCUS98176	01.05	Resistance 3	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Resistance 3 BCUS98176 01.05.ncl	30	GRAPHICS_FPS	FPS cap unlock; 60 FPS is not guaranteed.
-BCES01097	01.01	Shadow Of The Colossus	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Shadow Of The Colossus BCES01097 01.01.ncl	426	GRAPHICS_FPS	FPS patch; exact effect not documented in this file.
-BCES01097	01.00	Shadow Of The Colossus	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Shadow Of The Colossus BCES01097 BCES01115 BCUS98259 NPEA00280 v01.00 av01.01.ncl	716	GRAPHICS_FPS	FPS patch; exact effect not documented in this file.
+BCES01097	01.01	Shadow Of The Colossus	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Shadow Of The Colossus BCES01097 01.01.ncl	426	COMMUNITY_CODE	No explicit FPS/graphics section detected; reference only.
+BCES01097	01.00	Shadow Of The Colossus	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Shadow Of The Colossus BCES01097 BCES01115 BCUS98259 NPEA00280 v01.00 av01.01.ncl	716	COMMUNITY_CODE	No explicit FPS/graphics section detected; reference only.
 BLUS30565	01.01	Silent Hill Downpour	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Silent Hill Downpour BLUS30565 01.01.ncl	1159	GRAPHICS_FPS	60 FPS target; actual frame rate depends on game/scene.
 BLUS30169	01.00	Silent Hill Homecoming	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Silent Hill Homecoming BLUS30169 01.00.ncl	5554	GRAPHICS_FPS	60 FPS target; actual frame rate depends on game/scene.
 BLUS30253	01.02	Skate 2	HARDWARE_TESTED_FPS	Nascar1243/PS3-FPS-Patches	main	Skate 2 BLUS30253 v01.02.ncl	31	GRAPHICS_FPS	FPS cap unlock; 60 FPS is not guaranteed.
