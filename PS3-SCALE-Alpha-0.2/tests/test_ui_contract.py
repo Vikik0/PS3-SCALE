@@ -154,7 +154,7 @@ assert "PS3SCALE_COMMUNITY_INDEX_URL" in src
 assert "ps3scale_community_index_load" in src
 assert "ps3scale_community_file_matches_game" in src
 assert "ONLINE GRAPHICS DATABASE" in src
-assert "REFERENCE ONLY - NOT AUTO-APPLIED" in src
+assert "APPLY: REFERENCE ONLY - NOT INSTALLED" in src
 assert "SQUARE FILTER" in src
 assert "TRIANGLE SEARCH" in src
 assert "L1 PREV | R1 NEXT" in src
