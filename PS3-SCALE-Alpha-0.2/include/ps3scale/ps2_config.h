@@ -27,4 +27,8 @@ int ps3scale_ps2_config_build(uint8_t *out, size_t capacity,
 /* Validates only the restricted CONFIG format emitted by the builder above. */
 int ps3scale_ps2_config_validate_generated(const uint8_t *data, size_t size);
 
+/* Validates a downloaded CUSTOM/NET CONFIG or encrypted PS2 Classics ENC file. */
+int ps3scale_ps2_config_validate_external(const uint8_t *data, size_t size,
+                                          const char *type);
+
 #endif
