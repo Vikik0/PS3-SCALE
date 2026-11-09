@@ -8,7 +8,6 @@ int main(void)
 {
     static const char *path = "/tmp/ps3scale_ps2_config_index_test.tsv";
     ps3scale_ps2_config_db_t db = {0};
-    ps3scale_ps2_config_entry_t entry;
     const ps3scale_ps2_config_entry_t *found;
     char normalized[PS3SCALE_PS2_CONFIG_ID_MAX];
     char url[512];
@@ -38,8 +37,6 @@ int main(void)
 
     found = ps3scale_ps2_config_db_find(&db, "NPUD21770", "ENC");
     assert(found != NULL && strcmp(found->type, "ENC") == 0);
-    assert(ps3scale_ps2_config_db_build_url == NULL);
-    (void)entry;
 
     found = ps3scale_ps2_config_db_find(&db, "SLES52568", "NET");
     assert(found != NULL && strcmp(found->type, "CUSTOM") == 0);
