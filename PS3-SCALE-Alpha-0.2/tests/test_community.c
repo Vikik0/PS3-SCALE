@@ -28,6 +28,9 @@ int main(void)
         "\t\tKirby Nightmare in Dream Land\tCOMMUNITY_CONFIRMED\t"
         "DoSpamu/RPCS3toArtemisPatches\tmaster\t"
         "PSXPlace Confirmed/Kirby Nightmare in Dream Land.ncl\t200\n"
+        "RXKIR1131\t01.00\t\tCOMMUNITY_CONFIRMED\t"
+        "DoSpamu/RPCS3toArtemisPatches\tmaster\t"
+        "PSXPlace Confirmed/RXKIR1131 01.00.ncl\t100\n"
         "BLUS30253\t01.02\tSkate 2\tARTEMIS_DATABASE\t"
         "RobertoTorino/ArtemisPS3Offline\tmain\t"
         "codes/Skate 2 BLUS30253 01.02.ncl\t500\n";
@@ -47,9 +50,9 @@ int main(void)
     memset(&index, 0, sizeof(index));
     if (write_index(path, valid) != 0)
         return 1;
-    if (ps3scale_community_index_load(path, &index) != 3)
+    if (ps3scale_community_index_load(path, &index) != 4)
         return 2;
-    if (index.count != 3)
+    if (index.count != 4)
         return 3;
 
     memset(&game, 0, sizeof(game));
@@ -66,8 +69,14 @@ int main(void)
         return 5;
 
     strcpy(game.title, "Skate 3");
-    if (ps3scale_community_file_matches_game(&index.items[2], &game))
+    if (ps3scale_community_file_matches_game(&index.items[3], &game))
         return 6;
+
+    game.kind = PS3SCALE_GAME_PS3_HDD;
+    strcpy(game.title, "Kirby");
+    strcpy(game.title_id, "RXKIR1131");
+    if (!ps3scale_community_file_matches_game(&index.items[2], &game))
+        return 15;
 
     game.kind = PS3SCALE_GAME_PS2_ISO;
     strcpy(game.title, "Kirby's Nightmare in Dream Land");
@@ -82,14 +91,14 @@ int main(void)
         return 9;
     if (ps3scale_community_index_load(path, &index) >= 0)
         return 10;
-    if (index.count != 3)
+    if (index.count != 4)
         return 11;
 
     if (write_index(path, invalid_path) != 0)
         return 12;
     if (ps3scale_community_index_load(path, &index) >= 0)
         return 13;
-    if (index.count != 3)
+    if (index.count != 4)
         return 14;
 
     ps3scale_community_index_free(&index);

@@ -1138,6 +1138,8 @@ static void start_catalog_sync_worker(int force)
     g_catalog_sync_running = 1;
     snprintf(g_catalog_status, sizeof(g_catalog_status),
              "CONNECTING TO GITHUB DATABASE");
+    snprintf(g_online_message, sizeof(g_online_message),
+             "REFRESHING GITHUB PROFILE + COMMUNITY GAME INDEX...");
     rc = sysThreadCreate(&g_catalog_thread, catalog_sync_worker, NULL,
                          1500, 0x10000, THREAD_JOINABLE,
                          "PS3 SCALE Online Database");
@@ -2089,6 +2091,10 @@ static void draw_online_database(void)
         draw_text(452, 340, 0xdce3e8ff, line);
         draw_text(452, 374, 0xffcc66ff, "REFERENCE ONLY - NOT AUTO-APPLIED");
         draw_text(452, 402, 0x9aa6adff, "REVIEW SOURCE + GAME VERSION FIRST");
+    } else if (!g_community_ready) {
+        draw_text(452, 160, 0xffcc66ff, "GITHUB COMMUNITY INDEX NOT LOADED.");
+        draw_text(452, 196, 0x9aa6adff, "CONNECT TO INTERNET AND PRESS START.");
+        draw_text(452, 224, 0x9aa6adff, "SAFE PROFILE CATALOG IS SEPARATE.");
     } else {
         draw_text(452, 160, 0xffcc66ff, "NO MATCHING GITHUB FILES FOUND.");
         draw_text(452, 196, 0x9aa6adff, "SEARCHED INSTALLED PS3 GAME NAMES");
@@ -2775,6 +2781,15 @@ int main(int argc, char *argv[])
                     g_screen = SCREEN_ONLINE_DB;
                     g_online_selected = 0;
                     rebuild_online_results();
+                    if (g_community_ready) {
+                        snprintf(g_online_message, sizeof(g_online_message),
+                                 "SEARCHED %u PS3 GAMES; FOUND %u GITHUB FILES.",
+                                 (unsigned)g_online_games_searched,
+                                 (unsigned)g_online_community_result_count);
+                    } else {
+                        snprintf(g_online_message, sizeof(g_online_message),
+                                 "GITHUB INDEX NOT LOADED. PRESS START TO SYNC.");
+                    }
                     if (catalog_cache_is_stale() ||
                         community_index_cache_is_stale())
                         start_catalog_sync_worker(0);
