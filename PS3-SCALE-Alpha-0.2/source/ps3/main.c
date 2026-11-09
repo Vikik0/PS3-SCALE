@@ -857,23 +857,6 @@ static int game_is_ps2(const ps3scale_game_t *game)
            game->kind == PS3SCALE_GAME_PS2_ISO;
 }
 
-static int path_ends_with_ci(const char *value, const char *suffix)
-{
-    size_t value_length, suffix_length, i;
-    if (!value || !suffix)
-        return 0;
-    value_length = strlen(value);
-    suffix_length = strlen(suffix);
-    if (suffix_length > value_length)
-        return 0;
-    value += value_length - suffix_length;
-    for (i = 0; i < suffix_length; i++)
-        if (toupper((unsigned char)value[i]) !=
-            toupper((unsigned char)suffix[i]))
-            return 0;
-    return 1;
-}
-
 static int text_contains_ci(const char *text, const char *query)
 {
     size_t i, j;
@@ -1112,7 +1095,7 @@ static void draw_home_ambient(void)
 
     draw_ambient_ring(18.0f, 1.46f, phase * 0.22f,
                       center_x, -7.0f, center_z, 0x9b8de65a);
-    draw_ambient_satellite(22.0f, phase * 0.38f,
+    draw_ambient_satellite(22.0f, phase * 0.38f, 0.55f, phase * 0.24f,
                            center_x, 0.0f, center_z, 0xb3a9e988);
 
     tiny3d_Project2D();
