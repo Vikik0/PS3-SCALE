@@ -3278,6 +3278,12 @@ int main(int argc, char *argv[])
                 g_profile_confirm_pending = 0;
                 if (profile)
                     set_details_message("EXACT ONLINE PROFILE FOUND. REVIEW BEFORE INSTALL.");
+                else if (selected_game() &&
+                         (selected_game()->kind == PS3SCALE_GAME_PS2_ISO ||
+                          selected_game()->kind == PS3SCALE_GAME_PS2_CLASSIC))
+                    set_details_message(ps2_config_for_game(selected_game()) ?
+                        "VERIFIED PS2 CONFIG FOUND. TRIANGLE TO DOWNLOAD." :
+                        "NO VERIFIED PS2 CONFIG FOUND FOR THIS GAME ID.");
                 else
                     set_details_message("NO EXACT ONLINE PROFILE FOR THIS GAME UPDATE.");
                 g_screen = SCREEN_DETAILS;
@@ -3318,13 +3324,26 @@ int main(int argc, char *argv[])
             if (triangle && !old_triangle) {
                 if (g_profile_confirm_pending) {
                     confirm_profile_install();
-                } else if (game && game->kind == PS3SCALE_GAME_PS2_ISO) {
-                    g_config_preview = !g_config_preview;
+                } else if (game &&
+                           (game->kind == PS3SCALE_GAME_PS2_ISO ||
+                            game->kind == PS3SCALE_GAME_PS2_CLASSIC)) {
+                    if (ps2_config_for_game(game))
+                        start_ps2_config_download();
+                    else if (game->kind == PS3SCALE_GAME_PS2_ISO) {
+                        g_config_preview = !g_config_preview;
+                        set_details_message("NO VERIFIED CONFIG. THIS IS PREVIEW ONLY.");
+                    } else {
+                        set_details_message("NO VERIFIED ENC CONFIG FOR THIS TITLE ID.");
+                    }
                 }
             }
             if (((cross && !old_cross) || (start && !old_start)) &&
-                !g_profile_confirm_pending)
-                start_selected_game();
+                !g_profile_confirm_pending) {
+                if (game && game->kind == PS3SCALE_GAME_PS2_CLASSIC)
+                    set_details_message("START THIS PS2 CLASSIC WITH ITS XMB LAUNCHER.");
+                else
+                    start_selected_game();
+            }
             if (circle && !old_circle) {
                 if (g_profile_confirm_pending) {
                     g_profile_confirm_pending = 0;
