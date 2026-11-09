@@ -171,11 +171,10 @@ def metadata_for_file(
             )
         return metadata_from_ncl_content(source_kind, content)
     except (OSError, urllib.error.URLError, TimeoutError):
-        # Preserve the source's FPS-repository classification if inspection
-        # temporarily fails; the app still treats every NCL as reference-only.
+        # Unknown content must not leak into the default graphics-only view.
         return (
-            "GRAPHICS_FPS",
-            "FPS-source NCL; effect could not be inspected. Reference only.",
+            "COMMUNITY_CODE",
+            "NCL could not be inspected; graphics effect is unverified.",
         )
 
 
