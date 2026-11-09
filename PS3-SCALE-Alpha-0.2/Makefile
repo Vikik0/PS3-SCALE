@@ -82,6 +82,7 @@ $(BUILD):
 pkg: $(BUILD)
 	@python3 scripts/prepare_theme.py
 	@cp data/online_profiles.tsv pkgfiles/USRDIR/graphics_catalog.tsv
+	@cp data/community_game_files.tsv pkgfiles/USRDIR/community_game_files.tsv
 	@test -s pkgfiles/USRDIR/cacert.pem
 	@$(MAKE) --no-print-directory $(OUTPUT).pkg
 

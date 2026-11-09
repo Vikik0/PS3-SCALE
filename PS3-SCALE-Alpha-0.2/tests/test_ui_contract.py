@@ -150,6 +150,11 @@ assert "PS3SCALE_MUSIC_PATH" in src
 assert "ONLINE GRAPHICS DATABASE" in src
 assert "SCREEN_ONLINE_DB" in src
 assert "PS3SCALE_CATALOG_URL" in src
+assert "PS3SCALE_COMMUNITY_INDEX_URL" in src
+assert "ps3scale_community_index_load" in src
+assert "ps3scale_community_file_matches_game" in src
+assert "GITHUB GAME FILE SEARCH" in src
+assert "REFERENCE ONLY - NOT AUTO-APPLIED" in src
 assert "start_catalog_sync_worker(0)" in src
 assert "start_catalog_sync_worker(1)" in main
 assert "ps3scale_catalog_match_game" in src
@@ -178,7 +183,8 @@ online_source = source_path.with_name("online_catalog.c").read_text(encoding="ut
 assert "CURLOPT_SSL_VERIFYPEER, 1L" in online_source
 assert "CURLOPT_SSL_VERIFYHOST, 2L" in online_source
 assert "CURLOPT_CAINFO" in online_source
-assert "write_catalog_data" in online_source
+assert "write_download_data" in online_source
+assert "ps3scale_online_download_limited" in online_source
 
 catalog_source = source_path.parent.parent / "core" / "catalog.c"
 catalog_src = catalog_source.read_text(encoding="utf-8")

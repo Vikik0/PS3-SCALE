@@ -12,21 +12,27 @@
 #define PS3SCALE_CA_BUNDLE_PATH \
     "/dev_hdd0/game/PS3SCALE1/USRDIR/cacert.pem"
 #define PS3SCALE_DOWNLOAD_LIMIT (64L * 1024L)
+#define PS3SCALE_DOWNLOAD_HARD_LIMIT (2L * 1024L * 1024L)
 #define PS3SCALE_USER_AGENT "PS3SCALE/0.3"
 
 typedef struct download_context {
     FILE *file;
     size_t bytes_written;
+    size_t max_bytes;
 } download_context_t;
 
-static size_t write_catalog_data(void *contents, size_t size,
-                                 size_t count, void *user_data)
+static size_t write_download_data(void *contents, size_t size,
+                                  size_t count, void *user_data)
 {
     download_context_t *context = (download_context_t *)user_data;
-    size_t bytes = size * count;
+    size_t bytes;
 
-    if (!context || !context->file ||
-        bytes > (size_t)PS3SCALE_DOWNLOAD_LIMIT - context->bytes_written)
+    if (size && count > ((size_t)-1) / size)
+        return 0;
+    bytes = size * count;
+    if (!context || !context->file || !context->max_bytes ||
+        context->bytes_written > context->max_bytes ||
+        bytes > context->max_bytes - context->bytes_written)
         return 0;
     if (fwrite(contents, 1, bytes, context->file) != bytes)
         return 0;
@@ -74,7 +80,10 @@ static void network_modules_shutdown(void)
     sysModuleUnload(SYSMODULE_NET);
 }
 
-int ps3scale_online_download(const char *url, const char *destination)
+int ps3scale_online_download_limited(
+    const char *url,
+    const char *destination,
+    size_t max_bytes)
 {
     CURL *curl = NULL;
     CURLcode curl_result;
@@ -86,6 +95,7 @@ int ps3scale_online_download(const char *url, const char *destination)
 
     if (!url || strncmp(url, "https://", 8) != 0 ||
         !destination || !destination[0] ||
+        !max_bytes || max_bytes > (size_t)PS3SCALE_DOWNLOAD_HARD_LIMIT ||
         strlen(destination) + 6 >= sizeof(temporary_path))
         return -1;
 
@@ -104,6 +114,7 @@ int ps3scale_online_download(const char *url, const char *destination)
         goto cleanup;
     memset(&download, 0, sizeof(download));
     download.file = file;
+    download.max_bytes = max_bytes;
 
     curl = curl_easy_init();
     if (!curl)
@@ -111,11 +122,11 @@ int ps3scale_online_download(const char *url, const char *destination)
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, PS3SCALE_USER_AGENT);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_catalog_data);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_download_data);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &download);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 12L);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
-    curl_easy_setopt(curl, CURLOPT_MAXFILESIZE, PS3SCALE_DOWNLOAD_LIMIT);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
+    curl_easy_setopt(curl, CURLOPT_MAXFILESIZE, (long)max_bytes);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 4L);
     curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
@@ -132,7 +143,7 @@ int ps3scale_online_download(const char *url, const char *destination)
     (void)curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
     if (curl_result == CURLE_OK && response_code == 200 &&
         download.bytes_written > 0 &&
-        download.bytes_written <= (size_t)PS3SCALE_DOWNLOAD_LIMIT)
+        download.bytes_written <= max_bytes)
         result = 0;
 
 cleanup:
@@ -154,4 +165,10 @@ cleanup:
         unlink(temporary_path);
 
     return result;
+}
+
+int ps3scale_online_download(const char *url, const char *destination)
+{
+    return ps3scale_online_download_limited(
+        url, destination, (size_t)PS3SCALE_DOWNLOAD_LIMIT);
 }

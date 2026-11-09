@@ -27,6 +27,7 @@
 #include "ps3scale/locale.h"
 #include "ps3scale/hardware_info.h"
 #include "ps3scale/catalog.h"
+#include "ps3scale/community.h"
 #include "ps3scale/online.h"
 #include "ps3scale/profile_apply.h"
 #include "font8x12.h"
@@ -123,9 +124,33 @@ static int g_ui_font_height = 22;
 #define PS3SCALE_CATALOG_URL "https://raw.githubusercontent.com/Vikik0/PS3-SCALE/feature/online-graphics-database/PS3-SCALE-Alpha-0.2/data/online_profiles.tsv"
 #define PS3SCALE_PROFILE_CACHE_DIR "/dev_hdd0/game/PS3SCALE1/USRDIR/profiles"
 #define PS3SCALE_CATALOG_SYNC_SECONDS (24 * 60 * 60)
+#define PS3SCALE_COMMUNITY_INDEX_CACHE_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/community_game_files.tsv"
+#define PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/community_game_files.download"
+#define PS3SCALE_COMMUNITY_INDEX_URL "https://raw.githubusercontent.com/Vikik0/PS3-SCALE/feature/online-graphics-database/PS3-SCALE-Alpha-0.2/data/community_game_files.tsv"
+#define PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT (2u * 1024u * 1024u)
+#define PS3SCALE_MAX_ONLINE_RESULTS (PS3SCALE_COMMUNITY_MAX_FILES + PS3SCALE_MAX_GAMES)
+
+typedef enum online_result_kind {
+    ONLINE_RESULT_PROFILE = 0,
+    ONLINE_RESULT_COMMUNITY = 1
+} online_result_kind_t;
+
+typedef struct online_result {
+    unsigned short game_index;
+    unsigned short file_index;
+    unsigned char kind;
+} online_result_t;
 
 static ps3scale_catalog_t g_catalog;
 static ps3scale_catalog_t g_downloaded_catalog;
+static ps3scale_community_index_t g_community_index;
+static ps3scale_community_index_t g_downloaded_community_index;
+static int g_community_ready = 0;
+static online_result_t g_online_results[PS3SCALE_MAX_ONLINE_RESULTS];
+static size_t g_online_result_count = 0;
+static size_t g_online_profile_result_count = 0;
+static size_t g_online_community_result_count = 0;
+static size_t g_online_games_searched = 0;
 static volatile int g_catalog_sync_running = 0;
 static volatile int g_catalog_sync_done = 0;
 static volatile int g_catalog_sync_result = 0;
@@ -134,8 +159,9 @@ static sys_ppu_thread_t g_catalog_thread;
 static int g_catalog_ready = 0;
 static int g_online_selected = 0;
 static int g_profile_confirm_pending = 0;
-static char g_catalog_status[96] = "BUNDLED CATALOG NOT LOADED";
-static char g_online_message[128] = "SELECT A MATCHED GAME OR PRESS START TO SYNC.";
+static char g_catalog_status[96] = "LOCAL PROFILE + GITHUB INDEX NOT LOADED";
+static char g_online_message[128] = "SELECT A GAME RESULT OR PRESS START TO REFRESH GITHUB.";
+static void rebuild_online_results(void);
 static volatile int g_game_launch_running = 0;
 static volatile int g_game_launch_done = 0;
 static volatile int g_game_launch_result = -1;
@@ -1000,15 +1026,26 @@ static void set_details_message(const char *message)
 static void load_catalog_cache(void)
 {
     int count = ps3scale_catalog_load(PS3SCALE_CATALOG_CACHE_PATH, &g_catalog);
-    if (count > 0) {
-        g_catalog_ready = 1;
+    int community_count = ps3scale_community_index_load(
+        PS3SCALE_COMMUNITY_INDEX_CACHE_PATH, &g_community_index);
+
+    g_catalog_ready = (count > 0);
+    g_community_ready = (community_count > 0);
+
+    if (g_catalog_ready && g_community_ready) {
         snprintf(g_catalog_status, sizeof(g_catalog_status),
-                 "BUNDLED / CACHED DATABASE READY");
+                 "LOCAL PROFILE + GITHUB INDEX READY");
+    } else if (g_catalog_ready) {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "LOCAL PROFILE DATABASE READY");
+    } else if (g_community_ready) {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "GITHUB COMMUNITY INDEX READY");
     } else {
-        g_catalog_ready = 0;
         snprintf(g_catalog_status, sizeof(g_catalog_status),
                  "NO VALID LOCAL DATABASE");
     }
+    rebuild_online_results();
 }
 
 static int catalog_cache_is_stale(void)
@@ -1026,10 +1063,26 @@ static int catalog_cache_is_stale(void)
     return (now - info.st_mtime) >= PS3SCALE_CATALOG_SYNC_SECONDS;
 }
 
+static int community_index_cache_is_stale(void)
+{
+    struct stat info;
+    time_t now = time(NULL);
+
+    if (stat(PS3SCALE_COMMUNITY_INDEX_CACHE_PATH, &info) != 0)
+        return 1;
+    if (now < (time_t)1600000000)
+        return 1;
+    if (now <= info.st_mtime)
+        return 0;
+    return (now - info.st_mtime) >= PS3SCALE_CATALOG_SYNC_SECONDS;
+}
+
 static void catalog_sync_worker(void *arg)
 {
+    int result = 0;
     (void)arg;
     g_catalog_sync_result = 0;
+    ps3scale_community_index_free(&g_downloaded_community_index);
 
     if (ps3scale_online_download(PS3SCALE_CATALOG_URL,
                                  PS3SCALE_CATALOG_DOWNLOAD_PATH) == 0 &&
@@ -1037,11 +1090,27 @@ static void catalog_sync_worker(void *arg)
                               &g_downloaded_catalog) > 0 &&
         rename(PS3SCALE_CATALOG_DOWNLOAD_PATH,
                PS3SCALE_CATALOG_CACHE_PATH) == 0) {
-        g_catalog_sync_result = 1;
+        result |= 1;
     } else {
         unlink(PS3SCALE_CATALOG_DOWNLOAD_PATH);
-        g_catalog_sync_result = -1;
     }
+
+    if (ps3scale_online_download_limited(
+            PS3SCALE_COMMUNITY_INDEX_URL,
+            PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH,
+            PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT) == 0 &&
+        ps3scale_community_index_load(
+            PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH,
+            &g_downloaded_community_index) > 0 &&
+        rename(PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH,
+               PS3SCALE_COMMUNITY_INDEX_CACHE_PATH) == 0) {
+        result |= 2;
+    } else {
+        unlink(PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH);
+        ps3scale_community_index_free(&g_downloaded_community_index);
+    }
+
+    g_catalog_sync_result = result ? result : -1;
 
     /* Publish completion before clearing running so UI actions never
      * overlap the final network teardown window. */
@@ -1060,7 +1129,8 @@ static void start_catalog_sync_worker(int force)
                  "DATABASE SYNC OR GAME START IS ALREADY RUNNING.");
         return;
     }
-    if (!force && !catalog_cache_is_stale())
+    if (!force && !catalog_cache_is_stale() &&
+        !community_index_cache_is_stale())
         return;
 
     g_catalog_sync_done = 0;
@@ -1083,6 +1153,7 @@ static void start_catalog_sync_worker(int force)
 
 static void service_catalog_sync(void)
 {
+    int result;
     if (!g_catalog_sync_done)
         return;
 
@@ -1092,18 +1163,40 @@ static void service_catalog_sync(void)
         g_catalog_thread_started = 0;
     }
 
-    if (g_catalog_sync_result == 1) {
+    result = g_catalog_sync_result;
+    if (result & 1) {
         g_catalog = g_downloaded_catalog;
         g_catalog_ready = 1;
+    }
+    if (result & 2) {
+        ps3scale_community_index_free(&g_community_index);
+        g_community_index = g_downloaded_community_index;
+        memset(&g_downloaded_community_index, 0,
+               sizeof(g_downloaded_community_index));
+        g_community_ready = 1;
+    }
+
+    rebuild_online_results();
+    if (result == 3) {
         snprintf(g_catalog_status, sizeof(g_catalog_status),
-                 "ONLINE DATABASE UPDATED");
+                 "GITHUB PROFILE + GAME INDEX UPDATED");
         snprintf(g_online_message, sizeof(g_online_message),
-                 "DATABASE UPDATED. EXACT GAME MATCHES ARE READY.");
-    } else if (g_catalog_ready) {
+                 "GITHUB SEARCH INDEX UPDATED. GAME NAMES WERE RESCANNED.");
+    } else if (result == 1) {
         snprintf(g_catalog_status, sizeof(g_catalog_status),
-                 "UPDATE FAILED - USING CACHED DATABASE");
+                 "PROFILE DB UPDATED - GITHUB INDEX CACHED");
         snprintf(g_online_message, sizeof(g_online_message),
-                 "UPDATE FAILED. YOUR LAST VALID DATABASE IS STILL AVAILABLE.");
+                 "PROFILE DB UPDATED. USING LAST VALID GITHUB INDEX.");
+    } else if (result == 2) {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "GITHUB GAME INDEX UPDATED");
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "COMMUNITY FILE INDEX UPDATED. EXACT PROFILES ARE UNCHANGED.");
+    } else if (g_catalog_ready || g_community_ready) {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "UPDATE FAILED - USING LAST VALID CACHE");
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "UPDATE FAILED. LAST VALID LOCAL DATABASES ARE STILL AVAILABLE.");
     } else {
         snprintf(g_catalog_status, sizeof(g_catalog_status),
                  "OFFLINE - NO VALID DATABASE");
@@ -1131,38 +1224,91 @@ static int profile_script_state_for_game(const ps3scale_game_t *game,
         game->title_id, game->app_ver, profile ? profile->patches : NULL);
 }
 
-static size_t online_match_count(void)
+static void rebuild_online_results(void)
 {
-    return g_catalog_ready ?
-        ps3scale_catalog_count_matches(&g_catalog, &g_games) : 0;
-}
+    size_t i, j;
 
-static const ps3scale_game_t *online_match_at(
-    size_t target, const ps3scale_profile_t **profile_out)
-{
-    size_t i, match_index = 0;
-
-    if (profile_out)
-        *profile_out = NULL;
-    if (!g_catalog_ready)
-        return NULL;
+    g_online_result_count = 0;
+    g_online_profile_result_count = 0;
+    g_online_community_result_count = 0;
+    g_online_games_searched = 0;
 
     for (i = 0; i < g_games.count; i++) {
         const ps3scale_game_t *game = &g_games.items[i];
         const ps3scale_profile_t *profile;
         if (!game_is_ps3(game))
             continue;
-        profile = ps3scale_catalog_match_game(&g_catalog, game);
-        if (!profile)
+        g_online_games_searched++;
+        if (!g_catalog_ready)
             continue;
-        if (match_index == target) {
-            if (profile_out)
-                *profile_out = profile;
-            return game;
-        }
-        match_index++;
+        profile = ps3scale_catalog_match_game(&g_catalog, game);
+        if (!profile || g_online_result_count >= PS3SCALE_MAX_ONLINE_RESULTS)
+            continue;
+        g_online_results[g_online_result_count].game_index = (unsigned short)i;
+        g_online_results[g_online_result_count].file_index = 0;
+        g_online_results[g_online_result_count].kind = ONLINE_RESULT_PROFILE;
+        g_online_result_count++;
+        g_online_profile_result_count++;
     }
-    return NULL;
+
+    if (!g_community_ready || !g_community_index.items)
+        return;
+
+    /* Index-first traversal means each GitHub file is shown at most once,
+     * even if the same game is installed in more than one folder. */
+    for (j = 0; j < g_community_index.count; j++) {
+        for (i = 0; i < g_games.count; i++) {
+            const ps3scale_game_t *game = &g_games.items[i];
+            if (!game_is_ps3(game) ||
+                !ps3scale_community_file_matches_game(
+                    &g_community_index.items[j], game))
+                continue;
+            if (g_online_result_count < PS3SCALE_MAX_ONLINE_RESULTS) {
+                g_online_results[g_online_result_count].game_index = (unsigned short)i;
+                g_online_results[g_online_result_count].file_index = (unsigned short)j;
+                g_online_results[g_online_result_count].kind = ONLINE_RESULT_COMMUNITY;
+                g_online_result_count++;
+                g_online_community_result_count++;
+            }
+            break;
+        }
+    }
+}
+
+static size_t online_match_count(void)
+{
+    return g_online_result_count;
+}
+
+static const ps3scale_game_t *online_result_at(
+    size_t target,
+    const ps3scale_profile_t **profile_out,
+    const ps3scale_community_file_t **community_out)
+{
+    const online_result_t *result;
+    const ps3scale_game_t *game;
+
+    if (profile_out)
+        *profile_out = NULL;
+    if (community_out)
+        *community_out = NULL;
+    if (target >= g_online_result_count)
+        return NULL;
+
+    result = &g_online_results[target];
+    if ((size_t)result->game_index >= g_games.count)
+        return NULL;
+    game = &g_games.items[result->game_index];
+
+    if (result->kind == ONLINE_RESULT_PROFILE) {
+        if (profile_out)
+            *profile_out = profile_for_game(game);
+    } else if (result->kind == ONLINE_RESULT_COMMUNITY &&
+               community_out &&
+               (size_t)result->file_index < g_community_index.count) {
+        *community_out = &g_community_index.items[result->file_index];
+    }
+    return game;
 }
 
 static int write_profile_cache(const ps3scale_profile_t *profile)
@@ -1202,9 +1348,23 @@ static int write_profile_cache(const ps3scale_profile_t *profile)
 static void cache_selected_online_profile(void)
 {
     const ps3scale_profile_t *profile = NULL;
-    if (!online_match_at((size_t)g_online_selected, &profile) || !profile) {
+    const ps3scale_community_file_t *community = NULL;
+    const ps3scale_game_t *game = online_result_at(
+        (size_t)g_online_selected, &profile, &community);
+
+    if (!game) {
         snprintf(g_online_message, sizeof(g_online_message),
-                 "NO EXACT TITLE ID / APP VERSION MATCH IS SELECTED.");
+                 "SELECT A GITHUB RESULT FIRST.");
+        return;
+    }
+    if (!profile && community) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "COMMUNITY NCL FOUND. REFERENCE ONLY - NOT AUTO-APPLIED.");
+        return;
+    }
+    if (!profile) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "NO EXACT TITLE ID / APP VERSION PROFILE IS SELECTED.");
         return;
     }
     if (write_profile_cache(profile) == 0) {
@@ -1242,12 +1402,13 @@ static void open_selected_online_match(void)
 {
     const ps3scale_game_t *match;
     const ps3scale_profile_t *profile = NULL;
+    const ps3scale_community_file_t *community = NULL;
     size_t i, count;
 
-    match = online_match_at((size_t)g_online_selected, &profile);
-    if (!match || !profile) {
+    match = online_result_at((size_t)g_online_selected, &profile, &community);
+    if (!match) {
         snprintf(g_online_message, sizeof(g_online_message),
-                 "NO EXACT MATCH IS SELECTED.");
+                 "NO GITHUB RESULT IS SELECTED.");
         return;
     }
 
@@ -1258,14 +1419,21 @@ static void open_selected_online_match(void)
     for (i = 0; i < count; i++) {
         const ps3scale_game_t *candidate = library_game_at(i);
         if (candidate &&
-            strcmp(candidate->title_id, match->title_id) == 0 &&
-            strcmp(candidate->app_ver, match->app_ver) == 0) {
+            (candidate == match ||
+             (match->title_id[0] &&
+              strcmp(candidate->title_id, match->title_id) == 0) ||
+             strcmp(candidate->title, match->title) == 0)) {
             g_selected = (int)i;
             break;
         }
     }
     g_profile_confirm_pending = 0;
-    set_details_message("EXACT COMMUNITY PROFILE FOUND. REVIEW BEFORE INSTALL.");
+    if (profile)
+        set_details_message("EXACT COMMUNITY PROFILE FOUND. REVIEW BEFORE INSTALL.");
+    else if (community)
+        set_details_message("GITHUB NCL FILE FOUND. REFERENCE ONLY - NOT AUTO-APPLIED.");
+    else
+        set_details_message("GAME FOUND IN GITHUB INDEX.");
     g_screen = SCREEN_DETAILS;
 }
 
@@ -1812,6 +1980,7 @@ static void draw_online_database(void)
     size_t count = online_match_count();
     size_t start, i;
     const ps3scale_profile_t *selected_profile = NULL;
+    const ps3scale_community_file_t *selected_community = NULL;
     const ps3scale_game_t *selected = NULL;
 
     set_ui_font_size(9, 14);
@@ -1820,37 +1989,47 @@ static void draw_online_database(void)
     else if ((size_t)g_online_selected >= count)
         g_online_selected = (int)count - 1;
 
-    selected = online_match_at((size_t)g_online_selected, &selected_profile);
+    selected = online_result_at((size_t)g_online_selected,
+                                &selected_profile, &selected_community);
 
     draw_text(28, 16, 0xcaff39ff, "PS3 SCALE");
-    draw_text(190, 16, 0xffffffff, "ONLINE GRAPHICS DATABASE");
-    snprintf(line, sizeof(line), "DATABASE: %.42s", g_catalog_status);
-    draw_text(28, 48, g_catalog_ready ? 0x9ee56aff : 0xffcc66ff, line);
-    snprintf(line, sizeof(line), "PROFILES: %u  |  EXACT LIBRARY MATCHES: %u",
-             (unsigned)(g_catalog_ready ? g_catalog.count : 0),
-             (unsigned)count);
+    draw_text(190, 16, 0xffffffff, "GITHUB GAME FILE SEARCH");
+    snprintf(line, sizeof(line), "PROFILE DB: %s | GITHUB INDEX: %s",
+             g_catalog_ready ? "READY" : "OFFLINE",
+             g_community_ready ? "READY" : "OFFLINE");
+    draw_text(28, 48, (g_catalog_ready || g_community_ready) ?
+              0x9ee56aff : 0xffcc66ff, line);
+    snprintf(line, sizeof(line), "SAFE PROFILES: %u | GITHUB FILES: %u | PS3 GAMES: %u",
+             (unsigned)g_online_profile_result_count,
+             (unsigned)g_online_community_result_count,
+             (unsigned)g_online_games_searched);
     draw_text(28, 76, 0xdce3e8ff, line);
 
     draw_outline_rect(22.0f, 106.0f, 402.0f, 322.0f, 0x26445cff);
     draw_outline_rect(440.0f, 106.0f, 382.0f, 322.0f, 0x26445cff);
-    draw_text(32, 116, 0xffffffff, "MATCHED GAMES");
-    draw_text(452, 116, 0xffffffff, "PROFILE DETAILS");
+    draw_text(32, 116, 0xffffffff, "MATCHED GAME FILES");
+    draw_text(452, 116, 0xffffffff, "GITHUB RESULT DETAILS");
 
     start = (g_online_selected > 8) ? (size_t)(g_online_selected - 8) : 0;
     for (i = 0; i < 9 && start + i < count; i++) {
         const ps3scale_profile_t *profile = NULL;
-        const ps3scale_game_t *game = online_match_at(start + i, &profile);
+        const ps3scale_community_file_t *community = NULL;
+        const ps3scale_game_t *game = online_result_at(
+            start + i, &profile, &community);
         int is_selected = ((int)(start + i) == g_online_selected);
         float y = 148.0f + (float)i * 28.0f;
-        if (!game || !profile)
+        const char *tag = profile ? "PROFILE" : "GITHUB NCL";
+        const char *version = profile ? profile->app_ver :
+                              (community && community->app_ver[0] ?
+                               community->app_ver : "--");
+        if (!game)
             continue;
         if (is_selected)
             draw_solid_rect(28.0f, y - 3.0f, 390.0f, 24.0f, 0x14261dff);
-        snprintf(line, sizeof(line), "%.30s", game->title);
+        snprintf(line, sizeof(line), "%.28s", game->title);
         draw_text(36, y, is_selected ? 0xcaff39ff : 0xdce3e8ff, line);
-        snprintf(line, sizeof(line), "%.9s / %.5s",
-                 profile->title_id, profile->app_ver);
-        draw_text(300, y, is_selected ? 0xcaff39ff : 0x9aa6adff, line);
+        snprintf(line, sizeof(line), "%s %.5s", tag, version);
+        draw_text(290, y, is_selected ? 0xcaff39ff : 0x9aa6adff, line);
     }
 
     if (selected && selected_profile) {
@@ -1880,19 +2059,48 @@ static void draw_online_database(void)
             draw_text(452, 340, 0xffcc66ff,
                       "AUTO APPLY: DISABLED FOR MULTI-WRITE SAFETY");
         draw_text(452, 374, 0x9aa6adff, "MATCH: EXACT TITLE ID + APP_VER");
-        draw_text(452, 402, 0x9aa6adff, "SOURCE: COMMUNITY MAPI PATCH NOTES");
+        draw_text(452, 402, 0x9aa6adff, "SOURCE: PS3 SCALE SAFE PROFILE CATALOG");
+    } else if (selected && selected_community) {
+        const char *filename = strrchr(selected_community->path, '/');
+        if (filename)
+            filename++;
+        else
+            filename = selected_community->path;
+        snprintf(line, sizeof(line), "GAME: %.42s", selected->title);
+        draw_text(452, 152, 0xffffffff, line);
+        snprintf(line, sizeof(line), "FILE: %.48s", filename);
+        draw_text(452, 188, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "TITLE ID: %.16s",
+                 selected_community->title_id[0] ?
+                 selected_community->title_id : selected->title_id);
+        draw_text(452, 216, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "VERSION: %.16s",
+                 selected_community->app_ver[0] ?
+                 selected_community->app_ver : "NOT SPECIFIED");
+        draw_text(452, 244, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "SOURCE: %.48s",
+                 selected_community->repository);
+        draw_text(452, 278, 0xcaff39ff, line);
+        snprintf(line, sizeof(line), "TYPE: %.48s",
+                 ps3scale_community_source_label(selected_community->source_kind));
+        draw_text(452, 306, 0xffcc66ff, line);
+        snprintf(line, sizeof(line), "FILE SIZE: %lu KB",
+                 (selected_community->file_size + 1023ul) / 1024ul);
+        draw_text(452, 340, 0xdce3e8ff, line);
+        draw_text(452, 374, 0xffcc66ff, "REFERENCE ONLY - NOT AUTO-APPLIED");
+        draw_text(452, 402, 0x9aa6adff, "REVIEW SOURCE + GAME VERSION FIRST");
     } else {
-        draw_text(452, 160, 0xffcc66ff, "NO EXACT MATCHES IN YOUR PS3 LIBRARY.");
-        draw_text(452, 196, 0x9aa6adff, "THE DATABASE IS VERSION-SPECIFIC.");
-        draw_text(452, 224, 0x9aa6adff, "RESCAN GAMES AFTER INSTALLING UPDATES.");
+        draw_text(452, 160, 0xffcc66ff, "NO MATCHING GITHUB FILES FOUND.");
+        draw_text(452, 196, 0x9aa6adff, "SEARCHED INSTALLED PS3 GAME NAMES");
+        draw_text(452, 224, 0x9aa6adff, "AND TITLE IDS IN THE COMMUNITY INDEX.");
+        draw_text(452, 252, 0x9aa6adff, "PRESS START TO REFRESH GITHUB SOURCES.");
     }
 
     draw_text(28, 448, 0xdce3e8ff, g_online_message);
     draw_text(28, 478, 0x9aa6adff,
-              "UP/DOWN: SELECT  CROSS: OPEN  SQUARE: CACHE  TRIANGLE: ALL  START: SYNC  CIRCLE: BACK");
+              "UP/DOWN: SELECT  CROSS: OPEN GAME  SQUARE: CACHE PROFILE  TRIANGLE: ALL SAFE  START: SYNC  CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
-
 static void draw_scan(void)
 {
     char line[256];
@@ -2566,7 +2774,9 @@ int main(int argc, char *argv[])
                 } else if (g_home_selected == 1) {
                     g_screen = SCREEN_ONLINE_DB;
                     g_online_selected = 0;
-                    if (catalog_cache_is_stale())
+                    rebuild_online_results();
+                    if (catalog_cache_is_stale() ||
+                        community_index_cache_is_stale())
                         start_catalog_sync_worker(0);
                 } else if (g_home_selected == 2) {
                     g_screen = SCREEN_SETTINGS;

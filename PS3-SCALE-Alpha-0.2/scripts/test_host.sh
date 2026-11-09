@@ -59,6 +59,15 @@ cc -std=c99 -Wall -Wextra -Werror \
 
 cc -std=c99 -Wall -Wextra -Werror \
   -I"$ROOT/include" \
+  "$ROOT/source/core/community.c" \
+  "$ROOT/tests/test_community.c" \
+  -o "$OUT/test_community"
+"$OUT/test_community"
+
+python3 "$ROOT/tests/test_community_index_builder.py"
+
+cc -std=c99 -Wall -Wextra -Werror \
+  -I"$ROOT/include" \
   "$ROOT/source/core/webman_command.c" \
   "$ROOT/tests/test_webman_command.c" \
   -o "$OUT/test_webman_command"
