@@ -1110,7 +1110,7 @@ static void catalog_sync_worker(void *arg)
         ps3scale_community_index_free(&g_downloaded_community_index);
     }
 
-    g_catalog_sync_result = result ? result : -1;
+    g_catalog_sync_result = result;
 
     /* Publish completion before clearing running so UI actions never
      * overlap the final network teardown window. */
@@ -2098,7 +2098,7 @@ static void draw_online_database(void)
 
     draw_text(28, 448, 0xdce3e8ff, g_online_message);
     draw_text(28, 478, 0x9aa6adff,
-              "UP/DOWN: SELECT  CROSS: OPEN GAME  SQUARE: CACHE PROFILE  TRIANGLE: ALL SAFE  START: SYNC  CIRCLE: BACK");
+              "UP/DOWN SELECT | X OPEN | SQUARE SAVE | TRIANGLE SAVE ALL | START SYNC | CIRCLE BACK");
     set_ui_font_size(14, 22);
 }
 static void draw_scan(void)
