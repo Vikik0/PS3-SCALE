@@ -169,7 +169,7 @@ assert "ps3scale_catalog_match_game" in src
 assert "EXACT ONLINE PROFILE FOUND" in src
 assert "ONE-LAUNCH PROFILE ARMED. START THIS GAME." in src
 assert "CHECKING WEBMAN AND ARMING PROFILE." in src
-assert "ONE-LAUNCH APPLY: AVAILABLE AFTER CONFIRMATION" in src
+assert "APPLY: REVIEW + CONFIRM IN DETAILS" in src
 assert "STALE PROFILE SCRIPT. REMOVE IT BEFORE STARTING." in src
 assert "MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY" in src
 assert "cache_selected_online_profile" not in src
