@@ -250,7 +250,8 @@ static int scan_iso_files(const char *base, ps3scale_game_kind_t kind,
             accepted = ends_with_ci(entry->d_name, ".iso");
         else
             accepted = ends_with_ci(entry->d_name, ".iso") ||
-                       ends_with_ci(entry->d_name, ".bin");
+                       ends_with_ci(entry->d_name, ".bin") ||
+                       ends_with_ci(entry->d_name, ".bin.enc");
         if (!accepted) continue;
 
         if (path_join(path, sizeof(path), base, entry->d_name) != 0)
@@ -260,13 +261,27 @@ static int scan_iso_files(const char *base, ps3scale_game_kind_t kind,
 
         memset(&game, 0, sizeof(game));
         game.kind = kind;
-        basename_no_ext(game.title, sizeof(game.title), entry->d_name);
+        if (kind == PS3SCALE_GAME_PS2_ISO &&
+            ends_with_ci(entry->d_name, ".bin.enc")) {
+            size_t title_length = strlen(entry->d_name) - 8u;
+            if (title_length >= sizeof(game.title))
+                title_length = sizeof(game.title) - 1u;
+            memcpy(game.title, entry->d_name, title_length);
+            game.title[title_length] = '\0';
+            game.kind = PS3SCALE_GAME_PS2_CLASSIC;
+        } else {
+            basename_no_ext(game.title, sizeof(game.title), entry->d_name);
+        }
         strncpy(game.path, path, sizeof(game.path) - 1);
 
         if (kind == PS3SCALE_GAME_PS3_ISO) {
             (void)ps3scale_title_id_from_filename(entry->d_name,
                                                   game.title_id,
                                                   sizeof(game.title_id));
+        } else if (game.kind == PS3SCALE_GAME_PS2_CLASSIC) {
+            (void)ps3scale_ps2_serial_from_filename(entry->d_name,
+                                                    game.disc_id,
+                                                    sizeof(game.disc_id));
         } else {
             if (ps3scale_ps2_iso_read_serial(path, game.disc_id,
                                              sizeof(game.disc_id)) != 0) {
