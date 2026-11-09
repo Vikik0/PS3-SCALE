@@ -118,9 +118,9 @@ static int g_music_playing = 0;
 static int g_music_mode = 0; /* 0=alternate both, 1=Music 1 only, 2=Music 2 only. */
 static int g_music_next_track = 1;
 static int g_music_start_track = 1;
-static int g_music_current_track = 0;
+static volatile int g_music_current_track = 0;
 static int g_music_file_open = 0;
-static int g_music_track1_missing = 0;
+static volatile int g_music_track1_missing = 0;
 static unsigned int g_music_fade_remaining = 0;
 static int g_settings_selected = 0;
 static int g_animation_enabled = 1;
