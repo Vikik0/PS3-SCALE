@@ -68,6 +68,12 @@ static int g_keyboard_support_mode = 0;
 static char g_support_title[64] = "";
 static char g_support_details[64] = "";
 static char g_support_status[128] = "LOCAL OUTBOX READY.";
+static sys_ppu_thread_t g_support_thread;
+static volatile int g_support_send_running = 0;
+static volatile int g_support_send_done = 0;
+static volatile int g_support_send_result = -1;
+static int g_support_thread_started = 0;
+static char g_support_json[1024];
 static app_screen_t g_screen = SCREEN_HOME;
 static app_screen_t g_splash_next_screen = SCREEN_BOOT;
 static int g_splash_frames = 0;
@@ -93,6 +99,8 @@ static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 #define PS3SCALE_APOLLO_LOGO_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/apollo-save.png"
 #define PS3SCALE_SUPPORT_DIR "/dev_hdd0/game/PS3SCALE1/USRDIR/support"
 #define PS3SCALE_SUPPORT_OUTBOX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox.txt"
+/* Replace with the URL of the separate PS3 SCALE Supabase project after deployment. */
+#define PS3SCALE_SUPPORT_URL "https://YOUR_PROJECT.supabase.co/functions/v1/ps3scale-support"
 #define PS3SCALE_PS2_CONFIG_INDEX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/ps2_config_index.tsv"
 #define PS3SCALE_PS2_CLASSICS_CONFIG_DIR "/dev_hdd0/game/PS2CONFIG/USRDIR/CONFIG/ENC"
 #define PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT (PS3SCALE_PS2_CONFIG_MAX_BYTES * 2u)
@@ -3144,7 +3152,7 @@ static void draw_support_form(void)
 {
     int i;
     static const char *labels[3] = {
-        "REPORT TITLE", "PROBLEM DETAILS", "SAVE REPORT"
+        "REPORT TITLE", "PROBLEM DETAILS", "SUBMIT REPORT"
     };
 
     set_ui_font_size(12, 18);
@@ -3169,18 +3177,154 @@ static void draw_support_form(void)
             draw_text(52, y + 34.0f, 0xffffffff,
                       g_support_details[0] ? g_support_details : "PRESS CROSS TO DESCRIBE THE ISSUE");
         else
-            draw_text(52, y + 34.0f, 0xcaff39ff, "SAVE THIS REPORT TO THE PS3 SCALE SUPPORT OUTBOX");
+            draw_text(52, y + 34.0f, 0xcaff39ff, "SAVE LOCALLY; SEND ONLINE IF THE SERVICE IS CONFIGURED");
     }
 
     set_ui_font_size(8, 12);
     draw_text(36, 370, 0x7c859aff,
               "DEVICE MODEL, FIRMWARE AND APP VERSION ARE ADDED AUTOMATICALLY.");
     draw_text(36, 390, 0x7c859aff, g_support_status);
-    draw_text(36, 406, 0x7c859aff, "ONLINE SUBMISSION IS NOT CONFIGURED YET.");
+    draw_text(36, 406, 0x7c859aff,
+              strstr(PS3SCALE_SUPPORT_URL, "YOUR_PROJECT") ?
+              "ONLINE SUBMISSION NEEDS THE SEPARATE SUPPORT SERVICE." :
+              "REPORT IS SAVED LOCALLY BEFORE ONLINE SUBMISSION.");
     set_ui_font_size(11, 17);
     draw_text(28, 474, 0x9aa6adff,
               "UP/DOWN: MOVE  |  CROSS: EDIT / SAVE  |  CIRCLE: BACK");
     set_ui_font_size(14, 22);
+}
+
+static int support_json_escape(char *destination, size_t capacity,
+                               const char *source)
+{
+    size_t used = 0;
+    if (!destination || capacity == 0 || !source)
+        return -1;
+
+    while (*source) {
+        unsigned char c = (unsigned char)*source++;
+        if (c == '"' || c == '\\') {
+            if (used + 2 >= capacity) return -1;
+            destination[used++] = '\\';
+            destination[used++] = (char)c;
+        } else if (c == '\n' || c == '\r') {
+            if (used + 2 >= capacity) return -1;
+            destination[used++] = '\\';
+            destination[used++] = (c == '\n') ? 'n' : 'r';
+        } else if (c < 0x20) {
+            continue;
+        } else {
+            if (used + 1 >= capacity) return -1;
+            destination[used++] = (char)c;
+        }
+    }
+    destination[used] = '\0';
+    return 0;
+}
+
+static int build_support_json(void)
+{
+    char title[128], details[128], model[128];
+    char firmware[96], platform[96];
+    int length;
+
+    if (support_json_escape(title, sizeof(title), g_support_title) != 0 ||
+        support_json_escape(details, sizeof(details), g_support_details) != 0)
+        return -1;
+    if (g_hardware_info_valid) {
+        if (support_json_escape(model, sizeof(model),
+                                g_hardware_info.model_series) != 0 ||
+            support_json_escape(firmware, sizeof(firmware),
+                                g_hardware_info.firmware_version) != 0 ||
+            support_json_escape(platform, sizeof(platform),
+                                g_hardware_info.platform_id) != 0)
+            return -1;
+    } else {
+        snprintf(model, sizeof(model), "UNKNOWN");
+        snprintf(firmware, sizeof(firmware), "UNKNOWN");
+        snprintf(platform, sizeof(platform), "UNKNOWN");
+    }
+
+    length = snprintf(g_support_json, sizeof(g_support_json),
+        "{\"kind\":\"%s\",\"title\":\"%s\",\"details\":\"%s\","
+        "\"model\":\"%s\",\"firmware\":\"%s\",\"platform\":\"%s\","
+        "\"app_version\":\"ALPHA 0.2\"}",
+        g_support_is_feedback ? "feedback" : "issue",
+        title, details, model, firmware, platform);
+    return (length < 0 || (size_t)length >= sizeof(g_support_json)) ? -1 : 0;
+}
+
+static void support_submit_worker(void *arg)
+{
+    long response_code = 0;
+    (void)arg;
+    g_support_send_result = ps3scale_online_post_json(
+        PS3SCALE_SUPPORT_URL, g_support_json, strlen(g_support_json),
+        &response_code);
+    g_support_send_done = 1;
+    g_support_send_running = 0;
+}
+
+static void start_support_send(void)
+{
+    int rc;
+
+    if (strstr(PS3SCALE_SUPPORT_URL, "YOUR_PROJECT") != NULL) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "LOCAL SAVE OK; ONLINE OFF.");
+        return;
+    }
+    if (g_catalog_sync_running || g_catalog_thread_started ||
+        g_game_launch_running || g_game_launch_thread_started ||
+        g_profile_arm_running || g_profile_arm_thread_started) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "LOCAL SAVE OK; NETWORK BUSY.");
+        return;
+    }
+    if (g_support_thread_started || g_support_send_running) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "ANOTHER REPORT IS SENDING.");
+        return;
+    }
+    if (build_support_json() != 0) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "LOCAL SAVE OK; FORMAT ERROR.");
+        return;
+    }
+
+    g_support_send_done = 0;
+    g_support_send_result = -1;
+    g_support_send_running = 1;
+    rc = sysThreadCreate(&g_support_thread, support_submit_worker, NULL,
+                         1400, 0x8000, THREAD_JOINABLE,
+                         "PS3 SCALE Support");
+    if (rc == 0) {
+        g_support_thread_started = 1;
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "REPORT QUEUED FOR ONLINE SEND.");
+    } else {
+        g_support_send_running = 0;
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "LOCAL SAVE OK; SEND START FAILED.");
+    }
+}
+
+static void service_support_send(void)
+{
+    if (!g_support_send_done)
+        return;
+    if (g_support_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_support_thread, &thread_result);
+        g_support_thread_started = 0;
+    }
+    if (g_support_send_result == 0)
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "REPORT SENT ONLINE.");
+    else
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "LOCAL SAVE OK; SEND FAILED.");
+    g_support_send_done = 0;
 }
 
 static int save_support_report(void)
@@ -3223,6 +3367,7 @@ static int save_support_report(void)
 
     snprintf(g_support_status, sizeof(g_support_status),
              "SAVED TO LOCAL OUTBOX.");
+    start_support_send();
     return 0;
 }
 
@@ -3569,6 +3714,7 @@ int main(int argc, char *argv[])
 
         sysUtilCheckCallback();
         service_catalog_sync();
+        service_support_send();
         service_game_launch();
         service_profile_arm();
         service_ps2_config_download();
@@ -3992,6 +4138,11 @@ int main(int argc, char *argv[])
         u64 thread_result = 0;
         (void)sysThreadJoin(g_catalog_thread, &thread_result);
         g_catalog_thread_started = 0;
+    }
+    if (g_support_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_support_thread, &thread_result);
+        g_support_thread_started = 0;
     }
     if (g_game_launch_thread_started) {
         u64 thread_result = 0;

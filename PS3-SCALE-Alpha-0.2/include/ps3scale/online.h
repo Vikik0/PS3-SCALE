@@ -12,4 +12,11 @@ int ps3scale_online_download_limited(
     const char *destination,
     size_t max_bytes);
 
+/* Sends a small JSON report over HTTPS with certificate verification. */
+int ps3scale_online_post_json(
+    const char *url,
+    const char *json,
+    size_t json_size,
+    long *response_code);
+
 #endif

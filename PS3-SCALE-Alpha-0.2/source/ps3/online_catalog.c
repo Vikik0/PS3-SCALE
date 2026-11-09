@@ -172,3 +172,93 @@ int ps3scale_online_download(const char *url, const char *destination)
     return ps3scale_online_download_limited(
         url, destination, (size_t)PS3SCALE_DOWNLOAD_LIMIT);
 }
+
+static size_t discard_post_response(void *contents, size_t size,
+                                    size_t count, void *user_data)
+{
+    size_t *received = (size_t *)user_data;
+    size_t bytes;
+
+    (void)contents;
+    if (size && count > ((size_t)-1) / size)
+        return 0;
+    bytes = size * count;
+    if (!received || *received > 16384u || bytes > 16384u - *received)
+        return 0;
+    *received += bytes;
+    return bytes;
+}
+
+int ps3scale_online_post_json(const char *url, const char *json,
+                              size_t json_size, long *response_code)
+{
+    CURL *curl = NULL;
+    struct curl_slist *headers = NULL;
+    CURLcode curl_result;
+    long status = 0;
+    size_t response_bytes = 0;
+    int result = -1;
+
+    if (response_code)
+        *response_code = 0;
+    if (!url || strncmp(url, "https://", 8) != 0 ||
+        !json || !json_size || json_size > 4096u)
+        return -1;
+    if (network_modules_ready() != 0)
+        return -1;
+    if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
+        network_modules_shutdown();
+        return -1;
+    }
+
+    curl = curl_easy_init();
+    if (!curl)
+        goto cleanup;
+    {
+        struct curl_slist *next =
+            curl_slist_append(headers, "Content-Type: application/json");
+        if (!next)
+            goto cleanup;
+        headers = next;
+        next = curl_slist_append(headers, "Accept: application/json");
+        if (!next)
+            goto cleanup;
+        headers = next;
+    }
+
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, PS3SCALE_USER_AGENT);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)json_size);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, discard_post_response);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_bytes);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 25L);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0L);
+    curl_easy_setopt(curl, CURLOPT_FAILONERROR, 0L);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+    curl_easy_setopt(curl, CURLOPT_CAINFO, PS3SCALE_CA_BUNDLE_PATH);
+#ifdef CURLPROTO_HTTPS
+    curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
+#endif
+
+    curl_result = curl_easy_perform(curl);
+    (void)curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+    if (response_code)
+        *response_code = status;
+    if (curl_result == CURLE_OK && status >= 200 && status < 300)
+        result = 0;
+
+cleanup:
+    if (headers)
+        curl_slist_free_all(headers);
+    if (curl)
+        curl_easy_cleanup(curl);
+    curl_global_cleanup();
+    network_modules_shutdown();
+    return result;
+}

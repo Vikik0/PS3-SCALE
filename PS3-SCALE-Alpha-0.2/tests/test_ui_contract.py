@@ -275,3 +275,37 @@ assert '"/play.ps3%s"' in webman_command_src
 assert "encode_game_path" in webman_command_src
 
 print("PS3 SCALE UI contract tests: PASS")
+
+
+# Online support submission contract.
+assert "PS3SCALE_SUPPORT_URL" in src
+assert "ps3scale_online_post_json" in src
+assert "start_support_send();" in src
+assert "support_submit_worker" in src
+assert "service_support_send();" in main
+assert "LOCAL SAVE OK; ONLINE OFF." in src
+assert "PS3SCALE_SUPPORT_OUTBOX_PATH" in src
+support_form = section("static void draw_support_form(void)", "static int support_json_escape")
+assert "SUBMIT REPORT" in support_form
+assert "SAVE LOCALLY; SEND ONLINE IF THE SERVICE IS CONFIGURED" in support_form
+
+online_source = source_path.with_name("online_catalog.c").read_text(encoding="utf-8")
+assert "int ps3scale_online_post_json(" in online_source
+assert "CURLOPT_POSTFIELDS" in online_source
+assert "CURLOPT_SSL_VERIFYPEER" in online_source
+assert "CURLOPT_SSL_VERIFYHOST" in online_source
+assert "CURLPROTO_HTTPS" in online_source
+
+repo_root = source_path.parents[3]
+support_function = (repo_root / "supabase/functions/ps3scale-support/index.ts").read_text(encoding="utf-8")
+support_sql = (repo_root / "supabase/migrations/202611100001_ps3scale_support.sql").read_text(encoding="utf-8")
+support_config = (repo_root / "supabase/config.toml").read_text(encoding="utf-8")
+assert "SUPABASE_SERVICE_ROLE_KEY" in support_function
+assert "PS3SCALE_GITHUB_TOKEN" in support_function
+assert "SUPABASE_SERVICE_ROLE_KEY" not in src
+assert "PS3SCALE_GITHUB_TOKEN" not in src
+assert "verify_jwt = false" in support_config
+assert "enable row level security" in support_sql.lower()
+assert "grant all on table public.ps3scale_support_reports to service_role" in support_sql
+
+print("PS3 SCALE UI contract tests: PASS")

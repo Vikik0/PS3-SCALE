@@ -60,7 +60,9 @@ The USB update check is offline and only looks for a package file with a PKG hea
 - The Help page contains the five-step usage guide and separate Issue / Feedback entry points.
 - The report form uses the same controller keyboard as game search.
 - Reports include the title, details, detected model, firmware, platform and app version.
-- At this stage, reports are appended to `USRDIR/support/outbox.txt` on the console. They are not transmitted online yet; the separate support endpoint must be configured and deployed before direct PS3 submission can be enabled.
+- Every report is appended to `USRDIR/support/outbox.txt` before any network request, so a local copy survives a failed connection.
+- If the separate support URL is configured, the app sends the report asynchronously over verified HTTPS. If the URL is still the build placeholder or the request fails, the local copy remains available.
+- The repository now contains the isolated Supabase Edge Function and migration. Online sending is not active in this build until a new dedicated Supabase project is deployed and its URL is placed in `PS3SCALE_SUPPORT_URL`.
 
 ## Companion tools
 - **Apollo Save Tool** is a separate save/trophy/license utility. Its supplied green logo is packaged as an app asset and shown on the splash screen.
