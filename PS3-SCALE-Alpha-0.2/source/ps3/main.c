@@ -24,6 +24,7 @@
 #include "ps3scale/scanner.h"
 #include "ps3scale/webman.h"
 #include "ps3scale/ps2_config.h"
+#include "ps3scale/ps2_config_db.h"
 #include "ps3scale/locale.h"
 #include "ps3scale/hardware_info.h"
 #include "ps3scale/catalog.h"
@@ -46,6 +47,7 @@ typedef enum app_screen {
     SCREEN_SETTINGS,
     SCREEN_TOOLS,
     SCREEN_ABOUT,
+    SCREEN_SPLASH,
     SCREEN_LANGUAGE,
     SCREEN_BOOT,
     SCREEN_KEYBOARD
@@ -58,12 +60,18 @@ static int g_config_preview = 0;
 static int g_exit_requested = 0;
 static int g_home_selected = 0;
 static app_screen_t g_screen = SCREEN_HOME;
+static app_screen_t g_splash_next_screen = SCREEN_BOOT;
+static int g_splash_frames = 0;
+static ps3scale_ps2_config_db_t g_ps2_config_db;
 static char g_search[64] = "";
 static u32 *g_font_texture = NULL;
 static ya2d_Texture *g_cover_texture = NULL;
 static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 
 #define PS3SCALE_MUSIC_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3"
+#define PS3SCALE_PS2_CONFIG_INDEX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/ps2_config_index.tsv"
+#define PS3SCALE_PS2_CLASSICS_CONFIG_DIR "/dev_hdd0/game/PS2CONFIG/USRDIR/CONFIG/ENC"
+#define PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT (PS3SCALE_PS2_CONFIG_MAX_BYTES * 2u)
 
 static audioPortParam g_audio_params;
 static audioPortConfig g_audio_config;
@@ -127,11 +135,12 @@ static int g_ui_font_height = 22;
 #define PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/community_game_files.download"
 #define PS3SCALE_COMMUNITY_INDEX_URL "https://raw.githubusercontent.com/Vikik0/PS3-SCALE/feature/online-graphics-database/PS3-SCALE-Alpha-0.2/data/community_game_files.tsv"
 #define PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT (2u * 1024u * 1024u)
-#define PS3SCALE_MAX_ONLINE_RESULTS (PS3SCALE_COMMUNITY_MAX_FILES + PS3SCALE_MAX_GAMES)
+#define PS3SCALE_MAX_ONLINE_RESULTS (PS3SCALE_COMMUNITY_MAX_FILES + PS3SCALE_MAX_GAMES + PS3SCALE_PS2_CONFIG_MAX_ENTRIES)
 
 typedef enum online_result_kind {
     ONLINE_RESULT_PROFILE = 0,
-    ONLINE_RESULT_COMMUNITY = 1
+    ONLINE_RESULT_COMMUNITY = 1,
+    ONLINE_RESULT_PS2_CONFIG = 2
 } online_result_kind_t;
 
 typedef struct online_result {
@@ -149,6 +158,7 @@ static online_result_t g_online_results[PS3SCALE_MAX_ONLINE_RESULTS];
 static size_t g_online_result_count = 0;
 static size_t g_online_profile_result_count = 0;
 static size_t g_online_community_result_count = 0;
+static size_t g_online_ps2_config_result_count = 0;
 static size_t g_online_games_searched = 0;
 static volatile int g_catalog_sync_running = 0;
 static volatile int g_catalog_sync_done = 0;
@@ -361,6 +371,46 @@ static int load_extended_font(void)
     return 0;
 }
 
+static u32 ui_theme_color(u32 color)
+{
+    u32 rgb = color & 0xffffff00u;
+    u32 alpha = color & 0x000000ffu;
+
+    switch (rgb) {
+        case 0xcaff3900u: rgb = 0x8068e600u; break;
+        case 0x9ee56a00u: rgb = 0x20a69a00u; break;
+        case 0xffffffffu: rgb = 0x20263a00u; break;
+        case 0xdce3e800u: rgb = 0x424b6300u; break;
+        case 0x9aa6ad00u: rgb = 0x7c859a00u; break;
+        case 0x6f7b8300u: rgb = 0x9ba4b600u; break;
+        case 0xffcc6600u: rgb = 0xc58a3c00u; break;
+        case 0xff7b7b00u: rgb = 0xd65d6f00u; break;
+        case 0x0d172200u: rgb = 0xf2f4f900u; break;
+        case 0x111b2500u: rgb = 0xf8f9fc00u; break;
+        case 0x111e1800u: rgb = 0xeeeaff00u; break;
+        case 0x14261d00u: rgb = 0xeeeaff00u; break;
+        case 0x173a3500u: rgb = 0xe8e3ff00u; break;
+        case 0x1c594d00u: rgb = 0xe5e0fb00u; break;
+        case 0x101b2700u: rgb = 0xf1f2f700u; break;
+        case 0x26445c00u: rgb = 0xd9deeb00u; break;
+        case 0x34465400u: rgb = 0xd9deeb00u; break;
+        case 0x344f6300u: rgb = 0xd9deeb00u; break;
+        case 0x42647a00u: rgb = 0xcdd4e200u; break;
+        case 0x8bd45000u: rgb = 0x8068e600u; break;
+        case 0x4aafca00u: rgb = 0x8068e600u; break;
+        case 0x65c8e600u: rgb = 0x9b8dee00u; break;
+        case 0x397fb600u: rgb = 0xb3a9e900u; break;
+        case 0x55b9d600u: rgb = 0x9b8dee00u; break;
+        default: break;
+    }
+    return rgb | alpha;
+}
+
+static u32 color_with_alpha(u32 color, unsigned alpha)
+{
+    return (color & 0xffffff00u) | (alpha & 0xffu);
+}
+
 static void draw_text(float x, float y, u32 color, const char *text)
 {
     char translated[512];
@@ -392,7 +442,7 @@ static void draw_text(float x, float y, u32 color, const char *text)
         }
     }
 
-    SetFontColor(color, 0x00000000);
+    SetFontColor(ui_theme_color(color), 0x00000000);
     if (g_extended_font_ready) {
         float cursor = x;
 
@@ -686,7 +736,7 @@ static void draw_solid_rect(float x, float y, float w, float h, u32 color)
 {
     tiny3d_SetPolygon(TINY3D_QUADS);
     tiny3d_VertexPos(x, y, 65535.0f);
-    tiny3d_VertexColor(color);
+    tiny3d_VertexColor(ui_theme_color(color));
     tiny3d_VertexPos(x + w, y, 65535.0f);
     tiny3d_VertexPos(x + w, y + h, 65535.0f);
     tiny3d_VertexPos(x, y + h, 65535.0f);
@@ -697,7 +747,7 @@ static void draw_outline_rect(float x, float y, float w, float h, u32 color)
 {
     tiny3d_SetPolygon(TINY3D_LINE_LOOP);
     tiny3d_VertexPos(x, y, 65535.0f);
-    tiny3d_VertexColor(color);
+    tiny3d_VertexColor(ui_theme_color(color));
     tiny3d_VertexPos(x + w, y, 65535.0f);
     tiny3d_VertexPos(x + w, y + h, 65535.0f);
     tiny3d_VertexPos(x, y + h, 65535.0f);
@@ -708,7 +758,7 @@ static void draw_icon_line(float x1, float y1, float x2, float y2, u32 color)
 {
     tiny3d_SetPolygon(TINY3D_LINES);
     tiny3d_VertexPos(x1, y1, 65535.0f);
-    tiny3d_VertexColor(color);
+    tiny3d_VertexColor(ui_theme_color(color));
     tiny3d_VertexPos(x2, y2, 65535.0f);
     tiny3d_End();
 }
@@ -722,7 +772,7 @@ static void draw_circle_outline(float cx, float cy, float radius, u32 color)
         tiny3d_VertexPos(cx + cosf(angle) * radius,
                          cy + sinf(angle) * radius, 65535.0f);
         if (i == 0)
-            tiny3d_VertexColor(color);
+            tiny3d_VertexColor(ui_theme_color(color));
     }
     tiny3d_End();
 }
@@ -737,7 +787,7 @@ static void draw_gear_outline(float cx, float cy, float radius, u32 color)
         tiny3d_VertexPos(cx + cosf(angle) * r,
                          cy + sinf(angle) * r, 65535.0f);
         if (i == 0)
-            tiny3d_VertexColor(color);
+            tiny3d_VertexColor(ui_theme_color(color));
     }
     tiny3d_End();
 }
@@ -922,7 +972,7 @@ static void draw_ambient_ring(float radius, float tilt, float spin,
     for (i = 0; i < 48; i++) {
         float angle = 6.28318530718f * (float)i / 48.0f;
         tiny3d_VertexPos(cosf(angle), sinf(angle), 0.0f);
-        if (i == 0) tiny3d_VertexColor(color);
+        if (i == 0) tiny3d_VertexColor(ui_theme_color(color));
     }
     tiny3d_End();
 }
@@ -940,7 +990,7 @@ static void draw_ambient_satellite(float orbit_radius, float angle,
     tiny3d_SetMatrixModelView(&model);
     tiny3d_SetPolygon(TINY3D_LINES);
     tiny3d_VertexPos(px - 0.72f, py, 0.0f);
-    tiny3d_VertexColor(color);
+    tiny3d_VertexColor(ui_theme_color(color));
     tiny3d_VertexPos(px + 0.72f, py, 0.0f);
     tiny3d_VertexPos(px, py - 0.72f, 0.0f);
     tiny3d_VertexPos(px, py + 0.72f, 0.0f);
@@ -949,85 +999,91 @@ static void draw_ambient_satellite(float orbit_radius, float angle,
     tiny3d_End();
 }
 
+static void draw_stair_face(float ax, float ay, float az,
+                            float bx, float by, float bz,
+                            float cx, float cy, float cz,
+                            float dx, float dy, float dz, u32 color)
+{
+    tiny3d_SetPolygon(TINY3D_QUADS);
+    tiny3d_VertexPos(ax, ay, az);
+    tiny3d_VertexColor(color);
+    tiny3d_VertexPos(bx, by, bz);
+    tiny3d_VertexPos(cx, cy, cz);
+    tiny3d_VertexPos(dx, dy, dz);
+    tiny3d_End();
+}
+
+static void draw_stair_tread(float width, float height, float depth, int index)
+{
+    float x = width * 0.5f;
+    float y = height * 0.5f;
+    float z = depth * 0.5f;
+    u32 front = (index % 3 == 0) ? 0xd6dbe7ff : 0xdde1ebff;
+    u32 side = (index % 2 == 0) ? 0xc4cad9ff : 0xd0d5e2ff;
+
+    draw_stair_face(-x, y, -z, x, y, -z, x, y, z, -x, y, z,
+                    0xfdfdffff);
+    draw_stair_face(-x, -y, z, x, -y, z, x, y, z, -x, y, z,
+                    front);
+    draw_stair_face(x, -y, -z, x, -y, z, x, y, z, x, y, -z,
+                    side);
+    draw_stair_face(-x, -y, -z, -x, y, -z, -x, y, z, -x, -y, z,
+                    0xe7e9f1ff);
+    draw_stair_face(-x, -y, -z, x, -y, -z, x, y, -z, -x, y, -z,
+                    0xe1e4edff);
+}
+
 static void draw_home_ambient(void)
 {
-    /* Aurora Core: calm wireframe globe, orbital rings, and drifting particles. */
-    const float phase = (float)g_frame_counter * 0.0012f;
-    const float bob = sinf(phase * 0.58f) * 2.6f;
-    const float center_x = 28.0f;
-    const float center_y = 1.5f + bob;
-    const float center_z = 82.0f;
     MATRIX projection, rotation, scale, translation, model;
-    int latitude, longitude, segment, i;
+    const float phase = (float)g_frame_counter * 0.0012f;
+    const float bob = sinf(phase * 0.55f) * 0.7f;
+    const float center_x = 28.0f;
+    const float center_z = 80.0f;
+    int i;
 
     tiny3d_Project3D();
     projection = MatrixProjPerspective(70.0f, 16.0f / 9.0f, 0.1f, 300.0f);
     tiny3d_SetProjectionMatrix(&projection);
     tiny3d_SetLightsOff();
 
-    rotation = MatrixMultiply(MatrixRotationY(phase),
-                              MatrixRotationX(phase * 0.37f));
-    scale = MatrixScale(13.0f, 13.0f, 13.0f);
-    translation = MatrixTranslation(center_x, center_y, center_z);
-    model = MatrixMultiply(MatrixMultiply(scale, rotation), translation);
-    tiny3d_SetMatrixModelView(&model);
-
-    for (latitude = -3; latitude <= 3; latitude++) {
-        float lat = (float)latitude * 0.34f;
-        float ring_radius = cosf(lat);
-        float ring_y = sinf(lat);
-        tiny3d_SetPolygon(TINY3D_LINE_LOOP);
-        for (segment = 0; segment < 40; segment++) {
-            float angle = 6.28318530718f * (float)segment / 40.0f;
-            tiny3d_VertexPos(ring_radius * cosf(angle), ring_y,
-                             ring_radius * sinf(angle));
-            if (segment == 0) {
-                u32 color = (latitude == 0) ? 0x65c8e6d0 :
-                            ((latitude & 1) ? 0x397fb6a0 : 0x4a9fbe90);
-                tiny3d_VertexColor(color);
-            }
-        }
-        tiny3d_End();
+    /* Floating spiral staircase: procedural 3D treads, no external model. */
+    for (i = 0; i < 18; i++) {
+        float angle = (float)i * 0.42f + phase * 0.18f;
+        float radius = 4.6f + sinf(phase * 0.35f + (float)i * 0.21f) * 0.10f;
+        float y = ((float)i - 8.5f) * 0.66f + bob;
+        rotation = MatrixMultiply(MatrixRotationX(0.72f),
+                                  MatrixRotationY(angle + phase * 0.12f));
+        scale = MatrixScale(2.8f, 2.8f, 2.8f);
+        translation = MatrixTranslation(center_x + cosf(angle) * radius,
+                                         y,
+                                         center_z + sinf(angle) * radius);
+        model = MatrixMultiply(MatrixMultiply(scale, rotation), translation);
+        tiny3d_SetMatrixModelView(&model);
+        draw_stair_tread(4.8f, 0.28f, 2.45f, i);
     }
 
-    for (longitude = 0; longitude < 10; longitude++) {
-        float lon = 6.28318530718f * (float)longitude / 10.0f;
-        tiny3d_SetPolygon(TINY3D_LINE_STRIP);
-        for (segment = 0; segment <= 18; segment++) {
-            float lat = -1.25f + 2.5f * (float)segment / 18.0f;
-            float ring_radius = cosf(lat);
-            tiny3d_VertexPos(ring_radius * cosf(lon), sinf(lat),
-                             ring_radius * sinf(lon));
-            if (segment == 0)
-                tiny3d_VertexColor(0x397fb6a0);
-        }
-        tiny3d_End();
+    /* A fine helical guide line reinforces the continuous spiral motion. */
+    tiny3d_SetMatrixModelView(NULL);
+    tiny3d_SetPolygon(TINY3D_LINE_STRIP);
+    for (i = 0; i <= 36; i++) {
+        float angle = (float)i * 0.42f + phase * 0.18f;
+        float y = ((float)i / 2.0f - 8.5f) * 0.66f + bob;
+        tiny3d_VertexPos(center_x + cosf(angle) * 4.6f,
+                         y,
+                         center_z + sinf(angle) * 4.6f);
+        if (i == 0)
+            tiny3d_VertexColor(0x9989ed88);
     }
+    tiny3d_End();
 
-    draw_ambient_ring(18.8f, 1.08f, phase * 0.42f,
-                      center_x, center_y, center_z, 0x55b9d6b0);
-    draw_ambient_ring(21.2f, 0.38f, -phase * 0.28f,
-                      center_x, center_y, center_z, 0x397fb690);
-    draw_ambient_ring(16.6f, 1.48f, phase * 0.20f,
-                      center_x, center_y, center_z, 0x8bd45090);
-    draw_ambient_satellite(18.8f, phase * 0.42f + 0.7f,
-                           1.08f, phase * 0.42f,
-                           center_x, center_y, center_z, 0x8bd450ff);
-    draw_ambient_satellite(21.2f, -phase * 0.28f + 2.4f,
-                           0.38f, -phase * 0.28f,
-                           center_x, center_y, center_z, 0x65c8e6ff);
+    draw_ambient_ring(18.0f, 1.46f, phase * 0.22f,
+                      center_x, -7.0f, center_z, 0x9b8de65a);
+    draw_ambient_satellite(22.0f, phase * 0.38f,
+                           center_x, 0.0f, center_z, 0xb3a9e988);
 
     tiny3d_Project2D();
     tiny3d_SetMatrixModelView(NULL);
-    for (i = 0; i < 16; i++) {
-        float px = 492.0f +
-            (float)((i * 47 + (int)(g_frame_counter / 4u)) % 330);
-        float py = 34.0f + (float)((i * 31) % 430) +
-                   sinf(phase * 0.8f + (float)i * 0.71f) * 3.5f;
-        float size = (i % 4 == 0) ? 2.0f : 1.0f;
-        u32 color = (i % 3 == 0) ? 0x65c8e680 : 0x8bd45060;
-        draw_solid_rect(px, py, size, size, color);
-    }
 }
 
 static void set_settings_message(const char *message)
@@ -1852,6 +1908,35 @@ static void draw_language_selection(void)
     set_ui_font_size(14, 22);
 }
 
+static void draw_splash(void)
+{
+    unsigned alpha = 255u;
+    int frame = g_splash_frames;
+
+    if (frame < 42)
+        alpha = (unsigned)(frame * 255 / 42);
+    else if (frame >= 132)
+        alpha = (unsigned)((180 - frame) * 255 / 48);
+    if (alpha > 255u) alpha = 255u;
+
+    set_ui_font_size(18, 27);
+    draw_text(518, 220, color_with_alpha(0x20263aff, alpha), "PS3 SCALE");
+    set_ui_font_size(11, 17);
+    draw_text(545, 294, color_with_alpha(0x8068e6ff, alpha),
+              "SPECIAL THANKS");
+    draw_solid_rect(520.0f, 330.0f, 240.0f, 3.0f,
+                    color_with_alpha(0x8068e6ff, alpha));
+    set_ui_font_size(16, 24);
+    draw_text(350, 378, color_with_alpha(0x20263aff, alpha), "ARTEMIS");
+    draw_text(700, 378, color_with_alpha(0x20263aff, alpha), "APOLLO SAVE");
+    set_ui_font_size(9, 14);
+    draw_text(490, 440, color_with_alpha(0x7c859aff, alpha),
+              "FOR SUPPORTING THE PS3 COMMUNITY");
+    draw_text(520, 510, color_with_alpha(0x7c859aff, alpha),
+              "PRESS X TO CONTINUE");
+    set_ui_font_size(14, 22);
+}
+
 static void draw_boot(void)
 {
     const char *stage_text[] = {
@@ -1930,51 +2015,54 @@ static void draw_keyboard(void)
 
 static void draw_home(void)
 {
-    static char *items[] = {
-        "SCAN GAMES", "ONLINE GRAPHICS DATABASE", "SETTINGS",
-        "COMPANION TOOLS", "ABOUT PS3 SCALE"
+    char line[192];
+    const char *items[] = {
+        "SCAN GAMES",
+        "ONLINE GAME DATABASE",
+        "SETTINGS",
+        "COMPANION TOOLS",
+        "ABOUT PS3 SCALE"
     };
-    char line[128];
-    size_t ps3_count = library_total_count(LIBRARY_PS3);
-    size_t ps2_count = library_total_count(LIBRARY_PS2);
-    size_t matches = online_match_count();
+    const char *descriptions[] = {
+        "Browse your PS3 and PS2 library",
+        "Search community graphics and compatibility files",
+        "Music, volume, animation and language",
+        "Apollo Save, Artemis and webMAN MOD",
+        "Hardware, safety and project information"
+    };
     int i;
-    set_ui_font_size(12, 18);
 
-    draw_text(34, 26, 0xcaff39ff, "PS3 SCALE");
-    draw_text(34, 58, 0x9aa6adff,
-              "GAME LIBRARY  /  GRAPHICS PROFILES  /  SAFE TOOLS");
-    draw_text(34, 112, 0xffffffff, "MAIN MENU");
+    set_ui_font_size(12, 18);
+    draw_text(36, 24, 0xcaff39ff, "PS3 SCALE");
+    draw_text(36, 54, 0x9aa6adff,
+              "GAME LIBRARY  /  GRAPHICS  /  SAFE TOOLS");
+    draw_text(40, 112, 0xffffffff, "MAIN MENU");
+
     for (i = 0; i < 5; i++) {
-        float row_y = 154.0f + (float)i * 58.0f;
+        float y = 150.0f + (float)i * 60.0f;
         int selected = (i == g_home_selected);
-        if (selected) draw_solid_rect(48.0f, row_y, 408.0f, 44.0f, 0x111e18ff);
-        draw_menu_icon(i, 66.0f, row_y + 3.0f, selected);
-        if (selected) draw_text(44, row_y + 13.0f, 0xcaff39ff, ">");
-        draw_text(124, row_y + 13.0f,
-                  selected ? 0xcaff39ff : 0xdce3e8ff, items[i]);
+        if (selected) {
+            draw_solid_rect(34.0f, y - 5.0f, 444.0f, 51.0f, 0x14261dff);
+            draw_outline_rect(34.0f, y - 5.0f, 444.0f, 51.0f, 0x8bd450ff);
+        } else {
+            draw_outline_rect(34.0f, y - 5.0f, 444.0f, 51.0f, 0x26445cff);
+        }
+        draw_menu_icon(i, 54.0f, y + 1.0f, selected);
+        draw_text(106, y + 1.0f,
+                  selected ? 0xcaff39ff : 0xffffffff, items[i]);
+        set_ui_font_size(8, 12);
+        draw_text(106, y + 25.0f, 0x9aa6adff, descriptions[i]);
+        set_ui_font_size(12, 18);
     }
-    draw_outline_rect(490.0f, 126.0f, 326.0f, 302.0f, 0x26445cff);
-    draw_text(520, 148, 0xffffffff, "LIBRARY OVERVIEW");
-    snprintf(line, sizeof(line), "PS3 TITLES: %u", (unsigned)ps3_count);
-    draw_text(520, 188, 0xdce3e8ff, line);
-    snprintf(line, sizeof(line), "PS2 TITLES: %u", (unsigned)ps2_count);
-    draw_text(520, 218, 0xdce3e8ff, line);
-    snprintf(line, sizeof(line), "TOTAL TITLES: %u",
-             (unsigned)(ps3_count + ps2_count));
-    draw_text(520, 248, 0xcaff39ff, line);
-    draw_text(520, 302, 0xffffffff, "SYSTEM STATUS");
-    snprintf(line, sizeof(line), "MUSIC: %s", g_music_enabled ? "ON" : "OFF");
-    draw_text(520, 332, 0xdce3e8ff, line);
-    snprintf(line, sizeof(line), "HOME ANIMATION: %s",
-             g_animation_enabled ? "ON" : "OFF");
-    draw_text(520, 362, 0xdce3e8ff, line);
-    snprintf(line, sizeof(line), "ONLINE MATCHES: %u", (unsigned)matches);
-    draw_text(520, 392, g_catalog_ready ? 0x9ee56aff : 0xffcc66ff, line);
-    draw_text(34, 448, 0x9aa6adff,
+
+    snprintf(line, sizeof(line), "PS3: %u  |  PS2: %u  |  TOTAL: %u",
+             (unsigned)library_total_count(LIBRARY_PS3),
+             (unsigned)library_total_count(LIBRARY_PS2),
+             (unsigned)(library_total_count(LIBRARY_PS3) +
+                        library_total_count(LIBRARY_PS2)));
+    draw_text(40, 472, 0xdce3e8ff, line);
+    draw_text(40, 504, 0x9aa6adff,
               "UP/DOWN: SELECT   CROSS: OPEN   CIRCLE: EXIT");
-    draw_text(34, 478, 0x6f7b83ff,
-              "LOCAL SCAN + OPTIONAL ONLINE PROFILE SYNC");
     set_ui_font_size(14, 22);
 }
 
@@ -2500,12 +2588,13 @@ static void draw_about(void)
 
 static void draw_ui(void)
 {
-    tiny3d_Clear(0xff070a0d, TINY3D_CLEAR_ALL);
+    tiny3d_Clear(0xfff7f8fc, TINY3D_CLEAR_ALL);
     tiny3d_Project2D();
     /* Keep the same calm 3D ambience behind every app page. */
     if (g_animation_enabled)
         draw_home_ambient();
     switch (g_screen) {
+        case SCREEN_SPLASH: draw_splash(); break;
         case SCREEN_LANGUAGE: draw_language_selection(); break;
         case SCREEN_BOOT: draw_boot(); break;
         case SCREEN_KEYBOARD: draw_keyboard(); break;
@@ -2756,11 +2845,13 @@ int main(int argc, char *argv[])
 
     if (g_language == LANGUAGE_UNSET) {
         g_language_choice = LANGUAGE_ENGLISH;
-        g_screen = SCREEN_LANGUAGE;
+        g_splash_next_screen = SCREEN_LANGUAGE;
     } else {
         g_language_choice = g_language;
-        g_screen = SCREEN_BOOT;
+        g_splash_next_screen = SCREEN_BOOT;
     }
+    g_splash_frames = 0;
+    g_screen = SCREEN_SPLASH;
     g_boot_stage = 0;
     g_boot_stage_frames = 0;
 
@@ -2797,7 +2888,14 @@ int main(int argc, char *argv[])
             }
         }
 
-        if (g_screen == SCREEN_LANGUAGE) {
+        if (g_screen == SCREEN_SPLASH) {
+            if ((cross && !old_cross) || (start && !old_start) ||
+                ++g_splash_frames >= 180) {
+                g_screen = g_splash_next_screen;
+                g_boot_stage = 0;
+                g_boot_stage_frames = 0;
+            }
+        } else if (g_screen == SCREEN_LANGUAGE) {
             if (up && !old_up)
                 g_language_choice = (g_language_choice + 2) % 3;
             if (down && !old_down)
