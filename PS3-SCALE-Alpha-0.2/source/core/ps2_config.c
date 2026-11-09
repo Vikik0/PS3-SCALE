@@ -100,7 +100,7 @@ int ps3scale_ps2_config_validate_external(const uint8_t *data, size_t size,
         return -1;
     if (strcmp(type, "ENC") == 0) {
         if (size < 16u || size > (PS3SCALE_PS2_CONFIG_MAX_BYTES * 2u) ||
-            memcmp(data, "PS2\\0", 4) != 0)
+            memcmp(data, "PS2\0", 4) != 0)
             return -2;
         return 0;
     }
