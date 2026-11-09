@@ -10,6 +10,7 @@ import re
 import sys
 import urllib.error
 import urllib.request
+from urllib.parse import quote
 from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -82,6 +83,63 @@ def github_json(url: str) -> dict:
         raise RuntimeError(f"GitHub API returned HTTP {error.code}: {body}") from error
 
 
+def graphics_description_from_ncl(content: str) -> str:
+    """Extract only clearly named FPS/frame-rate sections from an NCL file."""
+    matches: list[str] = []
+    for raw_line in content.splitlines():
+        line = raw_line.strip().lstrip("#/* ").strip()
+        if not line or len(line) > 92:
+            continue
+        if re.search(
+            r"\\b(?:fps|frame[\\s_-]*rate|frame[\\s_-]*limit|"
+            r"uncap(?:ped)?|unlock[\\s_-]*fps|60[\\s_-]*fps)\\b",
+            line,
+            re.I,
+        ):
+            if line not in matches:
+                matches.append(line)
+        if len(matches) >= 2:
+            break
+    if matches:
+        return "; ".join(matches)[:127]
+    return "FPS patch; exact in-game effect is not documented in this file."
+
+
+def metadata_for_file(
+    repository: str,
+    branch: str,
+    path: str,
+    source_kind: str,
+    size: int,
+) -> tuple[str, str]:
+    """Classify the file for the UI without treating cheat databases as graphics."""
+    if source_kind == "HARDWARE_TESTED_FPS":
+        description = "FPS patch; exact in-game effect is not documented in this file."
+        try:
+            url = (
+                f"https://raw.githubusercontent.com/{repository}/"
+                f"{quote(branch, safe='')}/{quote(path, safe='/')}"
+            )
+            request = urllib.request.Request(
+                url,
+                headers={"User-Agent": "PS3-SCALE-community-index"},
+            )
+            with urllib.request.urlopen(request, timeout=20) as response:
+                content = response.read(min(size, 128 * 1024)).decode(
+                    "utf-8", errors="replace"
+                )
+            description = graphics_description_from_ncl(content)
+        except (OSError, urllib.error.URLError, TimeoutError):
+            pass
+        return "GRAPHICS_FPS", description
+
+    if source_kind == "COMMUNITY_CHEATS":
+        return "GAMEPLAY_CHEAT", "Gameplay cheat code; not a graphics enhancement."
+    if source_kind == "ARTEMIS_DATABASE":
+        return "GAMEPLAY_CODE", "Artemis code entry; not verified as a graphics enhancement."
+    return "COMMUNITY_CODE", "Community NCL code; graphics effect is not confirmed."
+
+
 def build_records() -> list[tuple[str, ...]]:
     records: list[tuple[str, ...]] = []
     seen: set[tuple[str, str]] = set()
@@ -118,8 +176,12 @@ def build_records() -> list[tuple[str, ...]]:
             seen.add(key)
 
             kind = source_kind_for(repository, path, default_kind)
+            category, description = metadata_for_file(
+                repository, branch, path, kind, size
+            )
             clean_title = title.replace("\t", " ").replace("\r", " ").replace("\n", " ")
             clean_path = path.replace("\t", " ").replace("\r", " ").replace("\n", " ")
+            clean_description = description.replace("\t", " ").replace("\r", " ").replace("\n", " ")[:127]
             records.append((
                 title_id,
                 app_version,
@@ -129,6 +191,8 @@ def build_records() -> list[tuple[str, ...]]:
                 branch,
                 clean_path,
                 str(size),
+                category,
+                clean_description,
             ))
 
     priority = {
@@ -152,9 +216,9 @@ def build_records() -> list[tuple[str, ...]]:
 def write_index(records: list[tuple[str, ...]]) -> None:
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     with OUTPUT.open("w", encoding="utf-8", newline="") as handle:
-        handle.write("# PS3 SCALE community game-file index v1\n")
-        handle.write("# Public GitHub NCL file metadata only; files are never auto-applied.\n")
-        handle.write("# Fields: TITLE_ID APP_VER TITLE SOURCE_KIND REPOSITORY BRANCH PATH SIZE\n")
+        handle.write("# PS3 SCALE community game-file index v2\n")
+        handle.write("# Public GitHub NCL metadata; community files are never auto-applied.\n")
+        handle.write("# Fields: TITLE_ID APP_VER TITLE SOURCE_KIND REPOSITORY BRANCH PATH SIZE CATEGORY DESCRIPTION\n")
         writer = csv.writer(
             handle,
             delimiter="\t",
