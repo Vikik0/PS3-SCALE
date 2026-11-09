@@ -2606,6 +2606,8 @@ static void draw_details(void)
     char line[256];
     const ps3scale_game_t *game = selected_game();
     const ps3scale_profile_t *profile = profile_for_game(game);
+    const ps3scale_ps2_config_entry_t *ps2_config = ps2_config_for_game(game);
+    int ps2_config_exists = ps2_config_target_exists(game, ps2_config);
     int script_state = profile_script_state_for_game(game, profile);
 
     set_ui_font_size(11, 17);
@@ -2699,21 +2701,55 @@ static void draw_details(void)
             draw_text(34, 448, 0x9aa6adff, g_details_message);
     } else {
         draw_text(34, 316, 0xffcc66ff,
-                  "PS2 CONFIG PREVIEW IS SEPARATE FROM PS3 GRAPHICS PATCHES.");
-        if (game->kind == PS3SCALE_GAME_PS2_ISO) {
-            draw_text(34, 376, 0xcaff39ff,
-                      g_config_preview ? "PS2 CONFIG PREVIEW - NOT APPLIED" :
-                                         "TRIANGLE: PREVIEW PS2 CONFIG");
-            if (g_config_preview) {
-                uint8_t config_data[32]; size_t config_size = 0; char hex[96];
-                if (ps3scale_ps2_config_build(config_data, sizeof(config_data),
-                        PS3SCALE_PS2_CFG_DISABLE_SMOOTHING |
-                        PS3SCALE_PS2_CFG_ENABLE_L2H, &config_size) == 0) {
-                    format_hex(hex, sizeof(hex), config_data, config_size);
-                    draw_text(34, 408, 0xdce3e8ff, hex);
+                  "PS2 CONFIGS CHANGE COMPATIBILITY SETTINGS, NOT HD TEXTURES.");
+        if (ps2_config) {
+            snprintf(line, sizeof(line), "COMMUNITY CONFIG: %.6s", ps2_config->type);
+            draw_text(34, 348, 0xcaff39ff, line);
+            snprintf(line, sizeof(line), "CONFIG ID: %.16s", ps2_config->title_id);
+            draw_text(34, 376, 0xdce3e8ff, line);
+            if (text_contains_ci(ps2_config->title, "Twinsanity")) {
+                draw_text(34, 404, 0xdce3e8ff,
+                          "CRASH TWINSANITY: VERSION 2.00 IS RECOMMENDED.");
+                draw_text(34, 432, 0x9aa6adff,
+                          "COMMUNITY CONFIG TARGETS FREEZE / COMPATIBILITY ISSUES.");
+            } else {
+                draw_text(34, 404, 0x9aa6adff,
+                          "PER-GAME COMMUNITY CONFIGURATION FOUND.");
+                draw_text(34, 432, 0x9aa6adff,
+                          "ORIGINAL GAME IMAGE WILL NOT BE MODIFIED.");
+            }
+            if (ps2_config_exists)
+                draw_text(34, 456, 0xffcc66ff,
+                          "CONFIG ALREADY EXISTS - IT WILL NOT BE OVERWRITTEN.");
+            else if (g_ps2_config_download_running)
+                draw_text(34, 456, 0xcaff39ff, "DOWNLOADING CONFIG...");
+            else if (strcmp(ps2_config->type, "ENC") == 0)
+                draw_text(34, 456, 0xcaff39ff, "TRIANGLE: INSTALL ENC CONFIG");
+            else
+                draw_text(34, 456, 0xcaff39ff, "TRIANGLE: DOWNLOAD VERIFIED CONFIG");
+        } else {
+            draw_text(34, 348, 0xffcc66ff,
+                      "NO VERIFIED PER-GAME CONFIG MATCHES THIS TITLE ID.");
+            if (game->kind == PS3SCALE_GAME_PS2_ISO) {
+                draw_text(34, 376, 0xcaff39ff,
+                          g_config_preview ? "BASIC CONFIG PREVIEW - NOT APPLIED" :
+                                             "TRIANGLE: PREVIEW BASIC CONFIG");
+                if (g_config_preview) {
+                    uint8_t config_data[32]; size_t config_size = 0; char hex[96];
+                    if (ps3scale_ps2_config_build(config_data, sizeof(config_data),
+                            PS3SCALE_PS2_CFG_DISABLE_SMOOTHING |
+                            PS3SCALE_PS2_CFG_ENABLE_L2H, &config_size) == 0) {
+                        format_hex(hex, sizeof(hex), config_data, config_size);
+                        draw_text(34, 408, 0xdce3e8ff, hex);
+                    }
                 }
+            } else {
+                draw_text(34, 376, 0x9aa6adff,
+                          "PS2 CLASSIC CONFIG NEEDS A MATCHING GAME SERIAL.");
             }
         }
+        if (g_details_message[0])
+            draw_text(34, 482, 0x9aa6adff, g_details_message);
     }
 
     if (g_cover_texture)
@@ -2724,10 +2760,12 @@ static void draw_details(void)
         draw_text(702, 180, 0x6f7b83ff, "NO COVER");
     }
 
-    draw_text(34, 478, 0x9aa6adff,
+    draw_text(34, 510, 0x9aa6adff,
               game_is_ps3(game) ?
               "CROSS/START: START GAME  SQUARE: ARM/REMOVE PROFILE  CIRCLE: BACK" :
-              "TRIANGLE: CONFIG PREVIEW  |  CIRCLE: BACK");
+              (game->kind == PS3SCALE_GAME_PS2_ISO ?
+               "CROSS/START: MOUNT PS2 ISO  TRIANGLE: DOWNLOAD CONFIG  CIRCLE: BACK" :
+               "TRIANGLE: INSTALL ENC CONFIG  CROSS: PS2 CLASSICS LAUNCHER"));
     set_ui_font_size(14, 22);
 }
 
