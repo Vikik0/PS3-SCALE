@@ -2440,166 +2440,186 @@ static void draw_home(void)
 
 static void draw_online_database(void)
 {
-    char line[192];
-    size_t count = online_match_count();
-    size_t start, i;
     const ps3scale_profile_t *selected_profile = NULL;
     const ps3scale_community_file_t *selected_community = NULL;
+    const ps3scale_ps2_config_entry_t *selected_ps2_config = NULL;
     const ps3scale_game_t *selected = NULL;
+    char line[192];
+    size_t i, visible_count = 0;
 
-    set_ui_font_size(9, 14);
-    if (count == 0)
-        g_online_selected = 0;
-    else if ((size_t)g_online_selected >= count)
-        g_online_selected = (int)count - 1;
-
-    selected = online_result_at((size_t)g_online_selected,
-                                &selected_profile, &selected_community);
-
-    draw_text(28, 16, 0xcaff39ff, "PS3 SCALE");
-    draw_text(180, 16, 0xffffffff, "ONLINE GRAPHICS DATABASE");
-    snprintf(line, sizeof(line), "PROFILE: %s | GITHUB: %s | FILTER: %s",
+    set_ui_font_size(10, 16);
+    draw_text(34, 24, 0xcaff39ff, "ONLINE GAME DATABASE");
+    snprintf(line, sizeof(line),
+             "PROFILE: %s  |  GITHUB: %s  |  PS2 CONFIGS: %s  |  FILTER: %s",
              g_catalog_ready ? "READY" : "OFFLINE",
              g_community_ready ? "READY" : "OFFLINE",
+             g_ps2_config_db.count ? "READY" : "OFFLINE",
              online_filter_label());
-    draw_text(28, 48, (g_catalog_ready || g_community_ready) ?
-              0x9ee56aff : 0xffcc66ff, line);
-    snprintf(line, sizeof(line), "RESULTS: %u | GRAPHICS PROFILES: %u | PS3 GAMES: %u | SEARCH: %.24s",
-             (unsigned)count,
+    draw_text(34, 54, 0x9aa6adff, line);
+    snprintf(line, sizeof(line),
+             "RESULTS: %u  |  PROFILES: %u  |  GITHUB: %u  |  PS2 CFG: %u  |  SEARCH: %.20s",
+             (unsigned)g_online_result_count,
              (unsigned)g_online_profile_result_count,
-             (unsigned)g_online_games_searched,
-             g_online_query[0] ? g_online_query : "ALL");
-    draw_text(28, 76, 0xdce3e8ff, line);
+             (unsigned)g_online_community_result_count,
+             (unsigned)g_online_ps2_config_result_count,
+             g_online_query[0] ? g_online_query : "ALL LOCAL TITLES");
+    draw_text(34, 82, 0xdce3e8ff, line);
 
-    draw_outline_rect(22.0f, 106.0f, 402.0f, 322.0f, 0x26445cff);
-    draw_outline_rect(440.0f, 106.0f, 382.0f, 322.0f, 0x26445cff);
-    draw_text(32, 116, 0xffffffff, "MATCHED GAME FILES");
-    draw_text(452, 116, 0xffffffff, "PATCH DETAILS");
+    draw_outline_rect(28, 118, 390, 360, 0x344654ff);
+    draw_outline_rect(432, 118, 820, 360, 0x344654ff);
+    draw_text(44, 132, 0x9aa6adff, "SEARCH RESULTS");
 
-    start = (g_online_selected >= 8) ? (size_t)(g_online_selected - 7) : 0;
-    for (i = 0; i < 8 && start + i < count; i++) {
+    selected = online_result_at((size_t)g_online_selected,
+                                 &selected_profile,
+                                 &selected_community,
+                                 &selected_ps2_config);
+
+    for (i = 0; i < g_online_result_count; i++) {
         const ps3scale_profile_t *profile = NULL;
         const ps3scale_community_file_t *community = NULL;
-        const ps3scale_game_t *game = online_result_at(
-            start + i, &profile, &community);
+        const ps3scale_ps2_config_entry_t *ps2_config = NULL;
+        const ps3scale_game_t *game =
+            online_result_at(i, &profile, &community, &ps2_config);
         const char *title;
         const char *kind;
         const char *version;
-        int is_selected = ((int)(start + i) == g_online_selected);
-        float y = 151.0f + (float)i * 31.0f;
+        char row[144];
+        float y;
 
-        if (!game)
+        if (!game && !community && !ps2_config)
             continue;
-        title = (community && community->title[0]) ?
-                community->title : (profile ? profile->title : game->title);
-        kind = profile ? "PROFILE" :
-               (community && strcmp(community->category, "GRAPHICS_FPS") == 0 ?
-                "FPS" :
-                (community && strcmp(community->category, "GAMEPLAY_CHEAT") == 0 ?
-                 "CHEAT" : "CODE"));
-        version = profile ? profile->app_ver :
-                  (community && community->app_ver[0] ?
-                   community->app_ver : "--");
+        if (visible_count >= 10)
+            break;
 
-        if (is_selected)
-            draw_solid_rect(28.0f, y - 3.0f, 390.0f, 25.0f, 0x14261dff);
-        snprintf(line, sizeof(line), "%.24s", title);
-        draw_text(36, y, is_selected ? 0xcaff39ff : 0xdce3e8ff, line);
-        snprintf(line, sizeof(line), "%s %.5s", kind, version);
-        draw_text(270, y, is_selected ? 0xcaff39ff : 0x9aa6adff, line);
-    }
-
-    if (selected && selected_profile) {
-        const char *region =
-            ps3scale_community_region_label(selected_profile->title_id);
-        snprintf(line, sizeof(line), "GAME: %.35s", selected_profile->title);
-        draw_text(452, 150, 0xffffffff, line);
-        snprintf(line, sizeof(line), "EFFECT: %.32s", selected_profile->effect);
-        draw_text(452, 178, 0xcaff39ff, line);
-        snprintf(line, sizeof(line), "TITLE ID: %.9s", selected_profile->title_id);
-        draw_text(452, 206, 0xdce3e8ff, line);
-        snprintf(line, sizeof(line), "VERSION: %.5s | REGION: %.5s",
-                 selected_profile->app_ver, region);
-        draw_text(452, 234, 0xdce3e8ff, line);
-        draw_text(452, 262, 0x9ee56aff, "TYPE: GRAPHICS / FPS PROFILE");
-        draw_text(452, 290, 0xffcc66ff, "TRUST: COMMUNITY-REPORTED");
-        snprintf(line, sizeof(line), "PATCH WRITES: %u",
-                 selected_profile->patch_count);
-        draw_text(452, 318, 0xdce3e8ff, line);
-        if (strcmp(selected_profile->trust, "B_COMMUNITY_MANUAL") == 0)
-            draw_text(452, 346, 0xffcc66ff, "APPLY: MANUAL ONLY");
-        else if (selected_profile->patch_count == 1)
-            draw_text(452, 346, 0x9ee56aff, "APPLY: REVIEW + CONFIRM IN DETAILS");
-        else
-            draw_text(452, 346, 0xffcc66ff, "APPLY: DISABLED FOR MULTI-WRITE SAFETY");
-        draw_text(452, 374, 0x9aa6adff, "MATCH: EXACT TITLE ID + APP VERSION");
-        draw_text(452, 402, 0x9aa6adff, "SOURCE: PS3 SCALE GRAPHICS PROFILE DB");
-    } else if (selected && selected_community) {
-        const char *filename = strrchr(selected_community->path, '/');
-        const char *region =
-            ps3scale_community_region_label(selected->title_id);
-        const ps3scale_profile_t *safe_profile = profile_for_game(selected);
-        int exact_match = ps3scale_community_file_matches_exact_game(
-            selected_community, selected);
-
-        if (filename)
-            filename++;
-        else
-            filename = selected_community->path;
-
-        snprintf(line, sizeof(line), "GAME: %.35s", selected_community->title[0] ?
-                 selected_community->title : selected->title);
-        draw_text(452, 150, 0xffffffff, line);
-        snprintf(line, sizeof(line), "EFFECT: %.32s",
-                 selected_community->description);
-        draw_text(452, 178, 0xcaff39ff, line);
-        if (strlen(selected_community->description) > 32) {
-            snprintf(line, sizeof(line), "DETAIL: %.32s",
-                     selected_community->description + 32);
-            draw_text(452, 206, 0xcaff39ff, line);
+        if (ps2_config) {
+            title = ps2_config->title;
+            kind = "PS2 CFG";
+            version = ps2_config->type;
+        } else if (community) {
+            title = community->title[0] ? community->title :
+                    (game ? game->title : "GITHUB GAME FILE");
+            kind = "GITHUB";
+            version = community->app_ver[0] ? community->app_ver : "--";
         } else {
-            draw_text(452, 206, 0x9aa6adff, "DETAIL: SOURCE DESCRIPTION");
+            title = game ? game->title : "GAME PROFILE";
+            kind = "PROFILE";
+            version = profile ? profile->app_ver : "--";
         }
-        snprintf(line, sizeof(line), "TITLE ID: %.9s",
-                 selected->title_id);
-        draw_text(452, 234, 0xdce3e8ff, line);
-        snprintf(line, sizeof(line), "VERSION: %.5s | REGION: %.5s",
-                 selected_community->app_ver[0] ?
-                 selected_community->app_ver : "--", region);
-        draw_text(452, 262, 0xdce3e8ff, line);
-        snprintf(line, sizeof(line), "TYPE: %.34s",
-                 ps3scale_community_category_label(selected_community->category));
-        draw_text(452, 290, 0xffcc66ff, line);
-        snprintf(line, sizeof(line), "SOURCE: %.32s",
-                 selected_community->repository);
-        draw_text(452, 318, 0xcaff39ff, line);
-        draw_text(452, 346, exact_match ? 0x9ee56aff : 0xffcc66ff,
-                  exact_match ? "MATCH: EXACT REGION + VERSION" :
-                                "MATCH: VERSION/REGION NOT VERIFIED");
-        if (safe_profile)
-            draw_text(452, 374, 0x9ee56aff, "APPLY: EXACT PROFILE AVAILABLE");
-        else if (strcmp(selected_community->category, "GRAPHICS_FPS") == 0)
-            draw_text(452, 374, 0xffcc66ff, "APPLY: REFERENCE ONLY - NOT INSTALLED");
-        else
-            draw_text(452, 374, 0xffcc66ff, "APPLY: NOT A GRAPHICS PROFILE");
-        snprintf(line, sizeof(line), "FILE: %.34s", filename);
-        draw_text(452, 402, 0x9aa6adff, line);
-    } else if (!g_community_ready) {
-        draw_text(452, 160, 0xffcc66ff, "GITHUB INDEX NOT LOADED.");
-        draw_text(452, 188, 0x9aa6adff, "CONNECT TO INTERNET AND PRESS START.");
-        draw_text(452, 216, 0x9aa6adff, "PROFILE DATABASE IS LOCAL + SEPARATE.");
-    } else {
-        draw_text(452, 160, 0xffcc66ff, "NO MATCHING FILES FOUND.");
-        draw_text(452, 188, 0x9aa6adff, "TRY ALL FILES OR ANY REGION/VER FILTER.");
-        draw_text(452, 216, 0x9aa6adff, "SEARCH BY GAME NAME OR TITLE ID.");
+
+        y = 158.0f + (float)visible_count * 29.0f;
+        if ((int)i == g_online_selected)
+            draw_solid_rect(38, y - 3, 370, 25, 0x14261dff);
+        snprintf(row, sizeof(row), "%.22s  |  %s  |  %.10s",
+                 title, kind, version);
+        draw_text(48, y, (int)i == g_online_selected ?
+                  0xcaff39ff : 0xffffffff, row);
+        visible_count++;
     }
 
-    snprintf(line, sizeof(line), "%.84s", g_online_message);
-    draw_text(28, 444, 0xdce3e8ff, line);
-    draw_text(28, 474, 0x9aa6adff,
-              "D-PAD SELECT | L1/R1 PREV/NEXT | SQUARE FILTER | TRIANGLE SEARCH | X OPEN | START SYNC | CIRCLE BACK");
+    if (selected_profile && selected) {
+        const ps3scale_profile_t *safe_profile = profile_for_game(selected);
+        int exact_match = selected_community ?
+            ps3scale_community_file_matches_exact_game(selected_community,
+                                                        selected) : 1;
+        draw_text(452, 144, 0xcaff39ff, "EXACT GAME PROFILE");
+        snprintf(line, sizeof(line), "GAME: %.54s", selected->title);
+        draw_text(452, 176, 0xffffffff, line);
+        snprintf(line, sizeof(line), "TITLE ID: %.18s", selected->title_id);
+        draw_text(452, 204, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "PROFILE VERSION: %.18s", selected_profile->app_ver);
+        draw_text(452, 232, 0xdce3e8ff, line);
+        draw_text(452, 260, 0x9aa6adff,
+                  exact_match ? "MATCH: EXACT TITLE ID / VERSION" :
+                                "MATCH: REVIEW VERSION BEFORE INSTALL");
+        draw_text(452, 288, 0x9aa6adff,
+                  safe_profile ? "SAFE PROFILE: AVAILABLE" :
+                                 "SAFE PROFILE: NOT AVAILABLE");
+        draw_text(452, 316, 0x9aa6adff,
+                  "INSTALL ONLY AFTER REVIEWING THE TARGET GAME.");
+        draw_text(452, 344, 0x9aa6adff,
+                  "PROFILE IS APPLIED ONLY TO THE SELECTED GAME.");
+    } else if (selected_ps2_config) {
+        draw_text(452, 144, 0xcaff39ff, "PS2 COMMUNITY CONFIG");
+        snprintf(line, sizeof(line), "GAME: %.54s", selected_ps2_config->title);
+        draw_text(452, 176, 0xffffffff, line);
+        snprintf(line, sizeof(line), "CONFIG TYPE: %.8s", selected_ps2_config->type);
+        draw_text(452, 204, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "GAME ID: %.18s", selected_ps2_config->title_id);
+        draw_text(452, 232, 0xdce3e8ff, line);
+        draw_text(452, 260, 0x9aa6adff,
+                  "SOURCE: WEBMAN-MOD PS2 CONFIG DATABASE");
+        draw_text(452, 288, 0x9aa6adff,
+                  "PURPOSE: GAME-SPECIFIC COMPATIBILITY / PERFORMANCE.");
+        draw_text(452, 316, 0xffcc66ff,
+                  "NOT AN HD TEXTURE PACK OR UNIVERSAL UPSCALER.");
+        draw_text(452, 344, 0x9aa6adff,
+                  "OPEN THE LOCAL PS2 GAME, THEN TRIANGLE TO DOWNLOAD.");
+        draw_text(452, 372, 0x9aa6adff,
+                  "THE ORIGINAL ISO / CLASSIC FILE IS NEVER OVERWRITTEN.");
+    } else if (selected_community) {
+        const ps3scale_profile_t *safe_profile =
+            selected ? profile_for_game(selected) : NULL;
+        int exact_match = selected ?
+            ps3scale_community_file_matches_exact_game(selected_community,
+                                                        selected) : 0;
+        const char *region = selected ?
+            ps3scale_community_region_label(selected->title_id) : "NOT LINKED";
+        const char *title = selected ? selected->title : selected_community->title;
+        const char *title_id = selected ? selected->title_id :
+                               selected_community->title_id;
+        draw_text(452, 144, 0xcaff39ff, "GITHUB COMMUNITY RESULT");
+        snprintf(line, sizeof(line), "GAME: %.54s", title);
+        draw_text(452, 176, 0xffffffff, line);
+        snprintf(line, sizeof(line), "TITLE ID: %.18s", title_id);
+        draw_text(452, 204, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "REGION: %.24s", region);
+        draw_text(452, 232, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "CATEGORY: %.24s", selected_community->category);
+        draw_text(452, 260, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "VERSION: %.18s",
+                 selected_community->app_ver[0] ?
+                 selected_community->app_ver : "NOT SPECIFIED");
+        draw_text(452, 288, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "REPOSITORY: %.36s",
+                 selected_community->repository);
+        draw_text(452, 316, 0x9aa6adff, line);
+        if (!selected) {
+            draw_text(452, 344, 0xffcc66ff, "LOCAL GAME: NOT FOUND / NOT SCANNED");
+            draw_text(452, 372, 0x9aa6adff,
+                      "SCAN THE MATCHING GAME BEFORE APPLYING ANY FILE.");
+        } else {
+            draw_text(452, 344, 0x9aa6adff,
+                      exact_match ? "MATCH: EXACT GAME ID / VERSION" :
+                                    "MATCH: REVIEW GAME ID / VERSION");
+            draw_text(452, 372, 0x9aa6adff,
+                      safe_profile ? "SAFE PROFILE: AVAILABLE" :
+                                     "SAFE PROFILE: NOT AVAILABLE");
+        }
+    } else if (!g_online_result_count) {
+        draw_text(452, 144, 0xffcc66ff, "NO MATCHES FOR THIS SEARCH.");
+        draw_text(452, 176, 0x9aa6adff,
+                  "TRY A GAME NAME, DISC ID OR TITLE ID.");
+        if (!g_catalog_ready)
+            draw_text(452, 204, 0x9aa6adff, "GRAPHICS PROFILE CATALOG IS OFFLINE.");
+        if (!g_community_ready)
+            draw_text(452, 232, 0x9aa6adff, "GITHUB INDEX IS OFFLINE.");
+        if (!g_ps2_config_db.count)
+            draw_text(452, 260, 0x9aa6adff, "PS2 CONFIG INDEX IS NOT INSTALLED.");
+    } else {
+        draw_text(452, 144, 0x9aa6adff,
+                  "SELECT A RESULT TO REVIEW ITS GAME / FILE MATCH.");
+        draw_text(452, 176, 0x9aa6adff,
+                  "SEARCH ALSO INCLUDES TITLES NOT INSTALLED LOCALLY.");
+    }
+
+    if (g_online_message[0])
+        draw_text(34, 492, 0xffcc66ff, g_online_message);
+    draw_text(34, 532, 0x9aa6adff,
+              "TRIANGLE: SEARCH GAME NAME  SQUARE: FILTER  CROSS: OPEN  CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
+
+
 static void draw_scan(void)
 {
     char line[256];
