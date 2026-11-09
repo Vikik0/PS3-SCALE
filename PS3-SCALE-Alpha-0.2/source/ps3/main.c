@@ -1558,17 +1558,68 @@ static const ps3scale_game_t *online_result_at(
 }
 
 
+static int ps2_config_ids_match(const char *left, const char *right)
+{
+    char a[PS3SCALE_PS2_CONFIG_ID_MAX];
+    char b[PS3SCALE_PS2_CONFIG_ID_MAX];
+    if (!left || !right)
+        return 0;
+    if (ps3scale_ps2_config_normalize_id(left, a, sizeof(a)) != 0 ||
+        ps3scale_ps2_config_normalize_id(right, b, sizeof(b)) != 0)
+        return strcmp(left, right) == 0;
+    return strcmp(a, b) == 0;
+}
+
 static void open_selected_online_match(void)
 {
     const ps3scale_game_t *match;
     const ps3scale_profile_t *profile = NULL;
     const ps3scale_community_file_t *community = NULL;
+    const ps3scale_ps2_config_entry_t *ps2_config = NULL;
     size_t i, count;
 
-    match = online_result_at((size_t)g_online_selected, &profile, &community);
+    match = online_result_at((size_t)g_online_selected, &profile,
+                             &community, &ps2_config);
+    if (ps2_config) {
+        int found_local_game = 0;
+        g_library = LIBRARY_PS2;
+        g_search[0] = '\0';
+        g_selected = 0;
+        count = library_count(LIBRARY_PS2);
+        for (i = 0; i < count; i++) {
+            const ps3scale_game_t *candidate = library_game_at(i);
+            const char *candidate_id;
+            if (!candidate)
+                continue;
+            candidate_id = candidate->disc_id[0] ?
+                           candidate->disc_id : candidate->title_id;
+            if (ps2_config_ids_match(candidate_id, ps2_config->title_id)) {
+                g_selected = (int)i;
+                found_local_game = 1;
+                break;
+            }
+        }
+        if (found_local_game) {
+            g_profile_confirm_pending = 0;
+            g_config_preview = 0;
+            set_details_message("VERIFIED PS2 CONFIG FOUND. TRIANGLE TO DOWNLOAD.");
+            g_screen = SCREEN_DETAILS;
+        } else {
+            snprintf(g_online_message, sizeof(g_online_message),
+                     "PS2 CONFIG FOUND FOR %.32s. SCAN THE MATCHING PS2 GAME FIRST.",
+                     ps2_config->title);
+        }
+        return;
+    }
+
     if (!match) {
-        snprintf(g_online_message, sizeof(g_online_message),
-                 "NO GITHUB RESULT IS SELECTED.");
+        if (community)
+            snprintf(g_online_message, sizeof(g_online_message),
+                     "GITHUB FILE FOUND FOR %.32s. LOCAL GAME NOT SCANNED.",
+                     community->title);
+        else
+            snprintf(g_online_message, sizeof(g_online_message),
+                     "NO GITHUB RESULT IS SELECTED.");
         return;
     }
 
@@ -1600,6 +1651,7 @@ static void open_selected_online_match(void)
         set_details_message("GAME FOUND IN GITHUB INDEX.");
     g_screen = SCREEN_DETAILS;
 }
+
 
 static void profile_arm_worker(void *arg)
 {
