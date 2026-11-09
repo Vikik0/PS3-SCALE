@@ -106,6 +106,35 @@ static int encode_game_path(const char *source, char *destination,
     return 0;
 }
 
+static int path_ends_with_ci(const char *path, const char *suffix)
+{
+    size_t path_length, suffix_length, i;
+    if (!path || !suffix)
+        return 0;
+    path_length = strlen(path);
+    suffix_length = strlen(suffix);
+    if (suffix_length > path_length)
+        return 0;
+    path += path_length - suffix_length;
+    for (i = 0; i < suffix_length; i++) {
+        char a = path[i];
+        char b = suffix[i];
+        if (a >= 'a' && a <= 'z') a = (char)(a - 'a' + 'A');
+        if (b >= 'a' && b <= 'z') b = (char)(b - 'a' + 'A');
+        if (a != b)
+            return 0;
+    }
+    return 1;
+}
+
+static int valid_ps2_iso_path(const char *path)
+{
+    if (!allowed_game_path(path) || !strstr(path, "/PS2ISO/"))
+        return 0;
+    return path_ends_with_ci(path, ".ISO") ||
+           path_ends_with_ci(path, ".BIN");
+}
+
 int ps3scale_webman_build_start_path(const ps3scale_game_t *game,
                                      char *output, size_t output_size)
 {
@@ -119,10 +148,15 @@ int ps3scale_webman_build_start_path(const ps3scale_game_t *game,
     }
     output[0] = '\0';
 
-    if (!valid_title_id(game->title_id))
+    if (game->kind == PS3SCALE_GAME_PS2_ISO) {
+        if (!valid_ps2_iso_path(game->path) ||
+            encode_game_path(game->path, encoded_path,
+                             sizeof(encoded_path)) != 0)
+            return -1;
+        written = snprintf(output, output_size, "/play.ps3%s", encoded_path);
+    } else if (!valid_title_id(game->title_id)) {
         return -1;
-
-    if (game->kind == PS3SCALE_GAME_PS3_HDD) {
+    } else if (game->kind == PS3SCALE_GAME_PS3_HDD) {
         written = snprintf(output, output_size, "/play.ps3?%s",
                            game->title_id);
     } else if (game->kind == PS3SCALE_GAME_PS3_FOLDER ||
