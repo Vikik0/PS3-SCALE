@@ -311,7 +311,13 @@ static size_t normalize_title(const char *source,
 
     for (input = 0; source[input] && output + 1 < capacity; input++) {
         unsigned char ch = (unsigned char)source[input];
-        if (ch == '\'' || ch == '`') {
+        if (ch == '\'') {
+            if ((source[input + 1] == 's' || source[input + 1] == 'S') &&
+                (!source[input + 2] ||
+                 !isalnum((unsigned char)source[input + 2])))
+                input++;
+            continue;
+        } else if (ch == '`') {
             continue;
         } else if (ch < 0x80u && isalnum(ch)) {
             if (pending_space && output + 1 < capacity)

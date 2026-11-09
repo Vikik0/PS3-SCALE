@@ -54,7 +54,7 @@ int main(void)
     memset(&index, 0, sizeof(index));
     if (write_index(path, valid) != 0)
         return 1;
-    if (ps3scale_community_index_load(path, &index) != 4)
+    if (ps3scale_community_index_load(path, &index) != 5)
         return 2;
     if (index.count != 5)
         return 3;
