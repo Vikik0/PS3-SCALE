@@ -161,6 +161,9 @@ int main(void)
             if (strcmp(list.items[i].title, "Demo PS3 Game") == 0 &&
                 list.items[i].cover_path[0] != '\0')
                 saw_ps3_cover = 1;
+            if (list.items[i].kind == PS3SCALE_GAME_PS2_CLASSIC &&
+                strcmp(list.items[i].disc_id, "SLUS_209.09") == 0)
+                saw_encrypted_ps2 = 1;
         }
         assert(saw_mounted);
         assert(saw_ps3_iso_id);
