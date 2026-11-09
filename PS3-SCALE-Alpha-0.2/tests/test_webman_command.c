@@ -51,6 +51,17 @@ int main(void)
                                              sizeof(output)) != 0);
 
     game.kind = PS3SCALE_GAME_PS2_ISO;
+    strcpy(game.path, "/dev_hdd0/PS2ISO/Crash Twinsanity [SLUS_209.09].iso");
+    expect_path(&game,
+        "/play.ps3/dev_hdd0/PS2ISO/Crash%20Twinsanity%20%5BSLUS_209.09%5D.iso");
+
+    strcpy(game.path, "/dev_usb001/PS2ISO/Crash.bin");
+    expect_path(&game, "/play.ps3/dev_usb001/PS2ISO/Crash.bin");
+
+    strcpy(game.path, "/dev_hdd0/GAMES/Crash.iso");
+    assert(ps3scale_webman_build_start_path(&game, output,
+                                             sizeof(output)) != 0);
+    strcpy(game.path, "/dev_hdd0/PS2ISO/Crash.bin.enc");
     assert(ps3scale_webman_build_start_path(&game, output,
                                              sizeof(output)) != 0);
 
