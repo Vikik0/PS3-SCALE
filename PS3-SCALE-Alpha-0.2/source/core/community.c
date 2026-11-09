@@ -582,7 +582,7 @@ const char *ps3scale_community_source_label(const char *source_kind)
     if (!source_kind)
         return "COMMUNITY FILE";
     if (strcmp(source_kind, "HARDWARE_TESTED_FPS") == 0)
-        return "HARDWARE-TESTED FPS PATCH";
+        return "FPS PATCH REPOSITORY";
     if (strcmp(source_kind, "COMMUNITY_CONFIRMED") == 0)
         return "COMMUNITY-CONFIRMED PATCH";
     if (strcmp(source_kind, "COMMUNITY_UNVERIFIED") == 0)

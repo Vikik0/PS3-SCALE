@@ -120,7 +120,7 @@ int main(void)
         return 7;
 
     if (strcmp(ps3scale_community_source_label("HARDWARE_TESTED_FPS"),
-               "HARDWARE-TESTED FPS PATCH") != 0)
+               "FPS PATCH REPOSITORY") != 0)
         return 8;
     if (strcmp(index.items[0].category, "GRAPHICS_FPS") != 0 ||
         strcmp(index.items[0].description, "Unlock FPS") != 0)
