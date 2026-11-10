@@ -3177,24 +3177,41 @@ static void draw_details(void)
 
     draw_soft_card(526.0f, 92.0f, 308.0f, 292.0f, 0);
     set_ui_font_size(9, 14);
-    draw_text(544.0f, 110.0f, 0xffffffff, "Visual Profile Preview");
-    draw_solid_rect(542.0f, 142.0f, 132.0f, 132.0f, 0xcbd8bfff);
-    draw_solid_rect(680.0f, 142.0f, 136.0f, 132.0f, 0xc8d9c0ff);
-    draw_solid_rect(542.0f, 142.0f, 132.0f, 42.0f, 0xa7c1a0ff);
-    draw_solid_rect(680.0f, 142.0f, 136.0f, 42.0f, 0x9fc59fff);
-    draw_solid_rect(542.0f, 222.0f, 132.0f, 52.0f, 0x8c9d7aff);
-    draw_solid_rect(680.0f, 216.0f, 136.0f, 58.0f, 0x789c72ff);
-    draw_icon_line(542.0f, 220.0f, 674.0f, 220.0f, 0xe9e5d8ff);
-    draw_icon_line(680.0f, 212.0f, 816.0f, 212.0f, 0xf4f1e5ff);
-    draw_solid_rect(674.0f, 142.0f, 6.0f, 132.0f, 0xfaf8ffff);
-    draw_circle_outline(677.0f, 208.0f, 11.0f, 0x875be8ff);
-    set_ui_font_size(7, 11);
-    draw_text(554.0f, 286.0f, 0x514b69ff, "ORIGINAL");
-    draw_text(744.0f, 286.0f, 0x875be8ff, "ENHANCED");
-    draw_text(544.0f, 322.0f, 0x77718fff,
-              "Preview layout only; real results depend on");
-    draw_text(544.0f, 340.0f, 0x77718fff,
-              "the verified game profile and console output.");
+    draw_text(544.0f, 108.0f, 0xffffffff, "Original vs Enhanced");
+    draw_solid_rect(542.0f, 136.0f, 132.0f, 84.0f, 0xcbd8bfff);
+    draw_solid_rect(680.0f, 136.0f, 136.0f, 84.0f, 0xc8d9c0ff);
+    draw_solid_rect(542.0f, 136.0f, 132.0f, 28.0f, 0xa7c1a0ff);
+    draw_solid_rect(680.0f, 136.0f, 136.0f, 28.0f, 0x9fc59fff);
+    draw_solid_rect(542.0f, 190.0f, 132.0f, 30.0f, 0x8c9d7aff);
+    draw_solid_rect(680.0f, 184.0f, 136.0f, 36.0f, 0x789c72ff);
+    draw_icon_line(542.0f, 184.0f, 674.0f, 184.0f, 0xe9e5d8ff);
+    draw_icon_line(680.0f, 178.0f, 816.0f, 178.0f, 0xf4f1e5ff);
+    draw_solid_rect(674.0f, 136.0f, 6.0f, 84.0f, 0xfaf8ffff);
+    draw_circle_outline(677.0f, 178.0f, 10.0f, 0x875be8ff);
+    set_ui_font_size(6, 9);
+    draw_text(554.0f, 228.0f, 0x514b69ff, "ORIGINAL");
+    draw_text(744.0f, 228.0f, 0x875be8ff, "ENHANCED");
+    draw_soft_chip(542.0f, 246.0f, 132.0f, "Enhancement Info", 1);
+    draw_soft_chip(680.0f, 246.0f, 136.0f, "Compatibility", 0);
+    if (profile || ps2_config) {
+        draw_circle_outline(550.0f, 286.0f, 4.0f, 0x2c9f8eff);
+        draw_text(562.0f, 282.0f, 0x514b69ff,
+                  "Higher Resolution (profile-dependent)");
+        draw_circle_outline(550.0f, 304.0f, 4.0f, 0x2c9f8eff);
+        draw_text(562.0f, 300.0f, 0x514b69ff,
+                  "Improved Texture Sharpness");
+        draw_circle_outline(550.0f, 322.0f, 4.0f, 0x2c9f8eff);
+        draw_text(562.0f, 318.0f, 0x514b69ff,
+                  "Better Color & Lighting");
+        draw_circle_outline(550.0f, 340.0f, 4.0f, 0x2c9f8eff);
+        draw_text(562.0f, 336.0f, 0x514b69ff,
+                  "Smoother Performance (game-specific)");
+    } else {
+        draw_text(544.0f, 292.0f, 0xffcc66ff,
+                  "No verified profile is available.");
+        draw_text(544.0f, 316.0f, 0x77718fff,
+                  "This game will start unmodified.");
+    }
 
     draw_soft_button(20.0f, 400.0f, 250.0f, 44.0f,
                      game_is_ps3(game) ?
