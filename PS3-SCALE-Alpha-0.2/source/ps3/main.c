@@ -1322,21 +1322,17 @@ static void draw_scene_background(void)
                   sinf(phase + (float)i * 0.73f) * 3.0f;
         float pulse = 0.45f + 0.55f *
                       sinf(phase * 2.0f + (float)i * 1.17f);
-        if (pulse > 0.30f)
-            draw_solid_rect(x, y, (i % 5 == 0) ? 3.0f : 2.0f,
-                            (i % 5 == 0) ? 3.0f : 2.0f,
-                            scene_blend(0x9e8bcfff, 0xffffffff,
-                                        pulse * daylight * 0.65f));
+        draw_solid_rect(x, y, (i % 5 == 0) ? 3.0f : 2.0f,
+                        (i % 5 == 0) ? 3.0f : 2.0f,
+                        scene_blend(0x9e8bcf00, 0xffffffff,
+                                    pulse * daylight * 0.65f));
     }
 
-    if (night > 0.25f) {
-        for (i = 0; i < 14; i++) {
-            float x = (float)((i * 173 + 67) % 840);
-            float y = (float)((i * 97 + 33) % 300);
-            draw_solid_rect(x, y, 2.0f, 2.0f,
-                            scene_blend(0x66558aff, 0xf6edffff,
-                                        night * 0.72f));
-        }
+    for (i = 0; i < 14; i++) {
+        float x = (float)((i * 173 + 67) % 840);
+        float y = (float)((i * 97 + 33) % 300);
+        draw_solid_rect(x, y, 2.0f, 2.0f,
+                        scene_blend(0x66558a00, 0xf6edffcc, night * 0.82f));
     }
     (void)dusk;
 }
@@ -2640,7 +2636,7 @@ static void draw_boot(void)
     const char *stage_text[] = {
         "Initializing graphics and controller",
         "Checking settings and audio",
-        "Scanning local game library",
+        "SCANNING LOCAL GAME LIBRARY",
         "Checking companion tools",
         "Ready"
     };

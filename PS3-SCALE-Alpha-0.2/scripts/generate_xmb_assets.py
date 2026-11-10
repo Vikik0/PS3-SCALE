@@ -96,39 +96,52 @@ def stairs(c,n,x0,y0,dx,dy,w0,dw,top,front,side):
 
 def generate(font):
     PKG.mkdir(parents=True,exist_ok=True)
-    bg=Canvas(1280,720,(21,18,46),(94,69,132))
-    for i in range(105):
-        x=(i*197+83)%1280; y=(i*113+29)%450
-        bg.rect(x,y,3 if i%4==0 else 2,3 if i%4==0 else 2,(192,180,230))
-    bg.circle(1000,145,70,(214,198,255),3)
-    bg.circle(1000,145,58,(154,126,216),2)
-    bg.line(880,148,1120,100,(201,183,245),2)
-    stairs(bg,23,12,660,22,25,600,15,(247,244,255),(190,180,215),(105,88,145))
-    bg.line(40,646,610,76,(193,165,255),5)
-    bg.rect(620,285,625,300,(40,31,72))
-    bg.rect(620,285,625,3,(184,151,255))
-    bg.text(670,330,"PS3",8,(250,247,255),font)
-    bg.text(910,330,"SCALE",8,(190,145,255),font)
-    bg.rect(670,440,530,5,(176,140,255))
-    bg.text(670,475,"PS3 & PS2 ENHANCEMENT MANAGEMENT",2,(239,232,255),font)
-    bg.text(670,525,"A NEW WAY TO EXPLORE YOUR GAME LIBRARY",2,(211,199,239),font)
-    bg.rect(670,595,430,42,(76,58,112))
-    bg.text(688,608,"CFW 4.92  |  PS3 SLIM READY",2,(248,243,255),font)
+
+    # Bright XMB wallpaper: pale lavender, soft glow and ascending staircase.
+    bg=Canvas(1280,720,(250,248,255),(222,214,241))
+    for wave in range(4):
+        prev=None
+        for x in range(0,1281,16):
+            y=68+wave*154+math.sin(x*0.004+wave*0.85)*20
+            point=(x,y)
+            if prev:
+                bg.line(prev[0],prev[1],point[0],point[1],
+                        (232-wave*4,222-wave*3,250),2)
+            prev=point
+    for i in range(58):
+        x=(i*197+83)%1280; y=(i*113+29)%660
+        bg.rect(x,y,2,2,(225,216,245))
+    bg.circle(1030,132,96,(224,211,248),3)
+    bg.circle(1030,132,78,(237,229,251),2)
+    stairs(bg,34,8,704,23,18,890,19,
+           (255,254,255),(226,220,242),(190,178,220))
+    bg.line(20,678,720,48,(208,187,244),4)
+    bg.line(40,704,760,74,(242,231,255),3)
+    bg.rect(720,280,510,226,(250,248,255))
+    bg.rect(720,280,510,3,(187,151,246))
+    bg.text(760,326,"PS3",6,(35,29,58),font)
+    bg.text(940,326,"SCALE",6,(143,65,221),font)
+    bg.text(760,430,"PS3 & PS2 ENHANCEMENT",2,(100,87,132),font)
+    bg.text(760,468,"MANAGEMENT",3,(100,87,132),font)
     bg.save(PKG/"PIC1.PNG")
 
-    icon=Canvas(320,176,(24,18,52),(72,45,117))
-    stairs(icon,8,8,142,8,13,124,8,(239,232,255),(169,147,216),(94,70,146))
-    icon.line(15,137,88,26,(202,171,255),2)
-    icon.text(142,40,"PS3",3,(255,255,255),font)
-    icon.text(142,79,"SCALE",3,(193,148,255),font)
-    icon.rect(142,128,164,22,(75,54,118))
-    icon.text(151,133,"GAME ENHANCER",1,(255,255,255),font)
+    # XMB icon remains bright and legible at compact PS3 menu size.
+    icon=Canvas(320,176,(252,250,255),(231,224,246))
+    stairs(icon,9,-10,166,8,12,190,15,
+           (255,255,255),(230,223,246),(192,179,224))
+    icon.circle(52,58,31,(207,188,245),2)
+    icon.text(112,38,"PS3",4,(35,29,58),font)
+    icon.text(112,80,"SCALE",4,(143,65,221),font)
+    icon.rect(112,128,180,2,(180,147,236))
+    icon.text(118,140,"GAME ENHANCER",1,(95,83,126),font)
     icon.save(PKG/"ICON0.PNG")
 
-    pic0=Canvas(310,176,(26,20,56),(77,50,122))
-    stairs(pic0,9,4,160,7,13,300,18,(242,236,255),(170,151,213),(95,73,145))
-    pic0.text(18,18,"PS3 SCALE",3,(255,255,255),font)
-    pic0.text(20,64,"GRAPHICS / GAME PROFILES",1,(205,180,255),font)
+    # Small preview uses the same white/lavender staircase identity.
+    pic0=Canvas(310,176,(250,248,255),(224,216,242))
+    stairs(pic0,11,-18,174,8,11,250,14,
+           (255,255,255),(230,223,246),(193,180,224))
+    pic0.text(18,20,"PS3 SCALE",3,(43,34,68),font)
+    pic0.text(20,78,"GRAPHICS / GAME PROFILES",1,(126,93,173),font)
     pic0.save(PKG/"PIC0.PNG")
 
     for name,size in (("ICON0.PNG",(320,176)),("PIC1.PNG",(1280,720)),("PIC0.PNG",(310,176))):
