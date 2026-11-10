@@ -29,3 +29,7 @@ The user-supplied green Apollo Save logo is a separate splash asset. It is not r
 
 ## Verification
 Host tests and GitHub Actions verify compilation, asset dimensions, the periodic phase formula and page-level rendering calls. The exact RSX appearance, alpha blending, frame pacing and perceived loop smoothness still require a real PS3 Slim / CFW 4.92 hardware check.
+
+
+## Upgrade behavior
+The new build uses the `animation_v2` settings key. A legacy `animation=0` value from an earlier installation is ignored, so the approved animated staircase is enabled after upgrading. The setting remains available to the user afterward.

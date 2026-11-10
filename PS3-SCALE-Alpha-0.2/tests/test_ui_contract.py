@@ -164,6 +164,11 @@ assert "draw_ambient_satellite" in ambient
 assert "g_frame_counter % 21600ul" in ambient
 assert "sinf(phase)" in ambient
 assert "for (i = 0; i < 22; i++)" in ambient
+assert "MatrixScale(2.35f, 2.35f, 2.35f)" in ambient
+assert "const float center_x = -9.5f;" in ambient
+assert "case 0xffffff00u: rgb = 0x29243f00u;" in src
+assert 'sscanf(line, "animation_v2=%d"' in src
+assert 'fprintf(fp, "animation_v2=%d\\n"' in src
 draw_ui_impl = section("static void draw_ui(void)", "static int compare_game_titles")
 assert "if (g_animation_enabled)" in draw_ui_impl
 assert "draw_home_ambient();" in draw_ui_impl
@@ -319,6 +324,7 @@ assert "draw_stair_tread(4.8f, 0.28f, 2.45f, i);" in src
 assert "g_frame_counter % 21600ul" in src
 assert "draw_home_card" not in src  # home cards are rendered in the main menu loop
 assert "PS3" in home and "SCALE" in home and "COMPANION TOOLS" in home
+assert '"Detect games"' in home and '"Game profiles"' in home
 project_root = source_path.parents[2]
 makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 assert "scripts/generate_xmb_assets.py" in makefile

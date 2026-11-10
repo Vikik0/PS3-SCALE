@@ -438,7 +438,7 @@ static u32 ui_theme_color(u32 color)
     switch (rgb) {
         case 0xcaff3900u: rgb = 0x875be800u; break;
         case 0x9ee56a00u: rgb = 0x2c9f8e00u; break;
-        case 0xffffffffu: rgb = 0x29243f00u; break;
+        case 0xffffff00u: rgb = 0x29243f00u; break;
         case 0xdce3e800u: rgb = 0x514b6900u; break;
         case 0x9aa6ad00u: rgb = 0x77718f00u; break;
         case 0x6f7b8300u: rgb = 0x9992ad00u; break;
@@ -1262,9 +1262,9 @@ static void draw_scene_background(void)
 {
     const float tau = 6.28318530718f;
     float phase = (float)(g_frame_counter % 21600ul) / 21600.0f * tau;
-    float daylight = 0.60f + 0.30f * cosf(phase);
+    float daylight = 0.82f + 0.12f * cosf(phase);
     float night = 1.0f - daylight;
-    float dusk = 1.0f - fabsf(daylight - 0.5f) * 2.0f;
+    float dusk = 1.0f - fabsf(daylight - 0.82f) / 0.12f;
     u32 top, bottom, accent, glow;
     int i, wave;
 
@@ -1274,10 +1274,10 @@ static void draw_scene_background(void)
         dusk = 0.0f;
     }
 
-    top = scene_blend(0x29213fff, 0xf9f7ffff, daylight);
-    bottom = scene_blend(0x57496fff, 0xe2dcf3ff, daylight);
-    top = scene_blend(top, 0x9b83baff, dusk * 0.12f);
-    bottom = scene_blend(bottom, 0xb9a7dfff, dusk * 0.18f);
+    top = scene_blend(0xded8eeff, 0xfaf9ffff, daylight);
+    bottom = scene_blend(0xcfc5e6ff, 0xf0ecf9ff, daylight);
+    top = scene_blend(top, 0xe9defcff, dusk * 0.06f);
+    bottom = scene_blend(bottom, 0xe0d4f5ff, dusk * 0.08f);
     accent = scene_blend(0x8b73c8ff, 0xb995ffff, daylight * 0.72f);
     glow = scene_blend(0x8a73b8ff, 0xf4eaffff, daylight);
 
@@ -1344,7 +1344,7 @@ static void draw_home_ambient(void)
     const float phase =
         (float)(g_frame_counter % 21600ul) / 21600.0f * tau;
     const float bob = sinf(phase) * 0.18f;
-    const float center_x = -8.0f;
+    const float center_x = -9.5f;
     const float center_z = 29.0f;
     int i;
 
@@ -1366,7 +1366,7 @@ static void draw_home_ambient(void)
         float y = ((float)i - 10.5f) * 0.57f + bob;
         rotation = MatrixMultiply(MatrixRotationX(0.76f),
                                   MatrixRotationY(angle));
-        scale = MatrixScale(1.82f, 1.82f, 1.82f);
+        scale = MatrixScale(2.35f, 2.35f, 2.35f);
         translation = MatrixTranslation(center_x + cosf(angle) * radius,
                                          y,
                                          center_z + sinf(angle) * radius);
@@ -2225,7 +2225,7 @@ static void load_app_settings(void)
             g_music_enabled = value ? 1 : 0;
         else if (sscanf(line, "volume=%d", &value) == 1)
             set_background_music_volume(value);
-        else if (sscanf(line, "animation=%d", &value) == 1)
+        else if (sscanf(line, "animation_v2=%d", &value) == 1)
             g_animation_enabled = value ? 1 : 0;
         else if (sscanf(line, "music_mode=%d", &value) == 1 &&
                  value >= 0 && value <= 2)
@@ -2249,7 +2249,7 @@ static int save_app_settings(void)
     }
     fprintf(fp, "music=%d\n", g_music_enabled ? 1 : 0);
     fprintf(fp, "volume=%d\n", g_music_volume);
-    fprintf(fp, "animation=%d\n", g_animation_enabled ? 1 : 0);
+    fprintf(fp, "animation_v2=%d\n", g_animation_enabled ? 1 : 0);
     fprintf(fp, "music_mode=%d\n", g_music_mode);
     fprintf(fp, "music_next=%d\n", g_music_next_track);
     fprintf(fp, "language=%d\n", g_language);
@@ -2780,8 +2780,8 @@ static void draw_home(void)
         "Scan Games", "Online DB", "Settings", "Help", "About"
     };
     static const char *descriptions[5] = {
-        "Detect PS3 & PS2", "Profiles & updates", "Customize app",
-        "Usage guide & support", "Credits & information"
+        "Detect games", "Game profiles", "Music & display",
+        "Guides & support", "Credits & info"
     };
     char line[192];
     int i;
@@ -2813,7 +2813,7 @@ static void draw_home(void)
         set_ui_font_size(7, 11);
         draw_text_centered(x + 4.0f, y + 78.0f, w - 8.0f,
                            selected ? 0xcaff39ff : 0xffffffff, items[i]);
-        set_ui_font_size(6, 9);
+        set_ui_font_size(5, 8);
         draw_text_centered(x + 5.0f, y + 104.0f, w - 10.0f,
                            0x77718fff, descriptions[i]);
         if (selected) {
