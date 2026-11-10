@@ -325,5 +325,8 @@ assert '"/dev_usb000/music1.mp3"' in src
 assert '"/dev_usb003/PS3SCALE/music1.mp3"' in src
 assert "rename(temp_path, PS3SCALE_MUSIC1_PATH)" in src
 assert "MUSIC 1 IMPORTED FROM USB" in settings
+sfo = (project_root / "sfo.xml").read_text(encoding="utf-8")
+assert '<value name="APP_VER" type="string">00.20</value>' in sfo
+assert '<value name="VERSION" type="string">00.20</value>' in sfo
 
 print("PS3 SCALE UI contract tests: PASS")

@@ -95,7 +95,7 @@ jobs:
           if [ -s "PS3-SCALE-Alpha-0.2/pkgfiles/USRDIR/music1.mp3" ]; then
             echo "Music 1 asset found and will be packaged."
           else
-            echo "Music 1 asset is not yet in the source tree; runtime fallback remains Music 2."
+            echo "Music 1 is not embedded; runtime will import music1.mp3 from USB000-USB003 when present."
           fi
           echo "Verified embedded theme MP3 and Apollo Save logo in pkgfiles/USRDIR."
 

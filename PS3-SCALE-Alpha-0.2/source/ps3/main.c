@@ -582,15 +582,22 @@ static int import_music1_from_usb(void)
         "/dev_usb002/PS3SCALE/music1.mp3",
         "/dev_usb003/PS3SCALE/music1.mp3"
     };
-    FILE *existing;
     char temp_path[PS3SCALE_PATH_MAX];
     unsigned char buffer[32768];
+    FILE *existing;
     size_t i;
+
+    if (!g_mpg123)
+        return -1;
 
     existing = fopen(PS3SCALE_MUSIC1_PATH, "rb");
     if (existing) {
         fclose(existing);
-        return 0;
+        if (mpg123_open(g_mpg123, PS3SCALE_MUSIC1_PATH) == MPG123_OK) {
+            mpg123_close(g_mpg123);
+            return 0;
+        }
+        (void)remove(PS3SCALE_MUSIC1_PATH);
     }
 
     if (snprintf(temp_path, sizeof(temp_path), "%s.tmp",
@@ -635,10 +642,14 @@ static int import_music1_from_usb(void)
         if (fclose(destination) != 0)
             valid = 0;
 
+        /* Verify the copied file is a decodable MP3 before replacing anything. */
         if (valid && total >= 16384u &&
-            rename(temp_path, PS3SCALE_MUSIC1_PATH) == 0) {
-            g_music1_imported_from_usb = 1;
-            return 1;
+            mpg123_open(g_mpg123, temp_path) == MPG123_OK) {
+            mpg123_close(g_mpg123);
+            if (rename(temp_path, PS3SCALE_MUSIC1_PATH) == 0) {
+                g_music1_imported_from_usb = 1;
+                return 1;
+            }
         }
         (void)remove(temp_path);
     }
