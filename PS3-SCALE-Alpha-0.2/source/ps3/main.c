@@ -3302,7 +3302,7 @@ static void draw_tools(void)
     draw_page_header("Companion Tools", "Optional tools detected on the console");
     draw_soft_card(24.0f, 96.0f, 806.0f, 320.0f, 0);
     set_ui_font_size(10, 15);
-    draw_text(48.0f, 120.0f, 0xffffffff, "Apollo Save");
+    draw_text(48.0f, 120.0f, 0xffffffff, "APOLLO SAVE TOOL");
     snprintf(line, sizeof(line), "STATUS: %s",
              g_apollo_installed ? "INSTALLED" : "NOT DETECTED");
     draw_text(642.0f, 120.0f,
@@ -3313,7 +3313,7 @@ static void draw_tools(void)
     draw_solid_rect(48.0f, 176.0f, 748.0f, 1.0f, 0xd9d1eaff);
 
     set_ui_font_size(10, 15);
-    draw_text(48.0f, 196.0f, 0xffffffff, "Artemis PS3");
+    draw_text(48.0f, 196.0f, 0xffffffff, "ARTEMIS PS3");
     snprintf(line, sizeof(line), "STATUS: %s",
              g_artemis_installed ? "INSTALLED" : "NOT DETECTED");
     draw_text(642.0f, 196.0f,
