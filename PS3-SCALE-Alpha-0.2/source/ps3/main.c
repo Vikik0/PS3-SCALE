@@ -129,6 +129,7 @@ static int g_music_start_track = 1;
 static volatile int g_music_current_track = 0;
 static int g_music_file_open = 0;
 static volatile int g_music_track1_missing = 0;
+static int g_music1_imported_from_usb = 0;
 static unsigned int g_music_fade_remaining = 0;
 static int g_settings_selected = 0;
 static int g_animation_enabled = 1;
@@ -434,32 +435,31 @@ static u32 ui_theme_color(u32 color)
 {
     u32 rgb = color & 0xffffff00u;
     u32 alpha = color & 0x000000ffu;
-
     switch (rgb) {
-        case 0xcaff3900u: rgb = 0x8068e600u; break;
-        case 0x9ee56a00u: rgb = 0x20a69a00u; break;
-        case 0xffffffffu: rgb = 0x20263a00u; break;
-        case 0xdce3e800u: rgb = 0x424b6300u; break;
-        case 0x9aa6ad00u: rgb = 0x7c859a00u; break;
-        case 0x6f7b8300u: rgb = 0x9ba4b600u; break;
-        case 0xffcc6600u: rgb = 0xc58a3c00u; break;
-        case 0xff7b7b00u: rgb = 0xd65d6f00u; break;
-        case 0x0d172200u: rgb = 0xf2f4f900u; break;
-        case 0x111b2500u: rgb = 0xf8f9fc00u; break;
-        case 0x111e1800u: rgb = 0xeeeaff00u; break;
-        case 0x14261d00u: rgb = 0xeeeaff00u; break;
-        case 0x173a3500u: rgb = 0xe8e3ff00u; break;
-        case 0x1c594d00u: rgb = 0xe5e0fb00u; break;
-        case 0x101b2700u: rgb = 0xf1f2f700u; break;
-        case 0x26445c00u: rgb = 0xd9deeb00u; break;
-        case 0x34465400u: rgb = 0xd9deeb00u; break;
-        case 0x344f6300u: rgb = 0xd9deeb00u; break;
-        case 0x42647a00u: rgb = 0xcdd4e200u; break;
-        case 0x8bd45000u: rgb = 0x8068e600u; break;
-        case 0x4aafca00u: rgb = 0x8068e600u; break;
-        case 0x65c8e600u: rgb = 0x9b8dee00u; break;
-        case 0x397fb600u: rgb = 0xb3a9e900u; break;
-        case 0x55b9d600u: rgb = 0x9b8dee00u; break;
+        case 0xcaff3900u: rgb = 0x875be800u; break;
+        case 0x9ee56a00u: rgb = 0x2c9f8e00u; break;
+        case 0xffffffffu: rgb = 0x29243f00u; break;
+        case 0xdce3e800u: rgb = 0x514b6900u; break;
+        case 0x9aa6ad00u: rgb = 0x77718f00u; break;
+        case 0x6f7b8300u: rgb = 0x9992ad00u; break;
+        case 0xffcc6600u: rgb = 0xc58a4d00u; break;
+        case 0xff7b7b00u: rgb = 0xd65d8500u; break;
+        case 0x0d172200u: rgb = 0xf3efff00u; break;
+        case 0x111b2500u: rgb = 0xf8f5ff00u; break;
+        case 0x111e1800u: rgb = 0xeee8ff00u; break;
+        case 0x14261d00u: rgb = 0xe9e2ff00u; break;
+        case 0x173a3500u: rgb = 0xe8e0ff00u; break;
+        case 0x1c594d00u: rgb = 0xe5dcff00u; break;
+        case 0x101b2700u: rgb = 0xf4f1ff00u; break;
+        case 0x26445c00u: rgb = 0xc6b8ed00u; break;
+        case 0x34465400u: rgb = 0xc6b8ed00u; break;
+        case 0x344f6300u: rgb = 0xc6b8ed00u; break;
+        case 0x42647a00u: rgb = 0xc8bee800u; break;
+        case 0x8bd45000u: rgb = 0x875be800u; break;
+        case 0x4aafca00u: rgb = 0x875be800u; break;
+        case 0x65c8e600u: rgb = 0xb49af700u; break;
+        case 0x397fb600u: rgb = 0x9079dc00u; break;
+        case 0x55b9d600u: rgb = 0x9c86e700u; break;
         default: break;
     }
     return rgb | alpha;
@@ -571,6 +571,80 @@ static void draw_text(float x, float y, u32 color, const char *text)
     }
 }
 
+
+static int import_music1_from_usb(void)
+{
+    static const char *usb_paths[] = {
+        "/dev_usb000/music1.mp3", "/dev_usb001/music1.mp3",
+        "/dev_usb002/music1.mp3", "/dev_usb003/music1.mp3",
+        "/dev_usb000/PS3SCALE/music1.mp3",
+        "/dev_usb001/PS3SCALE/music1.mp3",
+        "/dev_usb002/PS3SCALE/music1.mp3",
+        "/dev_usb003/PS3SCALE/music1.mp3"
+    };
+    FILE *existing;
+    char temp_path[PS3SCALE_PATH_MAX];
+    unsigned char buffer[32768];
+    size_t i;
+
+    existing = fopen(PS3SCALE_MUSIC1_PATH, "rb");
+    if (existing) {
+        fclose(existing);
+        return 0;
+    }
+
+    if (snprintf(temp_path, sizeof(temp_path), "%s.tmp",
+                 PS3SCALE_MUSIC1_PATH) >= (int)sizeof(temp_path))
+        return -1;
+
+    for (i = 0; i < sizeof(usb_paths) / sizeof(usb_paths[0]); i++) {
+        FILE *source = fopen(usb_paths[i], "rb");
+        FILE *destination;
+        size_t total = 0;
+        int valid = 1;
+
+        if (!source)
+            continue;
+        destination = fopen(temp_path, "wb");
+        if (!destination) {
+            fclose(source);
+            return -1;
+        }
+
+        for (;;) {
+            size_t got = fread(buffer, 1, sizeof(buffer), source);
+            if (got > 0) {
+                if (total > (20u * 1024u * 1024u) - got ||
+                    fwrite(buffer, 1, got, destination) != got) {
+                    valid = 0;
+                    break;
+                }
+                total += got;
+            }
+            if (got < sizeof(buffer)) {
+                if (ferror(source))
+                    valid = 0;
+                break;
+            }
+        }
+
+        if (fflush(destination) != 0)
+            valid = 0;
+        if (fclose(source) != 0)
+            valid = 0;
+        if (fclose(destination) != 0)
+            valid = 0;
+
+        if (valid && total >= 16384u &&
+            rename(temp_path, PS3SCALE_MUSIC1_PATH) == 0) {
+            g_music1_imported_from_usb = 1;
+            return 1;
+        }
+        (void)remove(temp_path);
+    }
+    return -1;
+}
+
 static int open_music_track(int track)
 {
     const char *path = (track == 1) ? PS3SCALE_MUSIC1_PATH :
@@ -621,6 +695,9 @@ static int open_background_music(void)
     requested_track = (g_music_mode == 1) ? 1 :
                       (g_music_mode == 2) ? 2 : g_music_start_track;
     g_music_track1_missing = 0;
+    g_music1_imported_from_usb = 0;
+    if (g_music_mode != 2)
+        (void)import_music1_from_usb();
     if (open_music_track(requested_track) != 0) {
         if (requested_track == 1) {
             g_music_track1_missing = 1;
@@ -1144,6 +1221,123 @@ static void draw_stair_tread(float width, float height, float depth, int index)
                     0xe7e9f1ff);
     draw_stair_face(-x, -y, -z, x, -y, -z, x, y, -z, -x, y, -z,
                     0xe1e4edff);
+}
+
+
+static u32 scene_blend(u32 a, u32 b, float t)
+{
+    int ar = (int)((a >> 24) & 255u), ag = (int)((a >> 16) & 255u);
+    int ab = (int)((a >> 8) & 255u);
+    int br = (int)((b >> 24) & 255u), bg = (int)((b >> 16) & 255u);
+    int bb = (int)((b >> 8) & 255u);
+    int r, g, blue;
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    r = ar + (int)((float)(br - ar) * t);
+    g = ag + (int)((float)(bg - ag) * t);
+    blue = ab + (int)((float)(bb - ab) * t);
+    return ((u32)r << 24) | ((u32)g << 16) | ((u32)blue << 8) | 0xffu;
+}
+
+static void draw_scene_background(void)
+{
+    const float tau = 6.28318530718f;
+    float cycle = (float)(g_frame_counter % 36000ul) / 36000.0f;
+    float angle = cycle * tau;
+    float daylight = 0.5f + 0.5f * sinf(angle - 1.57079632679f);
+    float night = 1.0f - daylight;
+    float dusk = 1.0f - fabsf(daylight - 0.5f) * 2.0f;
+    u32 top, bottom, stair_top, stair_front, stair_side, accent;
+    float orb_x, orb_y;
+    int i;
+
+    if (!g_animation_enabled) {
+        daylight = 0.66f;
+        night = 0.34f;
+        dusk = 0.0f;
+    }
+
+    top = scene_blend(0x17152fff, 0xf4f0ffff, daylight);
+    bottom = scene_blend(0x43345fff, 0xd9d0f0ff, daylight);
+    top = scene_blend(top, 0x51406fff, dusk * 0.26f);
+    bottom = scene_blend(bottom, 0xb48bbcff, dusk * 0.30f);
+    stair_top = scene_blend(0x8873b6ff, 0xfffdffff, daylight * 0.76f);
+    stair_front = scene_blend(0x44365fff, 0xc9bee5ff, daylight * 0.74f);
+    stair_side = scene_blend(0x241d3fff, 0x9888bdff, daylight * 0.72f);
+    accent = scene_blend(0x9b83edff, 0x9a6bffff, daylight * 0.30f);
+
+    for (i = 0; i < 16; i++) {
+        float t = (float)i / 15.0f;
+        draw_solid_rect(0.0f, (float)i * 32.0f, 854.0f, 34.0f,
+                        scene_blend(top, bottom, t));
+    }
+
+    orb_x = 690.0f + cosf(angle) * 42.0f;
+    orb_y = 94.0f + sinf(angle) * 24.0f;
+    draw_circle_outline(orb_x, orb_y, 47.0f,
+                        scene_blend(0x9b83edff, 0xffe6baff, daylight));
+    draw_circle_outline(orb_x, orb_y, 40.0f,
+                        scene_blend(0xbaa6edff, 0xfff3d8ff, daylight));
+    draw_circle_outline(orb_x, orb_y, 33.0f,
+                        scene_blend(0xd2c7ffff, 0xfff7e5ff, daylight));
+    if (daylight > 0.42f) {
+        int ray;
+        for (ray = 0; ray < 12; ray++) {
+            float a = (float)ray * tau / 12.0f + angle * 0.04f;
+            draw_icon_line(orb_x + cosf(a) * 53.0f,
+                           orb_y + sinf(a) * 53.0f,
+                           orb_x + cosf(a) * 62.0f,
+                           orb_y + sinf(a) * 62.0f,
+                           0xf9e1b5ff);
+        }
+    }
+
+    if (night > 0.18f) {
+        for (i = 0; i < 38; i++) {
+            float x = (float)((i * 137 + 31) % 842);
+            float y = (float)((i * 83 + 19) % 250);
+            float pulse = 0.55f + 0.45f * sinf(angle * 2.0f + (float)i);
+            if (pulse * night > 0.20f)
+                draw_solid_rect(x, y, (i % 5 == 0) ? 3.0f : 2.0f,
+                                (i % 5 == 0) ? 3.0f : 2.0f,
+                                scene_blend(0x514675ff, 0xf8f1ffff,
+                                            pulse * night));
+        }
+    }
+
+    if (daylight > 0.30f) {
+        u32 cloud = scene_blend(0x7c6ca0ff, 0xffffffcc, daylight);
+        draw_solid_rect(500.0f, 174.0f, 82.0f, 3.0f, cloud);
+        draw_solid_rect(526.0f, 166.0f, 64.0f, 3.0f, cloud);
+        draw_solid_rect(570.0f, 184.0f, 54.0f, 2.0f, cloud);
+        draw_solid_rect(760.0f, 238.0f, 56.0f, 2.0f, cloud);
+        draw_solid_rect(782.0f, 230.0f, 42.0f, 2.0f, cloud);
+    }
+
+    for (i = 0; i < 18; i++) {
+        float x = 4.0f + (float)i * 17.0f;
+        float y = 458.0f - (float)i * 21.0f;
+        float width = 424.0f - (float)i * 14.0f;
+        float shade = (float)(i % 4) * 0.025f;
+        draw_solid_rect(x + 7.0f, y + 12.0f, width, 17.0f,
+                        scene_blend(stair_side, 0x55476fff, shade));
+        draw_solid_rect(x + 1.0f, y + 7.0f, width, 17.0f,
+                        scene_blend(stair_front, 0x8875b4ff, shade));
+        draw_solid_rect(x - 2.0f, y, width + 5.0f, 9.0f,
+                        scene_blend(stair_top, 0xe5dcffff, shade));
+        draw_solid_rect(x + 4.0f, y + 5.0f, width - 5.0f, 2.0f,
+                        scene_blend(accent, 0xffffffcc, daylight * 0.28f));
+        draw_outline_rect(x - 2.0f, y, width + 5.0f, 24.0f,
+                          scene_blend(0x5d4b88ff, 0xb9a8e8ff, daylight));
+    }
+
+    for (i = 0; i < 3; i++)
+        draw_icon_line(26.0f + (float)i * 8.0f, 454.0f,
+                       340.0f + (float)i * 7.0f, 118.0f,
+                       scene_blend(0x8d70d5ff, 0xb7a0ffff, daylight));
+    draw_solid_rect(0.0f, 495.0f, 854.0f, 17.0f,
+                    scene_blend(0x201b39ff, 0xeee8ffff, daylight));
+    draw_solid_rect(0.0f, 494.0f, 854.0f, 2.0f, accent);
 }
 
 static void draw_home_ambient(void)
@@ -2372,32 +2566,42 @@ static void draw_splash(void)
 {
     unsigned alpha = 255u;
     int frame = g_splash_frames;
-
-    if (frame < 42)
-        alpha = (unsigned)(frame * 255 / 42);
-    else if (frame >= 132)
-        alpha = (unsigned)((180 - frame) * 255 / 48);
+    float progress = (float)(frame % 180) / 180.0f;
+    if (frame < 42) alpha = (unsigned)(frame * 255 / 42);
+    else if (frame >= 132) alpha = (unsigned)((180 - frame) * 255 / 48);
     if (alpha > 255u) alpha = 255u;
 
-    set_ui_font_size(20, 30);
-    draw_text(300, 184, color_with_alpha(0x20263aff, alpha), "PS3 SCALE");
-    set_ui_font_size(11, 17);
-    draw_text(340, 246, color_with_alpha(0x8068e6ff, alpha),
+    draw_solid_rect(150.0f, 70.0f, 554.0f, 370.0f, 0xf6f2ffdd);
+    draw_outline_rect(150.0f, 70.0f, 554.0f, 370.0f, 0xb9a7e8ff);
+    draw_solid_rect(150.0f, 70.0f, 554.0f, 4.0f, 0x875be8ff);
+
+    set_ui_font_size(28, 42);
+    draw_text(258, 116, color_with_alpha(0x20263aff, alpha), "PS3 SCALE");
+    set_ui_font_size(10, 15);
+    draw_text(276, 178, color_with_alpha(0x8068e6ff, alpha),
               "PS3 & PS2 ENHANCEMENT MANAGEMENT");
-    draw_text(350, 314, color_with_alpha(0x8068e6ff, alpha),
-              "SPECIAL THANKS");
-    draw_solid_rect(246.0f, 340.0f, 354.0f, 3.0f,
+    draw_text(340, 234, color_with_alpha(0x8068e6ff, alpha), "SPECIAL THANKS");
+    draw_solid_rect(255.0f, 258.0f, 344.0f, 2.0f,
                     color_with_alpha(0x8068e6ff, alpha));
-    set_ui_font_size(14, 21);
-    draw_text(250, 374, color_with_alpha(0x20263aff, alpha), "ARTEMIS");
-    draw_text(600, 374, color_with_alpha(0x20263aff, alpha), "APOLLO SAVE");
+    set_ui_font_size(12, 18);
+    draw_text(255, 294, color_with_alpha(0x20263aff, alpha), "ARTEMIS");
+    draw_text(510, 294, color_with_alpha(0x20263aff, alpha), "APOLLO SAVE");
     if (g_apollo_texture)
-        ya2d_drawTextureEx(g_apollo_texture, 650.0f, 288.0f,
-                           0.34f, 78.0f, 78.0f);
-    set_ui_font_size(9, 14);
-    draw_text(330, 438, color_with_alpha(0x7c859aff, alpha),
-              "FOR SUPPORTING THE PS3 COMMUNITY");
-    draw_text(340, 490, color_with_alpha(0x7c859aff, alpha),
+        ya2d_drawTextureEx(g_apollo_texture, 586.0f, 272.0f,
+                           0.28f, 66.0f, 66.0f);
+    draw_icon_line(426.0f, 282.0f, 426.0f, 346.0f,
+                   color_with_alpha(0x8068e6ff, alpha));
+    draw_circle_outline(300.0f, 322.0f, 18.0f,
+                        color_with_alpha(0x8068e6ff, alpha));
+    draw_icon_line(286.0f, 335.0f, 314.0f, 307.0f,
+                   color_with_alpha(0x8068e6ff, alpha));
+    set_ui_font_size(8, 12);
+    draw_text(286, 366, color_with_alpha(0x7c859aff, alpha),
+              "THANK YOU FOR SUPPORTING THE PS3 COMMUNITY");
+    draw_solid_rect(252.0f, 394.0f, 350.0f, 5.0f, 0xdcd3f2ff);
+    draw_solid_rect(252.0f, 394.0f, 350.0f * progress, 5.0f,
+                    color_with_alpha(0x8068e6ff, alpha));
+    draw_text(348, 414, color_with_alpha(0x7c859aff, alpha),
               "PRESS X TO CONTINUE");
     set_ui_font_size(14, 22);
 }
@@ -2412,26 +2616,28 @@ static void draw_boot(void)
         "READY"
     };
     const int progress[] = {12, 28, 58, 88, 100};
-    float width = (640.0f * (float)progress[g_boot_stage]) / 100.0f;
-    set_ui_font_size(14, 21);
-
-    draw_text(34, 30, 0xcaff39ff, "PS3 SCALE");
-    draw_text(34, 92, 0xffffffff, "STARTING PS3 SCALE");
-    draw_text(100, 214, 0xdce3e8ff, stage_text[g_boot_stage]);
-    draw_outline_rect(100.0f, 286.0f, 648.0f, 20.0f, 0x42647aff);
-    draw_solid_rect(104.0f, 290.0f, width, 12.0f, 0x4aafcaff);
+    float width = (560.0f * (float)progress[g_boot_stage]) / 100.0f;
+    set_ui_font_size(24, 36);
+    draw_text(110, 86, 0xcaff39ff, "PS3 SCALE");
+    set_ui_font_size(12, 18);
+    draw_text(110, 142, 0xffffffff, "STARTING YOUR GAME LIBRARY");
+    draw_solid_rect(94.0f, 194.0f, 666.0f, 194.0f, 0xf7f4ffff);
+    draw_outline_rect(94.0f, 194.0f, 666.0f, 194.0f, 0xc5b5eaff);
+    draw_solid_rect(94.0f, 194.0f, 666.0f, 4.0f, 0x875be8ff);
+    set_ui_font_size(10, 15);
+    draw_text(126, 230, 0x8068e6ff, stage_text[g_boot_stage]);
+    draw_solid_rect(126.0f, 286.0f, 600.0f, 18.0f, 0xded7f0ff);
+    draw_solid_rect(130.0f, 290.0f, width, 10.0f, 0x875be8ff);
     if (g_boot_stage == 2) {
-        float moving = 104.0f + (float)((g_frame_counter * 5u) % 530u);
-        draw_solid_rect(moving, 290.0f, 78.0f, 12.0f, 0xcaff39ff);
+        float moving = 130.0f + (float)((g_frame_counter * 5u) % 500u);
+        draw_solid_rect(moving, 290.0f, 70.0f, 10.0f, 0xc3aaffff);
     }
-    if (g_boot_stage < 4)
-        draw_text(100, 336, 0x9aa6adff, "PLEASE WAIT...");
-    else
-        draw_text(100, 336, 0x9ee56aff, "READY");
-    draw_text(100, 380, g_app_files_ok ? 0x9ee56aff : 0xffcc66ff,
+    draw_text(126, 332, g_boot_stage < 4 ? 0x9aa6adff : 0x9ee56aff,
+              g_boot_stage < 4 ? "PLEASE WAIT..." : "READY");
+    draw_text(126, 358, g_app_files_ok ? 0x9ee56aff : 0xffcc66ff,
               g_app_files_ok ? "APP FILE CHECK: OK" : "APP FILE CHECK: VERIFY INSTALL");
     draw_text(34, 478, 0x6f7b83ff,
-              "LOCAL CHECKS ONLY  |  NO GAME FILES ARE MODIFIED");
+              "LOCAL CHECKS ONLY  |  ORIGINAL GAME FILES ARE NEVER REPLACED");
     set_ui_font_size(14, 22);
 }
 
@@ -2490,54 +2696,63 @@ static void draw_home(void)
         "HELP & SUPPORT", "COMPANION TOOLS", "ABOUT"
     };
     static const char *descriptions[6] = {
-        "Find PS3 / PS2 games",
-        "Profiles and updates",
-        "Music and language",
-        "Guides and support",
-        "Companion tools",
-        "Hardware and safety"
+        "Find PS3 / PS2 games", "Profiles and updates",
+        "Music and language", "Guides and support",
+        "Companion tools", "Hardware and safety"
     };
     char line[192];
     int i;
 
-    set_ui_font_size(12, 18);
-    draw_text(28, 16, 0xcaff39ff, "PS3 SCALE");
+    set_ui_font_size(21, 31);
+    draw_text(32, 24, 0xcaff39ff, "PS3 SCALE");
     set_ui_font_size(8, 12);
-    draw_text(28, 44, 0x9aa6adff,
+    draw_text(34, 62, 0x9aa6adff,
               "PS3 & PS2 ENHANCEMENT MANAGEMENT");
-    draw_solid_rect(592.0f, 16.0f, 228.0f, 34.0f, 0xf8f9fcff);
-    draw_outline_rect(592.0f, 16.0f, 228.0f, 34.0f, 0xd9deebff);
-    draw_text(606, 26, 0x8068e6ff, "CFW 4.92  |  PS3 SCALE 0.2");
-    set_ui_font_size(11, 17);
+    draw_solid_rect(32.0f, 88.0f, 214.0f, 3.0f, 0x8068e6ff);
+    draw_text(34, 105, 0x9aa6adff, "EXPLORE  |  ENHANCE  |  PLAY");
+    draw_solid_rect(640.0f, 20.0f, 184.0f, 36.0f, 0xf7f3ffff);
+    draw_outline_rect(640.0f, 20.0f, 184.0f, 36.0f, 0xb7a4e8ff);
+    draw_text(654, 32, 0x8068e6ff, "CFW 4.92  |  SCALE 0.2");
 
     for (i = 0; i < 6; i++) {
-        int col = i % 3;
-        int row = i / 3;
-        float x = 24.0f + (float)col * 270.0f;
-        float y = 112.0f + (float)row * 132.0f;
+        int col = i % 3, row = i / 3;
+        float x = 316.0f + (float)col * 170.0f;
+        float y = 112.0f + (float)row * 154.0f;
+        const float w = 158.0f, h = 132.0f;
         int selected = (i == g_home_selected);
-        draw_solid_rect(x, y, 254.0f, 112.0f,
-                        selected ? 0xeeeaffff : 0xf8f9fcff);
-        draw_outline_rect(x, y, 254.0f, 112.0f,
-                          selected ? 0x8068e6ff : 0xd9deebff);
-        draw_menu_icon(i, x + 16.0f, y + 18.0f, selected);
-        draw_text(x + 70.0f, y + 24.0f,
-                  selected ? 0xcaff39ff : 0xffffffff, items[i]);
+        float label_x = x + (w - (float)strlen(items[i]) * 8.0f) * 0.5f;
+
+        draw_solid_rect(x + 4.0f, y + 6.0f, w, h, 0x6a578a55);
+        draw_solid_rect(x, y, w, h, selected ? 0xfffcffff : 0xf5f1ffff);
+        draw_outline_rect(x, y, w, h,
+                          selected ? 0x875be8ff : 0xc9bce8ff);
+        draw_solid_rect(x, y, 4.0f, h,
+                        selected ? 0x875be8ff : 0xb6a5e4ff);
+        if (selected) {
+            draw_outline_rect(x - 3.0f, y - 3.0f, w + 6.0f, h + 6.0f,
+                              0xa98affff);
+            draw_solid_rect(x + 12.0f, y + h - 5.0f, w - 24.0f, 2.0f,
+                            0x875be8ff);
+        }
+        draw_menu_icon(i, x + (w - 42.0f) * 0.5f, y + 13.0f, selected);
         set_ui_font_size(8, 12);
-        draw_text(x + 70.0f, y + 51.0f, 0x7c859aff, descriptions[i]);
-        set_ui_font_size(11, 17);
-        if (selected)
-            draw_solid_rect(x + 16.0f, y + 88.0f, 222.0f, 3.0f, 0x8068e6ff);
+        draw_text(label_x, y + 69.0f,
+                  selected ? 0x8068e6ff : 0xffffffff, items[i]);
+        set_ui_font_size(6, 9);
+        draw_text(x + 9.0f, y + 96.0f, 0x9aa6adff, descriptions[i]);
+        set_ui_font_size(8, 12);
     }
 
-    snprintf(line, sizeof(line), "PS3: %u  |  PS2: %u  |  TOTAL: %u",
+    snprintf(line, sizeof(line), "PS3  %u    PS2  %u    TOTAL  %u",
              (unsigned)library_total_count(LIBRARY_PS3),
              (unsigned)library_total_count(LIBRARY_PS2),
              (unsigned)(library_total_count(LIBRARY_PS3) +
                         library_total_count(LIBRARY_PS2)));
-    draw_text(28, 400, 0xdce3e8ff, line);
-    draw_text(28, 474, 0x9aa6adff,
-              "D-PAD: MOVE  |  CROSS: SELECT  |  CIRCLE: EXIT");
+    draw_solid_rect(30.0f, 430.0f, 270.0f, 38.0f, 0xf6f2ffff);
+    draw_outline_rect(30.0f, 430.0f, 270.0f, 38.0f, 0xc8b9eaff);
+    draw_text(44, 443, 0xffffffff, line);
+    draw_text(32, 482, 0x9aa6adff,
+              "D-PAD MOVE  |  CROSS SELECT  |  CIRCLE EXIT");
     set_ui_font_size(14, 22);
 }
 
@@ -3021,19 +3236,25 @@ static void draw_settings(void)
     };
     char value[96];
     int i;
-    set_ui_font_size(11, 17);
+    set_ui_font_size(14, 21);
     draw_text(28, 18, 0xcaff39ff, "PS3 SCALE");
     draw_text(28, 48, 0xffffffff, "SETTINGS");
+    set_ui_font_size(8, 12);
     draw_text(28, 76, 0x9aa6adff,
               "PERSONALIZE YOUR APP. SETTINGS ARE SAVED ON THE INTERNAL HDD.");
-    draw_solid_rect(22.0f, 104.0f, 804.0f, 300.0f, 0xf8f9fcff);
-    draw_outline_rect(22.0f, 104.0f, 804.0f, 300.0f, 0xd9deebff);
+    draw_solid_rect(22.0f, 104.0f, 804.0f, 300.0f, 0xf7f4ffff);
+    draw_outline_rect(22.0f, 104.0f, 804.0f, 300.0f, 0xc5b5eaff);
+    draw_solid_rect(22.0f, 104.0f, 804.0f, 3.0f, 0x875be8ff);
+
     for (i = 0; i < SETTINGS_COUNT; i++) {
         float y = 116.0f + (float)i * 35.0f;
         int selected = (i == g_settings_selected);
         if (selected) {
-            draw_solid_rect(30.0f, y - 4.0f, 788.0f, 31.0f, 0xeeeaffff);
-            draw_outline_rect(30.0f, y - 4.0f, 788.0f, 31.0f, 0x8068e6ff);
+            draw_solid_rect(30.0f, y - 4.0f, 788.0f, 31.0f, 0xe9e2ffff);
+            draw_outline_rect(30.0f, y - 4.0f, 788.0f, 31.0f, 0x9a78efff);
+            draw_solid_rect(30.0f, y - 4.0f, 4.0f, 31.0f, 0x875be8ff);
+        } else {
+            draw_solid_rect(30.0f, y - 4.0f, 788.0f, 31.0f, 0xf1edfbff);
         }
         value[0] = 0;
         if (i == 0)
@@ -3055,11 +3276,24 @@ static void draw_settings(void)
             snprintf(value, sizeof(value), "AUTO: MUSIC 1 > MUSIC 2");
         else
             snprintf(value, sizeof(value), "MUSIC %d ONLY", g_music_mode);
-        draw_text(48, y + 2.0f, selected ? 0xcaff39ff : 0xffffffff, labels[i]);
-        draw_text(570, y + 2.0f, selected ? 0xcaff39ff : 0x9aa6adff, value);
+
+        draw_text(48, y + 2.0f, selected ? 0x8068e6ff : 0xffffffff, labels[i]);
+        draw_text(570, y + 2.0f, selected ? 0x8068e6ff : 0x9aa6adff, value);
+        if (i == 1) {
+            float bar = (float)g_music_volume / 255.0f * 142.0f;
+            draw_solid_rect(670.0f, y + 13.0f, 142.0f, 4.0f, 0xd9d0efff);
+            draw_solid_rect(670.0f, y + 13.0f, bar, 4.0f, 0x875be8ff);
+            draw_circle_outline(670.0f + bar, y + 15.0f, 5.0f, 0x875be8ff);
+        }
     }
+
+    set_ui_font_size(8, 12);
     if (g_music_track1_missing)
-        draw_text(34, 418, 0xffcc6600, "MUSIC 1 FILE IS NOT IN THIS BUILD; MUSIC 2 IS USED AS FALLBACK.");
+        draw_text(34, 418, 0xffcc66ff,
+                  "MUSIC 1 FILE IS NOT IN THIS BUILD; COPY music1.mp3 TO USB ROOT AND REOPEN.");
+    else if (g_music1_imported_from_usb)
+        draw_text(34, 418, 0x9ee56aff,
+                  "MUSIC 1 IMPORTED FROM USB AND SAVED TO INTERNAL HDD.");
     else
         draw_text(34, 418, 0x9aa6adff, g_settings_message);
     draw_text(28, 478, 0x9aa6adff,
@@ -3411,9 +3645,18 @@ static void draw_ui(void)
 {
     tiny3d_Clear(0xfff7f8fc, TINY3D_CLEAR_ALL);
     tiny3d_Project2D();
-    /* Keep the same calm 3D ambience behind every app page. */
-    if (g_animation_enabled)
-        draw_home_ambient();
+    draw_scene_background();
+    if (g_animation_enabled) {
+        if (g_screen == SCREEN_HOME || g_screen == SCREEN_SPLASH ||
+            g_screen == SCREEN_BOOT)
+            draw_home_ambient();
+    }
+    if (g_screen != SCREEN_HOME && g_screen != SCREEN_SPLASH &&
+        g_screen != SCREEN_BOOT) {
+        draw_solid_rect(12.0f, 10.0f, 830.0f, 492.0f, 0xf7f4ffed);
+        draw_outline_rect(12.0f, 10.0f, 830.0f, 492.0f, 0xc5b5eaff);
+        draw_solid_rect(12.0f, 10.0f, 830.0f, 3.0f, 0x875be8ff);
+    }
     switch (g_screen) {
         case SCREEN_SPLASH: draw_splash(); break;
         case SCREEN_LANGUAGE: draw_language_selection(); break;

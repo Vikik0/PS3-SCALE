@@ -10,7 +10,10 @@
 
 ## Music 1 — requested Zorrovian BIOS track
 - Intended installed path: `/dev_hdd0/game/PS3SCALE1/USRDIR/music1.mp3`
-- The current branch contains the two-track playback code, but the Music 1 binary is not yet present in the repository build inputs. Until it is added, the app detects the missing file and safely falls back to Music 2.
+- The Music 1 binary is not yet embedded in the repository build inputs.
+- The app now searches `/dev_usb000` through `/dev_usb003` for `music1.mp3` at the USB root or in a `PS3SCALE/` folder. Before the audio thread starts, it copies a valid file to the internal HDD path above using a temporary file and atomic rename.
+- Once imported, the app plays the internal HDD copy on every launch; the USB drive can be removed after the copy completes.
+- If the file is neither embedded nor found on USB, the app reports the missing asset and falls back to Music 2.
 - `scripts/prepare_theme.py` packages Music 1 automatically when `audio-source/music1.mp3` or ordered `audio-source/music1.mp3.part-*` files are present.
 
 ## Playlist behavior
@@ -30,5 +33,5 @@ The build reconstructs Music 2 from ordered source chunks and verifies its exact
 - [x] Existing Music 2 theme is embedded and verified.
 - [x] Two-track playback and persisted alternating launch order are implemented.
 - [x] Playlist selector and fade-in are implemented.
-- [ ] Add the requested Zorrovian BIOS MP3 to the repository build inputs.
+- [ ] Add the requested Zorrovian BIOS MP3 to the repository build inputs so it ships inside the PKG without a USB import.
 - [ ] Verify both tracks, transitions, volume and clean shutdown on the user's PS3 hardware.

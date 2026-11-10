@@ -16,6 +16,11 @@ TARGET_NAME = "USRDIR/theme.mp3"
 LOGO_NAME = "USRDIR/apollo-save.png"
 LOGO_SIZE = 5_046
 LOGO_SHA256 = "a9efad28fbd8788fb0129c71de78c70e45d9fd47ab0de461124eb9ec2a930465"
+XMB_ASSETS = {
+    "ICON0.PNG": (320, 176),
+    "PIC1.PNG": (1280, 720),
+    "PIC0.PNG": (310, 176),
+}
 
 
 def main() -> int:
@@ -58,6 +63,7 @@ def main() -> int:
 
     found = False
     logo_found = False
+    xmb_found = set()
     for index in range(item_count):
         record_offset = index * 0x20
         if record_offset + 0x20 > len(payload):
@@ -88,11 +94,26 @@ def main() -> int:
             print(f"PASS: {LOGO_NAME} is embedded in {package_path.name}")
             print(f"PASS: {len(logo):,} bytes; SHA-256 {logo_digest}")
             logo_found = True
+        elif name in XMB_ASSETS:
+            image = payload[file_offset:file_offset + file_size]
+            if len(image) < 24 or image[:8] != bytes.fromhex("89504e470d0a1a0a"):
+                raise SystemExit(f"ERROR: {name} is not a valid PNG")
+            width, height = struct.unpack_from(">II", image, 16)
+            expected = XMB_ASSETS[name]
+            if (width, height) != expected:
+                raise SystemExit(
+                    f"ERROR: {name} dimensions {(width, height)}; expected {expected}"
+                )
+            print(f"PASS: {name} is embedded ({width}x{height}, {len(image):,} bytes)")
+            xmb_found.add(name)
 
     if not found:
         raise SystemExit(f"ERROR: {TARGET_NAME} is missing from the PKG")
     if not logo_found:
         raise SystemExit(f"ERROR: {LOGO_NAME} is missing from the PKG")
+    missing_xmb = set(XMB_ASSETS) - xmb_found
+    if missing_xmb:
+        raise SystemExit(f"ERROR: XMB assets missing from the PKG: {sorted(missing_xmb)}")
     return 0
 
 

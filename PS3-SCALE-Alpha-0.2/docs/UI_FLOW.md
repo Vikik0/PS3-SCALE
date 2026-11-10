@@ -52,7 +52,7 @@ Settings are stored at `/dev_hdd0/game/PS3SCALE1/USRDIR/settings.cfg`:
 - Restore default audio/animation and playlist settings.
 - **Music Playlist:** Auto (alternate Music 1 / Music 2), Music 1 only, or Music 2 only.
 
-Music 1 is the requested Zorrovian BIOS track. Music 2 is the existing bundled GTA V pause-menu theme at `USRDIR/theme.mp3`. The runtime looks for Music 1 at `USRDIR/music1.mp3`; the build helper packages it when its source is added under `audio-source/music1.mp3` or as ordered `music1.mp3.part-*` chunks. The current source branch still has only Music 2, so it reports the missing Music 1 asset and falls back to Music 2 until that file is added.
+Music 1 is the requested Zorrovian BIOS track. Music 2 is the existing bundled GTA V pause-menu theme at `USRDIR/theme.mp3`. The runtime looks for Music 1 at `USRDIR/music1.mp3`; the build helper packages it when its source is added under `audio-source/music1.mp3` or as ordered `music1.mp3.part-*` chunks. If Music 1 is not embedded, the app now checks the root and `PS3SCALE/` folder on USB000–USB003, imports `music1.mp3` to the internal HDD before audio starts, and then plays the internal copy. If no USB copy exists, it clearly reports the missing asset and falls back to Music 2.
 
 The USB update check is offline and only looks for a package file with a PKG header. It does not download, verify a release signature, or install the package. The user must install a confirmed PS3 SCALE update through Package Manager.
 
@@ -76,3 +76,10 @@ PS3 SCALE does not load these apps' plugins or modify their data.
 - Muting music outputs silence without continuing MP3 decoding, reducing CPU work.
 - Game scanning is read-only.
 - No graphics profile is marked applied unless an exact-title workflow verifies and applies it.
+
+
+## Visual environment and XMB identity
+- The application background is a low-cost RSX scene with a gradual day / dusk / night cycle, stars, a moving celestial light and a large illuminated staircase.
+- Home uses six controller-first glass cards; Settings uses a consistent purple selection state and volume slider.
+- The PKG build regenerates `ICON0.PNG`, `PIC1.PNG` and `PIC0.PNG` from the embedded bitmap font so the XMB icon and background match the in-app identity.
+- The scene is rendered with Tiny3D / PSL1GHT primitives and remains compatible with the existing PS3 runtime; it does not rely on unsupported desktop UI frameworks.

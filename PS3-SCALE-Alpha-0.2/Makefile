@@ -81,6 +81,10 @@ $(BUILD):
 # This recipe ensures packaging cannot race object compilation/linking under -j.
 pkg: $(BUILD)
 	@python3 scripts/prepare_theme.py
+	@python3 scripts/generate_xmb_assets.py
+	@test -s pkgfiles/ICON0.PNG
+	@test -s pkgfiles/PIC1.PNG
+	@test -s pkgfiles/PIC0.PNG
 	@test -s pkgfiles/USRDIR/apollo-save.png
 	@cp data/online_profiles.tsv pkgfiles/USRDIR/graphics_catalog.tsv
 	@cp data/community_game_files.tsv pkgfiles/USRDIR/community_game_files.tsv

@@ -308,4 +308,21 @@ assert "verify_jwt = false" in support_config
 assert "enable row level security" in support_sql.lower()
 assert "grant all on table public.ps3scale_support_reports to service_role" in support_sql
 
+# XMB and scene design contract.
+assert "draw_scene_background();" in draw_ui_impl
+assert "daylight" in src and "night" in src and "stair_top" in src
+assert "draw_home_card" not in src  # home cards are rendered in the main menu loop
+assert "PS3 SCALE" in home and "COMPANION TOOLS" in home
+makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+assert "scripts/generate_xmb_assets.py" in makefile
+assert "PIC1.PNG" in makefile and "ICON0.PNG" in makefile and "PIC0.PNG" in makefile
+xmb_generator = (ROOT / "scripts/generate_xmb_assets.py").read_text(encoding="utf-8")
+assert '("PIC1.PNG",(1280,720))' in xmb_generator
+assert '("ICON0.PNG",(320,176))' in xmb_generator
+assert "import_music1_from_usb" in src
+assert '"/dev_usb000/music1.mp3"' in src
+assert '"/dev_usb003/PS3SCALE/music1.mp3"' in src
+assert "rename(temp_path, PS3SCALE_MUSIC1_PATH)" in src
+assert "MUSIC 1 IMPORTED FROM USB" in settings
+
 print("PS3 SCALE UI contract tests: PASS")
