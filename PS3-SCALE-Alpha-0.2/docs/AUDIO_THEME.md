@@ -11,7 +11,7 @@
 ## Music 1 — requested Zorrovian BIOS track
 - Intended installed path: `/dev_hdd0/game/PS3SCALE1/USRDIR/music1.mp3`
 - The Music 1 binary is not yet embedded in the repository build inputs.
-- The app now searches `/dev_usb000` through `/dev_usb003` for `music1.mp3` at the USB root or in a `PS3SCALE/` folder. Before the audio thread starts, it copies a valid file to the internal HDD path above using a temporary file and atomic rename.
+- The app now searches `/dev_usb000` through `/dev_usb003` for `music1.mp3` or the exact supplied filename `BIOS - Zorrovian [Official Visualiser] (1).mp3`, at the USB root or in a `PS3SCALE/` folder. Before the audio thread starts, it copies a valid file to the internal HDD path above using a temporary file and atomic rename.
 - Once imported, the app plays the internal HDD copy on every launch; the USB drive can be removed after the copy completes.
 - If the file is neither embedded nor found on USB, the app reports the missing asset and falls back to Music 2.
 - `scripts/prepare_theme.py` packages Music 1 automatically when `audio-source/music1.mp3` or ordered `audio-source/music1.mp3.part-*` files are present.

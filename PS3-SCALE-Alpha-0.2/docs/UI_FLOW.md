@@ -52,7 +52,7 @@ Settings are stored at `/dev_hdd0/game/PS3SCALE1/USRDIR/settings.cfg`:
 - Restore default audio/animation and playlist settings.
 - **Music Playlist:** Auto (alternate Music 1 / Music 2), Music 1 only, or Music 2 only.
 
-Music 1 is the requested Zorrovian BIOS track. Music 2 is the existing bundled GTA V pause-menu theme at `USRDIR/theme.mp3`. The runtime looks for Music 1 at `USRDIR/music1.mp3`; the build helper packages it when its source is added under `audio-source/music1.mp3` or as ordered `music1.mp3.part-*` chunks. If Music 1 is not embedded, the app now checks the root and `PS3SCALE/` folder on USB000–USB003, imports `music1.mp3` to the internal HDD before audio starts, and then plays the internal copy. If no USB copy exists, it clearly reports the missing asset and falls back to Music 2.
+Music 1 is the requested Zorrovian BIOS track. Music 2 is the existing bundled GTA V pause-menu theme at `USRDIR/theme.mp3`. The runtime looks for Music 1 at `USRDIR/music1.mp3`; the build helper packages it when its source is added under `audio-source/music1.mp3` or as ordered `music1.mp3.part-*` chunks. If Music 1 is not embedded, the app now checks the root and `PS3SCALE/` folder on USB000–USB003 for either `music1.mp3` or the exact supplied filename `BIOS - Zorrovian [Official Visualiser] (1).mp3`, imports it to the internal HDD before audio starts, and then plays the internal copy. If no USB copy exists, it clearly reports the missing asset and falls back to Music 2.
 
 The USB update check is offline and only looks for a package file with a PKG header. It does not download, verify a release signature, or install the package. The user must install a confirmed PS3 SCALE update through Package Manager.
 

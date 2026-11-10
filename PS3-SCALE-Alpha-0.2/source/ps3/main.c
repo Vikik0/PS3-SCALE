@@ -580,7 +580,15 @@ static int import_music1_from_usb(void)
         "/dev_usb000/PS3SCALE/music1.mp3",
         "/dev_usb001/PS3SCALE/music1.mp3",
         "/dev_usb002/PS3SCALE/music1.mp3",
-        "/dev_usb003/PS3SCALE/music1.mp3"
+        "/dev_usb003/PS3SCALE/music1.mp3",
+        "/dev_usb000/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb001/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb002/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb003/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb000/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb001/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb002/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb003/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1).mp3"
     };
     char temp_path[PS3SCALE_PATH_MAX];
     unsigned char buffer[32768];

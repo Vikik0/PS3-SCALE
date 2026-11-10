@@ -323,6 +323,7 @@ assert '("ICON0.PNG",(320,176))' in xmb_generator
 assert "import_music1_from_usb" in src
 assert '"/dev_usb000/music1.mp3"' in src
 assert '"/dev_usb003/PS3SCALE/music1.mp3"' in src
+assert '"/dev_usb000/BIOS - Zorrovian [Official Visualiser] (1).mp3"' in src
 assert "rename(temp_path, PS3SCALE_MUSIC1_PATH)" in src
 assert "MUSIC 1 IMPORTED FROM USB" in settings
 sfo = (project_root / "sfo.xml").read_text(encoding="utf-8")
