@@ -313,10 +313,11 @@ assert "draw_scene_background();" in draw_ui_impl
 assert "daylight" in src and "night" in src and "stair_top" in src
 assert "draw_home_card" not in src  # home cards are rendered in the main menu loop
 assert "PS3 SCALE" in home and "COMPANION TOOLS" in home
-makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+project_root = source_path.parents[2]
+makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 assert "scripts/generate_xmb_assets.py" in makefile
 assert "PIC1.PNG" in makefile and "ICON0.PNG" in makefile and "PIC0.PNG" in makefile
-xmb_generator = (ROOT / "scripts/generate_xmb_assets.py").read_text(encoding="utf-8")
+xmb_generator = (project_root / "scripts/generate_xmb_assets.py").read_text(encoding="utf-8")
 assert '("PIC1.PNG",(1280,720))' in xmb_generator
 assert '("ICON0.PNG",(320,176))' in xmb_generator
 assert "import_music1_from_usb" in src
