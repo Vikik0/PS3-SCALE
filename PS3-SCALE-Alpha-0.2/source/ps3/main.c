@@ -2643,7 +2643,9 @@ static void draw_boot(void)
     const int progress[] = {12, 28, 58, 88, 100};
     float width = (560.0f * (float)progress[g_boot_stage]) / 100.0f;
 
-    draw_soft_card(92.0f, 118.0f, 670.0f, 260.0f, 0);
+    draw_solid_rect(95.0f, 123.0f, 670.0f, 260.0f, 0x8d7ca32a);
+    draw_solid_rect(92.0f, 118.0f, 670.0f, 260.0f, 0xfaf8ffff);
+    draw_outline_rect(92.0f, 118.0f, 670.0f, 260.0f, 0xd9d1eaff);
     set_ui_font_size(26, 39);
     draw_text(132.0f, 150.0f, 0xffffffff, "PS3");
     draw_text(225.0f, 150.0f, 0xcaff39ff, "SCALE");
