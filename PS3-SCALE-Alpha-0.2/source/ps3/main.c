@@ -3144,10 +3144,11 @@ static void draw_details(void)
             else
                 draw_text(204.0f, 322.0f, 0x2c9f8eff, "Exact profile available.");
         } else {
+            /* NO PROFILE FOR THIS TITLE. GAME WILL START UNMODIFIED. */
             draw_text(204.0f, 296.0f, 0xffcc66ff,
-                      "No exact profile for this update.");
+                      "NO PROFILE FOR THIS TITLE.");
             draw_text(204.0f, 322.0f, 0x77718fff,
-                      "Game will start unmodified.");
+                      "GAME WILL START UNMODIFIED.");
         }
     } else if (ps2_config) {
         snprintf(line, sizeof(line), "Community config: %.10s", ps2_config->type);
