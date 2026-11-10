@@ -2845,7 +2845,7 @@ static void draw_online_database(void)
     char line[192];
     size_t i, visible_count = 0;
 
-    draw_page_header("Online DB", "Profiles, community files and verified PS2 configurations");
+    draw_page_header("Online DB", "ONLINE GAME DATABASE | Profiles, community files and verified PS2 configurations");
     draw_soft_card(20.0f, 88.0f, 360.0f, 360.0f, 0);
     draw_soft_card(394.0f, 88.0f, 440.0f, 360.0f, 0);
 
@@ -2931,7 +2931,7 @@ static void draw_online_database(void)
                   profile_for_game(selected) ?
                   "SAFE PROFILE: AVAILABLE" : "SAFE PROFILE: NOT AVAILABLE");
         draw_text(414.0f, 402.0f, 0x77718fff,
-                  "Review the target game before applying.");
+                  "APPLY: REVIEW + CONFIRM IN DETAILS");
     } else if (selected_ps2_config) {
         draw_text(414.0f, 232.0f, 0xcaff39ff, "PS2 COMMUNITY CONFIG");
         snprintf(line, sizeof(line), "GAME: %.42s", selected_ps2_config->title);
@@ -2941,7 +2941,7 @@ static void draw_online_database(void)
         snprintf(line, sizeof(line), "GAME ID: %.18s", selected_ps2_config->title_id);
         draw_text(414.0f, 312.0f, 0x514b69ff, line);
         draw_text(414.0f, 342.0f, 0xffcc66ff,
-                  "Compatibility config, not an HD texture pack.");
+                  "APPLY: NOT A GRAPHICS PROFILE");
         draw_text(414.0f, 370.0f, 0x77718fff,
                   "Original ISO / classic files are never overwritten.");
     } else if (selected_community) {
@@ -2955,8 +2955,11 @@ static void draw_online_database(void)
                  selected_community->app_ver[0] ?
                  selected_community->app_ver : "Not specified");
         draw_text(414.0f, 312.0f, 0x514b69ff, line);
-        draw_text(414.0f, 342.0f, 0xffcc66ff,
-                  "Reference only; not installed automatically.");
+        snprintf(line, sizeof(line), "REGION: %s",
+                 ps3scale_community_region_label(selected_community->title_id));
+        draw_text(414.0f, 342.0f, 0x514b69ff, line);
+        draw_text(414.0f, 370.0f, 0xffcc66ff,
+                  "APPLY: REFERENCE ONLY - NOT INSTALLED");
     } else {
         draw_text(414.0f, 232.0f, 0x77718fff,
                   g_online_result_count ?
