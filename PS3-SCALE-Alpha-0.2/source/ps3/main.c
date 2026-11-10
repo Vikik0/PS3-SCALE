@@ -3647,6 +3647,21 @@ static void draw_about(void)
     set_ui_font_size(14, 22);
 }
 
+static void draw_profile_toast(void)
+{
+    if (!strstr(g_details_message, "ONE-LAUNCH PROFILE ARMED"))
+        return;
+    draw_soft_card(568.0f, 16.0f, 264.0f, 48.0f, 1);
+    draw_circle_outline(590.0f, 40.0f, 10.0f, 0x2c9f8eff);
+    draw_icon_line(585.0f, 40.0f, 589.0f, 44.0f, 0x2c9f8eff);
+    draw_icon_line(589.0f, 44.0f, 596.0f, 35.0f, 0x2c9f8eff);
+    set_ui_font_size(8, 12);
+    draw_text(610.0f, 28.0f, 0xffffffff, "Profile Ready");
+    set_ui_font_size(6, 9);
+    draw_text(610.0f, 44.0f, 0x77718fff, "Start the game to use it");
+    set_ui_font_size(14, 22);
+}
+
 static void draw_ui(void)
 {
     tiny3d_Clear(0xfffafbff, TINY3D_CLEAR_ALL);
@@ -3679,6 +3694,8 @@ static void draw_ui(void)
         case SCREEN_SUPPORT_FORM: draw_support_form(); break;
         default: draw_home(); break;
     }
+    if (g_screen == SCREEN_DETAILS)
+        draw_profile_toast();
     tiny3d_Flip();
 }
 
