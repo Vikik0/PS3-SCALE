@@ -1227,19 +1227,19 @@ static void draw_stair_tread(float width, float height, float depth, int index)
     float x = width * 0.5f;
     float y = height * 0.5f;
     float z = depth * 0.5f;
-    u32 front = (index % 3 == 0) ? 0xd6dbe7ff : 0xdde1ebff;
-    u32 side = (index % 2 == 0) ? 0xc4cad9ff : 0xd0d5e2ff;
+    u32 front = (index % 3 == 0) ? 0xded8eeff : 0xe7e2f3ff;
+    u32 side = (index % 2 == 0) ? 0xcac0e2ff : 0xd5cceaff;
 
     draw_stair_face(-x, y, -z, x, y, -z, x, y, z, -x, y, z,
-                    0xfdfdffff);
+                    0xfffeffff);
     draw_stair_face(-x, -y, z, x, -y, z, x, y, z, -x, y, z,
                     front);
     draw_stair_face(x, -y, -z, x, -y, z, x, y, z, x, y, -z,
                     side);
     draw_stair_face(-x, -y, -z, -x, y, -z, -x, y, z, -x, -y, z,
-                    0xe7e9f1ff);
+                    0xf1edfbff);
     draw_stair_face(-x, -y, -z, x, -y, -z, x, y, -z, -x, y, -z,
-                    0xe1e4edff);
+                    0xe6e0f3ff);
 }
 
 
@@ -1261,126 +1261,116 @@ static u32 scene_blend(u32 a, u32 b, float t)
 static void draw_scene_background(void)
 {
     const float tau = 6.28318530718f;
-    float cycle = (float)(g_frame_counter % 36000ul) / 36000.0f;
-    float angle = cycle * tau;
-    float daylight = 0.5f + 0.5f * sinf(angle - 1.57079632679f);
+    float phase = (float)(g_frame_counter % 21600ul) / 21600.0f * tau;
+    float daylight = 0.60f + 0.30f * cosf(phase);
     float night = 1.0f - daylight;
     float dusk = 1.0f - fabsf(daylight - 0.5f) * 2.0f;
-    u32 top, bottom, stair_top, stair_front, stair_side, accent;
-    float orb_x, orb_y;
-    int i;
+    u32 top, bottom, accent, glow;
+    int i, wave;
 
     if (!g_animation_enabled) {
-        daylight = 0.66f;
-        night = 0.34f;
+        daylight = 0.86f;
+        night = 0.14f;
         dusk = 0.0f;
     }
 
-    top = scene_blend(0x17152fff, 0xf4f0ffff, daylight);
-    bottom = scene_blend(0x43345fff, 0xd9d0f0ff, daylight);
-    top = scene_blend(top, 0x51406fff, dusk * 0.26f);
-    bottom = scene_blend(bottom, 0xb48bbcff, dusk * 0.30f);
-    stair_top = scene_blend(0x8873b6ff, 0xfffdffff, daylight * 0.76f);
-    stair_front = scene_blend(0x44365fff, 0xc9bee5ff, daylight * 0.74f);
-    stair_side = scene_blend(0x241d3fff, 0x9888bdff, daylight * 0.72f);
-    accent = scene_blend(0x9b83edff, 0x9a6bffff, daylight * 0.30f);
+    top = scene_blend(0x29213fff, 0xf9f7ffff, daylight);
+    bottom = scene_blend(0x57496fff, 0xe2dcf3ff, daylight);
+    top = scene_blend(top, 0x9b83baff, dusk * 0.12f);
+    bottom = scene_blend(bottom, 0xb9a7dfff, dusk * 0.18f);
+    accent = scene_blend(0x8b73c8ff, 0xb995ffff, daylight * 0.72f);
+    glow = scene_blend(0x8a73b8ff, 0xf4eaffff, daylight);
 
-    for (i = 0; i < 16; i++) {
-        float t = (float)i / 15.0f;
-        draw_solid_rect(0.0f, (float)i * 32.0f, 854.0f, 34.0f,
+    for (i = 0; i < 24; i++) {
+        float t = (float)i / 23.0f;
+        draw_solid_rect(0.0f, (float)i * 22.0f, 854.0f, 23.0f,
                         scene_blend(top, bottom, t));
     }
 
-    orb_x = 690.0f + cosf(angle) * 42.0f;
-    orb_y = 94.0f + sinf(angle) * 24.0f;
-    draw_circle_outline(orb_x, orb_y, 47.0f,
-                        scene_blend(0x9b83edff, 0xffe6baff, daylight));
-    draw_circle_outline(orb_x, orb_y, 40.0f,
-                        scene_blend(0xbaa6edff, 0xfff3d8ff, daylight));
-    draw_circle_outline(orb_x, orb_y, 33.0f,
-                        scene_blend(0xd2c7ffff, 0xfff7e5ff, daylight));
-    if (daylight > 0.42f) {
-        int ray;
-        for (ray = 0; ray < 12; ray++) {
-            float a = (float)ray * tau / 12.0f + angle * 0.04f;
-            draw_icon_line(orb_x + cosf(a) * 53.0f,
-                           orb_y + sinf(a) * 53.0f,
-                           orb_x + cosf(a) * 62.0f,
-                           orb_y + sinf(a) * 62.0f,
-                           0xf9e1b5ff);
+    /* Soft orbital halo and light ribbons: every motion is phase-periodic. */
+    draw_circle_outline(738.0f + cosf(phase) * 12.0f,
+                        112.0f + sinf(phase) * 7.0f,
+                        74.0f, glow);
+    draw_circle_outline(738.0f + cosf(phase) * 12.0f,
+                        112.0f + sinf(phase) * 7.0f,
+                        61.0f, accent);
+    draw_circle_outline(738.0f + cosf(phase) * 12.0f,
+                        112.0f + sinf(phase) * 7.0f,
+                        48.0f, 0xe8ddffff);
+
+    for (wave = 0; wave < 3; wave++) {
+        float previous_x = 0.0f;
+        float previous_y = 0.0f;
+        int segment;
+        for (segment = 0; segment <= 28; segment++) {
+            float x = (float)segment * (854.0f / 28.0f);
+            float y = 430.0f - (float)wave * 42.0f +
+                sinf(phase + x * 0.0065f + (float)wave * 0.85f) *
+                (8.0f + (float)wave * 2.0f);
+            if (segment > 0)
+                draw_icon_line(previous_x, previous_y, x, y,
+                               scene_blend(0xc4b1f5ff, 0xffffffcc,
+                                           daylight * 0.72f));
+            previous_x = x;
+            previous_y = y;
         }
     }
 
-    if (night > 0.18f) {
-        for (i = 0; i < 38; i++) {
-            float x = (float)((i * 137 + 31) % 842);
-            float y = (float)((i * 83 + 19) % 250);
-            float pulse = 0.55f + 0.45f * sinf(angle * 2.0f + (float)i);
-            if (pulse * night > 0.20f)
-                draw_solid_rect(x, y, (i % 5 == 0) ? 3.0f : 2.0f,
-                                (i % 5 == 0) ? 3.0f : 2.0f,
-                                scene_blend(0x514675ff, 0xf8f1ffff,
-                                            pulse * night));
+    for (i = 0; i < 22; i++) {
+        float x = (float)((i * 137 + 31) % 842);
+        float y = (float)((i * 83 + 19) % 470) +
+                  sinf(phase + (float)i * 0.73f) * 3.0f;
+        float pulse = 0.45f + 0.55f *
+                      sinf(phase * 2.0f + (float)i * 1.17f);
+        if (pulse > 0.30f)
+            draw_solid_rect(x, y, (i % 5 == 0) ? 3.0f : 2.0f,
+                            (i % 5 == 0) ? 3.0f : 2.0f,
+                            scene_blend(0x9e8bcfff, 0xffffffff,
+                                        pulse * daylight * 0.65f));
+    }
+
+    if (night > 0.25f) {
+        for (i = 0; i < 14; i++) {
+            float x = (float)((i * 173 + 67) % 840);
+            float y = (float)((i * 97 + 33) % 300);
+            draw_solid_rect(x, y, 2.0f, 2.0f,
+                            scene_blend(0x66558aff, 0xf6edffff,
+                                        night * 0.72f));
         }
     }
-
-    if (daylight > 0.30f) {
-        u32 cloud = scene_blend(0x7c6ca0ff, 0xffffffcc, daylight);
-        draw_solid_rect(500.0f, 174.0f, 82.0f, 3.0f, cloud);
-        draw_solid_rect(526.0f, 166.0f, 64.0f, 3.0f, cloud);
-        draw_solid_rect(570.0f, 184.0f, 54.0f, 2.0f, cloud);
-        draw_solid_rect(760.0f, 238.0f, 56.0f, 2.0f, cloud);
-        draw_solid_rect(782.0f, 230.0f, 42.0f, 2.0f, cloud);
-    }
-
-    for (i = 0; i < 18; i++) {
-        float x = 4.0f + (float)i * 17.0f;
-        float y = 458.0f - (float)i * 21.0f;
-        float width = 424.0f - (float)i * 14.0f;
-        float shade = (float)(i % 4) * 0.025f;
-        draw_solid_rect(x + 7.0f, y + 12.0f, width, 17.0f,
-                        scene_blend(stair_side, 0x55476fff, shade));
-        draw_solid_rect(x + 1.0f, y + 7.0f, width, 17.0f,
-                        scene_blend(stair_front, 0x8875b4ff, shade));
-        draw_solid_rect(x - 2.0f, y, width + 5.0f, 9.0f,
-                        scene_blend(stair_top, 0xe5dcffff, shade));
-        draw_solid_rect(x + 4.0f, y + 5.0f, width - 5.0f, 2.0f,
-                        scene_blend(accent, 0xffffffcc, daylight * 0.28f));
-        draw_outline_rect(x - 2.0f, y, width + 5.0f, 24.0f,
-                          scene_blend(0x5d4b88ff, 0xb9a8e8ff, daylight));
-    }
-
-    for (i = 0; i < 3; i++)
-        draw_icon_line(26.0f + (float)i * 8.0f, 454.0f,
-                       340.0f + (float)i * 7.0f, 118.0f,
-                       scene_blend(0x8d70d5ff, 0xb7a0ffff, daylight));
-    draw_solid_rect(0.0f, 495.0f, 854.0f, 17.0f,
-                    scene_blend(0x201b39ff, 0xeee8ffff, daylight));
-    draw_solid_rect(0.0f, 494.0f, 854.0f, 2.0f, accent);
+    (void)dusk;
 }
 
 static void draw_home_ambient(void)
 {
     MATRIX projection, rotation, scale, translation, model;
-    const float phase = (float)g_frame_counter * 0.0012f;
-    const float bob = sinf(phase * 0.55f) * 0.7f;
-    const float center_x = 28.0f;
-    const float center_z = 80.0f;
+    const float tau = 6.28318530718f;
+    const float phase =
+        (float)(g_frame_counter % 21600ul) / 21600.0f * tau;
+    const float bob = sinf(phase) * 0.18f;
+    const float center_x = -8.0f;
+    const float center_z = 29.0f;
     int i;
 
     tiny3d_Project3D();
-    projection = MatrixProjPerspective(70.0f, 16.0f / 9.0f, 0.1f, 300.0f);
+    projection = MatrixProjPerspective(68.0f, 16.0f / 9.0f,
+                                       0.1f, 240.0f);
     tiny3d_SetProjectionMatrix(&projection);
     tiny3d_SetLightsOff();
 
-    /* Floating spiral staircase: procedural 3D treads, no external model. */
-    for (i = 0; i < 18; i++) {
-        float angle = (float)i * 0.42f + phase * 0.18f;
-        float radius = 4.6f + sinf(phase * 0.35f + (float)i * 0.21f) * 0.10f;
-        float y = ((float)i - 8.5f) * 0.66f + bob;
-        rotation = MatrixMultiply(MatrixRotationX(0.72f),
-                                  MatrixRotationY(angle + phase * 0.12f));
-        scale = MatrixScale(2.8f, 2.8f, 2.8f);
+    /*
+     * A slow, continuous spiral staircase. The global phase completes one
+     * full revolution in 21600 frames; all secondary motion is a sine wave
+     * of that same phase, so the first and last frames meet without a pop.
+     */
+    for (i = 0; i < 22; i++) {
+        float angle = (float)i * 0.31f + phase;
+        float radius = 4.55f +
+            sinf(phase + (float)i * 0.19f) * 0.055f;
+        float y = ((float)i - 10.5f) * 0.57f + bob;
+        rotation = MatrixMultiply(MatrixRotationX(0.76f),
+                                  MatrixRotationY(angle));
+        scale = MatrixScale(1.82f, 1.82f, 1.82f);
         translation = MatrixTranslation(center_x + cosf(angle) * radius,
                                          y,
                                          center_z + sinf(angle) * radius);
@@ -1389,24 +1379,26 @@ static void draw_home_ambient(void)
         draw_stair_tread(4.8f, 0.28f, 2.45f, i);
     }
 
-    /* A fine helical guide line reinforces the continuous spiral motion. */
+    /* Fine helical edge light follows the same periodic path as the steps. */
     tiny3d_SetMatrixModelView(NULL);
     tiny3d_SetPolygon(TINY3D_LINE_STRIP);
-    for (i = 0; i <= 36; i++) {
-        float angle = (float)i * 0.42f + phase * 0.18f;
-        float y = ((float)i / 2.0f - 8.5f) * 0.66f + bob;
-        tiny3d_VertexPos(center_x + cosf(angle) * 4.6f,
+    for (i = 0; i <= 44; i++) {
+        float angle = (float)i * 0.155f + phase;
+        float y = ((float)i * 0.5f - 10.5f) * 0.57f + bob;
+        tiny3d_VertexPos(center_x + cosf(angle) * 4.58f,
                          y,
-                         center_z + sinf(angle) * 4.6f);
+                         center_z + sinf(angle) * 4.58f);
         if (i == 0)
-            tiny3d_VertexColor(0x9989ed88);
+            tiny3d_VertexColor(0xc0a8ff88);
     }
     tiny3d_End();
 
-    draw_ambient_ring(18.0f, 1.46f, phase * 0.22f,
-                      center_x, -7.0f, center_z, 0x9b8de65a);
-    draw_ambient_satellite(22.0f, phase * 0.38f, 0.55f, phase * 0.24f,
-                           center_x, 0.0f, center_z, 0xb3a9e988);
+    draw_ambient_ring(12.0f, 1.42f, phase,
+                      center_x + 1.0f, -0.6f, center_z,
+                      0xb9a4ff50);
+    draw_ambient_satellite(14.0f, phase, 0.52f, phase,
+                           center_x + 1.0f, 0.0f, center_z,
+                           0xc6b6ff88);
 
     tiny3d_Project2D();
     tiny3d_SetMatrixModelView(NULL);
@@ -2586,77 +2578,94 @@ static void draw_splash(void)
     unsigned alpha = 255u;
     int frame = g_splash_frames;
     float progress = (float)(frame % 180) / 180.0f;
-    if (frame < 42) alpha = (unsigned)(frame * 255 / 42);
-    else if (frame >= 132) alpha = (unsigned)((180 - frame) * 255 / 48);
+
+    if (frame < 24) alpha = (unsigned)(frame * 255 / 24);
     if (alpha > 255u) alpha = 255u;
 
-    draw_solid_rect(150.0f, 70.0f, 554.0f, 370.0f, 0xf6f2ffdd);
-    draw_outline_rect(150.0f, 70.0f, 554.0f, 370.0f, 0xb9a7e8ff);
-    draw_solid_rect(150.0f, 70.0f, 554.0f, 4.0f, 0x875be8ff);
-
-    set_ui_font_size(28, 42);
-    draw_text(258, 116, color_with_alpha(0x20263aff, alpha), "PS3 SCALE");
-    set_ui_font_size(10, 15);
-    draw_text(276, 178, color_with_alpha(0x8068e6ff, alpha),
-              "PS3 & PS2 ENHANCEMENT MANAGEMENT");
-    draw_text(340, 234, color_with_alpha(0x8068e6ff, alpha), "SPECIAL THANKS");
-    draw_solid_rect(255.0f, 258.0f, 344.0f, 2.0f,
-                    color_with_alpha(0x8068e6ff, alpha));
+    set_ui_font_size(34, 50);
+    draw_text(246.0f, 82.0f,
+              color_with_alpha(0x20263aff, alpha), "PS3");
+    draw_text(366.0f, 82.0f,
+              color_with_alpha(0x875be8ff, alpha), "SCALE");
     set_ui_font_size(12, 18);
-    draw_text(255, 294, color_with_alpha(0x20263aff, alpha), "ARTEMIS");
-    draw_text(510, 294, color_with_alpha(0x20263aff, alpha), "APOLLO SAVE");
+    draw_text(234.0f, 146.0f,
+              color_with_alpha(0x514b69ff, alpha),
+              "PS3 & PS2 Enhancement Management");
+
+    set_ui_font_size(11, 17);
+    draw_text(352.0f, 204.0f,
+              color_with_alpha(0x514b69ff, alpha), "Special Thanks");
+    draw_solid_rect(250.0f, 213.0f, 88.0f, 2.0f,
+                    color_with_alpha(0xb9a7e8ff, alpha));
+    draw_solid_rect(516.0f, 213.0f, 88.0f, 2.0f,
+                    color_with_alpha(0xb9a7e8ff, alpha));
+
+    /* Artemis remains a simple vector mark; Apollo uses the user's new logo. */
+    draw_circle_outline(312.0f, 278.0f, 25.0f,
+                        color_with_alpha(0x875be8ff, alpha));
+    draw_icon_line(292.0f, 298.0f, 312.0f, 244.0f,
+                   color_with_alpha(0x875be8ff, alpha));
+    draw_icon_line(312.0f, 244.0f, 332.0f, 298.0f,
+                   color_with_alpha(0x875be8ff, alpha));
+    draw_icon_line(300.0f, 282.0f, 324.0f, 282.0f,
+                   color_with_alpha(0x875be8ff, alpha));
+    set_ui_font_size(10, 15);
+    draw_text(268.0f, 322.0f,
+              color_with_alpha(0x20263aff, alpha), "A R T E M I S");
+
+    draw_icon_line(426.0f, 248.0f, 426.0f, 342.0f,
+                   color_with_alpha(0xb9a7e8ff, alpha));
     if (g_apollo_texture)
-        ya2d_drawTextureEx(g_apollo_texture, 586.0f, 272.0f,
-                           0.28f, 66.0f, 66.0f);
-    draw_icon_line(426.0f, 282.0f, 426.0f, 346.0f,
-                   color_with_alpha(0x8068e6ff, alpha));
-    draw_circle_outline(300.0f, 322.0f, 18.0f,
-                        color_with_alpha(0x8068e6ff, alpha));
-    draw_icon_line(286.0f, 335.0f, 314.0f, 307.0f,
-                   color_with_alpha(0x8068e6ff, alpha));
-    set_ui_font_size(8, 12);
-    draw_text(286, 366, color_with_alpha(0x7c859aff, alpha),
-              "THANK YOU FOR SUPPORTING THE PS3 COMMUNITY");
-    draw_solid_rect(252.0f, 394.0f, 350.0f, 5.0f, 0xdcd3f2ff);
-    draw_solid_rect(252.0f, 394.0f, 350.0f * progress, 5.0f,
-                    color_with_alpha(0x8068e6ff, alpha));
-    draw_text(348, 414, color_with_alpha(0x7c859aff, alpha),
-              "PRESS X TO CONTINUE");
+        ya2d_drawTextureEx(g_apollo_texture, 470.0f, 242.0f,
+                           0.0f, 88.0f, 88.0f);
+    set_ui_font_size(11, 17);
+    draw_text(566.0f, 278.0f,
+              color_with_alpha(0x20263aff, alpha), "APOLLO");
+    draw_text(566.0f, 300.0f,
+              color_with_alpha(0x20263aff, alpha), "SAVE");
+
+    draw_solid_rect(202.0f, 390.0f, 450.0f, 12.0f, 0xe2dcf3ff);
+    draw_outline_rect(202.0f, 390.0f, 450.0f, 12.0f, 0xd4c9edff);
+    draw_solid_rect(205.0f, 393.0f, 444.0f * progress, 6.0f,
+                    color_with_alpha(0x875be8ff, alpha));
+    set_ui_font_size(10, 15);
+    draw_text(342.0f, 421.0f,
+              color_with_alpha(0x514b69ff, alpha),
+              "Initializing PS3 SCALE ...");
     set_ui_font_size(14, 22);
 }
 
 static void draw_boot(void)
 {
     const char *stage_text[] = {
-        "INITIALIZING GRAPHICS AND CONTROLLER",
-        "CHECKING SETTINGS AND AUDIO",
-        "SCANNING LOCAL GAME LIBRARY",
-        "CHECKING COMPANION TOOLS",
-        "READY"
+        "Initializing graphics and controller",
+        "Checking settings and audio",
+        "Scanning local game library",
+        "Checking companion tools",
+        "Ready"
     };
     const int progress[] = {12, 28, 58, 88, 100};
     float width = (560.0f * (float)progress[g_boot_stage]) / 100.0f;
-    set_ui_font_size(24, 36);
-    draw_text(110, 86, 0xcaff39ff, "PS3 SCALE");
-    set_ui_font_size(12, 18);
-    draw_text(110, 142, 0xffffffff, "STARTING YOUR GAME LIBRARY");
-    draw_solid_rect(94.0f, 194.0f, 666.0f, 194.0f, 0xf7f4ffff);
-    draw_outline_rect(94.0f, 194.0f, 666.0f, 194.0f, 0xc5b5eaff);
-    draw_solid_rect(94.0f, 194.0f, 666.0f, 4.0f, 0x875be8ff);
-    set_ui_font_size(10, 15);
-    draw_text(126, 230, 0x8068e6ff, stage_text[g_boot_stage]);
-    draw_solid_rect(126.0f, 286.0f, 600.0f, 18.0f, 0xded7f0ff);
-    draw_solid_rect(130.0f, 290.0f, width, 10.0f, 0x875be8ff);
+
+    draw_soft_card(92.0f, 118.0f, 670.0f, 260.0f, 0);
+    set_ui_font_size(26, 39);
+    draw_text(132.0f, 150.0f, 0xffffffff, "PS3");
+    draw_text(225.0f, 150.0f, 0xcaff39ff, "SCALE");
+    set_ui_font_size(11, 17);
+    draw_text(132.0f, 206.0f, 0x514b69ff,
+              "Starting your game library");
+    draw_solid_rect(132.0f, 270.0f, 590.0f, 16.0f, 0xe2dcf3ff);
+    draw_solid_rect(136.0f, 274.0f, width, 8.0f, 0x875be8ff);
     if (g_boot_stage == 2) {
-        float moving = 130.0f + (float)((g_frame_counter * 5u) % 500u);
-        draw_solid_rect(moving, 290.0f, 70.0f, 10.0f, 0xc3aaffff);
+        float moving = 136.0f + (float)((g_frame_counter * 5u) % 500u);
+        draw_solid_rect(moving, 274.0f, 62.0f, 8.0f, 0xc5aaffff);
     }
-    draw_text(126, 332, g_boot_stage < 4 ? 0x9aa6adff : 0x9ee56aff,
-              g_boot_stage < 4 ? "PLEASE WAIT..." : "READY");
-    draw_text(126, 358, g_app_files_ok ? 0x9ee56aff : 0xffcc66ff,
-              g_app_files_ok ? "APP FILE CHECK: OK" : "APP FILE CHECK: VERIFY INSTALL");
-    draw_text(34, 478, 0x6f7b83ff,
-              "LOCAL CHECKS ONLY  |  ORIGINAL GAME FILES ARE NEVER REPLACED");
+    set_ui_font_size(9, 14);
+    draw_text(132.0f, 316.0f, 0x514b69ff, stage_text[g_boot_stage]);
+    draw_text(132.0f, 346.0f,
+              g_app_files_ok ? 0x9ee56aff : 0xffcc66ff,
+              g_app_files_ok ? "APP FILE CHECK: OK" :
+                               "APP FILE CHECK: VERIFY INSTALL");
     set_ui_font_size(14, 22);
 }
 
@@ -2708,70 +2717,124 @@ static void draw_keyboard(void)
     set_ui_font_size(14, 22);
 }
 
+
+static void draw_soft_card(float x, float y, float w, float h, int selected)
+{
+    draw_solid_rect(x + 3.0f, y + 5.0f, w, h,
+                    selected ? 0x806c9d38 : 0x8d7ca32a);
+    draw_solid_rect(x, y, w, h,
+                    selected ? 0xf4efffff : 0xfaf8ffff);
+    draw_outline_rect(x, y, w, h,
+                      selected ? 0x9568edff : 0xd9d1eaff);
+    draw_solid_rect(x + 7.0f, y + 5.0f, w - 14.0f, 1.5f, 0xffffff88);
+    if (selected) {
+        draw_solid_rect(x + 10.0f, y + h - 5.0f,
+                        w - 20.0f, 3.0f, 0x875be8ff);
+    }
+}
+
+static void draw_text_centered(float x, float y, float w,
+                               u32 color, const char *value)
+{
+    float text_width = (float)strlen(value ? value : "") *
+                       (float)g_ui_font_width;
+    if (text_width > w) text_width = w;
+    draw_text(x + (w - text_width) * 0.5f, y, color, value);
+}
+
+static void draw_soft_chip(float x, float y, float w, const char *label,
+                           int selected)
+{
+    draw_solid_rect(x, y, w, 24.0f,
+                    selected ? 0xeee7ffff : 0xf8f6ffff);
+    draw_outline_rect(x, y, w, 24.0f,
+                      selected ? 0x9568edff : 0xd9d1eaff);
+    set_ui_font_size(7, 11);
+    draw_text_centered(x + 4.0f, y + 7.0f, w - 8.0f,
+                       selected ? 0xcaff39ff : 0xffffffff, label);
+}
+
+static void draw_page_header(const char *title, const char *subtitle)
+{
+    set_ui_font_size(16, 24);
+    draw_text(24.0f, 16.0f, 0xffffffff, "PS3 SCALE");
+    set_ui_font_size(10, 15);
+    draw_text(190.0f, 22.0f, 0xcaff39ff, title);
+    set_ui_font_size(7, 11);
+    draw_text(26.0f, 49.0f, 0x77718fff, subtitle);
+    draw_solid_rect(24.0f, 68.0f, 178.0f, 2.0f, 0xb79affff);
+    draw_solid_rect(24.0f, 70.0f, 178.0f, 1.0f, 0xffffff80);
+}
+
+static void draw_soft_button(float x, float y, float w, float h,
+                             const char *label, int selected)
+{
+    draw_soft_card(x, y, w, h, selected);
+    set_ui_font_size(8, 12);
+    draw_text_centered(x + 5.0f, y + (h - 12.0f) * 0.5f, w - 10.0f,
+                       selected ? 0xcaff39ff : 0xffffffff, label);
+}
+
 static void draw_home(void)
 {
-    static const char *items[6] = {
-        "SCAN GAMES", "ONLINE DB", "SETTINGS",
-        "HELP & SUPPORT", "COMPANION TOOLS", "ABOUT"
+    static const char *items[5] = {
+        "Scan Games", "Online DB", "Settings", "Help", "About"
     };
-    static const char *descriptions[6] = {
-        "Find PS3 / PS2 games", "Profiles and updates",
-        "Music and language", "Guides and support",
-        "Companion tools", "Hardware and safety"
+    static const char *descriptions[5] = {
+        "Detect PS3 & PS2", "Profiles & updates", "Customize app",
+        "Usage guide & support", "Credits & information"
     };
     char line[192];
     int i;
 
-    set_ui_font_size(21, 31);
-    draw_text(32, 24, 0xcaff39ff, "PS3 SCALE");
+    set_ui_font_size(22, 33);
+    draw_text(28.0f, 20.0f, 0xffffffff, "PS3");
+    draw_text(104.0f, 20.0f, 0xcaff39ff, "SCALE");
     set_ui_font_size(8, 12);
-    draw_text(34, 62, 0x9aa6adff,
+    draw_text(31.0f, 62.0f, 0x77718fff,
               "PS3 & PS2 ENHANCEMENT MANAGEMENT");
-    draw_solid_rect(32.0f, 88.0f, 214.0f, 3.0f, 0x8068e6ff);
-    draw_text(34, 105, 0x9aa6adff, "EXPLORE  |  ENHANCE  |  PLAY");
-    draw_solid_rect(640.0f, 20.0f, 184.0f, 36.0f, 0xf7f3ffff);
-    draw_outline_rect(640.0f, 20.0f, 184.0f, 36.0f, 0xb7a4e8ff);
-    draw_text(654, 32, 0x8068e6ff, "CFW 4.92  |  SCALE 0.2");
+    draw_solid_rect(30.0f, 86.0f, 218.0f, 2.0f, 0xb69affff);
+    draw_text(31.0f, 103.0f, 0x77718fff,
+              "EXPLORE  |  ENHANCE  |  PLAY");
 
-    for (i = 0; i < 6; i++) {
-        int col = i % 3, row = i / 3;
-        float x = 316.0f + (float)col * 170.0f;
-        float y = 112.0f + (float)row * 154.0f;
-        const float w = 158.0f, h = 132.0f;
+    draw_solid_rect(594.0f, 20.0f, 112.0f, 28.0f, 0xfaf8ffff);
+    draw_outline_rect(594.0f, 20.0f, 112.0f, 28.0f, 0xd8d0eaff);
+    draw_text(605.0f, 29.0f, 0xcaff39ff, "CFW 4.92");
+    draw_solid_rect(714.0f, 20.0f, 126.0f, 28.0f, 0xfaf8ffff);
+    draw_outline_rect(714.0f, 20.0f, 126.0f, 28.0f, 0xd8d0eaff);
+    draw_text(724.0f, 29.0f, 0xffffffff, "PS3 SLIM");
+
+    for (i = 0; i < 5; i++) {
+        float x = 306.0f + (float)i * 105.0f;
+        float y = 154.0f;
+        const float w = 98.0f, h = 148.0f;
         int selected = (i == g_home_selected);
-        float label_x = x + (w - (float)strlen(items[i]) * 8.0f) * 0.5f;
-
-        draw_solid_rect(x + 4.0f, y + 6.0f, w, h, 0x6a578a55);
-        draw_solid_rect(x, y, w, h, selected ? 0xfffcffff : 0xf5f1ffff);
-        draw_outline_rect(x, y, w, h,
-                          selected ? 0x875be8ff : 0xc9bce8ff);
-        draw_solid_rect(x, y, 4.0f, h,
-                        selected ? 0x875be8ff : 0xb6a5e4ff);
-        if (selected) {
-            draw_outline_rect(x - 3.0f, y - 3.0f, w + 6.0f, h + 6.0f,
-                              0xa98affff);
-            draw_solid_rect(x + 12.0f, y + h - 5.0f, w - 24.0f, 2.0f,
-                            0x875be8ff);
-        }
-        draw_menu_icon(i, x + (w - 42.0f) * 0.5f, y + 13.0f, selected);
-        set_ui_font_size(8, 12);
-        draw_text(label_x, y + 69.0f,
-                  selected ? 0x8068e6ff : 0xffffffff, items[i]);
+        draw_soft_card(x, y, w, h, selected);
+        draw_menu_icon(i == 4 ? 5 : i, x + 28.0f, y + 16.0f, selected);
+        set_ui_font_size(7, 11);
+        draw_text_centered(x + 4.0f, y + 78.0f, w - 8.0f,
+                           selected ? 0xcaff39ff : 0xffffffff, items[i]);
         set_ui_font_size(6, 9);
-        draw_text(x + 9.0f, y + 96.0f, 0x9aa6adff, descriptions[i]);
-        set_ui_font_size(8, 12);
+        draw_text_centered(x + 5.0f, y + 104.0f, w - 10.0f,
+                           0x77718fff, descriptions[i]);
+        if (selected) {
+            draw_circle_outline(x + w * 0.5f, y + 130.0f, 3.0f,
+                                0x9568edff);
+        }
     }
 
-    snprintf(line, sizeof(line), "PS3  %u    PS2  %u    TOTAL  %u",
+    snprintf(line, sizeof(line), "PS3  %u     PS2  %u     TOTAL  %u",
              (unsigned)library_total_count(LIBRARY_PS3),
              (unsigned)library_total_count(LIBRARY_PS2),
              (unsigned)(library_total_count(LIBRARY_PS3) +
                         library_total_count(LIBRARY_PS2)));
-    draw_solid_rect(30.0f, 430.0f, 270.0f, 38.0f, 0xf6f2ffff);
-    draw_outline_rect(30.0f, 430.0f, 270.0f, 38.0f, 0xc8b9eaff);
-    draw_text(44, 443, 0xffffffff, line);
-    draw_text(32, 482, 0x9aa6adff,
-              "D-PAD MOVE  |  CROSS SELECT  |  CIRCLE EXIT");
+    draw_soft_card(30.0f, 414.0f, 270.0f, 40.0f, 0);
+    set_ui_font_size(8, 12);
+    draw_text(44.0f, 428.0f, 0xffffffff, line);
+    draw_text(31.0f, 480.0f, 0x77718fff,
+              "D-PAD LEFT / RIGHT MOVE   |   CROSS SELECT   |   CIRCLE EXIT");
+    draw_text(31.0f, 496.0f, 0x875be8ff,
+              "SELECT: COMPANION TOOLS");
     set_ui_font_size(14, 22);
 }
 
@@ -2784,32 +2847,22 @@ static void draw_online_database(void)
     char line[192];
     size_t i, visible_count = 0;
 
-    set_ui_font_size(10, 16);
-    draw_text(34, 24, 0xcaff39ff, "ONLINE GAME DATABASE");
-    snprintf(line, sizeof(line),
-             "PROFILE: %s  |  GITHUB: %s  |  PS2 CONFIGS: %s  |  FILTER: %s",
-             g_catalog_ready ? "READY" : "OFFLINE",
-             g_community_ready ? "READY" : "OFFLINE",
-             g_ps2_config_db.count ? "READY" : "OFFLINE",
-             online_filter_label());
-    draw_text(34, 54, 0x9aa6adff, line);
-    snprintf(line, sizeof(line),
-             "RESULTS: %u  |  PROFILES: %u  |  GITHUB: %u  |  PS2 CFG: %u  |  SEARCH: %.20s",
-             (unsigned)g_online_result_count,
-             (unsigned)g_online_profile_result_count,
-             (unsigned)g_online_community_result_count,
-             (unsigned)g_online_ps2_config_result_count,
-             g_online_query[0] ? g_online_query : "ALL LOCAL TITLES");
-    draw_text(34, 82, 0xdce3e8ff, line);
+    draw_page_header("Online DB", "Profiles, community files and verified PS2 configurations");
+    draw_soft_card(20.0f, 88.0f, 360.0f, 360.0f, 0);
+    draw_soft_card(394.0f, 88.0f, 440.0f, 360.0f, 0);
 
-    draw_outline_rect(28, 118, 390, 360, 0x344654ff);
-    draw_outline_rect(432, 118, 820, 360, 0x344654ff);
-    draw_text(44, 132, 0x9aa6adff, "SEARCH RESULTS");
+    set_ui_font_size(8, 12);
+    draw_text(38.0f, 104.0f, 0xffffffff, "Search updates");
+    snprintf(line, sizeof(line), "QUERY: %.36s",
+             g_online_query[0] ? g_online_query : "All local titles");
+    draw_text(38.0f, 128.0f, 0x77718fff, line);
+    snprintf(line, sizeof(line), "FILTER: %.26s", online_filter_label());
+    draw_text(38.0f, 152.0f, 0xcaff39ff, line);
 
     selected = online_result_at((size_t)g_online_selected,
-                                 &selected_profile,
-                                 &selected_community,
-                                 &selected_ps2_config);
+                                &selected_profile,
+                                &selected_community,
+                                &selected_ps2_config);
 
     for (i = 0; i < g_online_result_count; i++) {
         const ps3scale_profile_t *profile = NULL;
@@ -2819,461 +2872,369 @@ static void draw_online_database(void)
             online_result_at(i, &profile, &community, &ps2_config);
         const char *title;
         const char *kind;
-        const char *version;
-        char row[144];
+        char row[128];
         float y;
 
-        if (!game && !community && !ps2_config)
-            continue;
-        if (visible_count >= 10)
-            break;
-
+        if (!game && !community && !ps2_config) continue;
+        if (visible_count >= 8) break;
         if (ps2_config) {
             title = ps2_config->title;
             kind = "PS2 CFG";
-            version = ps2_config->type;
         } else if (community) {
             title = community->title[0] ? community->title :
-                    (game ? game->title : "GITHUB GAME FILE");
+                    (game ? game->title : "GitHub Game File");
             kind = "GITHUB";
-            version = community->app_ver[0] ? community->app_ver : "--";
         } else {
-            title = game ? game->title : "GAME PROFILE";
+            title = game ? game->title : "Game Profile";
             kind = "PROFILE";
-            version = profile ? profile->app_ver : "--";
         }
-
-        y = 158.0f + (float)visible_count * 29.0f;
-        if ((int)i == g_online_selected)
-            draw_solid_rect(38, y - 3, 370, 25, 0x14261dff);
-        snprintf(row, sizeof(row), "%.22s  |  %s  |  %.10s",
-                 title, kind, version);
-        draw_text(48, y, (int)i == g_online_selected ?
-                  0xcaff39ff : 0xffffffff, row);
+        y = 182.0f + (float)visible_count * 30.0f;
+        draw_soft_card(32.0f, y, 334.0f, 26.0f,
+                       (int)i == g_online_selected);
+        set_ui_font_size(6, 9);
+        snprintf(row, sizeof(row), "%.30s", title);
+        draw_text(42.0f, y + 4.0f,
+                  (int)i == g_online_selected ? 0xcaff39ff : 0xffffffff, row);
+        draw_text(302.0f, y + 4.0f, 0x77718fff, kind);
         visible_count++;
     }
 
+    set_ui_font_size(8, 12);
+    snprintf(line, sizeof(line), "RESULTS: %u",
+             (unsigned)g_online_result_count);
+    draw_text(38.0f, 422.0f, 0x77718fff, line);
+
+    draw_text(414.0f, 104.0f, 0xffffffff, "Community (GitHub)");
+    draw_text(414.0f, 128.0f, 0x77718fff,
+              "Profiles, configs & enhancements");
+    snprintf(line, sizeof(line), "CATALOG: %s",
+             g_catalog_ready ? "READY" : "OFFLINE");
+    draw_text(414.0f, 168.0f, 0x514b69ff, line);
+    snprintf(line, sizeof(line), "GITHUB INDEX: %s",
+             g_community_ready ? "READY" : "OFFLINE");
+    draw_text(414.0f, 192.0f, 0x514b69ff, line);
+
     if (selected_profile && selected) {
-        const ps3scale_profile_t *safe_profile = profile_for_game(selected);
         int exact_match = selected_community ?
             ps3scale_community_file_matches_exact_game(selected_community,
                                                         selected) : 1;
-        draw_text(452, 144, 0xcaff39ff, "EXACT GAME PROFILE");
+        draw_text(414.0f, 232.0f, 0xcaff39ff, "EXACT GAME PROFILE");
         snprintf(line, sizeof(line), "GAME: %.54s", selected->title);
-        draw_text(452, 176, 0xffffffff, line);
+        draw_text(414.0f, 260.0f, 0xffffffff, line);
         snprintf(line, sizeof(line), "TITLE ID: %.18s", selected->title_id);
-        draw_text(452, 204, 0xdce3e8ff, line);
-        snprintf(line, sizeof(line), "PROFILE VERSION: %.18s", selected_profile->app_ver);
-        draw_text(452, 232, 0xdce3e8ff, line);
-        draw_text(452, 260, 0x9aa6adff,
+        draw_text(414.0f, 286.0f, 0x514b69ff, line);
+        snprintf(line, sizeof(line), "VERSION: %.18s", selected_profile->app_ver);
+        draw_text(414.0f, 312.0f, 0x514b69ff, line);
+        draw_text(414.0f, 342.0f,
+                  exact_match ? 0x2c9f8eff : 0xffcc66ff,
                   exact_match ? "MATCH: EXACT TITLE ID / VERSION" :
                                 "MATCH: REVIEW VERSION BEFORE INSTALL");
-        draw_text(452, 288, 0x9aa6adff,
-                  safe_profile ? "SAFE PROFILE: AVAILABLE" :
-                                 "SAFE PROFILE: NOT AVAILABLE");
-        draw_text(452, 316, 0x9aa6adff,
-                  "INSTALL ONLY AFTER REVIEWING THE TARGET GAME.");
-        draw_text(452, 344, 0x9aa6adff,
-                  "PROFILE IS APPLIED ONLY TO THE SELECTED GAME.");
-        draw_text(452, 372, 0x9aa6adff,
-                  safe_profile ? "APPLY: REVIEW + CONFIRM IN DETAILS" :
-                                 "APPLY: NOT A GRAPHICS PROFILE");
+        draw_text(414.0f, 370.0f, 0x77718fff,
+                  profile_for_game(selected) ?
+                  "SAFE PROFILE: AVAILABLE" : "SAFE PROFILE: NOT AVAILABLE");
+        draw_text(414.0f, 402.0f, 0x77718fff,
+                  "Review the target game before applying.");
     } else if (selected_ps2_config) {
-        draw_text(452, 144, 0xcaff39ff, "PS2 COMMUNITY CONFIG");
-        snprintf(line, sizeof(line), "GAME: %.54s", selected_ps2_config->title);
-        draw_text(452, 176, 0xffffffff, line);
-        snprintf(line, sizeof(line), "CONFIG TYPE: %.8s", selected_ps2_config->type);
-        draw_text(452, 204, 0xdce3e8ff, line);
+        draw_text(414.0f, 232.0f, 0xcaff39ff, "PS2 COMMUNITY CONFIG");
+        snprintf(line, sizeof(line), "GAME: %.42s", selected_ps2_config->title);
+        draw_text(414.0f, 260.0f, 0xffffffff, line);
+        snprintf(line, sizeof(line), "CONFIG TYPE: %.10s", selected_ps2_config->type);
+        draw_text(414.0f, 286.0f, 0x514b69ff, line);
         snprintf(line, sizeof(line), "GAME ID: %.18s", selected_ps2_config->title_id);
-        draw_text(452, 232, 0xdce3e8ff, line);
-        draw_text(452, 260, 0x9aa6adff,
-                  "SOURCE: WEBMAN-MOD PS2 CONFIG DATABASE");
-        draw_text(452, 288, 0x9aa6adff,
-                  "PURPOSE: GAME-SPECIFIC COMPATIBILITY / PERFORMANCE.");
-        draw_text(452, 316, 0xffcc66ff,
-                  "NOT AN HD TEXTURE PACK OR UNIVERSAL UPSCALER.");
-        draw_text(452, 344, 0x9aa6adff,
-                  "OPEN THE LOCAL PS2 GAME, THEN TRIANGLE TO DOWNLOAD.");
-        draw_text(452, 372, 0x9aa6adff,
-                  "THE ORIGINAL ISO / CLASSIC FILE IS NEVER OVERWRITTEN.");
+        draw_text(414.0f, 312.0f, 0x514b69ff, line);
+        draw_text(414.0f, 342.0f, 0xffcc66ff,
+                  "Compatibility config, not an HD texture pack.");
+        draw_text(414.0f, 370.0f, 0x77718fff,
+                  "Original ISO / classic files are never overwritten.");
     } else if (selected_community) {
-        const ps3scale_profile_t *safe_profile =
-            selected ? profile_for_game(selected) : NULL;
-        int exact_match = selected ?
-            ps3scale_community_file_matches_exact_game(selected_community,
-                                                        selected) : 0;
-        const char *region = selected ?
-            ps3scale_community_region_label(selected->title_id) : "NOT LINKED";
-        const char *title = selected ? selected->title : selected_community->title;
-        const char *title_id = selected ? selected->title_id :
-                               selected_community->title_id;
-        draw_text(452, 144, 0xcaff39ff, "GITHUB COMMUNITY RESULT");
-        snprintf(line, sizeof(line), "GAME: %.54s", title);
-        draw_text(452, 176, 0xffffffff, line);
-        snprintf(line, sizeof(line), "TITLE ID: %.18s", title_id);
-        draw_text(452, 204, 0xdce3e8ff, line);
-        snprintf(line, sizeof(line), "REGION: %.24s", region);
-        draw_text(452, 232, 0xdce3e8ff, line);
+        snprintf(line, sizeof(line), "GAME: %.42s", selected_community->title);
+        draw_text(414.0f, 232.0f, 0xffffffff, line);
+        snprintf(line, sizeof(line), "TITLE ID: %.18s", selected_community->title_id);
+        draw_text(414.0f, 260.0f, 0x514b69ff, line);
         snprintf(line, sizeof(line), "CATEGORY: %.24s", selected_community->category);
-        draw_text(452, 260, 0xdce3e8ff, line);
+        draw_text(414.0f, 286.0f, 0x514b69ff, line);
         snprintf(line, sizeof(line), "VERSION: %.18s",
                  selected_community->app_ver[0] ?
-                 selected_community->app_ver : "NOT SPECIFIED");
-        draw_text(452, 288, 0xdce3e8ff, line);
-        snprintf(line, sizeof(line), "REPOSITORY: %.36s",
-                 selected_community->repository);
-        draw_text(452, 316, 0x9aa6adff, line);
-        if (!selected) {
-            draw_text(452, 344, 0xffcc66ff, "LOCAL GAME: NOT FOUND / NOT SCANNED");
-            draw_text(452, 372, 0x9aa6adff,
-                      "SCAN THE MATCHING GAME BEFORE APPLYING ANY FILE.");
-        } else {
-            draw_text(452, 344, 0x9aa6adff,
-                      exact_match ? "MATCH: EXACT GAME ID / VERSION" :
-                                    "MATCH: REVIEW GAME ID / VERSION");
-            draw_text(452, 372, 0x9aa6adff,
-                      safe_profile ? "SAFE PROFILE: AVAILABLE" :
-                                     "SAFE PROFILE: NOT AVAILABLE");
-        }
-        draw_text(452, 400, 0xffcc66ff,
-                  "APPLY: REFERENCE ONLY - NOT INSTALLED");
-    } else if (!g_online_result_count) {
-        draw_text(452, 144, 0xffcc66ff, "NO MATCHES FOR THIS SEARCH.");
-        draw_text(452, 176, 0x9aa6adff,
-                  "TRY A GAME NAME, DISC ID OR TITLE ID.");
-        if (!g_catalog_ready)
-            draw_text(452, 204, 0x9aa6adff, "GRAPHICS PROFILE CATALOG IS OFFLINE.");
-        if (!g_community_ready)
-            draw_text(452, 232, 0x9aa6adff, "GITHUB INDEX IS OFFLINE.");
-        if (!g_ps2_config_db.count)
-            draw_text(452, 260, 0x9aa6adff, "PS2 CONFIG INDEX IS NOT INSTALLED.");
+                 selected_community->app_ver : "Not specified");
+        draw_text(414.0f, 312.0f, 0x514b69ff, line);
+        draw_text(414.0f, 342.0f, 0xffcc66ff,
+                  "Reference only; not installed automatically.");
     } else {
-        draw_text(452, 144, 0x9aa6adff,
-                  "SELECT A RESULT TO REVIEW ITS GAME / FILE MATCH.");
-        draw_text(452, 176, 0x9aa6adff,
-                  "SEARCH ALSO INCLUDES TITLES NOT INSTALLED LOCALLY.");
+        draw_text(414.0f, 232.0f, 0x77718fff,
+                  g_online_result_count ?
+                  "Select a result to review its match." :
+                  "No results for this search.");
+        draw_text(414.0f, 260.0f, 0x77718fff,
+                  "Try a game name, disc ID or title ID.");
     }
 
     if (g_online_message[0])
-        draw_text(34, 492, 0xffcc66ff, g_online_message);
-    draw_text(34, 532, 0x9aa6adff,
-              "D-PAD SELECT  L1/R1 PREV/NEXT  TRIANGLE SEARCH  SQUARE FILTER  CROSS OPEN  CIRCLE BACK");
+        draw_text(24.0f, 470.0f, 0xffcc66ff, g_online_message);
+    set_ui_font_size(7, 11);
+    draw_text(24.0f, 496.0f, 0x77718fff,
+              "D-PAD SELECT   |   L1/R1 PREV/NEXT   |   TRIANGLE SEARCH   |   SQUARE FILTER   |   START SYNC   |   CIRCLE BACK");
     set_ui_font_size(14, 22);
 }
 
 
 static void draw_scan(void)
 {
-    char line[256];
-    size_t i, count, start;
+    char line[192];
+    size_t count = library_count(g_library);
     size_t ps3_count = library_total_count(LIBRARY_PS3);
     size_t ps2_count = library_total_count(LIBRARY_PS2);
+    size_t start = (g_selected > 7) ? (size_t)(g_selected - 7) : 0;
+    size_t i;
     const ps3scale_game_t *selected;
 
-    /* Keep the scanner readable on 720p TVs: two fixed, non-overlapping panels. */
-    set_ui_font_size(9, 14);
     clamp_selection();
-    count = library_count(g_library);
     selected = selected_game();
+    draw_page_header("Game Library", "Browse your PS3 and PS2 collection");
+    draw_soft_card(20.0f, 88.0f, 144.0f, 364.0f, 0);
+    set_ui_font_size(8, 12);
+    draw_text(34.0f, 104.0f, 0xffffffff, "LIBRARY");
+    draw_soft_chip(30.0f, 130.0f, 124.0f, "All Games", 0);
+    draw_soft_chip(30.0f, 162.0f, 124.0f, "PS3 Games", g_library == LIBRARY_PS3);
+    draw_soft_chip(30.0f, 194.0f, 124.0f, "PS2 Games", g_library == LIBRARY_PS2);
+    draw_soft_chip(30.0f, 226.0f, 124.0f, "Favorites", 0);
+    draw_soft_chip(30.0f, 258.0f, 124.0f, "Recently Added", 0);
+    set_ui_font_size(7, 11);
+    snprintf(line, sizeof(line), "PS3  %u", (unsigned)ps3_count);
+    draw_text(34.0f, 320.0f, 0x77718fff, line);
+    snprintf(line, sizeof(line), "PS2  %u", (unsigned)ps2_count);
+    draw_text(34.0f, 342.0f, 0x77718fff, line);
+    snprintf(line, sizeof(line), "TOTAL  %u", (unsigned)(ps3_count + ps2_count));
+    draw_text(34.0f, 364.0f, 0xcaff39ff, line);
 
-    draw_text(28, 16, 0xcaff39ff, "PS3 SCALE");
-    draw_text(178, 16, 0x9aa6adff, "SCAN GAMES");
+    draw_soft_card(176.0f, 82.0f, 656.0f, 34.0f, 0);
+    set_ui_font_size(8, 12);
+    snprintf(line, sizeof(line), "Search games: %.44s",
+             g_search[0] ? g_search : "All titles");
+    draw_text(194.0f, 93.0f, 0x77718fff, line);
+    draw_text(754.0f, 93.0f, 0xcaff39ff, "GRID");
 
-    draw_text(28, 48, 0xffffffff, "PLATFORM:");
-    draw_text(140, 48, g_library == LIBRARY_PS3 ? 0xcaff39ff : 0x9aa6adff, "L1  PS3");
-    draw_text(250, 48, g_library == LIBRARY_PS2 ? 0xcaff39ff : 0x9aa6adff, "R1  PS2");
-    draw_text(370, 48, 0x9aa6adff, "SELECT/START: SEARCH");
-
-    draw_solid_rect(24.0f, 72.0f, 798.0f, 25.0f, 0x0d1722ff);
-    snprintf(line, sizeof(line), "SEARCH: %.46s",
-             g_search[0] ? g_search : "ALL GAMES");
-    draw_text(32, 78, 0xdce3e8ff, line);
-    snprintf(line, sizeof(line), "PS3: %u  |  PS2: %u  |  RESULTS: %u",
-             (unsigned)ps3_count, (unsigned)ps2_count, (unsigned)count);
-    draw_text(28, 108, 0x9aa6adff, line);
-
-    draw_outline_rect(22.0f, 138.0f, 402.0f, 292.0f, 0x26445cff);
-    draw_outline_rect(440.0f, 138.0f, 382.0f, 292.0f, 0x26445cff);
-    draw_text(32, 148, 0xffffffff,
-              g_library == LIBRARY_PS3 ? "PS3 GAME LIST" : "PS2 GAME LIST");
-    draw_text(452, 148, 0xffffffff, "SELECTED GAME");
-
-    start = (g_selected > 8) ? (size_t)(g_selected - 8) : 0;
-    for (i = 0; i < 9 && start + i < count; i++) {
+    for (i = 0; i < 8 && start + i < count; i++) {
         const ps3scale_game_t *game = library_game_at(start + i);
         int is_selected = ((int)(start + i) == g_selected);
-        const char *kind;
-        float row_y = 178.0f + (float)i * 27.0f;
+        float x = 176.0f + (float)(i % 4) * 94.0f;
+        float y = 128.0f + (float)(i / 4) * 154.0f;
+        u32 tile_color = (i % 3 == 0) ? 0xe9e1f8ff :
+                         (i % 3 == 1) ? 0xe4e9f5ff : 0xf0e6f3ff;
         if (!game) continue;
-        if (game->kind == PS3SCALE_GAME_PS3_ISO ||
-            game->kind == PS3SCALE_GAME_PS2_ISO)
-            kind = "ISO";
-        else if (game->kind == PS3SCALE_GAME_PS2_CLASSIC)
-            kind = "PS2C";
-        else if (game->kind == PS3SCALE_GAME_PS3_HDD ||
-                 game->kind == PS3SCALE_GAME_PS2_HDD)
-            kind = "HDD";
-        else
-            kind = "DIR";
-        if (is_selected)
-            draw_solid_rect(27.0f, row_y - 2.0f, 390.0f, 22.0f, 0x14261dff);
-        snprintf(line, sizeof(line), "%c %-4s %.27s",
-                 is_selected ? '>' : ' ', kind, game->title);
-        draw_text(32, row_y, is_selected ? 0xcaff39ff : 0xdce3e8ff, line);
-    }
-
-    if (selected) {
-        snprintf(line, sizeof(line), "TITLE: %.21s", selected->title);
-        draw_text(452, 178, 0xdce3e8ff, line);
-        snprintf(line, sizeof(line), "TYPE: %.22s",
-                 ps3scale_game_kind_name(selected->kind));
-        draw_text(452, 202, 0xdce3e8ff, line);
-        if (g_library == LIBRARY_PS3) {
-            snprintf(line, sizeof(line), "TITLE ID: %.16s",
-                     selected->title_id[0] ? selected->title_id : "NOT READ");
+        draw_soft_card(x, y, 86.0f, 146.0f, is_selected);
+        draw_solid_rect(x + 6.0f, y + 7.0f, 74.0f, 91.0f, tile_color);
+        if (is_selected && g_cover_texture) {
+            ya2d_drawTextureEx(g_cover_texture, x + 6.0f, y + 7.0f,
+                               0.0f, 74.0f, 91.0f);
         } else {
-            snprintf(line, sizeof(line), "PS2 SERIAL: %.16s",
-                     selected->disc_id[0] ? selected->disc_id :
-                     (selected->title_id[0] ? selected->title_id : "NOT READ"));
+            draw_solid_rect(x + 12.0f, y + 16.0f, 62.0f, 3.0f, 0xb69affff);
+            draw_solid_rect(x + 12.0f, y + 25.0f, 44.0f, 2.0f, 0xcfc4e8ff);
+            draw_solid_rect(x + 12.0f, y + 76.0f, 54.0f, 2.0f, 0xcfc4e8ff);
+            draw_solid_rect(x + 12.0f, y + 83.0f, 38.0f, 2.0f, 0xcfc4e8ff);
         }
-        draw_text(452, 226, 0xdce3e8ff, line);
-        snprintf(line, sizeof(line), "PATH: %.20s", selected->path);
-        draw_text(452, 250, 0x9aa6adff, line);
-        draw_text(452, 274, 0xcaff39ff, "CROSS: OPEN DETAILS");
+        set_ui_font_size(6, 9);
+        draw_text(x + 7.0f, y + 105.0f, 0xffffffff, game->title);
+        draw_text(x + 7.0f, y + 120.0f,
+                  0xcaff39ff,
+                  (game->kind == PS3SCALE_GAME_PS2_ISO ||
+                   game->kind == PS3SCALE_GAME_PS2_CLASSIC ||
+                   game->kind == PS3SCALE_GAME_PS2_HDD) ? "PS2" : "PS3");
+    }
 
-        /* Cover art is isolated on the far right, below the metadata. */
+    draw_soft_card(560.0f, 128.0f, 272.0f, 300.0f, 0);
+    set_ui_font_size(9, 14);
+    draw_text(578.0f, 146.0f, 0xffffffff, "Selected Game");
+    if (selected) {
+        snprintf(line, sizeof(line), "%.32s", selected->title);
+        set_ui_font_size(10, 15);
+        draw_text(578.0f, 176.0f, 0xcaff39ff, line);
+        set_ui_font_size(7, 11);
+        snprintf(line, sizeof(line), "TYPE: %.24s",
+                 ps3scale_game_kind_name(selected->kind));
+        draw_text(578.0f, 214.0f, 0x514b69ff, line);
+        if (game_is_ps3(selected))
+            snprintf(line, sizeof(line), "TITLE ID: %.18s", selected->title_id);
+        else
+            snprintf(line, sizeof(line), "PS2 SERIAL: %.18s",
+                     selected->disc_id[0] ? selected->disc_id : selected->title_id);
+        draw_text(578.0f, 238.0f, 0x514b69ff, line);
+        snprintf(line, sizeof(line), "PATH: %.25s", selected->path);
+        draw_text(578.0f, 262.0f, 0x77718fff, line);
+        draw_text(578.0f, 302.0f, 0x2c9f8eff, "CROSS: OPEN DETAILS");
+        draw_text(578.0f, 326.0f, 0x77718fff,
+                  "Original game files stay untouched.");
         if (g_cover_texture)
-            ya2d_drawTextureEx(g_cover_texture, 680.0f, 282.0f,
-                               0.5f, 112.0f, 142.0f);
-        else {
-            draw_solid_rect(680.0f, 282.0f, 112.0f, 142.0f, 0x101b27ff);
-            draw_outline_rect(680.0f, 282.0f, 112.0f, 142.0f, 0x344654ff);
-            draw_text(690, 346, 0x6f7b83ff, "NO COVER");
-        }
+            ya2d_drawTextureEx(g_cover_texture, 738.0f, 342.0f,
+                               0.0f, 78.0f, 72.0f);
     } else {
-        draw_text(452, 184, 0x9aa6adff, "NO MATCHING GAMES FOUND.");
-        draw_text(452, 210, 0x9aa6adff, "PRESS SELECT OR START TO SEARCH.");
+        draw_text(578.0f, 184.0f, 0x77718fff, "No matching games found.");
+        draw_text(578.0f, 210.0f, 0x77718fff, "Scan or change platform.");
     }
 
-    if (g_config_preview && selected &&
-        selected->kind == PS3SCALE_GAME_PS2_ISO) {
-        uint8_t config_data[32];
-        size_t config_size = 0;
-        if (ps3scale_ps2_config_build(config_data, sizeof(config_data),
-                PS3SCALE_PS2_CFG_DISABLE_SMOOTHING |
-                PS3SCALE_PS2_CFG_ENABLE_L2H, &config_size) == 0) {
-            snprintf(line, sizeof(line), "PS2 CONFIG PREVIEW: %u BYTES",
-                     (unsigned)config_size);
-            draw_text(452, 438, 0xcaff39ff, line);
-        }
-    }
     if (g_games.truncated)
-        draw_text(28, 438, 0xffcc66ff,
+        draw_text(178.0f, 442.0f, 0xffcc66ff,
                   "WARNING: LIBRARY LIMIT REACHED (256 TITLES)");
-
-    draw_text(28, 470, 0x9aa6adff,
-              "UP/DOWN MOVE  |  L1/R1 PLATFORM  |  CROSS DETAILS  |  SELECT/START SEARCH");
-    draw_text(28, 492, 0x6f7b83ff,
-              "SQUARE RESCAN  |  TRIANGLE PS2 PREVIEW  |  CIRCLE BACK");
+    set_ui_font_size(7, 11);
+    draw_text(24.0f, 478.0f,
+              0x77718fff,
+              "L1 / R1: PS3 / PS2   |   UP / DOWN: MOVE   |   CROSS: DETAILS");
+    draw_text(24.0f, 496.0f, 0x875be8ff,
+              "SELECT / START: SEARCH   |   SQUARE: RESCAN   |   CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
 
 static void draw_details(void)
 {
-    char line[256];
+    char line[192];
     const ps3scale_game_t *game = selected_game();
     const ps3scale_profile_t *profile = profile_for_game(game);
     const ps3scale_ps2_config_entry_t *ps2_config = ps2_config_for_game(game);
     int ps2_config_exists = ps2_config_target_exists(game, ps2_config);
     int script_state = profile_script_state_for_game(game, profile);
 
-    set_ui_font_size(11, 17);
-    draw_text(28, 22, 0xcaff39ff, "PS3 SCALE");
-    draw_text(180, 25, 0x9aa6adff, "GAME DETAILS");
+    draw_page_header("Game Details", "Review compatibility and available enhancements");
     if (!game) {
-        draw_text(34, 120, 0x9aa6adff, "NO GAME SELECTED.");
-        draw_text(34, 478, 0x9aa6adff, "CIRCLE: BACK");
+        draw_soft_card(24.0f, 92.0f, 806.0f, 340.0f, 0);
+        draw_text(52.0f, 128.0f, 0xffffffff, "No game selected.");
+        draw_text(52.0f, 474.0f, 0x77718fff, "CIRCLE: BACK");
         set_ui_font_size(14, 22);
         return;
     }
 
-    snprintf(line, sizeof(line), "TITLE: %.48s", game->title);
-    draw_text(34, 96, 0xffffffff, line);
-    snprintf(line, sizeof(line), "TYPE: %.42s", ps3scale_game_kind_name(game->kind));
-    draw_text(34, 132, 0xdce3e8ff, line);
-    if (game_is_ps3(game))
-        snprintf(line, sizeof(line), "TITLE ID: %.16s",
-                 game->title_id[0] ? game->title_id : "NOT READ");
-    else
-        snprintf(line, sizeof(line), "PS2 SERIAL: %.16s",
-                 game->disc_id[0] ? game->disc_id :
-                 (game->title_id[0] ? game->title_id : "NOT READ"));
-    draw_text(34, 168, 0xdce3e8ff, line);
-    snprintf(line, sizeof(line), "PATH: %.48s", game->path);
-    draw_text(34, 204, 0x9aa6adff, line);
-    if (game_is_ps3(game))
-        snprintf(line, sizeof(line), "APP VERSION: %.12s",
-                 game->app_ver[0] ? game->app_ver : "UNKNOWN - RESCAN");
-    else
-        snprintf(line, sizeof(line), "APP VERSION: NOT USED FOR PS2 CONFIG");
-    draw_text(34, 240, 0x9aa6adff, line);
+    draw_soft_card(20.0f, 92.0f, 154.0f, 292.0f, 0);
+    if (g_cover_texture)
+        ya2d_drawTextureEx(g_cover_texture, 34.0f, 108.0f,
+                           0.0f, 126.0f, 174.0f);
+    else {
+        draw_solid_rect(34.0f, 108.0f, 126.0f, 174.0f, 0xe9e1f8ff);
+        draw_text(50.0f, 184.0f, 0x77718fff, "NO COVER ART");
+    }
+    draw_soft_chip(38.0f, 300.0f, 118.0f,
+                   game_is_ps3(game) ? "PS3" : "PS2", 1);
+    draw_text(34.0f, 340.0f, 0x77718fff,
+              "ORIGINAL FILES SAFE");
 
-    draw_text(34, 282, 0xffffffff, "GRAPHICS PROFILE");
+    draw_soft_card(186.0f, 92.0f, 326.0f, 292.0f, 0);
+    set_ui_font_size(11, 17);
+    draw_text(204.0f, 110.0f, 0xffffffff, game->title);
+    set_ui_font_size(7, 11);
+    snprintf(line, sizeof(line), "Platform: %s",
+             game_is_ps3(game) ? "PlayStation 3" : "PlayStation 2");
+    draw_text(204.0f, 150.0f, 0x514b69ff, line);
+    snprintf(line, sizeof(line), "Game ID: %.18s",
+             game->title_id[0] ? game->title_id :
+             (game->disc_id[0] ? game->disc_id : "Not read"));
+    draw_text(204.0f, 176.0f, 0x514b69ff, line);
+    snprintf(line, sizeof(line), "Version: %.16s",
+             game_is_ps3(game) ?
+             (game->app_ver[0] ? game->app_ver : "Unknown - rescan") :
+             "PS2 configuration");
+    draw_text(204.0f, 202.0f, 0x514b69ff, line);
+    snprintf(line, sizeof(line), "Location: %.25s", game->path);
+    draw_text(204.0f, 228.0f, 0x77718fff, line);
+    draw_text(204.0f, 270.0f, 0xffffffff, "Enhancement Status");
     if (game_is_ps3(game)) {
         if (profile) {
-            snprintf(line, sizeof(line), "ONLINE PROFILE: %.46s", profile->effect);
-            draw_text(34, 316, 0xcaff39ff, line);
-            draw_text(34, 348, 0xffcc66ff,
-                      "TRUST: COMMUNITY-REPORTED - REVIEW BEFORE USE.");
+            snprintf(line, sizeof(line), "Profile: %.30s", profile->effect);
+            draw_text(204.0f, 296.0f, 0x2c9f8eff, line);
             if (script_state == -2)
-                snprintf(line, sizeof(line), "PROFILE SCRIPT: STALE - REMOVE");
+                draw_text(204.0f, 322.0f, 0xffcc66ff, "Profile script is stale.");
             else if (script_state == -1)
-                snprintf(line, sizeof(line), "PROFILE SCRIPT: USER-OWNED - NOT TOUCHED");
-            else if (strcmp(profile->trust, "B_COMMUNITY_MANUAL") == 0)
-                snprintf(line, sizeof(line), "MANUAL ONLY: RE-APPLY REQUIRED IN GAME");
+                draw_text(204.0f, 322.0f, 0xffcc66ff, "User script is protected.");
             else if (profile->patch_count != 1)
-                snprintf(line, sizeof(line), "AUTO APPLY: MULTI-WRITE MANUAL ONLY");
-            else if (script_state == 1)
-                snprintf(line, sizeof(line), "ONE-LAUNCH PROFILE: ARMED");
+                draw_text(204.0f, 322.0f, 0xffcc66ff, "Manual-only profile.");
             else
-                snprintf(line, sizeof(line), "ONE-LAUNCH PROFILE: NOT ARMED");
-            draw_text(34, 376, 0xdce3e8ff, line);
-        } else if (script_state == -2) {
-            draw_text(34, 316, 0xffcc66ff,
-                      "OLD PROFILE SCRIPT DOES NOT MATCH THIS CATALOG.");
-            draw_text(34, 348, 0x9aa6adff,
-                      "REMOVE IT BEFORE STARTING THIS GAME.");
-            draw_text(34, 376, 0x9aa6adff,
-                      "NO EXACT PROFILE IS AVAILABLE FOR THIS UPDATE.");
-        } else if (script_state == -1) {
-            draw_text(34, 316, 0xffcc66ff,
-                      "A USER WEBMAN SCRIPT EXISTS FOR THIS TITLE.");
-            draw_text(34, 348, 0x9aa6adff,
-                      "PS3 SCALE WILL NOT MODIFY OR REMOVE IT.");
-            draw_text(34, 376, 0x9aa6adff,
-                      "NO EXACT ONLINE PROFILE IS AVAILABLE.");
+                draw_text(204.0f, 322.0f, 0x2c9f8eff, "Exact profile available.");
         } else {
-            draw_text(34, 316, 0xffcc66ff,
-                      "NO EXACT ONLINE PROFILE FOR THIS UPDATE.");
-            draw_text(34, 348, 0x9aa6adff,
-                      "TITLE ID AND APP VERSION MUST BOTH MATCH.");
-            draw_text(34, 376, 0x9aa6adff,
-                      "NO PROFILE FOR THIS TITLE. GAME WILL START UNMODIFIED.");
+            draw_text(204.0f, 296.0f, 0xffcc66ff,
+                      "No exact profile for this update.");
+            draw_text(204.0f, 322.0f, 0x77718fff,
+                      "Game will start unmodified.");
         }
-
-        draw_solid_rect(34.0f, 396.0f, 270.0f, 40.0f, 0x173a35ff);
-        draw_outline_rect(34.0f, 396.0f, 270.0f, 40.0f, 0x8bd450ff);
-        if (g_profile_arm_running)
-            draw_text(58, 407, 0xcaff39ff, "ARMING PROFILE...");
-        else if (g_game_launch_running)
-            draw_text(58, 407, 0xcaff39ff, "STARTING...");
-        else if (profile && script_state == 1)
-            draw_text(58, 407, 0xcaff39ff, "START WITH PROFILE");
-        else
-            draw_text(58, 407, 0xcaff39ff, "START UNMODIFIED");
-        if (g_profile_confirm_pending)
-            draw_text(34, 448, 0xffcc66ff,
-                      "COMMUNITY PATCH: TRIANGLE CONFIRMS; CIRCLE CANCELS.");
-        else
-            draw_text(34, 448, 0x9aa6adff, g_details_message);
+    } else if (ps2_config) {
+        snprintf(line, sizeof(line), "Community config: %.10s", ps2_config->type);
+        draw_text(204.0f, 296.0f, 0x2c9f8eff, line);
+        draw_text(204.0f, 322.0f,
+                  ps2_config_exists ? 0xffcc66ff : 0x2c9f8eff,
+                  ps2_config_exists ? "Config already installed." :
+                                      "Verified config available.");
     } else {
-        draw_text(34, 316, 0xffcc66ff,
-                  "PS2 CONFIGS CHANGE COMPATIBILITY SETTINGS, NOT HD TEXTURES.");
-        if (ps2_config) {
-            snprintf(line, sizeof(line), "COMMUNITY CONFIG: %.6s", ps2_config->type);
-            draw_text(34, 348, 0xcaff39ff, line);
-            snprintf(line, sizeof(line), "CONFIG ID: %.16s", ps2_config->title_id);
-            draw_text(34, 376, 0xdce3e8ff, line);
-            if (text_contains_ci(ps2_config->title, "Twinsanity")) {
-                draw_text(34, 404, 0xdce3e8ff,
-                          "CRASH TWINSANITY: VERSION 2.00 IS RECOMMENDED.");
-                draw_text(34, 432, 0x9aa6adff,
-                          "COMMUNITY CONFIG TARGETS FREEZE / COMPATIBILITY ISSUES.");
-            } else {
-                draw_text(34, 404, 0x9aa6adff,
-                          "PER-GAME COMMUNITY CONFIGURATION FOUND.");
-                draw_text(34, 432, 0x9aa6adff,
-                          "ORIGINAL GAME IMAGE WILL NOT BE MODIFIED.");
-            }
-            if (ps2_config_exists)
-                draw_text(34, 456, 0xffcc66ff,
-                          "CONFIG ALREADY EXISTS - IT WILL NOT BE OVERWRITTEN.");
-            else if (g_ps2_config_download_running)
-                draw_text(34, 456, 0xcaff39ff, "DOWNLOADING CONFIG...");
-            else if (strcmp(ps2_config->type, "ENC") == 0)
-                draw_text(34, 456, 0xcaff39ff, "TRIANGLE: INSTALL ENC CONFIG");
-            else
-                draw_text(34, 456, 0xcaff39ff, "TRIANGLE: DOWNLOAD VERIFIED CONFIG");
-        } else {
-            draw_text(34, 348, 0xffcc66ff,
-                      "NO VERIFIED PER-GAME CONFIG MATCHES THIS TITLE ID.");
-            if (game->kind == PS3SCALE_GAME_PS2_ISO) {
-                draw_text(34, 376, 0xcaff39ff,
-                          g_config_preview ? "BASIC CONFIG PREVIEW - NOT APPLIED" :
-                                             "TRIANGLE: PREVIEW BASIC CONFIG");
-                if (g_config_preview) {
-                    uint8_t config_data[32]; size_t config_size = 0; char hex[96];
-                    if (ps3scale_ps2_config_build(config_data, sizeof(config_data),
-                            PS3SCALE_PS2_CFG_DISABLE_SMOOTHING |
-                            PS3SCALE_PS2_CFG_ENABLE_L2H, &config_size) == 0) {
-                        format_hex(hex, sizeof(hex), config_data, config_size);
-                        draw_text(34, 408, 0xdce3e8ff, hex);
-                    }
-                }
-            } else {
-                draw_text(34, 376, 0x9aa6adff,
-                          "PS2 CLASSIC CONFIG NEEDS A MATCHING GAME SERIAL.");
-            }
-        }
-        if (g_details_message[0])
-            draw_text(34, 482, 0x9aa6adff, g_details_message);
+        draw_text(204.0f, 296.0f, 0xffcc66ff,
+                  "No verified PS2 config matches this ID.");
+        draw_text(204.0f, 322.0f, 0x77718fff,
+                  "Original game image will not be modified.");
     }
 
-    if (g_cover_texture)
-        ya2d_drawTextureEx(g_cover_texture, 690.0f, 112.0f, 0.5f, 120.0f, 160.0f);
-    else {
-        draw_solid_rect(690.0f, 112.0f, 120.0f, 160.0f, 0x101b27ff);
-        draw_outline_rect(690.0f, 112.0f, 120.0f, 160.0f, 0x344654ff);
-        draw_text(702, 180, 0x6f7b83ff, "NO COVER");
-    }
+    draw_soft_card(526.0f, 92.0f, 308.0f, 292.0f, 0);
+    set_ui_font_size(9, 14);
+    draw_text(544.0f, 110.0f, 0xffffffff, "Visual Profile Preview");
+    draw_solid_rect(542.0f, 142.0f, 132.0f, 132.0f, 0xcbd8bfff);
+    draw_solid_rect(680.0f, 142.0f, 136.0f, 132.0f, 0xc8d9c0ff);
+    draw_solid_rect(542.0f, 142.0f, 132.0f, 42.0f, 0xa7c1a0ff);
+    draw_solid_rect(680.0f, 142.0f, 136.0f, 42.0f, 0x9fc59fff);
+    draw_solid_rect(542.0f, 222.0f, 132.0f, 52.0f, 0x8c9d7aff);
+    draw_solid_rect(680.0f, 216.0f, 136.0f, 58.0f, 0x789c72ff);
+    draw_icon_line(542.0f, 220.0f, 674.0f, 220.0f, 0xe9e5d8ff);
+    draw_icon_line(680.0f, 212.0f, 816.0f, 212.0f, 0xf4f1e5ff);
+    draw_solid_rect(674.0f, 142.0f, 6.0f, 132.0f, 0xfaf8ffff);
+    draw_circle_outline(677.0f, 208.0f, 11.0f, 0x875be8ff);
+    set_ui_font_size(7, 11);
+    draw_text(554.0f, 286.0f, 0x514b69ff, "ORIGINAL");
+    draw_text(744.0f, 286.0f, 0x875be8ff, "ENHANCED");
+    draw_text(544.0f, 322.0f, 0x77718fff,
+              "Preview layout only; real results depend on");
+    draw_text(544.0f, 340.0f, 0x77718fff,
+              "the verified game profile and console output.");
 
-    draw_text(34, 510, 0x9aa6adff,
-              game_is_ps3(game) ?
-              "CROSS/START: START GAME  SQUARE: ARM/REMOVE PROFILE  CIRCLE: BACK" :
-              (game->kind == PS3SCALE_GAME_PS2_ISO ?
-               "CROSS/START: MOUNT PS2 ISO  TRIANGLE: DOWNLOAD CONFIG  CIRCLE: BACK" :
-               "TRIANGLE: INSTALL ENC CONFIG  CROSS: PS2 CLASSICS LAUNCHER"));
+    draw_soft_button(20.0f, 400.0f, 250.0f, 44.0f,
+                     game_is_ps3(game) ?
+                     (profile ? "TRIANGLE: APPLY PROFILE" : "NO VERIFIED PROFILE") :
+                     (ps2_config ? "TRIANGLE: DOWNLOAD CONFIG" : "NO CONFIG MATCH"),
+                     1);
+    draw_soft_button(282.0f, 400.0f, 250.0f, 44.0f,
+                     "SQUARE: PROFILE OPTIONS", 0);
+    draw_soft_button(544.0f, 400.0f, 290.0f, 44.0f,
+                     "CROSS: START GAME", 0);
+    set_ui_font_size(7, 11);
+    draw_text(24.0f, 474.0f, 0x77718fff,
+              g_profile_confirm_pending ?
+              "COMMUNITY PATCH: TRIANGLE CONFIRMS; CIRCLE CANCELS." :
+              g_details_message);
+    draw_text(24.0f, 496.0f, 0x875be8ff,
+              "CROSS / START: PLAY   |   TRIANGLE: CONFIRM   |   CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
 
 static void draw_settings(void)
 {
     static const char *labels[SETTINGS_COUNT] = {
-        "BACKGROUND MUSIC", "MUSIC VOLUME", "HOME ANIMATION",
-        "CHECK FOR USB UPDATE", "RESCAN GAME LIBRARY",
-        "RESTORE DEFAULT SETTINGS", "LANGUAGE", "MUSIC PLAYLIST"
+        "Music", "Music Volume", "Animations (UI & Background)",
+        "Check for USB Update", "Rescan Game Library",
+        "Restore Default Settings", "Language", "Music Playlist"
+    };
+    static const char *sections[6] = {
+        "General", "Display", "Audio", "Enhancements", "Network", "System"
     };
     char value[96];
     int i;
-    set_ui_font_size(14, 21);
-    draw_text(28, 18, 0xcaff39ff, "PS3 SCALE");
-    draw_text(28, 48, 0xffffffff, "SETTINGS");
-    set_ui_font_size(8, 12);
-    draw_text(28, 76, 0x9aa6adff,
-              "PERSONALIZE YOUR APP. SETTINGS ARE SAVED ON THE INTERNAL HDD.");
-    draw_solid_rect(22.0f, 104.0f, 804.0f, 300.0f, 0xf7f4ffff);
-    draw_outline_rect(22.0f, 104.0f, 804.0f, 300.0f, 0xc5b5eaff);
-    draw_solid_rect(22.0f, 104.0f, 804.0f, 3.0f, 0x875be8ff);
 
+    draw_page_header("Settings", "Personalize PS3 SCALE; preferences are saved on the internal HDD");
+    draw_soft_card(20.0f, 88.0f, 148.0f, 354.0f, 0);
+    set_ui_font_size(8, 12);
+    for (i = 0; i < 6; i++) {
+        float y = 112.0f + (float)i * 46.0f;
+        draw_soft_chip(28.0f, y, 132.0f, sections[i], i == 0);
+    }
+
+    draw_soft_card(184.0f, 88.0f, 650.0f, 354.0f, 0);
+    set_ui_font_size(8, 12);
+    draw_text(204.0f, 104.0f, 0xffffffff, "General Preferences");
     for (i = 0; i < SETTINGS_COUNT; i++) {
-        float y = 116.0f + (float)i * 35.0f;
+        float y = 132.0f + (float)i * 34.0f;
         int selected = (i == g_settings_selected);
         if (selected) {
-            draw_solid_rect(30.0f, y - 4.0f, 788.0f, 31.0f, 0xe9e2ffff);
-            draw_outline_rect(30.0f, y - 4.0f, 788.0f, 31.0f, 0x9a78efff);
-            draw_solid_rect(30.0f, y - 4.0f, 4.0f, 31.0f, 0x875be8ff);
-        } else {
-            draw_solid_rect(30.0f, y - 4.0f, 788.0f, 31.0f, 0xf1edfbff);
+            draw_solid_rect(198.0f, y - 5.0f, 620.0f, 29.0f, 0xeee8ffff);
+            draw_outline_rect(198.0f, y - 5.0f, 620.0f, 29.0f, 0xbba5f0ff);
         }
         value[0] = 0;
         if (i == 0)
@@ -3283,11 +3244,11 @@ static void draw_settings(void)
         else if (i == 2)
             snprintf(value, sizeof(value), "%s", g_animation_enabled ? "ON" : "OFF");
         else if (i == 3)
-            snprintf(value, sizeof(value), "SCAN USB000 - USB007");
+            snprintf(value, sizeof(value), "USB000 - USB007");
         else if (i == 4)
-            snprintf(value, sizeof(value), "CURRENT LIBRARY");
+            snprintf(value, sizeof(value), "Current Library");
         else if (i == 5)
-            snprintf(value, sizeof(value), "DEFAULTS");
+            snprintf(value, sizeof(value), "Defaults");
         else if (i == 6)
             snprintf(value, sizeof(value), "%s",
                      ps3scale_locale_language_name(g_language));
@@ -3296,108 +3257,136 @@ static void draw_settings(void)
         else
             snprintf(value, sizeof(value), "MUSIC %d ONLY", g_music_mode);
 
-        draw_text(48, y + 2.0f, selected ? 0x8068e6ff : 0xffffffff, labels[i]);
-        draw_text(570, y + 2.0f, selected ? 0x8068e6ff : 0x9aa6adff, value);
-        if (i == 1) {
-            float bar = (float)g_music_volume / 255.0f * 142.0f;
-            draw_solid_rect(670.0f, y + 13.0f, 142.0f, 4.0f, 0xd9d0efff);
-            draw_solid_rect(670.0f, y + 13.0f, bar, 4.0f, 0x875be8ff);
-            draw_circle_outline(670.0f + bar, y + 15.0f, 5.0f, 0x875be8ff);
+        set_ui_font_size(7, 11);
+        draw_text(214.0f, y + 3.0f,
+                  selected ? 0xcaff39ff : 0xffffffff, labels[i]);
+        draw_text(604.0f, y + 3.0f,
+                  selected ? 0xcaff39ff : 0x77718fff, value);
+        if (i == 0 || i == 2) {
+            draw_solid_rect(748.0f, y, 54.0f, 18.0f,
+                            ((i == 0 && g_music_enabled) ||
+                             (i == 2 && g_animation_enabled)) ?
+                             0xded2ffff : 0xe7e3f0ff);
+            draw_outline_rect(748.0f, y, 54.0f, 18.0f, 0xb9a7e8ff);
+            draw_solid_rect(
+                ((i == 0 && g_music_enabled) ||
+                 (i == 2 && g_animation_enabled)) ? 780.0f : 752.0f,
+                y + 3.0f, 12.0f, 12.0f, 0x875be8ff);
+        } else if (i == 1) {
+            float bar = (float)g_music_volume / 255.0f * 112.0f;
+            draw_solid_rect(680.0f, y + 14.0f, 112.0f, 3.0f, 0xe0d9f0ff);
+            draw_solid_rect(680.0f, y + 14.0f, bar, 3.0f, 0x875be8ff);
+            draw_circle_outline(680.0f + bar, y + 15.5f, 5.0f, 0x875be8ff);
         }
     }
 
-    set_ui_font_size(8, 12);
+    set_ui_font_size(7, 11);
     if (g_music_track1_missing)
-        draw_text(34, 418, 0xffcc66ff,
-                  "MUSIC 1 FILE IS NOT IN THIS BUILD; COPY music1.mp3 TO USB ROOT AND REOPEN.");
+        draw_text(202.0f, 418.0f, 0xffcc66ff,
+                  "MUSIC 1 IS NOT BUNDLED IN THIS BUILD; MUSIC 2 IS THE FALLBACK.");
     else if (g_music1_imported_from_usb)
-        draw_text(34, 418, 0x9ee56aff,
-                  "MUSIC 1 IMPORTED FROM USB AND SAVED TO INTERNAL HDD.");
+        draw_text(202.0f, 418.0f, 0x9ee56aff,
+                  "MUSIC 1 IMPORTED FROM USB AND SAVED TO THE INTERNAL HDD.");
     else
-        draw_text(34, 418, 0x9aa6adff, g_settings_message);
-    draw_text(28, 478, 0x9aa6adff,
-              "UP/DOWN MOVE  CROSS SELECT  LEFT/RIGHT ADJUST  CIRCLE BACK");
+        draw_text(202.0f, 418.0f, 0x77718fff, g_settings_message);
+
+    draw_text(24.0f, 474.0f, 0x77718fff,
+              "UP / DOWN: MOVE   |   CROSS: CHANGE   |   LEFT / RIGHT: ADJUST");
+    draw_text(24.0f, 496.0f, 0x875be8ff,
+              "CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
 
 static void draw_tools(void)
 {
     char line[128];
+    draw_page_header("Companion Tools", "Optional tools detected on the console");
+    draw_soft_card(24.0f, 96.0f, 806.0f, 320.0f, 0);
     set_ui_font_size(10, 15);
-    draw_text(34, 24, 0xcaff39ff, "PS3 SCALE");
-    draw_text(34, 62, 0xffffffff, "COMPANION TOOLS");
-
-    draw_text(34, 112, 0xcaff39ff, "APOLLO SAVE TOOL");
+    draw_text(48.0f, 120.0f, 0xffffffff, "Apollo Save");
     snprintf(line, sizeof(line), "STATUS: %s",
              g_apollo_installed ? "INSTALLED" : "NOT DETECTED");
-    draw_text(610, 112, g_apollo_installed ? 0x9ee56aff : 0xffcc66ff, line);
-    draw_text(34, 140, 0xdce3e8ff,
-              "SAVE BACKUP / RESTORE / RESIGN / TROPHY AND LICENSE TOOLS.");
+    draw_text(642.0f, 120.0f,
+              g_apollo_installed ? 0x2c9f8eff : 0xffcc66ff, line);
+    set_ui_font_size(7, 11);
+    draw_text(48.0f, 148.0f, 0x77718fff,
+              "Save backup, restore, resign, trophy and license tools.");
+    draw_solid_rect(48.0f, 176.0f, 748.0f, 1.0f, 0xd9d1eaff);
 
-    draw_text(34, 190, 0xcaff39ff, "ARTEMIS PS3");
+    set_ui_font_size(10, 15);
+    draw_text(48.0f, 196.0f, 0xffffffff, "Artemis PS3");
     snprintf(line, sizeof(line), "STATUS: %s",
              g_artemis_installed ? "INSTALLED" : "NOT DETECTED");
-    draw_text(610, 190, g_artemis_installed ? 0x9ee56aff : 0xffcc66ff, line);
-    draw_text(34, 218, 0xdce3e8ff,
-              "TITLE-SPECIFIC CHEAT DATABASE AND ITS OWN RUNTIME PLUGIN.");
+    draw_text(642.0f, 196.0f,
+              g_artemis_installed ? 0x2c9f8eff : 0xffcc66ff, line);
+    set_ui_font_size(7, 11);
+    draw_text(48.0f, 224.0f, 0x77718fff,
+              "Title-specific cheat database and its own runtime plugin.");
+    draw_solid_rect(48.0f, 252.0f, 748.0f, 1.0f, 0xd9d1eaff);
 
-    draw_text(34, 268, 0xcaff39ff, "webMAN MOD");
+    set_ui_font_size(10, 15);
+    draw_text(48.0f, 272.0f, 0xffffffff, "webMAN MOD");
     snprintf(line, sizeof(line), "STATUS: %s",
              g_webman_installed ? "PLUGIN FOUND" : "NOT DETECTED");
-    draw_text(610, 268, g_webman_installed ? 0x9ee56aff : 0xffcc66ff, line);
-    draw_text(34, 296, 0xdce3e8ff,
-              "GAME MOUNTING / FTP / TEMPERATURE / OPTIONAL PS3MAPI.");
-
-    draw_text(34, 354, 0xffffffff, "SAFE INTEGRATION");
-    draw_text(34, 382, 0x9aa6adff,
-              "PS3 SCALE DOES NOT REPLACE OR MODIFY THESE APPLICATIONS.");
-    draw_text(34, 410, 0x9aa6adff,
-              "OPEN INSTALLED TOOLS FROM THE XMB GAME MENU.");
-    draw_text(34, 446, 0x9aa6adff, g_tools_message);
-    draw_text(34, 478, 0x9aa6adff,
-              "CROSS: REFRESH TOOL STATUS  |  CIRCLE: BACK");
+    draw_text(642.0f, 272.0f,
+              g_webman_installed ? 0x2c9f8eff : 0xffcc66ff, line);
+    set_ui_font_size(7, 11);
+    draw_text(48.0f, 300.0f, 0x77718fff,
+              "Game mounting, FTP, temperature and optional PS3MAPI.");
+    draw_text(48.0f, 362.0f, 0x77718fff,
+              "CROSS: REFRESH TOOL STATUS");
+    draw_text(24.0f, 478.0f, 0x77718fff, "CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
 
 static void draw_help(void)
 {
+    static const char *step_titles[5] = {
+        "Scan Games", "Select a Game", "Review Profile",
+        "Apply Safely", "Start Game"
+    };
+    static const char *step_lines[5] = {
+        "Detect your PS3 and PS2 titles.",
+        "Choose a game from your library.",
+        "Check version and compatibility.",
+        "Use only a verified exact match.",
+        "Launch and enjoy your game."
+    };
+    static const char *actions[2] = { "Report an Issue", "Send Feedback" };
     int i;
-    static const char *actions[2] = { "REPORT AN ISSUE", "SEND FEEDBACK" };
 
-    set_ui_font_size(12, 18);
-    draw_text(28, 18, 0xcaff39ff, "PS3 SCALE");
-    draw_text(28, 48, 0xffffffff, "HELP & SUPPORT");
-    draw_solid_rect(22.0f, 88.0f, 488.0f, 322.0f, 0xf8f9fcff);
-    draw_outline_rect(22.0f, 88.0f, 488.0f, 322.0f, 0xd9deebff);
-    draw_text(40, 106, 0x8068e6ff, "HOW TO USE PS3 SCALE");
-    set_ui_font_size(9, 14);
-    draw_text(42, 146, 0xffffffff, "1. SCAN TO DETECT YOUR PS3 / PS2 GAMES.");
-    draw_text(42, 184, 0xffffffff, "2. SELECT A GAME AND CHECK ITS VERSION.");
-    draw_text(42, 222, 0xffffffff, "3. REVIEW THE PROFILE AND COMPATIBILITY.");
-    draw_text(42, 260, 0xffffffff, "4. APPLY ONLY A VERIFIED MATCH.");
-    draw_text(42, 298, 0xffffffff, "5. START GAME; OTHERWISE IT STARTS UNMODIFIED.");
-    draw_text(42, 358, 0x7c859aff, "ORIGINAL GAME FILES ARE NEVER REPLACED BY A SCAN.");
-
-    draw_solid_rect(526.0f, 88.0f, 300.0f, 322.0f, 0xf8f9fcff);
-    draw_outline_rect(526.0f, 88.0f, 300.0f, 322.0f, 0xd9deebff);
-    draw_text(544, 106, 0x8068e6ff, "SUPPORT");
-    for (i = 0; i < 2; i++) {
-        float y = 154.0f + (float)i * 68.0f;
-        int selected = (i == g_help_selected);
-        draw_solid_rect(540.0f, y, 270.0f, 50.0f,
-                        selected ? 0xeeeaffff : 0xf2f4f9ff);
-        draw_outline_rect(540.0f, y, 270.0f, 50.0f,
-                          selected ? 0x8068e6ff : 0xd9deebff);
-        draw_text(556, y + 16.0f,
-                  selected ? 0xcaff39ff : 0xffffffff, actions[i]);
+    draw_page_header("Help & Support", "A quick step-by-step guide to PS3 SCALE");
+    for (i = 0; i < 5; i++) {
+        float x = 20.0f + (float)i * 164.0f;
+        draw_soft_card(x, 112.0f, 154.0f, 202.0f, 0);
+        set_ui_font_size(10, 15);
+        draw_circle_outline(x + 28.0f, 144.0f, 13.0f, 0x9568edff);
+        {
+            char number[8];
+            snprintf(number, sizeof(number), "%d", i + 1);
+            draw_text(x + 24.0f, 139.0f, 0xcaff39ff, number);
+        }
+        set_ui_font_size(8, 12);
+        draw_text(x + 12.0f, 176.0f, 0xffffffff, step_titles[i]);
+        set_ui_font_size(6, 9);
+        draw_text(x + 12.0f, 208.0f, 0x77718fff, step_lines[i]);
+        draw_solid_rect(x + 12.0f, 268.0f, 130.0f, 2.0f, 0xd9d1eaff);
     }
-    set_ui_font_size(8, 12);
-    draw_text(544, 314, 0x7c859aff, "REPORTS INCLUDE MODEL + FIRMWARE INFO.");
-    draw_text(544, 340, 0x7c859aff, "SAVED REPORTS ARE KEPT IN THE LOCAL OUTBOX.");
-    draw_text(544, 366, 0x7c859aff, g_support_status);
-    set_ui_font_size(11, 17);
-    draw_text(28, 474, 0x9aa6adff,
-              "UP/DOWN: SELECT  |  CROSS: OPEN  |  CIRCLE: BACK");
+
+    draw_soft_card(20.0f, 332.0f, 814.0f, 112.0f, 0);
+    set_ui_font_size(9, 14);
+    draw_text(38.0f, 346.0f, 0xffffffff, "Support & Contact");
+    set_ui_font_size(7, 11);
+    draw_text(38.0f, 376.0f, 0x77718fff, "support@ps3scale.app");
+    draw_soft_button(252.0f, 362.0f, 220.0f, 42.0f,
+                     actions[1], g_help_selected == 1);
+    draw_soft_button(486.0f, 362.0f, 220.0f, 42.0f,
+                     actions[0], g_help_selected == 0);
+    draw_text(38.0f, 414.0f, 0x77718fff,
+              "Reports include console model and firmware; saved locally before sending.");
+    set_ui_font_size(7, 11);
+    draw_text(24.0f, 478.0f, 0x77718fff,
+              "UP / DOWN: CHOOSE SUPPORT ACTION   |   CROSS: OPEN   |   CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
 
@@ -3405,45 +3394,37 @@ static void draw_support_form(void)
 {
     int i;
     static const char *labels[3] = {
-        "REPORT TITLE", "PROBLEM DETAILS", "SUBMIT REPORT"
+        "Report Title", "Problem Details", "Submit Report"
     };
 
-    set_ui_font_size(12, 18);
-    draw_text(28, 18, 0xcaff39ff, "PS3 SCALE");
-    draw_text(28, 48, 0xffffffff,
-              g_support_is_feedback ? "SEND FEEDBACK" : "REPORT AN ISSUE");
-    draw_solid_rect(22.0f, 88.0f, 804.0f, 322.0f, 0xf8f9fcff);
-    draw_outline_rect(22.0f, 88.0f, 804.0f, 322.0f, 0xd9deebff);
-
+    draw_page_header(g_support_is_feedback ? "Send Feedback" : "Report an Issue",
+                     "Send a note from PS3 SCALE");
+    draw_soft_card(24.0f, 96.0f, 806.0f, 330.0f, 0);
     for (i = 0; i < 3; i++) {
-        float y = 112.0f + (float)i * 82.0f;
+        float y = 118.0f + (float)i * 86.0f;
         int selected = (i == g_support_selected);
-        draw_solid_rect(36.0f, y, 776.0f, 66.0f,
-                        selected ? 0xeeeaffff : 0xf2f4f9ff);
-        draw_outline_rect(36.0f, y, 776.0f, 66.0f,
-                          selected ? 0x8068e6ff : 0xd9deebff);
-        draw_text(52, y + 7.0f, 0x8068e6ff, labels[i]);
+        draw_soft_card(42.0f, y, 768.0f, 68.0f, selected);
+        set_ui_font_size(8, 12);
+        draw_text(60.0f, y + 9.0f, 0xcaff39ff, labels[i]);
+        set_ui_font_size(7, 11);
         if (i == 0)
-            draw_text(52, y + 34.0f, 0xffffffff,
-                      g_support_title[0] ? g_support_title : "PRESS CROSS TO ENTER A TITLE");
+            draw_text(60.0f, y + 38.0f, 0xffffffff,
+                      g_support_title[0] ? g_support_title :
+                                           "Press CROSS to enter a title");
         else if (i == 1)
-            draw_text(52, y + 34.0f, 0xffffffff,
-                      g_support_details[0] ? g_support_details : "PRESS CROSS TO DESCRIBE THE ISSUE");
+            draw_text(60.0f, y + 38.0f, 0xffffffff,
+                      g_support_details[0] ? g_support_details :
+                                             "Press CROSS to describe the issue");
         else
-            draw_text(52, y + 34.0f, 0xcaff39ff, "SAVE LOCALLY; SEND ONLINE IF THE SERVICE IS CONFIGURED");
+            draw_text(60.0f, y + 38.0f, 0x77718fff,
+                      "Save locally; send online if the service is configured");
     }
-
-    set_ui_font_size(8, 12);
-    draw_text(36, 370, 0x7c859aff,
-              "DEVICE MODEL, FIRMWARE AND APP VERSION ARE ADDED AUTOMATICALLY.");
-    draw_text(36, 390, 0x7c859aff, g_support_status);
-    draw_text(36, 406, 0x7c859aff,
-              strstr(PS3SCALE_SUPPORT_URL, "YOUR_PROJECT") ?
-              "ONLINE SUBMISSION NEEDS THE SEPARATE SUPPORT SERVICE." :
-              "REPORT IS SAVED LOCALLY BEFORE ONLINE SUBMISSION.");
-    set_ui_font_size(11, 17);
-    draw_text(28, 474, 0x9aa6adff,
-              "UP/DOWN: MOVE  |  CROSS: EDIT / SAVE  |  CIRCLE: BACK");
+    set_ui_font_size(7, 11);
+    draw_text(44.0f, 388.0f, 0x77718fff,
+              "Device model, firmware and app version are added automatically.");
+    draw_text(44.0f, 408.0f, 0x77718fff, g_support_status);
+    draw_text(24.0f, 478.0f, 0x77718fff,
+              "UP / DOWN: MOVE   |   CROSS: EDIT / SAVE   |   CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
 
@@ -3626,56 +3607,58 @@ static int save_support_report(void)
 
 static void draw_about(void)
 {
-    set_ui_font_size(11, 17);
-    draw_text(34, 24, 0xcaff39ff, "PS3 SCALE");
-    draw_text(34, 62, 0xffffffff, "ABOUT");
-    draw_text(34, 112, 0xdce3e8ff,
-              "PS3 / PS2 GAME LIBRARY AND GRAPHICS PROFILE MANAGER.");
-    draw_text(34, 152, 0xdce3e8ff,
-              "TARGET HARDWARE: PS3 FAT / SLIM / SUPER SLIM.");
-    draw_text(34, 192, 0x9aa6adff,
-              "ALPHA 0.2 - EXPERIMENTAL HOMEBREW SOFTWARE.");
-    draw_text(34, 232, 0x9aa6adff,
-              "SCANNING IS READ-ONLY. ORIGINAL GAME FILES ARE PRESERVED.");
-    draw_text(34, 272, 0x9aa6adff,
-              "NO UNIVERSAL UPSCALER OR FRAME GENERATION IS CLAIMED.");
-    draw_text(34, 312, 0x9aa6adff,
-              "PROFILES NEED EXACT TITLE / UPDATE MATCHING.");
-
-    draw_text(34, 352, 0xffffffff, "HARDWARE INFORMATION");
+    draw_page_header("About", "Credits, hardware and safety information");
+    draw_soft_card(24.0f, 92.0f, 806.0f, 340.0f, 0);
+    set_ui_font_size(12, 18);
+    draw_text(48.0f, 116.0f, 0xffffffff,
+              "PS3 / PS2 Game Library & Enhancement Manager");
+    set_ui_font_size(8, 12);
+    draw_text(48.0f, 158.0f, 0x77718fff,
+              "PS3 SCALE helps organize game libraries and review version-matched community profiles.");
+    draw_text(48.0f, 188.0f, 0x77718fff,
+              "Scanning is read-only. Original game files are never replaced by a scan.");
+    draw_text(48.0f, 218.0f, 0x77718fff,
+              "No universal upscaler or frame generation is claimed.");
+    draw_text(48.0f, 260.0f, 0xffffffff, "Hardware Information");
     if (g_hardware_info_valid) {
-        draw_text(34, 382, 0xdce3e8ff, "DETECTED MODEL:");
-        draw_text(210, 382, 0xdce3e8ff, g_hardware_info.model_series);
-        draw_text(34, 416, 0xdce3e8ff, "CONSOLE TYPE:");
-        draw_text(170, 416, 0xdce3e8ff,
+        draw_text(48.0f, 292.0f, 0x514b69ff, "Detected model:");
+        draw_text(190.0f, 292.0f, 0x514b69ff, g_hardware_info.model_series);
+        draw_text(48.0f, 322.0f, 0x514b69ff, "Console type:");
+        draw_text(190.0f, 322.0f, 0x514b69ff,
                   ps3scale_console_type_name(g_hardware_info.console_type));
-        draw_text(300, 416, 0xdce3e8ff, "FIRMWARE:");
-        draw_text(404, 416, 0xdce3e8ff, g_hardware_info.firmware_version);
-        draw_text(34, 448, 0xdce3e8ff, "PLATFORM ID:");
-        draw_text(170, 448, 0xdce3e8ff, g_hardware_info.platform_id);
+        draw_text(48.0f, 352.0f, 0x514b69ff, "Firmware:");
+        draw_text(190.0f, 352.0f, 0x514b69ff,
+                  g_hardware_info.firmware_version);
+        draw_text(48.0f, 382.0f, 0x514b69ff, "Platform ID:");
+        draw_text(190.0f, 382.0f, 0x514b69ff,
+                  g_hardware_info.platform_id);
     } else {
-        draw_text(34, 382, 0xffcc66ff, "HARDWARE INFO UNAVAILABLE.");
+        draw_text(48.0f, 292.0f, 0xffcc66ff,
+                  "Hardware information is unavailable.");
     }
-    draw_text(34, 478, 0x9aa6adff, "CIRCLE: BACK");
+    set_ui_font_size(7, 11);
+    draw_text(48.0f, 412.0f, 0x77718fff,
+              "Alpha 0.2  |  CFW 4.92  |  PS3 FAT / SLIM / SUPER SLIM");
+    draw_text(24.0f, 478.0f, 0x77718fff, "CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
 
 static void draw_ui(void)
 {
-    tiny3d_Clear(0xfff7f8fc, TINY3D_CLEAR_ALL);
+    tiny3d_Clear(0xfffafbff, TINY3D_CLEAR_ALL);
     tiny3d_Project2D();
     draw_scene_background();
-    if (g_animation_enabled) {
-        if (g_screen == SCREEN_HOME || g_screen == SCREEN_SPLASH ||
-            g_screen == SCREEN_BOOT)
-            draw_home_ambient();
-    }
+
+    /* The same animated 3D stair environment stays alive on every page. */
+    if (g_animation_enabled)
+        draw_home_ambient();
+
     if (g_screen != SCREEN_HOME && g_screen != SCREEN_SPLASH &&
         g_screen != SCREEN_BOOT) {
-        draw_solid_rect(12.0f, 10.0f, 830.0f, 492.0f, 0xf7f4ffed);
-        draw_outline_rect(12.0f, 10.0f, 830.0f, 492.0f, 0xc5b5eaff);
-        draw_solid_rect(12.0f, 10.0f, 830.0f, 3.0f, 0x875be8ff);
+        draw_solid_rect(10.0f, 8.0f, 834.0f, 496.0f, 0xfaf8ff48);
+        draw_outline_rect(10.0f, 8.0f, 834.0f, 496.0f, 0xd9d1ea88);
     }
+
     switch (g_screen) {
         case SCREEN_SPLASH: draw_splash(); break;
         case SCREEN_LANGUAGE: draw_language_selection(); break;
@@ -4033,14 +4016,14 @@ int main(int argc, char *argv[])
             if (cross && !old_cross) keyboard_press();
             if (circle && !old_circle) keyboard_cancel();
         } else if (g_screen == SCREEN_HOME) {
-            if (up && !old_up && g_home_selected >= 3)
-                g_home_selected -= 3;
-            if (down && !old_down && g_home_selected < 3)
-                g_home_selected += 3;
-            if (left && !old_left && (g_home_selected % 3) > 0)
-                g_home_selected--;
-            if (right && !old_right && (g_home_selected % 3) < 2)
-                g_home_selected++;
+            if (left && !old_left)
+                g_home_selected = (g_home_selected + 4) % 5;
+            if (right && !old_right)
+                g_home_selected = (g_home_selected + 1) % 5;
+            if (select && !old_select) {
+                g_screen = SCREEN_TOOLS;
+                refresh_companion_tool_status();
+            }
             if (cross && !old_cross) {
                 if (g_home_selected == 0) {
                     g_screen = SCREEN_SCAN;
@@ -4066,9 +4049,6 @@ int main(int argc, char *argv[])
                 } else if (g_home_selected == 3) {
                     g_screen = SCREEN_HELP;
                     g_help_selected = 0;
-                } else if (g_home_selected == 4) {
-                    g_screen = SCREEN_TOOLS;
-                    refresh_companion_tool_status();
                 } else {
                     g_screen = SCREEN_ABOUT;
                 }

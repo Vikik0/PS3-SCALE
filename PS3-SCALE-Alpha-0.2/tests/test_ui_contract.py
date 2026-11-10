@@ -71,16 +71,17 @@ assert draw_text_impl.count("SetFontSize(") == 2
 
 # Layout contract: compact font, independent list/metadata/cover columns.
 scan = section("static void draw_scan(void)", "static void draw_details(void)")
-assert "set_ui_font_size(9, 14)" in scan
-assert "draw_text(452, 178" in scan
-assert "ya2d_drawTextureEx(g_cover_texture, 680.0f, 282.0f" in scan
-assert "SELECT/START: SEARCH" in scan
+assert "draw_soft_card(20.0f, 88.0f, 144.0f, 364.0f" in scan
+assert "draw_soft_card(560.0f, 128.0f, 272.0f, 300.0f" in scan
+assert "ya2d_drawTextureEx(g_cover_texture, x + 6.0f" in scan
+assert "SELECT / START: SEARCH" in scan
+assert "for (i = 0; i < 8" in scan
 
 # Settings retain the expected maintenance/audio actions and add language selection.
 settings = section("static void draw_settings(void)", "static void draw_tools(void)")
-for token in ("BACKGROUND MUSIC", "MUSIC VOLUME", "HOME ANIMATION",
-              "CHECK FOR USB UPDATE", "RESCAN GAME LIBRARY",
-              "RESTORE DEFAULT SETTINGS", "LANGUAGE", "MUSIC PLAYLIST"):
+for token in ("Music", "Music Volume", "Animations (UI & Background)",
+              "Check for USB Update", "Rescan Game Library",
+              "Restore Default Settings", "Language", "Music Playlist"):
     assert token in settings, f"Missing settings entry: {token}"
 assert "COPY MUSIC TO INTERNAL HDD" not in settings
 assert "copy_music_to_internal" not in src
@@ -94,7 +95,7 @@ assert "music_next=%d" in src
 assert "open_music_track(next_track)" in src
 assert "g_music_fade_remaining = 48000u" in src
 assert "AUTO: MUSIC 1 > MUSIC 2" in settings
-assert "MUSIC 1 FILE IS NOT IN THIS BUILD" in settings
+assert "MUSIC 1 IS NOT BUNDLED IN THIS BUILD" in settings
 assert "START GAME" in src
 assert "start_selected_game()" in main
 assert "ps3scale_webman_start_game(&g_game_launch_target)" in src
@@ -120,17 +121,18 @@ assert "BACKGROUND MUSIC STARTED." in main
 assert "PS3SCALE_SETTINGS_PATH" in src
 assert "settings.cfg" in src
 
-# Six-tile home screen, Apollo Save branding, Help and local support outbox.
+# Five primary home tiles; Companion Tools remains reachable through SELECT.
 home = section("static void draw_home(void)", "static void draw_online_database(void)")
-for token in ("SCAN GAMES", "ONLINE DB", "SETTINGS", "HELP & SUPPORT",
-              "COMPANION TOOLS", "ABOUT"):
+for token in ("Scan Games", "Online DB", "Settings", "Help", "About",
+              "SELECT: COMPANION TOOLS"):
     assert token in home
-assert "for (i = 0; i < 6; i++)" in home
-assert "g_home_selected < 3" in main
+assert "static const char *items[5]" in home
+assert "for (i = 0; i < 5; i++)" in home
+assert "g_home_selected = (g_home_selected + 1) % 5;" in main
 assert "SCREEN_HELP" in src and "SCREEN_SUPPORT_FORM" in src
 help_ui = section("static void draw_help(void)", "static void draw_about(void)")
-assert "REPORT AN ISSUE" in help_ui and "SEND FEEDBACK" in help_ui
-assert "HOW TO USE PS3 SCALE" in help_ui
+assert "Report an Issue" in help_ui and "Send Feedback" in help_ui
+assert "A quick step-by-step guide to PS3 SCALE" in help_ui
 assert "PS3SCALE_SUPPORT_OUTBOX_PATH" in src
 assert "SAVED TO LOCAL OUTBOX" in src
 assert "open_support_keyboard(0)" in main
@@ -141,8 +143,8 @@ assert "ya2d_freeTexture(g_apollo_texture)" in main
 # Read-only hardware detection reports firmware and the Platform ID without console IDs.
 assert "ps3scale_hardware_detect(&g_hardware_info)" in main
 about = section("static void draw_about(void)", "static void draw_ui(void)")
-for token in ("HARDWARE INFORMATION", "DETECTED MODEL:", "CONSOLE TYPE:",
-              "FIRMWARE:", "PLATFORM ID:", "HARDWARE INFO UNAVAILABLE."):
+for token in ("Hardware Information", "Detected model:", "Console type:",
+              "Firmware:", "Platform ID:", "Hardware information is unavailable."):
     assert token in about
 hardware_detect_path = source_path.with_name("hardware_detect.c")
 hardware_detect_src = hardware_detect_path.read_text(encoding="utf-8")
@@ -159,7 +161,9 @@ assert "MatrixRotationY" in ambient
 assert "TINY3D_LINE_STRIP" in ambient
 assert "draw_ambient_ring" in ambient
 assert "draw_ambient_satellite" in ambient
-assert "g_frame_counter * 0.0012f" in ambient
+assert "g_frame_counter % 21600ul" in ambient
+assert "sinf(phase)" in ambient
+assert "for (i = 0; i < 22; i++)" in ambient
 draw_ui_impl = section("static void draw_ui(void)", "static int compare_game_titles")
 assert "if (g_animation_enabled)" in draw_ui_impl
 assert "draw_home_ambient();" in draw_ui_impl
@@ -286,8 +290,8 @@ assert "service_support_send();" in main
 assert "LOCAL SAVE OK; ONLINE OFF." in src
 assert "PS3SCALE_SUPPORT_OUTBOX_PATH" in src
 support_form = section("static void draw_support_form(void)", "static int support_json_escape")
-assert "SUBMIT REPORT" in support_form
-assert "SAVE LOCALLY; SEND ONLINE IF THE SERVICE IS CONFIGURED" in support_form
+assert "Submit Report" in support_form
+assert "Save locally; send online if the service is configured" in support_form
 
 online_source = source_path.with_name("online_catalog.c").read_text(encoding="utf-8")
 assert "int ps3scale_online_post_json(" in online_source
@@ -310,9 +314,11 @@ assert "grant all on table public.ps3scale_support_reports to service_role" in s
 
 # XMB and scene design contract.
 assert "draw_scene_background();" in draw_ui_impl
-assert "daylight" in src and "night" in src and "stair_top" in src
+assert "daylight" in src and "night" in src
+assert "draw_stair_tread(4.8f, 0.28f, 2.45f, i);" in src
+assert "g_frame_counter % 21600ul" in src
 assert "draw_home_card" not in src  # home cards are rendered in the main menu loop
-assert "PS3 SCALE" in home and "COMPANION TOOLS" in home
+assert "PS3" in home and "SCALE" in home and "COMPANION TOOLS" in home
 project_root = source_path.parents[2]
 makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 assert "scripts/generate_xmb_assets.py" in makefile

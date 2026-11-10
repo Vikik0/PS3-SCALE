@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate PS3 SCALE XMB artwork using only the Python standard library."""
 from __future__ import annotations
-import re, struct, zlib
+import math, re, struct, zlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
