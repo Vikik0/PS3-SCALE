@@ -2889,9 +2889,15 @@ static void draw_online_database(void)
         y = 182.0f + (float)visible_count * 30.0f;
         draw_soft_card(32.0f, y, 334.0f, 26.0f,
                        (int)i == g_online_selected);
+        draw_solid_rect(40.0f, y + 4.0f, 20.0f, 18.0f,
+                        (i % 3 == 0) ? 0xe5dcf6ff :
+                        (i % 3 == 1) ? 0xe0e7f4ff : 0xf0e3f2ff);
+        draw_outline_rect(40.0f, y + 4.0f, 20.0f, 18.0f, 0xd2c6eaff);
+        draw_solid_rect(44.0f, y + 8.0f, 12.0f, 2.0f, 0xb69affff);
+        draw_solid_rect(44.0f, y + 13.0f, 8.0f, 2.0f, 0xcfc4e8ff);
         set_ui_font_size(6, 9);
         snprintf(row, sizeof(row), "%.30s", title);
-        draw_text(42.0f, y + 4.0f,
+        draw_text(68.0f, y + 4.0f,
                   (int)i == g_online_selected ? 0xcaff39ff : 0xffffffff, row);
         draw_text(302.0f, y + 4.0f, 0x77718fff, kind);
         visible_count++;
@@ -3370,6 +3376,7 @@ static void draw_help(void)
             snprintf(number, sizeof(number), "%d", i + 1);
             draw_text(x + 24.0f, 139.0f, 0xcaff39ff, number);
         }
+        draw_menu_icon(i, x + 98.0f, 126.0f, 0);
         set_ui_font_size(8, 12);
         draw_text(x + 12.0f, 176.0f, 0xffffffff, step_titles[i]);
         set_ui_font_size(5, 8);
