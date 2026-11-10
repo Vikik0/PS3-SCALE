@@ -3034,7 +3034,8 @@ static void draw_scan(void)
             draw_solid_rect(x + 12.0f, y + 83.0f, 38.0f, 2.0f, 0xcfc4e8ff);
         }
         set_ui_font_size(6, 9);
-        draw_text(x + 7.0f, y + 105.0f, 0xffffffff, game->title);
+        snprintf(line, sizeof(line), "%.12s", game->title);
+        draw_text(x + 7.0f, y + 105.0f, 0xffffffff, line);
         draw_text(x + 7.0f, y + 120.0f,
                   0xcaff39ff,
                   (game->kind == PS3SCALE_GAME_PS2_ISO ||
@@ -3046,7 +3047,7 @@ static void draw_scan(void)
     set_ui_font_size(9, 14);
     draw_text(578.0f, 146.0f, 0xffffffff, "Selected Game");
     if (selected) {
-        snprintf(line, sizeof(line), "%.32s", selected->title);
+        snprintf(line, sizeof(line), "%.24s", selected->title);
         set_ui_font_size(10, 15);
         draw_text(578.0f, 176.0f, 0xcaff39ff, line);
         set_ui_font_size(7, 11);
@@ -3117,7 +3118,8 @@ static void draw_details(void)
 
     draw_soft_card(186.0f, 92.0f, 326.0f, 292.0f, 0);
     set_ui_font_size(11, 17);
-    draw_text(204.0f, 110.0f, 0xffffffff, game->title);
+    snprintf(line, sizeof(line), "%.26s", game->title);
+    draw_text(204.0f, 110.0f, 0xffffffff, line);
     set_ui_font_size(7, 11);
     snprintf(line, sizeof(line), "Platform: %s",
              game_is_ps3(game) ? "PlayStation 3" : "PlayStation 2");
@@ -3348,11 +3350,11 @@ static void draw_help(void)
         "Apply Safely", "Start Game"
     };
     static const char *step_lines[5] = {
-        "Detect your PS3 and PS2 titles.",
-        "Choose a game from your library.",
-        "Check version and compatibility.",
-        "Use only a verified exact match.",
-        "Launch and enjoy your game."
+        "Find PS3 / PS2 titles.",
+        "Choose a library game.",
+        "Check version and match.",
+        "Apply a verified profile.",
+        "Start and enjoy your game."
     };
     static const char *actions[2] = { "Report an Issue", "Send Feedback" };
     int i;
@@ -3370,7 +3372,7 @@ static void draw_help(void)
         }
         set_ui_font_size(8, 12);
         draw_text(x + 12.0f, 176.0f, 0xffffffff, step_titles[i]);
-        set_ui_font_size(6, 9);
+        set_ui_font_size(5, 8);
         draw_text(x + 12.0f, 208.0f, 0x77718fff, step_lines[i]);
         draw_solid_rect(x + 12.0f, 268.0f, 130.0f, 2.0f, 0xd9d1eaff);
     }
