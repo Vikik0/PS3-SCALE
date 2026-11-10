@@ -2611,14 +2611,15 @@ static void draw_splash(void)
 
     draw_icon_line(426.0f, 248.0f, 426.0f, 342.0f,
                    color_with_alpha(0xb9a7e8ff, alpha));
-    if (g_apollo_texture)
+    if (g_apollo_texture) {
         ya2d_drawTextureEx(g_apollo_texture, 470.0f, 242.0f,
                            0.0f, 88.0f, 88.0f);
-    set_ui_font_size(11, 17);
-    draw_text(566.0f, 278.0f,
-              color_with_alpha(0x20263aff, alpha), "APOLLO");
-    draw_text(566.0f, 300.0f,
-              color_with_alpha(0x20263aff, alpha), "SAVE");
+        draw_solid_rect(470.0f, 242.0f, 88.0f, 88.0f,
+                        color_with_alpha(0xfaf8ffff, 255u - alpha));
+    }
+    set_ui_font_size(10, 15);
+    draw_text(566.0f, 286.0f,
+              color_with_alpha(0x20263aff, alpha), "APOLLO SAVE");
 
     draw_solid_rect(202.0f, 390.0f, 450.0f, 12.0f, 0xe2dcf3ff);
     draw_outline_rect(202.0f, 390.0f, 450.0f, 12.0f, 0xd4c9edff);
