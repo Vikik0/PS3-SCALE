@@ -84,7 +84,8 @@ assert "No games match this filter." in scan
 settings = section("static void draw_settings(void)", "static void draw_tools(void)")
 for token in ("Music", "Music Volume", "Animations (UI & Background)",
               "Check for USB Update", "Rescan Game Library",
-              "Restore Default Settings", "Language", "Music Playlist"):
+              "Restore Default Settings", "Language", "Music Playlist",
+              "Track Fade Duration"):
     assert token in settings, f"Missing settings entry: {token}"
 assert "COPY MUSIC TO INTERNAL HDD" not in settings
 assert "copy_music_to_internal" not in src
@@ -101,6 +102,11 @@ assert "mpg123_length(g_mpg123)" in src
 assert "music_sample_fade" in src
 assert "Keep this block on one track" in src
 assert "AUTO: %s > %s" in settings
+assert "music_fade_ms=%d" in src
+assert "settings_version=2" in src
+assert "cycle_music_fade_ms" in src
+assert "g_settings_selected == 8" in main
+assert "MUSIC 1: BIOS - ZORROVIAN (USB IMPORT)" in settings
 assert "draw_ps_symbol(407.0f, 22.0f" in src
 assert "MUSIC 1: BIOS - ZORROVIAN (USB IMPORT)" in settings
 assert "MUSIC 2: GTA V (BUILT IN)" in settings
