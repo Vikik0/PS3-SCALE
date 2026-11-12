@@ -162,18 +162,19 @@ assert "ps3scale_hardware_info_parse" in hardware_detect_src
 assert "ps3scale_console_type_name" in about
 assert "IDPS" not in hardware_detect_src and "PSID" not in hardware_detect_src
 
-# Home animation is true 3D but remains low-complexity and slow.
+# Home animation is a visible, slowly looping perspective spiral staircase.
 ambient = section("static void draw_home_ambient(void)", "static void set_settings_message")
-assert "MatrixProjPerspective" in ambient
-assert "MatrixRotationY" in ambient
+assert "PS3SCALE_STAIR_STEPS 24" in src
+assert "scene_project_point" in ambient
+assert "scene_push_face" in ambient
+assert "compare_scene_face_depth" in ambient
+assert "qsort(faces, face_count" in ambient
+assert "Spiral handrail" in ambient
 assert "TINY3D_LINE_STRIP" in ambient
-assert "draw_ambient_ring" in ambient
-assert "draw_ambient_satellite" in ambient
 assert "g_frame_counter % 21600ul" in ambient
 assert "sinf(phase)" in ambient
-assert "for (i = 0; i < 32; i++)" in ambient
-assert "MatrixScale(2.0f, 2.0f, 2.0f)" in ambient
-assert "const float center_x = -5.8f;" in ambient
+assert "outer_radius = 9.6f" in ambient
+assert "const float center_x = 7.2f;" in ambient
 assert "case 0xffffff00u: rgb = 0x29243f00u;" in src
 assert 'sscanf(line, "animation_v2=%d"' in src
 assert 'fprintf(fp, "animation_v2=%d\\n"' in src
@@ -182,7 +183,7 @@ assert "if (g_animation_enabled)" in draw_ui_impl
 assert "draw_home_ambient();" in draw_ui_impl
 assert "tiny3d_AlphaTest(1, 0x10, TINY3D_ALPHA_FUNC_GEQUAL);" in draw_ui_impl
 assert "tiny3d_BlendFunc(1," in draw_ui_impl
-assert "TINY3D_CLEAR_ZBUFFER" in draw_ui_impl
+assert "TINY3D_CLEAR_ZBUFFER" not in draw_ui_impl
 
 # Library sorting and companion-tool boundaries remain intact.
 assert "qsort(g_games.items" in src
@@ -345,11 +346,12 @@ assert "tiny3d_AlphaTest(1, 0x10, TINY3D_ALPHA_FUNC_GEQUAL);" in draw_ui_impl
 assert "TINY3D_CLEAR_ZBUFFER" in draw_ui_impl
 assert "draw_app_icon_preview" in src
 assert "XMB APP ICON" in src
-assert "draw_stair_tread(4.8f, 0.28f, 2.45f, i);" in src
+assert "scene_project_point" in src
+assert "PS3SCALE_STAIR_STEPS 24" in src
 assert "g_frame_counter % 21600ul" in src
 assert "draw_home_card" not in src  # home cards are rendered in the main menu loop
 assert "PS3" in home and "SCALE" in home and "COMPANION TOOLS" in home
-assert '"Detect PS3 & PS2 Titles"' in home and '"Community Updates"' in home
+assert '"PS3 / PS2 Library"' in home and '"Game Profiles"' in home
 assert "draw_ps_symbol" in home
 project_root = source_path.parents[2]
 makefile = (project_root / "Makefile").read_text(encoding="utf-8")
