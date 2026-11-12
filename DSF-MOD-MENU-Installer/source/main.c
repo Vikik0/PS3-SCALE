@@ -370,7 +370,7 @@ static void check_status(void)
 static void draw_text(float x, float y, u32 color, const char *text)
 {
     SetFontColor(color, 0x00000000);
-    DrawString(x, y, text ? text : "");
+    DrawString(x, y, (char *)(text ? text : ""));
 }
 
 static void draw_ui(void)
