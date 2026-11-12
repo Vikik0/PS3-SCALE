@@ -1,31 +1,19 @@
-# Bundling the startup theme in the PS3 PKG
+# PS3 SCALE two-track music packaging
 
-The application looks for the installed resource at:
+## Music 2 — built into the PKG
+- GTA V - Greyhound Pause Menu Theme Remix
+- Installed as `USRDIR/theme.mp3`.
+- Reconstructed from the 14 ordered `audio-source/theme.mp3.part-*` binary chunks.
+- SHA-256: `b8a7b1c2573ea8a397c2fbc3a6c731b25dcb71f572aedf5af8568785620d1b64`.
 
-`/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`
+## Music 1 — Zorrovian BIOS
+- Installed as `USRDIR/music1.mp3`.
+- The app auto-imports the uploaded Zorrovian MP3 from USB000–USB003, at the root or in `PS3SCALE/`.
+- Accepted names: `music1.mp3`, `BIOS - Zorrovian [Official Visualiser] (1).mp3`, and `BIOS - Zorrovian [Official Visualiser] (1)(2).mp3`.
+- Import uses a temporary file, mpg123 validation and atomic rename. Once copied, the internal HDD copy is used on later launches.
+- The uploaded MP3 is not yet stored in GitHub build inputs; this build therefore does not embed Music 1. Adding `audio-source/music1.mp3` or ordered `music1.mp3.part-*` chunks makes the existing packaging script include it.
 
-The package rule copies everything under `pkgfiles/` into the package root. The supported bundle location is therefore:
-
-`pkgfiles/USRDIR/theme.mp3`
-
-## Build pipeline
-
-The complete 7:11.856 track is stored in the repository as ordered binary chunks under `audio-source/theme.mp3.part-*`. The GitHub Actions PS3 build joins those chunks into `pkgfiles/USRDIR/theme.mp3` before `make pkg`.
-
-The bundled MP3 is stereo, 44.1 kHz, 96 kbps, and 5,182,732 bytes. The build verifies its SHA-256 before packaging.
-
-## PKG verification
-
-After `make pkg`, `scripts/verify_pkg_theme.py` decrypts the finalized PS3 PKG's file table and confirms that:
-
-- The package contains `USRDIR/theme.mp3`.
-- The embedded file size is exactly 5,182,732 bytes.
-- Its SHA-256 matches the packaged track.
-
-This prevents a successful build from being mistaken for a music-embedded build when the asset is absent.
-
-## Runtime
-
-After installation, the song is available at `/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`. No USB drive or manual copy is needed for the built-in startup theme. The app opens only the embedded internal resource. There is no USB music fallback and no manual copy action. The MP3 is assembled from the ordered binary chunks before packaging.
-
-Real playback, looping, volume adjustment, and clean shutdown still require final testing on PS3 hardware.
+## Playback
+- Auto alternates the first track on each app launch.
+- Music 1 only and Music 2 only are selectable.
+- Fade-in is one second; music volume and ON/OFF remain configurable.
