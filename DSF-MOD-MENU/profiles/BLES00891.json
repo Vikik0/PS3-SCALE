@@ -19,8 +19,8 @@
   "memory_patches_enabled": false,
   "installer": {
     "title": "DSF MOD MENU",
-    "title_id": "DSFMOD01",
-    "source_path": "/dev_hdd0/game/DSFMOD01/USRDIR/simple-cheat-menu.sprx",
+    "title_id": "DSFMOD001",
+    "source_path": "/dev_hdd0/game/DSFMOD001/USRDIR/simple-cheat-menu.sprx",
     "installed_plugin_path": "/dev_hdd0/plugins/simple-cheat-menu.sprx",
     "boot_config_path": "/dev_hdd0/boot_plugins.txt",
     "settings_path": "/dev_hdd0/tmp/simple-cheat-menu/settings.txt",
