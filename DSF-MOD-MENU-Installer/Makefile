@@ -19,7 +19,7 @@ SOURCES := source
 INCLUDES := include source
 
 LIBDIRS := $(PORTLIBS)
-LIBS := -lfont3d -ltiny3d -lgcm_sys -lrsx -lio -lsysutil -lsysfs -llv2 -lm
+LIBS := -lya2d -lfont3d -ltiny3d -lgcm_sys -lrsx -lio -lsysutil -lsysfs -llv2 -lm
 
 CFLAGS = -O2 -Wall -Wextra -std=gnu99 -mcpu=cell $(MACHDEP) $(INCLUDE)
 LDFLAGS = $(MACHDEP) -Wl,-Map,$(notdir $@).map
