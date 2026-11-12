@@ -245,6 +245,17 @@ static int ensure_fetch_settings(void)
                         defaults, sizeof(defaults) - 1);
 }
 
+static void rollback_plugin_file(void)
+{
+    remove(PLUGIN_TEMP);
+    if (file_exists(PLUGIN_BACKUP)) {
+        remove(PLUGIN_PATH);
+        (void)rename(PLUGIN_BACKUP, PLUGIN_PATH);
+    } else {
+        remove(PLUGIN_PATH);
+    }
+}
+
 static int install_plugin(void)
 {
     struct stat info;
@@ -281,23 +292,26 @@ static int install_plugin(void)
                  "ERROR: plugin copy failed.");
         return -6;
     }
-    if (rename(PLUGIN_TEMP, PLUGIN_PATH) != 0) {
+
+    /* Back up first, then remove the old destination for cellFs rename compatibility. */
+    if (file_exists(PLUGIN_PATH) && remove(PLUGIN_PATH) != 0) {
         remove(PLUGIN_TEMP);
         snprintf(g_message, sizeof(g_message),
-                 "ERROR: could not place plugin file.");
+                 "ERROR: existing plugin could not be replaced.");
         return -7;
+    }
+    if (rename(PLUGIN_TEMP, PLUGIN_PATH) != 0) {
+        rollback_plugin_file();
+        snprintf(g_message, sizeof(g_message),
+                 "ERROR: plugin rename failed; previous plugin restored.");
+        return -8;
     }
 
     if (boot_add_plugin_line() != 0) {
-        if (file_exists(PLUGIN_BACKUP)) {
-            remove(PLUGIN_PATH);
-            (void)rename(PLUGIN_BACKUP, PLUGIN_PATH);
-        } else {
-            remove(PLUGIN_PATH);
-        }
+        rollback_plugin_file();
         snprintf(g_message, sizeof(g_message),
                  "ERROR: boot_plugins update failed; plugin rolled back.");
-        return -8;
+        return -9;
     }
 
     snprintf(g_message, sizeof(g_message),
