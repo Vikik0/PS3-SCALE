@@ -585,10 +585,18 @@ static int import_music1_from_usb(void)
         "/dev_usb001/BIOS - Zorrovian [Official Visualiser] (1).mp3",
         "/dev_usb002/BIOS - Zorrovian [Official Visualiser] (1).mp3",
         "/dev_usb003/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb000/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3",
+        "/dev_usb001/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3",
+        "/dev_usb002/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3",
+        "/dev_usb003/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3",
         "/dev_usb000/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1).mp3",
         "/dev_usb001/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1).mp3",
         "/dev_usb002/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1).mp3",
-        "/dev_usb003/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1).mp3"
+        "/dev_usb003/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb000/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3",
+        "/dev_usb001/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3",
+        "/dev_usb002/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3",
+        "/dev_usb003/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3"
     };
     char temp_path[PS3SCALE_PATH_MAX];
     unsigned char buffer[32768];
@@ -1181,7 +1189,7 @@ static void draw_ambient_ring(float radius, float tilt, float spin,
     for (i = 0; i < 48; i++) {
         float angle = 6.28318530718f * (float)i / 48.0f;
         tiny3d_VertexPos(cosf(angle), sinf(angle), 0.0f);
-        if (i == 0) tiny3d_VertexColor(ui_theme_color(color));
+        tiny3d_VertexColor(ui_theme_color(color));
     }
     tiny3d_End();
 }
@@ -1201,10 +1209,15 @@ static void draw_ambient_satellite(float orbit_radius, float angle,
     tiny3d_VertexPos(px - 0.72f, py, 0.0f);
     tiny3d_VertexColor(ui_theme_color(color));
     tiny3d_VertexPos(px + 0.72f, py, 0.0f);
+    tiny3d_VertexColor(ui_theme_color(color));
     tiny3d_VertexPos(px, py - 0.72f, 0.0f);
+    tiny3d_VertexColor(ui_theme_color(color));
     tiny3d_VertexPos(px, py + 0.72f, 0.0f);
+    tiny3d_VertexColor(ui_theme_color(color));
     tiny3d_VertexPos(px, py, -0.72f);
+    tiny3d_VertexColor(ui_theme_color(color));
     tiny3d_VertexPos(px, py, 0.72f);
+    tiny3d_VertexColor(ui_theme_color(color));
     tiny3d_End();
 }
 
@@ -1214,11 +1227,10 @@ static void draw_stair_face(float ax, float ay, float az,
                             float dx, float dy, float dz, u32 color)
 {
     tiny3d_SetPolygon(TINY3D_QUADS);
-    tiny3d_VertexPos(ax, ay, az);
-    tiny3d_VertexColor(color);
-    tiny3d_VertexPos(bx, by, bz);
-    tiny3d_VertexPos(cx, cy, cz);
-    tiny3d_VertexPos(dx, dy, dz);
+    tiny3d_VertexPos(ax, ay, az); tiny3d_VertexColor(color);
+    tiny3d_VertexPos(bx, by, bz); tiny3d_VertexColor(color);
+    tiny3d_VertexPos(cx, cy, cz); tiny3d_VertexColor(color);
+    tiny3d_VertexPos(dx, dy, dz); tiny3d_VertexColor(color);
     tiny3d_End();
 }
 
@@ -1343,9 +1355,9 @@ static void draw_home_ambient(void)
     const float tau = 6.28318530718f;
     const float phase =
         (float)(g_frame_counter % 21600ul) / 21600.0f * tau;
-    const float bob = sinf(phase) * 0.18f;
-    const float center_x = -9.5f;
-    const float center_z = 29.0f;
+    const float bob = sinf(phase) * 0.12f;
+    const float center_x = -5.8f;
+    const float center_z = 25.0f;
     int i;
 
     tiny3d_Project3D();
@@ -1354,19 +1366,15 @@ static void draw_home_ambient(void)
     tiny3d_SetProjectionMatrix(&projection);
     tiny3d_SetLightsOff();
 
-    /*
-     * A slow, continuous spiral staircase. The global phase completes one
-     * full revolution in 21600 frames; all secondary motion is a sine wave
-     * of that same phase, so the first and last frames meet without a pop.
-     */
-    for (i = 0; i < 22; i++) {
-        float angle = (float)i * 0.31f + phase;
-        float radius = 4.55f +
-            sinf(phase + (float)i * 0.19f) * 0.055f;
-        float y = ((float)i - 10.5f) * 0.57f + bob;
+    /* Thirty-two low-poly treads form a slow, continuously turning spiral. */
+    for (i = 0; i < 32; i++) {
+        float angle = (float)i * 0.235f + phase;
+        float radius = 4.5f +
+            sinf(phase + (float)i * 0.15f) * 0.045f;
+        float y = ((float)i - 15.5f) * 0.46f + bob;
         rotation = MatrixMultiply(MatrixRotationX(0.76f),
                                   MatrixRotationY(angle));
-        scale = MatrixScale(2.35f, 2.35f, 2.35f);
+        scale = MatrixScale(2.0f, 2.0f, 2.0f);
         translation = MatrixTranslation(center_x + cosf(angle) * radius,
                                          y,
                                          center_z + sinf(angle) * radius);
@@ -1375,25 +1383,24 @@ static void draw_home_ambient(void)
         draw_stair_tread(4.8f, 0.28f, 2.45f, i);
     }
 
-    /* Fine helical edge light follows the same periodic path as the steps. */
+    /* A fine lilac edge traces the spiral; the cycle wraps without a jump. */
     tiny3d_SetMatrixModelView(NULL);
     tiny3d_SetPolygon(TINY3D_LINE_STRIP);
-    for (i = 0; i <= 44; i++) {
-        float angle = (float)i * 0.155f + phase;
-        float y = ((float)i * 0.5f - 10.5f) * 0.57f + bob;
+    for (i = 0; i <= 64; i++) {
+        float angle = (float)i * 0.115f + phase;
+        float y = ((float)i * 0.5f - 15.5f) * 0.46f + bob;
         tiny3d_VertexPos(center_x + cosf(angle) * 4.58f,
                          y,
                          center_z + sinf(angle) * 4.58f);
-        if (i == 0)
-            tiny3d_VertexColor(0xc0a8ff88);
+        tiny3d_VertexColor(0xc0a8ff88);
     }
     tiny3d_End();
 
-    draw_ambient_ring(12.0f, 1.42f, phase,
-                      center_x + 1.0f, -0.6f, center_z,
+    draw_ambient_ring(10.0f, 1.42f, phase,
+                      center_x + 1.5f, -0.5f, center_z,
                       0xb9a4ff50);
-    draw_ambient_satellite(14.0f, phase, 0.52f, phase,
-                           center_x + 1.0f, 0.0f, center_z,
+    draw_ambient_satellite(12.0f, phase, 0.52f, phase,
+                           center_x + 1.5f, 0.0f, center_z,
                            0xc6b6ff88);
 
     tiny3d_Project2D();
@@ -2719,14 +2726,16 @@ static void draw_keyboard(void)
 
 static void draw_soft_card(float x, float y, float w, float h, int selected)
 {
-    draw_solid_rect(x + 3.0f, y + 5.0f, w, h,
-                    selected ? 0x806c9d38 : 0x8d7ca32a);
+    draw_solid_rect(x + 4.0f, y + 7.0f, w, h,
+                    selected ? 0x665b8f50 : 0x5e718f35);
     draw_solid_rect(x, y, w, h,
-                    selected ? 0xf4efffff : 0xfaf8ffff);
+                    selected ? 0xf4efffe8 : 0xfaf8ffe8);
     draw_outline_rect(x, y, w, h,
                       selected ? 0x9568edff : 0xd9d1eaff);
-    draw_solid_rect(x + 7.0f, y + 5.0f, w - 14.0f, 1.5f, 0xffffff88);
+    draw_solid_rect(x + 8.0f, y + 5.0f, w - 16.0f, 1.5f, 0xffffffb8);
     if (selected) {
+        draw_outline_rect(x - 2.0f, y - 2.0f, w + 4.0f, h + 4.0f,
+                          0xb99aff70);
         draw_solid_rect(x + 10.0f, y + h - 5.0f,
                         w - 20.0f, 3.0f, 0x875be8ff);
     }
@@ -2755,14 +2764,15 @@ static void draw_soft_chip(float x, float y, float w, const char *label,
 
 static void draw_page_header(const char *title, const char *subtitle)
 {
-    set_ui_font_size(16, 24);
-    draw_text(24.0f, 16.0f, 0xffffffff, "PS3 SCALE");
+    draw_ps_symbol(22.0f, 11.0f, 0x29243fff);
+    set_ui_font_size(15, 23);
+    draw_text(68.0f, 16.0f, 0xffffffff, "PS3 SCALE");
     set_ui_font_size(10, 15);
-    draw_text(190.0f, 22.0f, 0xcaff39ff, title);
+    draw_text(218.0f, 22.0f, 0x875be8ff, title);
     set_ui_font_size(7, 11);
     draw_text(26.0f, 49.0f, 0x77718fff, subtitle);
-    draw_solid_rect(24.0f, 68.0f, 178.0f, 2.0f, 0xb79affff);
-    draw_solid_rect(24.0f, 70.0f, 178.0f, 1.0f, 0xffffff80);
+    draw_solid_rect(24.0f, 68.0f, 202.0f, 2.0f, 0xb79affff);
+    draw_solid_rect(24.0f, 70.0f, 202.0f, 1.0f, 0xffffffb8);
 }
 
 static void draw_soft_button(float x, float y, float w, float h,
@@ -2780,45 +2790,47 @@ static void draw_home(void)
         "Scan Games", "Online DB", "Settings", "Help", "About"
     };
     static const char *descriptions[5] = {
-        "Detect games", "Game profiles", "Music & display",
-        "Guides & support", "Credits & info"
+        "Detect PS3 & PS2 Titles", "Community Updates", "Customize Application",
+        "Usage Guide & Support", "Credits & Information"
     };
     char line[192];
     int i;
 
-    set_ui_font_size(22, 33);
-    draw_text(28.0f, 20.0f, 0xffffffff, "PS3");
-    draw_text(104.0f, 20.0f, 0xcaff39ff, "SCALE");
+    draw_ps_symbol(25.0f, 17.0f, 0x29243fff);
+    set_ui_font_size(25, 37);
+    draw_text(70.0f, 18.0f, 0xffffffff, "PS3");
+    draw_text(148.0f, 18.0f, 0x875be8ff, "SCALE");
     set_ui_font_size(8, 12);
-    draw_text(31.0f, 62.0f, 0x77718fff,
+    draw_text(72.0f, 61.0f, 0x514b69ff,
               "PS3 & PS2 ENHANCEMENT MANAGEMENT");
-    draw_solid_rect(30.0f, 86.0f, 218.0f, 2.0f, 0xb69affff);
-    draw_text(31.0f, 103.0f, 0x77718fff,
+    draw_solid_rect(72.0f, 82.0f, 252.0f, 2.0f, 0xb69affff);
+    draw_text(72.0f, 98.0f, 0x77718fff,
               "EXPLORE  |  ENHANCE  |  PLAY");
 
-    draw_solid_rect(594.0f, 20.0f, 112.0f, 28.0f, 0xfaf8ffff);
-    draw_outline_rect(594.0f, 20.0f, 112.0f, 28.0f, 0xd8d0eaff);
-    draw_text(605.0f, 29.0f, 0xcaff39ff, "CFW 4.92");
-    draw_solid_rect(714.0f, 20.0f, 126.0f, 28.0f, 0xfaf8ffff);
-    draw_outline_rect(714.0f, 20.0f, 126.0f, 28.0f, 0xd8d0eaff);
-    draw_text(724.0f, 29.0f, 0xffffffff, "PS3 SLIM");
+    draw_soft_card(568.0f, 18.0f, 116.0f, 32.0f, 0);
+    draw_text(582.0f, 28.0f, 0x875be8ff, "CFW 4.92");
+    draw_soft_card(692.0f, 18.0f, 148.0f, 32.0f, 0);
+    draw_text(705.0f, 28.0f, 0x514b69ff, "PS3 SLIM (CECH-25xx)");
 
+    draw_text(30.0f, 132.0f, 0x77718fff, "FEATURES");
     for (i = 0; i < 5; i++) {
-        float x = 306.0f + (float)i * 105.0f;
-        float y = 154.0f;
-        const float w = 98.0f, h = 148.0f;
+        float x = 168.0f + (float)i * 134.0f;
+        float y = 126.0f;
+        const float w = 126.0f, h = 150.0f;
         int selected = (i == g_home_selected);
         draw_soft_card(x, y, w, h, selected);
-        draw_menu_icon(i == 4 ? 5 : i, x + 28.0f, y + 16.0f, selected);
-        set_ui_font_size(7, 11);
-        draw_text_centered(x + 4.0f, y + 78.0f, w - 8.0f,
-                           selected ? 0xcaff39ff : 0xffffffff, items[i]);
-        set_ui_font_size(5, 8);
-        draw_text_centered(x + 5.0f, y + 104.0f, w - 10.0f,
+        draw_menu_icon(i == 4 ? 5 : i, x + 42.0f, y + 16.0f, selected);
+        set_ui_font_size(8, 12);
+        draw_text_centered(x + 5.0f, y + 77.0f, w - 10.0f,
+                           selected ? 0x875be8ff : 0x29243fff, items[i]);
+        set_ui_font_size(6, 9);
+        draw_text_centered(x + 6.0f, y + 103.0f, w - 12.0f,
                            0x77718fff, descriptions[i]);
         if (selected) {
-            draw_circle_outline(x + w * 0.5f, y + 130.0f, 3.0f,
+            draw_circle_outline(x + w * 0.5f, y + 132.0f, 4.0f,
                                 0x9568edff);
+            draw_circle_outline(x + w * 0.5f, y + 132.0f, 7.0f,
+                                0xb99aff70);
         }
     }
 
@@ -2827,11 +2839,11 @@ static void draw_home(void)
              (unsigned)library_total_count(LIBRARY_PS2),
              (unsigned)(library_total_count(LIBRARY_PS3) +
                         library_total_count(LIBRARY_PS2)));
-    draw_soft_card(30.0f, 414.0f, 270.0f, 40.0f, 0);
+    draw_soft_card(30.0f, 410.0f, 322.0f, 44.0f, 0);
     set_ui_font_size(8, 12);
-    draw_text(44.0f, 428.0f, 0xffffffff, line);
+    draw_text(46.0f, 426.0f, 0x514b69ff, line);
     draw_text(31.0f, 480.0f, 0x77718fff,
-              "D-PAD LEFT / RIGHT MOVE   |   CROSS SELECT   |   CIRCLE EXIT");
+              "D-PAD LEFT / RIGHT: MOVE   |   CROSS: SELECT   |   CIRCLE: EXIT");
     draw_text(31.0f, 496.0f, 0x875be8ff,
               "SELECT: COMPANION TOOLS");
     set_ui_font_size(14, 22);
@@ -3281,9 +3293,10 @@ static void draw_settings(void)
             snprintf(value, sizeof(value), "%s",
                      ps3scale_locale_language_name(g_language));
         else if (g_music_mode == 0)
-            snprintf(value, sizeof(value), "AUTO: MUSIC 1 > MUSIC 2");
+            snprintf(value, sizeof(value), "AUTO: BIOS > GTA V");
         else
-            snprintf(value, sizeof(value), "MUSIC %d ONLY", g_music_mode);
+            snprintf(value, sizeof(value), "%s",
+                     g_music_mode == 1 ? "BIOS ONLY" : "GTA V ONLY");
 
         set_ui_font_size(7, 11);
         draw_text(214.0f, y + 3.0f,
@@ -3311,7 +3324,7 @@ static void draw_settings(void)
     set_ui_font_size(7, 11);
     if (g_music_track1_missing)
         draw_text(202.0f, 418.0f, 0xffcc66ff,
-                  "MUSIC 1 IS NOT BUNDLED IN THIS BUILD; MUSIC 2 IS THE FALLBACK.");
+                  "MUSIC 1: BIOS - ZORROVIAN (USB IMPORT) | MUSIC 2: GTA V (BUILT IN).");
     else if (g_music1_imported_from_usb)
         draw_text(202.0f, 418.0f, 0x9ee56aff,
                   "MUSIC 1 IMPORTED FROM USB AND SAVED TO THE INTERNAL HDD.");
@@ -3690,12 +3703,31 @@ static void draw_profile_toast(void)
 static void draw_ui(void)
 {
     tiny3d_Clear(0xfffafbff, TINY3D_CLEAR_ALL);
+
+    /* Transparent glyphs, glass cards and PNG covers need RSX alpha state. */
+    tiny3d_AlphaTest(1, 0x10, TINY3D_ALPHA_FUNC_GEQUAL);
+    tiny3d_BlendFunc(1,
+        TINY3D_BLEND_FUNC_SRC_RGB_SRC_ALPHA |
+        TINY3D_BLEND_FUNC_SRC_ALPHA_SRC_ALPHA,
+        TINY3D_BLEND_FUNC_DST_RGB_ONE_MINUS_SRC_ALPHA |
+        TINY3D_BLEND_FUNC_DST_ALPHA_ONE_MINUS_SRC_ALPHA,
+        TINY3D_BLEND_RGB_FUNC_ADD | TINY3D_BLEND_ALPHA_FUNC_ADD);
+
     tiny3d_Project2D();
     draw_scene_background();
 
-    /* The same animated 3D stair environment stays alive on every page. */
-    if (g_animation_enabled)
+    /* The 2D gradient wrote depth; clear only Z before the 3D staircase. */
+    if (g_animation_enabled) {
+        tiny3d_Clear(0x00000000, TINY3D_CLEAR_ZBUFFER);
+        tiny3d_AlphaTest(1, 0x10, TINY3D_ALPHA_FUNC_GEQUAL);
+        tiny3d_BlendFunc(1,
+            TINY3D_BLEND_FUNC_SRC_RGB_SRC_ALPHA |
+            TINY3D_BLEND_FUNC_SRC_ALPHA_SRC_ALPHA,
+            TINY3D_BLEND_FUNC_DST_RGB_ONE_MINUS_SRC_ALPHA |
+            TINY3D_BLEND_FUNC_DST_ALPHA_ONE_MINUS_SRC_ALPHA,
+            TINY3D_BLEND_RGB_FUNC_ADD | TINY3D_BLEND_ALPHA_FUNC_ADD);
         draw_home_ambient();
+    }
 
     if (g_screen != SCREEN_HOME && g_screen != SCREEN_SPLASH &&
         g_screen != SCREEN_BOOT) {
