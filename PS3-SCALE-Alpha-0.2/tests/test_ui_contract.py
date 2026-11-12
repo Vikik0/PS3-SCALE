@@ -202,7 +202,17 @@ assert "PS3SCALE_COMMUNITY_INDEX_URL" in src
 assert "ps3scale_community_index_load" in src
 assert "ps3scale_community_file_matches_game" in src
 assert "ONLINE GAME DATABASE" in src
-assert "APPLY: REFERENCE ONLY - NOT INSTALLED" in src
+assert "APPLY: REFERENCE ONLY - NOT INSTALLED" not in src
+assert "X: DOWNLOAD TO COMMUNITY_DOWNLOADS" in src
+assert "DATA ONLY - NEVER EXECUTED OR AUTO-APPLIED" in src
+assert "community_download_worker" in src
+assert "start_community_file_download" in src
+assert "PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT" in src
+assert "community_downloads" in src
+assert "community_component_is_safe" in src
+assert "community_extension_is" in src
+assert "memchr(header, 0, got)" in src
+assert "CROSS DOWNLOAD / OPEN" in src
 assert "SQUARE FILTER" in src
 assert "TRIANGLE SEARCH" in src
 assert "L1/R1 PREV/NEXT" in src
