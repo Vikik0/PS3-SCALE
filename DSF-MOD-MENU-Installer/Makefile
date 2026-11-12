@@ -5,7 +5,7 @@ $(error "Please set PSL1GHT in your environment (normally $$PS3DEV).")
 endif
 
 TITLE := DSF MOD MENU
-APPID := DSFMOD01
+APPID := DSFMOD001
 CONTENTID := UP0001-$(APPID)_00-0000000000000000
 ICON0 := $(CURDIR)/pkgfiles/ICON0.PNG
 PKGFILES := $(CURDIR)/pkgfiles
