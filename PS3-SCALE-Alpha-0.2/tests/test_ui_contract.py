@@ -69,13 +69,16 @@ assert "cursor = DrawString(cursor, y, one) - 2.5f" not in draw_text_impl
 assert src.count("SetFontSize(") == 3  # wrapper plus Arabic-size set/restore
 assert draw_text_impl.count("SetFontSize(") == 2
 
-# Layout contract: compact font, independent list/metadata/cover columns.
+# Library uses a full-width 4x2 cover grid, real cached covers and working filters.
 scan = section("static void draw_scan(void)", "static void draw_details(void)")
-assert "draw_soft_card(20.0f, 88.0f, 144.0f, 364.0f" in scan
-assert "draw_soft_card(560.0f, 128.0f, 272.0f, 300.0f" in scan
-assert "ya2d_drawTextureEx(g_cover_texture, x + 6.0f" in scan
-assert "SELECT / START: SEARCH" in scan
-assert "for (i = 0; i < 8" in scan
+assert "draw_soft_card(20.0f, 88.0f, 150.0f, 356.0f" in scan
+assert "draw_soft_card(x, y, 150.0f, 148.0f, selected)" in scan
+assert "ya2d_drawTextureEx(g_scan_cover_textures[i]" in scan
+assert "draw_library_filter_item" in scan
+assert "Favorites" in scan and "Recently Added" in scan
+assert "SQUARE: FAVORITE" in scan
+assert "PS3SCALE_SCAN_GRID_COUNT" in scan
+assert "No games match this filter." in scan
 
 # Settings retain the expected maintenance/audio actions and add language selection.
 settings = section("static void draw_settings(void)", "static void draw_tools(void)")
