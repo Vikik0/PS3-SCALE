@@ -12,17 +12,38 @@
     "firmware": "4.93 CEX",
     "cobra": "8.5"
   },
-  "requested_menu_hotkey": [
-    "DPAD_UP",
-    "SELECT"
+  "approved_menu_hotkey": [
+    "PS_SHORT_PRESS"
   ],
-  "profile_status": "identity_confirmed_runtime_unbuilt",
+  "profile_status": "installer_source_added_build_pending",
   "memory_patches_enabled": false,
+  "installer": {
+    "title": "DSF MOD MENU",
+    "title_id": "DSFMOD01",
+    "source_path": "/dev_hdd0/game/DSFMOD01/USRDIR/simple-cheat-menu.sprx",
+    "installed_plugin_path": "/dev_hdd0/plugins/simple-cheat-menu.sprx",
+    "boot_config_path": "/dev_hdd0/boot_plugins.txt",
+    "settings_path": "/dev_hdd0/tmp/simple-cheat-menu/settings.txt",
+    "default_sync_mode": "fetch",
+    "backup_suffix": ".dsf-backup",
+    "package_status": "source_added_not_built"
+  },
+  "upstream_plugin": {
+    "project": "mohasi/ps3-dev",
+    "release": "191-3541f8d",
+    "asset": "simple-cheat-menu.sprx",
+    "sha256": "cbb556217faf63d2ae2c5480318397f0f4b1fa4b1ad52b39f55384c59a10ee90",
+    "trigger": "short PS-button press",
+    "license": "Apache-2.0"
+  },
   "notes": [
     "Title ID BLES00891 is confirmed by the user's webMAN overlay.",
     "The user confirmed the game is installed as a PKG.",
     "XMB game information displayed version 1.00; this is not a substitute for reading PARAM.SFO APP_VER.",
-    "Public Artemis codelist entry for BLES00891 is indexed as version 01.01; do not apply it to 1.00 without validation.",
+    "The user explicitly approved the upstream short PS-button trigger instead of D-Pad UP + SELECT.",
+    "The installer app is designed to preserve existing boot_plugins entries and back up any existing plugin before replacement.",
+    "The installer creates mode=fetch only if no settings file exists; it does not submit anonymous cheat votes by default.",
+    "Do not enable amber or red cheat entries on the displayed 1.00 build; no exact-build green confidence has been established.",
     "Do not add memory offsets until the exact EBOOT build and expected original bytes are verified."
   ],
   "community_features": {
@@ -31,7 +52,7 @@
       "vehicle_spawner",
       "vehicle_speed_boost_square"
     ],
-    "community_cheats_indexed_for_01_01_only": [
+    "simple_cheat_menu_data": [
       "car_health_never_decreases",
       "infinite_wp",
       "max_money_on_gain"
@@ -42,5 +63,20 @@
       "memory_unknown_code_3"
     ]
   },
-  "features": {}
+  "features": {
+    "vsh_overlay": {
+      "status": "upstream_prebuilt_plugin_pinned",
+      "hardware_tested": false
+    },
+    "ps_button_trigger": {
+      "status": "approved_upstream_behavior",
+      "hardware_tested": false
+    },
+    "reversible_installer": {
+      "status": "source_added_build_pending"
+    },
+    "game_memory_cheats": {
+      "status": "not_enabled_pending_exact_version_validation"
+    }
+  }
 }
