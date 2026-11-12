@@ -1,0 +1,87 @@
+name: DSF MOD MENU installer build
+
+on:
+  push:
+    branches:
+      - feature/dsf-mod-menu-bles00891
+    paths:
+      - "DSF-MOD-MENU-Installer/**"
+      - ".github/workflows/build-dsf-mod-menu.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-installer:
+    name: Build DSF MOD MENU PKG
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/02900/ps3-toolchain-tiny3d:latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Download and verify pinned Simple Cheat Menu plugin
+        run: |
+          set -eu
+          PROJECT="DSF-MOD-MENU-Installer"
+          mkdir -p "$PROJECT/pkgfiles/USRDIR"
+          rm -f "$PROJECT/pkgfiles/USRDIR/.gitkeep"
+          if ! command -v curl >/dev/null 2>&1; then
+            apt-get update
+            apt-get install -y curl
+          fi
+          curl --fail --location --retry 3 \
+            "https://github.com/mohasi/ps3-dev/releases/download/191-3541f8d/simple-cheat-menu.sprx" \
+            --output "$PROJECT/pkgfiles/USRDIR/simple-cheat-menu.sprx"
+          printf '%s  %s\n' \
+            "cbb556217faf63d2ae2c5480318397f0f4b1fa4b1ad52b39f55384c59a10ee90" \
+            "$PROJECT/pkgfiles/USRDIR/simple-cheat-menu.sprx" | sha256sum -c -
+
+      - name: Run installer host checks
+        working-directory: DSF-MOD-MENU-Installer
+        run: |
+          set -eu
+          python3 scripts/test_installer.py
+          python3 scripts/generate_icon.py
+          python3 - <<'PY'
+          import struct
+          data = open("pkgfiles/ICON0.PNG", "rb").read()
+          assert data[:8] == b"\x89PNG\r\n\x1a\n"
+          width, height = struct.unpack(">II", data[16:24])
+          assert (width, height) == (320, 176), (width, height)
+          print("ICON0.PNG validation: PASS (320x176 RGB)")
+          PY
+
+      - name: Build and validate installer PKG
+        working-directory: DSF-MOD-MENU-Installer
+        run: |
+          set -eu
+          make clean
+          make pkg
+          test -s dsfmod.elf
+          test -s dsfmod.self
+          test -s dsfmod.pkg
+          test -s dsfmod.gnpdrm.pkg
+          PKG_MAGIC="$(od -An -tx1 -N4 dsfmod.gnpdrm.pkg | tr -d ' \n')"
+          PKG_REVISION="$(od -An -tx1 -j4 -N2 dsfmod.gnpdrm.pkg | tr -d ' \n')"
+          test "$PKG_MAGIC" = "7f504b47"
+          test "$PKG_REVISION" = "8000"
+          test "$(stat -c %s dsfmod.gnpdrm.pkg)" -gt 70000
+          echo "Build outputs:"
+          ls -lah dsfmod.elf dsfmod.self dsfmod.pkg dsfmod.gnpdrm.pkg
+          echo "SHA-256:"
+          sha256sum dsfmod.elf dsfmod.self dsfmod.pkg dsfmod.gnpdrm.pkg
+
+      - name: Upload DSF installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DSF-MOD-MENU-Installer-test-build
+          if-no-files-found: error
+          path: |
+            DSF-MOD-MENU-Installer/dsfmod.elf
+            DSF-MOD-MENU-Installer/dsfmod.self
+            DSF-MOD-MENU-Installer/dsfmod.pkg
+            DSF-MOD-MENU-Installer/dsfmod.gnpdrm.pkg
+            DSF-MOD-MENU-Installer/pkgfiles/ICON0.PNG
