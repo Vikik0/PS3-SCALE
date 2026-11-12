@@ -150,6 +150,7 @@ static volatile int g_music_enabled = 1;
 static volatile int g_music_volume = 180;
 static int g_music_playing = 0;
 static int g_music_mode = 0; /* 0=alternate both, 1=Music 1 only, 2=Music 2 only. */
+static int g_music_fade_ms = 1000;
 static int g_music_next_track = 1;
 static int g_music_start_track = 1;
 static volatile int g_music_current_track = 0;
@@ -165,7 +166,7 @@ static int g_apollo_installed = 0;
 static int g_artemis_installed = 0;
 static int g_webman_installed = 0;
 static char g_tools_message[96] = "CROSS: REFRESH TOOL STATUS.";
-#define SETTINGS_COUNT 8
+#define SETTINGS_COUNT 9
 #define PS3SCALE_SETTINGS_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/settings.cfg"
 enum {
     LANGUAGE_UNSET = -1,
@@ -770,20 +771,38 @@ static float music_sample_fade(off_t sample_position, off_t total_samples)
 {
     float fade_in = 1.0f;
     float fade_out = 1.0f;
+    off_t fade_frames = (off_t)g_music_fade_ms * 48;
 
+    if (fade_frames < 12000)
+        fade_frames = 12000;
     if (sample_position < 0)
         sample_position = 0;
-    if (sample_position < 48000)
-        fade_in = (float)sample_position / 48000.0f;
+    if (sample_position < fade_frames)
+        fade_in = (float)sample_position / (float)fade_frames;
 
     if (total_samples > 0) {
         off_t remaining = total_samples - sample_position;
-        if (remaining < 48000) {
+        if (remaining < fade_frames) {
             fade_out = remaining <= 0 ? 0.0f :
-                       (float)remaining / 48000.0f;
+                       (float)remaining / (float)fade_frames;
         }
     }
     return fade_in < fade_out ? fade_in : fade_out;
+}
+
+static int cycle_music_fade_ms(int current, int direction)
+{
+    static const int choices[4] = {500, 1000, 1500, 2000};
+    int index = 1;
+    int i;
+    for (i = 0; i < 4; i++) {
+        if (choices[i] == current) {
+            index = i;
+            break;
+        }
+    }
+    index = (index + (direction >= 0 ? 1 : 3)) % 4;
+    return choices[index];
 }
 
 static void fill_audio_block(float *output)
@@ -2571,11 +2590,14 @@ static void start_selected_game(void)
 static void load_app_settings(void)
 {
     FILE *fp = fopen(PS3SCALE_SETTINGS_PATH, "r");
-    char line[64]; int value;
+    char line[64];
+    int value, settings_version = 0;
     if (!fp) return;
     g_language = LANGUAGE_UNSET;
     while (fgets(line, sizeof(line), fp)) {
-        if (sscanf(line, "music=%d", &value) == 1)
+        if (sscanf(line, "settings_version=%d", &value) == 1)
+            settings_version = value;
+        else if (sscanf(line, "music=%d", &value) == 1)
             g_music_enabled = value ? 1 : 0;
         else if (sscanf(line, "volume=%d", &value) == 1)
             set_background_music_volume(value);
@@ -2587,11 +2609,24 @@ static void load_app_settings(void)
         else if (sscanf(line, "music_next=%d", &value) == 1 &&
                  (value == 1 || value == 2))
             g_music_next_track = value;
+        else if (sscanf(line, "music_fade_ms=%d", &value) == 1 &&
+                 (value == 500 || value == 1000 ||
+                  value == 1500 || value == 2000))
+            g_music_fade_ms = value;
         else if (sscanf(line, "language=%d", &value) == 1 &&
                  value >= LANGUAGE_ENGLISH && value <= LANGUAGE_SPANISH)
             g_language = value;
     }
     fclose(fp);
+
+    /* Alpha 0.21's old config could remain pinned to a single song. Migrate
+       once to the requested alternating two-track playlist. */
+    if (settings_version < 2) {
+        g_music_mode = 0;
+        g_music_next_track = 1;
+        g_music_start_track = 1;
+        g_music_fade_ms = 1000;
+    }
 }
 
 static int save_app_settings(void)
@@ -2601,11 +2636,13 @@ static int save_app_settings(void)
         set_settings_message("SETTINGS COULD NOT BE SAVED TO INTERNAL HDD.");
         return -1;
     }
+    fprintf(fp, "settings_version=2\n");
     fprintf(fp, "music=%d\n", g_music_enabled ? 1 : 0);
     fprintf(fp, "volume=%d\n", g_music_volume);
     fprintf(fp, "animation_v2=%d\n", g_animation_enabled ? 1 : 0);
     fprintf(fp, "music_mode=%d\n", g_music_mode);
     fprintf(fp, "music_next=%d\n", g_music_next_track);
+    fprintf(fp, "music_fade_ms=%d\n", g_music_fade_ms);
     fprintf(fp, "language=%d\n", g_language);
     if (fclose(fp) != 0) {
         set_settings_message("SETTINGS SAVE FAILED.");
@@ -3889,7 +3926,8 @@ static void draw_settings(void)
     static const char *labels[SETTINGS_COUNT] = {
         "Music", "Music Volume", "Animations (UI & Background)",
         "Check for USB Update", "Rescan Game Library",
-        "Restore Default Settings", "Language", "Music Playlist"
+        "Restore Default Settings", "Language", "Music Playlist",
+        "Track Fade Duration"
     };
     static const char *sections[6] = {
         "General", "Display", "Audio", "Enhancements", "Network", "System"
@@ -3909,7 +3947,7 @@ static void draw_settings(void)
     set_ui_font_size(8, 12);
     draw_text(204.0f, 104.0f, 0xffffffff, "General Preferences");
     for (i = 0; i < SETTINGS_COUNT; i++) {
-        float y = 132.0f + (float)i * 34.0f;
+        float y = 128.0f + (float)i * 30.0f;
         int selected = (i == g_settings_selected);
         if (selected) {
             draw_solid_rect(198.0f, y - 5.0f, 620.0f, 29.0f, 0xeee8ffff);
@@ -3931,14 +3969,16 @@ static void draw_settings(void)
         else if (i == 6)
             snprintf(value, sizeof(value), "%s",
                      ps3scale_locale_language_name(g_language));
-        else if (g_music_mode == 0) {
+        else if (i == 7 && g_music_mode == 0) {
             const char *first = (g_music_start_track == 1) ? "BIOS" : "GTA V";
             const char *second = (g_music_start_track == 1) ? "GTA V" : "BIOS";
             snprintf(value, sizeof(value), "AUTO: %s > %s", first, second);
-        }
-        else
+        } else if (i == 7) {
             snprintf(value, sizeof(value), "%s",
                      g_music_mode == 1 ? "BIOS ONLY" : "GTA V ONLY");
+        } else if (i == 8) {
+            snprintf(value, sizeof(value), "%d MS", g_music_fade_ms);
+        }
 
         set_ui_font_size(7, 11);
         draw_text(214.0f, y + 3.0f,
@@ -5069,6 +5109,7 @@ int main(int argc, char *argv[])
                     g_music_mode = 0;
                     g_music_next_track = 1;
                     g_music_start_track = 1;
+                    g_music_fade_ms = 1000;
                     g_animation_enabled = 1;
                     g_language = LANGUAGE_ENGLISH;
                     g_language_choice = LANGUAGE_ENGLISH;
@@ -5093,6 +5134,9 @@ int main(int argc, char *argv[])
                             set_settings_message("MUSIC RESTART FAILED. CHECK TRACK FILES.");
                     }
                     (void)save_app_settings();
+                } else if (g_settings_selected == 8) {
+                    g_music_fade_ms = cycle_music_fade_ms(g_music_fade_ms, 1);
+                    (void)save_app_settings();
                 }
             }
 
@@ -5115,6 +5159,16 @@ int main(int argc, char *argv[])
                 }
                 if (right && !old_right) {
                     set_background_music_volume(g_music_volume + 13);
+                    (void)save_app_settings();
+                }
+            }
+            if (g_settings_selected == 8) {
+                if (left && !old_left) {
+                    g_music_fade_ms = cycle_music_fade_ms(g_music_fade_ms, -1);
+                    (void)save_app_settings();
+                }
+                if (right && !old_right) {
+                    g_music_fade_ms = cycle_music_fade_ms(g_music_fade_ms, 1);
                     (void)save_app_settings();
                 }
             }
