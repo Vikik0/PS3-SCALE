@@ -11,5 +11,5 @@
   <value name="SOUND_FORMAT" type="integer">279</value>
   <value name="TITLE" type="string">PS3 SCALE</value>
   <value name="TITLE_ID" type="string">PS3SCALE1</value>
-  <value name="VERSION" type="string">00.21</value>
+  <value name="VERSION" type="string">00.22</value>
 </sfo>
