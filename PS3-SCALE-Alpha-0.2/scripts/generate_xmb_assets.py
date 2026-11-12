@@ -94,54 +94,68 @@ def stairs(c,n,x0,y0,dx,dy,w0,dw,top,front,side):
         c.line(x,y,x+w,y-16,(255,252,255),2)
         c.line(x+8,y+11,x+w+18,y-5,(170,145,225),1)
 
+def ps_mark(canvas, x, y, scale, color):
+    points = [
+        ((0, 0), (0, 28)), ((0, 0), (16, 5)), ((16, 5), (16, 23)),
+        ((16, 23), (0, 18)), ((0, 18), (23, 30)), ((23, 30), (34, 25)),
+        ((34, 25), (34, 21)), ((34, 21), (23, 17)), ((23, 17), (13, 21))
+    ]
+    for a, b in points:
+        canvas.line(x+a[0]*scale, y+a[1]*scale,
+                    x+b[0]*scale, y+b[1]*scale, color, max(1, scale))
+
+
 def generate(font):
     PKG.mkdir(parents=True,exist_ok=True)
 
-    # Bright XMB wallpaper: pale lavender, soft glow and ascending staircase.
-    bg=Canvas(1280,720,(250,248,255),(222,214,241))
-    for wave in range(4):
+    # XMB wallpaper: clean lavender light, a broad stair sweep on the left,
+    # and quiet negative space on the right for the PS3 XMB icons.
+    bg=Canvas(1280,720,(253,252,255),(224,217,245))
+    for radius, color, width in (
+        (260,(236,228,251),3),(220,(242,236,253),2),(178,(247,243,255),2)
+    ):
+        bg.circle(1050,150,radius,color,width)
+    for wave in range(5):
         prev=None
-        for x in range(0,1281,16):
-            y=68+wave*154+math.sin(x*0.004+wave*0.85)*20
+        for x in range(0,1281,12):
+            y=90+wave*118+math.sin(x*0.0037+wave*0.78)*22
             point=(x,y)
             if prev:
                 bg.line(prev[0],prev[1],point[0],point[1],
-                        (232-wave*4,222-wave*3,250),2)
+                        (238-wave*3,231-wave*3,251),2)
             prev=point
-    for i in range(58):
-        x=(i*197+83)%1280; y=(i*113+29)%660
-        bg.rect(x,y,2,2,(225,216,245))
-    bg.circle(1030,132,96,(224,211,248),3)
-    bg.circle(1030,132,78,(237,229,251),2)
-    stairs(bg,34,8,704,23,18,890,19,
-           (255,254,255),(226,220,242),(190,178,220))
-    bg.line(20,678,720,48,(208,187,244),4)
-    bg.line(40,704,760,74,(242,231,255),3)
-    bg.rect(720,280,510,226,(250,248,255))
-    bg.rect(720,280,510,3,(187,151,246))
-    bg.text(760,326,"PS3",6,(35,29,58),font)
-    bg.text(940,326,"SCALE",6,(143,65,221),font)
-    bg.text(760,430,"PS3 & PS2 ENHANCEMENT",2,(100,87,132),font)
-    bg.text(760,468,"MANAGEMENT",3,(100,87,132),font)
+    for i in range(78):
+        x=(i*197+83)%1280; y=(i*113+29)%690
+        bg.rect(x,y,2 if i%4 else 3,2 if i%4 else 3,(229,220,247))
+    stairs(bg,34,-86,710,27,18,1050,21,
+           (255,255,255),(230,224,244),(185,173,218))
+    bg.line(4,686,742,38,(203,184,241),4)
+    bg.line(26,710,774,64,(247,239,255),3)
+    bg.line(0,640,694,6,(232,221,251),2)
     bg.save(PKG/"PIC1.PNG")
 
-    # XMB icon remains bright and legible at compact PS3 menu size.
-    icon=Canvas(320,176,(252,250,255),(231,224,246))
-    stairs(icon,9,-10,166,8,12,190,15,
-           (255,255,255),(230,223,246),(192,179,224))
-    icon.circle(52,58,31,(207,188,245),2)
-    icon.text(112,38,"PS3",4,(35,29,58),font)
-    icon.text(112,80,"SCALE",4,(143,65,221),font)
-    icon.rect(112,128,180,2,(180,147,236))
-    icon.text(118,140,"GAME ENHANCER",1,(95,83,126),font)
+    # The compact XMB icon carries the actual PS3 SCALE mark and staircase.
+    icon=Canvas(320,176,(253,251,255),(228,220,247))
+    icon.rect(12,12,296,152,(250,248,255))
+    icon.rect(12,12,5,152,(148,91,232))
+    icon.circle(64,84,54,(226,214,250),3)
+    stairs(icon,10,-12,166,8,10,126,7,
+           (255,255,255),(229,223,245),(190,178,223))
+    ps_mark(icon,37,38,1,(43,35,68))
+    icon.text(126,42,"PS3",4,(43,35,68),font)
+    icon.text(126,82,"SCALE",4,(143,65,221),font)
+    icon.rect(126,119,164,2,(180,147,236))
+    icon.text(130,132,"PS3 & PS2 ENHANCER",1,(100,87,132),font)
     icon.save(PKG/"ICON0.PNG")
 
-    # Small preview uses the same white/lavender staircase identity.
+    # XMB preview tile matches the installed app icon.
     pic0=Canvas(310,176,(250,248,255),(224,216,242))
-    stairs(pic0,11,-18,174,8,11,250,14,
+    stairs(pic0,12,-24,172,8,10,244,13,
            (255,255,255),(230,223,246),(193,180,224))
-    pic0.text(18,20,"PS3 SCALE",3,(43,34,68),font)
-    pic0.text(20,78,"GRAPHICS / GAME PROFILES",1,(126,93,173),font)
+    ps_mark(pic0,22,24,1,(43,35,68))
+    pic0.text(70,24,"PS3 SCALE",3,(43,35,68),font)
+    pic0.text(72,66,"GAME ENHANCEMENT",1,(126,93,173),font)
+    pic0.text(72,82,"MANAGEMENT",1,(126,93,173),font)
     pic0.save(PKG/"PIC0.PNG")
 
     for name,size in (("ICON0.PNG",(320,176)),("PIC1.PNG",(1280,720)),("PIC0.PNG",(310,176))):
