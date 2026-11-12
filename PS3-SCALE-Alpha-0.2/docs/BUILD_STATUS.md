@@ -1,30 +1,37 @@
-# PS3 SCALE Alpha 0.21 — UI correction build
+# PS3 SCALE Alpha 0.22 — visible staircase and XMB redesign
 
 Date: 2026-11-12
 
-## Corrections made after the first console screenshot
-- Enabled RSX alpha testing and source-alpha blending for bitmap text, PNGs, translucent cards and glow layers. This targets the black rectangular text backgrounds visible in the earlier console screenshot.
-- Cleared only the depth buffer between the 2D gradient and 3D scene so the background no longer occludes the staircase.
-- Corrected per-vertex color submission for stair faces, orbital rings and satellite lines.
-- Rebuilt the in-app staircase as a 32-tread Tiny3D spiral with a fixed periodic phase.
-- Reworked the Home screen around the PS3 SCALE logo, five larger glass cards, CFW / console badges, library counts and controller hints.
-- Reworked the external XMB ICON0, PIC1 wallpaper and PIC0 preview in the white/lavender staircase style.
-- Added an XMB icon preview to the About screen.
-- Updated the package version to 00.21.
-- Music 2 (GTA V pause-menu theme) remains embedded and SHA-256 checked. Music 1 (BIOS - Zorrovian) is recognized under the exact uploaded filename and can be imported from USB; it is not embedded in this build because the MP3 is not present in the GitHub source inputs.
+## Why the previous console build did not match the reference
+The previous build contained a Tiny3D staircase routine, but the console screenshot showed that the 3D pass was not visible. The UI therefore displayed only the flat gradient, orbital rings and particles. The Home card descriptions also overflowed their card widths, and an older saved settings file could keep the playlist on a single track.
 
-## Validation status
-- Source changes are committed to `feature/online-graphics-database`.
-- Host tests and PS3 ELF / SELF / PKG / GNPDRM build: pending the latest GitHub Actions run.
-- XMB asset dimensions and package contents: pending CI verification.
-- Physical PS3 Slim / CFW 4.92 visual verification: still required. CI cannot prove the exact RSX appearance on the console.
+## Corrections in Alpha 0.22
+- Replaced the invisible 3D draw pass with a perspective-projected spiral staircase rendered in the regular 2D UI pass. Its 24 wedge-shaped treads, shaded risers, central support and handrail move in a slow, periodic loop.
+- Removed the depth-buffer clear dependency that hid the earlier staircase.
+- Kept the staircase behind every screen, not only Home, while preserving the animation ON/OFF setting.
+- Shortened Home card descriptions so they fit without running into neighboring cards.
+- Rebuilt the external XMB PIC1 wallpaper with a perspective spiral staircase; ICON0 and PIC0 remain generated in the same lavender visual identity.
+- Added a Settings control for track fade duration (500 / 1000 / 1500 / 2000 ms).
+- Added settings version migration: older settings files are moved to the requested AUTO playlist (BIOS - Zorrovian, then GTA V; the first track alternates on the next app launch) rather than remaining pinned to BIOS ONLY.
+- Preserved Music ON/OFF, volume, animation toggle, language, Help, About and in-app issue reporting.
+- Updated the displayed and package version to 00.22.
+
+## Music assets
+- Music 2 (GTA V pause-menu theme) is embedded in the PKG.
+- Music 1 (BIOS - Zorrovian) is still imported from USB to the internal HDD; it is not embedded in the repository build inputs. The runtime supports the supplied original filename and the normalized `music1.mp3` name.
+- AUTO playlist and configurable fade are available once Music 1 has been imported.
+
+## Validation
+- Latest GitHub Actions host-side tests and PS3 ELF / SELF / PKG / GNPDRM package build: pending.
+- XMB asset generation and package content checks: pending.
+- Physical PS3 Slim / CFW 4.92 verification: required. CI cannot prove the actual RSX appearance or audio playback on the console.
 
 ## Existing safety boundaries
-- Scanning is read-only; original game files are not replaced.
-- Community NCL/TXT entries can be downloaded into `USRDIR/community_downloads` as inert data (HTTPS only, 2 MB maximum, text extensions only, existing files are not overwritten). Downloaded community data is never executed or auto-applied.
+- Scanning remains read-only; original game files are not replaced.
+- Community NCL/TXT entries are downloaded as inert data only (HTTPS, 2 MB maximum, text-only extensions, no overwrite). They are never executed or auto-applied.
 - Exact Title ID + APP_VER matching remains required for graphics profiles.
 - Multi-write profiles remain disabled for automatic application.
 - No universal AI upscaler, frame generation or guaranteed 60 FPS is claimed.
 
-## Next console check
-Install the new GNPDRM package over the previous Alpha build and verify, in order: splash, moving staircase, clean text without black boxes, Home cards, Scan Games, Details, Online DB, Settings, Help and About. Confirm Music 2 plays; to use Music 1, copy the supplied MP3 to a USB drive root with its original filename or rename it to `music1.mp3`. Then test one game launch and report any freeze or rendering artifact.
+## Console verification order
+Install the Alpha 0.22 GNPDRM package over the previous build, then check: splash, visible moving staircase, Home card text fit, Scan Games, Details, Online DB, Settings (AUTO playlist and fade duration), Help, About, and the external XMB preview. Confirm both music tracks play in the selected order after Music 1 is imported.
