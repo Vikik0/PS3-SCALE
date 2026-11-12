@@ -94,6 +94,87 @@ def stairs(c,n,x0,y0,dx,dy,w0,dw,top,front,side):
         c.line(x,y,x+w,y-16,(255,252,255),2)
         c.line(x+8,y+11,x+w+18,y-5,(170,145,225),1)
 
+def spiral_staircase(canvas, count, center_x, center_y, center_z,
+                      focal, outer_radius, inner_radius, angle_step, rise):
+    """Render a static, perspective spiral staircase for the XMB wallpaper."""
+    faces = []
+
+    def world(radius, angle, y):
+        return (center_x + math.cos(angle) * radius,
+                center_y + y,
+                center_z + math.sin(angle) * radius)
+
+    def project(point):
+        x, y, z = point
+        z = max(4.0, z)
+        return (640.0 + x * focal / z,
+                360.0 - y * focal / z)
+
+    for i in range(count):
+        angle = i * angle_step + 0.48
+        next_angle = angle + angle_step * 0.92
+        y = (i - (count - 1) * 0.5) * rise
+        top = [
+            world(inner_radius, angle, y + 0.14),
+            world(outer_radius, angle, y + 0.14),
+            world(outer_radius, next_angle, y + 0.14),
+            world(inner_radius, next_angle, y + 0.14),
+        ]
+        riser = [
+            world(outer_radius, angle, y - 0.20),
+            world(outer_radius, next_angle, y - 0.20),
+            top[2], top[1],
+        ]
+        side = [
+            world(inner_radius, next_angle, y - 0.20),
+            riser[1], top[2], top[3],
+        ]
+        faces.append((sum(p[2] for p in top) / 4.0,
+                      [project(p) for p in top],
+                      (195, 178, 239), (247, 241, 255)))
+        faces.append((sum(p[2] for p in riser) / 4.0,
+                      [project(p) for p in riser],
+                      (103, 80, 160), (202, 186, 235)))
+        faces.append((sum(p[2] for p in side) / 4.0,
+                      [project(p) for p in side],
+                      (143, 119, 197), (224, 211, 248)))
+
+    # Far treads are painted first; nearer treads cover them naturally.
+    faces.sort(key=lambda item: item[0], reverse=True)
+    for depth, points, fill, edge in faces:
+        canvas.poly(points, fill)
+        for j in range(4):
+            a, b = points[j], points[(j + 1) % 4]
+            canvas.line(a[0], a[1], b[0], b[1], edge, 2)
+
+    # Central support and a continuous illuminated outer handrail.
+    pole_top = project((center_x, 11.0, center_z))
+    pole_bottom = project((center_x, -11.0, center_z))
+    canvas.line(pole_top[0], pole_top[1], pole_bottom[0], pole_bottom[1],
+                (139, 113, 194), 8)
+    canvas.line(pole_top[0], pole_top[1], pole_bottom[0], pole_bottom[1],
+                (247, 239, 255), 2)
+
+    rail = []
+    for j in range(count * 6 + 1):
+        t = j / 6.0
+        angle = t * angle_step + 0.48
+        y = (t - (count - 1) * 0.5) * rise + 1.15
+        rail.append(project(world(outer_radius + 0.62, angle, y)))
+    for j in range(len(rail) - 1):
+        canvas.line(rail[j][0], rail[j][1], rail[j + 1][0],
+                    rail[j + 1][1], (247, 239, 255), 4)
+        canvas.line(rail[j][0], rail[j][1], rail[j + 1][0],
+                    rail[j + 1][1], (151, 119, 220), 1)
+
+    for i in range(0, count, 3):
+        angle = i * angle_step + 0.48
+        y = (i - (count - 1) * 0.5) * rise
+        base = project(world(outer_radius, angle, y + 0.18))
+        top = project(world(outer_radius + 0.62, angle, y + 1.15))
+        canvas.line(base[0], base[1], top[0], top[1], (199, 180, 242), 2)
+
+
 def ps_mark(canvas, x, y, scale, color):
     points = [
         ((0, 0), (0, 28)), ((0, 0), (16, 5)), ((16, 5), (16, 23)),
@@ -127,10 +208,9 @@ def generate(font):
     for i in range(78):
         x=(i*197+83)%1280; y=(i*113+29)%690
         bg.rect(x,y,2 if i%4 else 3,2 if i%4 else 3,(229,220,247))
-    stairs(bg,34,-86,710,27,18,1050,21,
-           (255,255,255),(230,224,244),(185,173,218))
-    bg.line(4,686,742,38,(203,184,241),4)
-    bg.line(26,710,774,64,(247,239,255),3)
+    spiral_staircase(bg,28,-10.5,0.0,58.0,1050.0,12.0,1.6,0.44,0.66)
+    bg.line(4,686,742,38,(203,184,241),3)
+    bg.line(26,710,774,64,(247,239,255),2)
     bg.line(0,640,694,6,(232,221,251),2)
     bg.save(PKG/"PIC1.PNG")
 
