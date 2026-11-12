@@ -22,8 +22,9 @@ The previous build contained a Tiny3D staircase routine, but the console screens
 - AUTO playlist and configurable fade are available once Music 1 has been imported.
 
 ## Validation
-- Latest GitHub Actions host-side tests and PS3 ELF / SELF / PKG / GNPDRM package build: pending.
-- XMB asset generation and package content checks: pending.
+- Latest GitHub Actions host-side tests: PASS.
+- PS3 ELF / SELF / standard PKG / GNPDRM PKG build: PASS.
+- XMB asset generation and package content checks: PASS (ICON0 320x176, PIC1 1280x720, PIC0 310x176; Apollo Save logo and Music 2 embedded).
 - Physical PS3 Slim / CFW 4.92 verification: required. CI cannot prove the actual RSX appearance or audio playback on the console.
 
 ## Existing safety boundaries
