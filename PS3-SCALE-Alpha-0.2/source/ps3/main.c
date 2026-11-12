@@ -3552,7 +3552,7 @@ static int build_support_json(void)
     length = snprintf(g_support_json, sizeof(g_support_json),
         "{\"kind\":\"%s\",\"title\":\"%s\",\"details\":\"%s\","
         "\"model\":\"%s\",\"firmware\":\"%s\",\"platform\":\"%s\","
-        "\"app_version\":\"ALPHA 0.2\"}",
+        "\"app_version\":\"ALPHA 0.21\"}",
         g_support_is_feedback ? "feedback" : "issue",
         title, details, model, firmware, platform);
     return (length < 0 || (size_t)length >= sizeof(g_support_json)) ? -1 : 0;
