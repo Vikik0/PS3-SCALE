@@ -94,8 +94,9 @@ assert "music_mode=%d" in src
 assert "music_next=%d" in src
 assert "open_music_track(next_track)" in src
 assert "g_music_fade_remaining = 48000u" in src
-assert "AUTO: MUSIC 1 > MUSIC 2" in settings
-assert "MUSIC 1 IS NOT BUNDLED IN THIS BUILD" in settings
+assert "AUTO: BIOS > GTA V" in settings
+assert "MUSIC 1: BIOS - ZORROVIAN (USB IMPORT)" in settings
+assert "MUSIC 2: GTA V (BUILT IN)" in settings
 assert "START GAME" in src
 assert "start_selected_game()" in main
 assert "ps3scale_webman_start_game(&g_game_launch_target)" in src
@@ -163,15 +164,18 @@ assert "draw_ambient_ring" in ambient
 assert "draw_ambient_satellite" in ambient
 assert "g_frame_counter % 21600ul" in ambient
 assert "sinf(phase)" in ambient
-assert "for (i = 0; i < 22; i++)" in ambient
-assert "MatrixScale(2.35f, 2.35f, 2.35f)" in ambient
-assert "const float center_x = -9.5f;" in ambient
+assert "for (i = 0; i < 32; i++)" in ambient
+assert "MatrixScale(2.0f, 2.0f, 2.0f)" in ambient
+assert "const float center_x = -5.8f;" in ambient
 assert "case 0xffffff00u: rgb = 0x29243f00u;" in src
 assert 'sscanf(line, "animation_v2=%d"' in src
 assert 'fprintf(fp, "animation_v2=%d\\n"' in src
 draw_ui_impl = section("static void draw_ui(void)", "static int compare_game_titles")
 assert "if (g_animation_enabled)" in draw_ui_impl
 assert "draw_home_ambient();" in draw_ui_impl
+assert "tiny3d_AlphaTest(1, 0x10, TINY3D_ALPHA_FUNC_GEQUAL);" in draw_ui_impl
+assert "tiny3d_BlendFunc(1," in draw_ui_impl
+assert "TINY3D_CLEAR_ZBUFFER" in draw_ui_impl
 
 # Library sorting and companion-tool boundaries remain intact.
 assert "qsort(g_games.items" in src
@@ -320,11 +324,16 @@ assert "grant all on table public.ps3scale_support_reports to service_role" in s
 # XMB and scene design contract.
 assert "draw_scene_background();" in draw_ui_impl
 assert "daylight" in src and "night" in src
+assert "tiny3d_AlphaTest(1, 0x10, TINY3D_ALPHA_FUNC_GEQUAL);" in draw_ui_impl
+assert "TINY3D_CLEAR_ZBUFFER" in draw_ui_impl
+assert "draw_app_icon_preview" in src
+assert "XMB APP ICON" in src
 assert "draw_stair_tread(4.8f, 0.28f, 2.45f, i);" in src
 assert "g_frame_counter % 21600ul" in src
 assert "draw_home_card" not in src  # home cards are rendered in the main menu loop
 assert "PS3" in home and "SCALE" in home and "COMPANION TOOLS" in home
-assert '"Detect games"' in home and '"Game profiles"' in home
+assert '"Detect PS3 & PS2 Titles"' in home and '"Community Updates"' in home
+assert "draw_ps_symbol" in home
 project_root = source_path.parents[2]
 makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 assert "scripts/generate_xmb_assets.py" in makefile
@@ -336,10 +345,11 @@ assert "import_music1_from_usb" in src
 assert '"/dev_usb000/music1.mp3"' in src
 assert '"/dev_usb003/PS3SCALE/music1.mp3"' in src
 assert '"/dev_usb000/BIOS - Zorrovian [Official Visualiser] (1).mp3"' in src
+assert '"/dev_usb000/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3"' in src
 assert "rename(temp_path, PS3SCALE_MUSIC1_PATH)" in src
 assert "MUSIC 1 IMPORTED FROM USB" in settings
 sfo = (project_root / "sfo.xml").read_text(encoding="utf-8")
-assert '<value name="APP_VER" type="string">00.20</value>' in sfo
-assert '<value name="VERSION" type="string">00.20</value>' in sfo
+assert '<value name="APP_VER" type="string">00.21</value>' in sfo
+assert '<value name="VERSION" type="string">00.21</value>' in sfo
 
 print("PS3 SCALE UI contract tests: PASS")
