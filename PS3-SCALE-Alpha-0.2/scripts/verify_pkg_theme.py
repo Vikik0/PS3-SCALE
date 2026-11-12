@@ -12,6 +12,9 @@ from pathlib import Path
 PKG_AES_KEY = "2E7B71D7C9C9A14EA3221F188828B8F8"
 EXPECTED_SIZE = 5_182_732
 EXPECTED_SHA256 = "b8a7b1c2573ea8a397c2fbc3a6c731b25dcb71f572aedf5af8568785620d1b64"
+MUSIC1_NAME = "USRDIR/music1.mp3"
+MUSIC1_SIZE = 3_129_868
+MUSIC1_SHA256 = "8b567be77af069f8c0010d54f6046b4ae339bf4599d2667939aa45d1d746cf23"
 TARGET_NAME = "USRDIR/theme.mp3"
 LOGO_NAME = "USRDIR/apollo-save.png"
 LOGO_SIZE = 3_742
@@ -24,9 +27,10 @@ XMB_ASSETS = {
 
 
 def main() -> int:
-    if len(sys.argv) != 2:
-        raise SystemExit("usage: verify_pkg_theme.py <finalized.pkg>")
+    if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] != "--require-music1"):
+        raise SystemExit("usage: verify_pkg_theme.py <finalized.pkg> [--require-music1]")
 
+    require_music1 = len(sys.argv) == 3
     package_path = Path(sys.argv[1])
     package = package_path.read_bytes()
     if len(package) < 0xC0 or package[:4] != bytes.fromhex("7f504b47"):
@@ -63,6 +67,7 @@ def main() -> int:
 
     found = False
     logo_found = False
+    music1_found = False
     xmb_found = set()
     for index in range(item_count):
         record_offset = index * 0x20
@@ -84,6 +89,16 @@ def main() -> int:
             print(f"PASS: {TARGET_NAME} is embedded in {package_path.name}")
             print(f"PASS: {len(audio):,} bytes; SHA-256 {digest}")
             found = True
+        elif name == MUSIC1_NAME:
+            music1 = payload[file_offset:file_offset + file_size]
+            music1_digest = hashlib.sha256(music1).hexdigest()
+            if len(music1) != MUSIC1_SIZE:
+                raise SystemExit(f"ERROR: embedded Music 1 size mismatch: {len(music1)}")
+            if music1_digest != MUSIC1_SHA256:
+                raise SystemExit(f"ERROR: embedded Music 1 SHA-256 mismatch: {music1_digest}")
+            print(f"PASS: {MUSIC1_NAME} is embedded in {package_path.name}")
+            print(f"PASS: {len(music1):,} bytes; SHA-256 {music1_digest}")
+            music1_found = True
         elif name == LOGO_NAME:
             logo = payload[file_offset:file_offset + file_size]
             logo_digest = hashlib.sha256(logo).hexdigest()
@@ -111,6 +126,10 @@ def main() -> int:
         raise SystemExit(f"ERROR: {TARGET_NAME} is missing from the PKG")
     if not logo_found:
         raise SystemExit(f"ERROR: {LOGO_NAME} is missing from the PKG")
+    if require_music1 and not music1_found:
+        raise SystemExit(f"ERROR: {MUSIC1_NAME} is required but missing from the PKG")
+    if not music1_found:
+        print(f"INFO: {MUSIC1_NAME} is not embedded; runtime fallback remains enabled")
     missing_xmb = set(XMB_ASSETS) - xmb_found
     if missing_xmb:
         raise SystemExit(f"ERROR: XMB assets missing from the PKG: {sorted(missing_xmb)}")

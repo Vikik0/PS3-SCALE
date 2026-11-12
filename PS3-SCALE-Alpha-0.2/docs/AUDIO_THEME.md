@@ -10,7 +10,7 @@
 
 ## Music 1 — Zorrovian BIOS
 - Intended installed path: `/dev_hdd0/game/PS3SCALE1/USRDIR/music1.mp3`
-- The MP3 is not yet part of the GitHub build inputs, so it is not embedded in this PKG.
+- The exact MP3 source is identified as 3,129,868 bytes with SHA-256 `8b567be77af069f8c0010d54f6046b4ae339bf4599d2667939aa45d1d746cf23`. It is not yet part of the GitHub build inputs, so it is not embedded in this PKG.
 - The app searches USB000–USB003 for `music1.mp3`, or the supplied filename `BIOS - Zorrovian [Official Visualiser] (1).mp3` / `BIOS - Zorrovian [Official Visualiser] (1)(2).mp3`, at the USB root or inside `PS3SCALE/`.
 - It copies the file to a temporary internal-HDD path, validates it with mpg123, then atomically renames it to `USRDIR/music1.mp3`. The USB can be removed after import.
 - If Music 1 is unavailable, the app reports that condition and plays the embedded Music 2 fallback.
@@ -19,8 +19,8 @@
 ## Playlist behavior
 - Auto alternates the first track on each app launch: one launch begins with Music 1 then Music 2; the next begins with Music 2 then Music 1.
 - Music 1 only and Music 2 only are selectable in Settings.
-- A one-second fade-in is applied at startup and when switching tracks.
+- A one-second fade-in is applied at the start of each track and a one-second fade-out at the end. Both are calculated from mpg123's decoded sample position and track length. Track boundaries are kept on separate audio blocks so the last samples of one song are never mixed with the first samples of the next.
 - Music ON/OFF and volume remain available. Music OFF shuts down the decoder, audio port and worker thread.
 
 ## Implementation and verification
-PS3 SCALE uses the LGPL mpg123 decoder and the native PSL1GHT audio-port API. MP3 data is decoded to 48 kHz stereo PCM blocks; the full track is not loaded into RAM. CI verifies the embedded Music 2 file and its SHA-256 inside the finalized GNPDRM PKG. Music 1 remains USB-importable but is not claimed as embedded until its binary is included in the source inputs.
+PS3 SCALE uses the LGPL mpg123 decoder and the native PSL1GHT audio-port API. MP3 data is decoded to 48 kHz stereo PCM blocks; the full track is not loaded into RAM. CI verifies the embedded Music 2 file and its SHA-256 inside the finalized GNPDRM PKG. If the exact Music 1 source or ordered chunks are added, the packaging and PKG-verification scripts also check its expected size and SHA-256 before it is accepted. Music 1 remains USB-importable but is not claimed as embedded until its binary is included in the source inputs.

@@ -134,18 +134,21 @@ def generate(font):
     bg.line(0,640,694,6,(232,221,251),2)
     bg.save(PKG/"PIC1.PNG")
 
-    # The compact XMB icon carries the actual PS3 SCALE mark and staircase.
-    icon=Canvas(320,176,(253,251,255),(228,220,247))
-    icon.rect(12,12,296,152,(250,248,255))
-    icon.rect(12,12,5,152,(148,91,232))
-    icon.circle(64,84,54,(226,214,250),3)
-    stairs(icon,10,-12,166,8,10,126,7,
-           (255,255,255),(229,223,245),(190,178,223))
-    ps_mark(icon,37,38,1,(43,35,68))
-    icon.text(126,42,"PS3",4,(43,35,68),font)
-    icon.text(126,82,"SCALE",4,(143,65,221),font)
-    icon.rect(126,119,164,2,(180,147,236))
-    icon.text(130,132,"PS3 & PS2 ENHANCER",1,(100,87,132),font)
+    # Dark, legible XMB tile: the staircase stays on the left and the
+    # PS3 SCALE wordmark sits on an uncluttered midnight-purple panel.
+    icon=Canvas(320,176,(30,25,54),(5,7,22))
+    stairs(icon,9,-36,174,8,10,156,10,
+           (255,255,255),(224,217,243),(150,137,190))
+    icon.rect(112,10,196,156,(10,10,29))
+    icon.line(112,10,308,10,(107,83,160),2)
+    icon.line(308,10,308,166,(107,83,160),2)
+    icon.line(308,166,112,166,(107,83,160),2)
+    icon.line(112,166,112,10,(107,83,160),2)
+    ps_mark(icon,202,18,0.76,(255,255,255))
+    icon.text(132,58,"PS3",4,(255,255,255),font)
+    icon.text(132,98,"SCALE",4,(190,145,255),font)
+    icon.rect(132,137,154,2,(151,104,231))
+    icon.text(136,149,"GAME ENHANCER",1,(228,220,248),font)
     icon.save(PKG/"ICON0.PNG")
 
     # XMB preview tile matches the installed app icon.

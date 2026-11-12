@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <stdint.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
@@ -147,7 +148,6 @@ static volatile int g_music_current_track = 0;
 static int g_music_file_open = 0;
 static volatile int g_music_track1_missing = 0;
 static int g_music1_imported_from_usb = 0;
-static unsigned int g_music_fade_remaining = 0;
 static int g_settings_selected = 0;
 static int g_animation_enabled = 1;
 static unsigned long g_frame_counter = 0;
@@ -751,57 +751,86 @@ static int open_background_music(void)
             return -1;
         }
     }
-    g_music_fade_remaining = 48000u;
     return 0;
+}
+
+static float music_sample_fade(off_t sample_position, off_t total_samples)
+{
+    float fade_in = 1.0f;
+    float fade_out = 1.0f;
+
+    if (sample_position < 0)
+        sample_position = 0;
+    if (sample_position < 48000)
+        fade_in = (float)sample_position / 48000.0f;
+
+    if (total_samples > 0) {
+        off_t remaining = total_samples - sample_position;
+        if (remaining < 48000) {
+            fade_out = remaining <= 0 ? 0.0f :
+                       (float)remaining / 48000.0f;
+        }
+    }
+    return fade_in < fade_out ? fade_in : fade_out;
 }
 
 static void fill_audio_block(float *output)
 {
     short pcm[AUDIO_BLOCK_SAMPLES * 2];
-    size_t total = 0, target = sizeof(pcm), i;
+    size_t total = 0, target = sizeof(pcm), i, decoded_frames;
+    off_t start_sample, track_length;
     float gain = g_music_enabled ? ((float)g_music_volume / 255.0f) : 0.0f;
 
-    if (gain <= 0.0f) {
+    if (!output)
+        return;
+    if (gain <= 0.0f || !g_mpg123 || !g_music_file_open) {
         memset(output, 0, sizeof(float) * AUDIO_BLOCK_SAMPLES * 2);
         return;
     }
+
     memset(pcm, 0, sizeof(pcm));
+    start_sample = mpg123_tell(g_mpg123);
+    if (start_sample < 0)
+        start_sample = 48000;
+    track_length = mpg123_length(g_mpg123);
+
     while (total < target && g_audio_thread_running) {
         size_t decoded = 0;
         int rc = mpg123_read(g_mpg123, ((unsigned char *)pcm) + total,
                              target - total, &decoded);
         total += decoded;
         if (rc == MPG123_NEW_FORMAT) {
-            long rate = 0; int channels = 0, encoding = 0;
+            long rate = 0; int channels = 0; int encoding = 0;
             if (mpg123_getformat(g_mpg123, &rate, &channels, &encoding) != MPG123_OK ||
                 rate != 48000 || channels != MPG123_STEREO ||
-                encoding != MPG123_ENC_SIGNED_16) break;
+                encoding != MPG123_ENC_SIGNED_16)
+                break;
             continue;
         }
         if (rc == MPG123_DONE) {
             if (g_music_mode == 0) {
                 int next_track = (g_music_current_track == 1) ? 2 : 1;
                 if (open_music_track(next_track) != 0) {
-                    if (next_track == 1) g_music_track1_missing = 1;
-                    if (open_music_track(2) != 0) break;
+                    if (next_track == 1)
+                        g_music_track1_missing = 1;
+                    if (open_music_track(2) != 0)
+                        break;
                 }
-                g_music_fade_remaining = 48000u;
-            } else {
-                if (mpg123_seek(g_mpg123, 0, SEEK_SET) < 0) break;
-                g_music_fade_remaining = 48000u;
+            } else if (mpg123_seek(g_mpg123, 0, SEEK_SET) < 0) {
+                break;
             }
-            continue;
+            /* Keep this block on one track; the next block fades in the next. */
+            break;
         }
-        if (rc == MPG123_ERR || (decoded == 0 && rc == MPG123_OK)) break;
+        if (rc == MPG123_ERR || (decoded == 0 && rc == MPG123_OK))
+            break;
     }
+
+    decoded_frames = total / (sizeof(short) * 2u);
     for (i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-        float fade = 1.0f;
-        if (g_music_fade_remaining > 0) {
-            fade = 1.0f -
-                ((float)g_music_fade_remaining / 48000.0f);
-            g_music_fade_remaining--;
-            if (fade < 0.0f) fade = 0.0f;
-        }
+        float fade = 0.0f;
+        if (i < decoded_frames)
+            fade = music_sample_fade(start_sample + (off_t)i, track_length);
         output[i * 2] =
             ((float)pcm[i * 2] / 32768.0f) * gain * fade;
         output[i * 2 + 1] =
@@ -2818,6 +2847,8 @@ static void draw_splash(void)
     if (frame < 24) alpha = (unsigned)(frame * 255 / 24);
     if (alpha > 255u) alpha = 255u;
 
+    draw_ps_symbol(407.0f, 22.0f,
+                   color_with_alpha(0x20263aff, alpha));
     set_ui_font_size(34, 50);
     draw_text(246.0f, 82.0f,
               color_with_alpha(0x20263aff, alpha), "PS3");
@@ -3539,8 +3570,11 @@ static void draw_settings(void)
         else if (i == 6)
             snprintf(value, sizeof(value), "%s",
                      ps3scale_locale_language_name(g_language));
-        else if (g_music_mode == 0)
-            snprintf(value, sizeof(value), "AUTO: BIOS > GTA V");
+        else if (g_music_mode == 0) {
+            const char *first = (g_music_start_track == 1) ? "BIOS" : "GTA V";
+            const char *second = (g_music_start_track == 1) ? "GTA V" : "BIOS";
+            snprintf(value, sizeof(value), "AUTO: %s > %s", first, second);
+        }
         else
             snprintf(value, sizeof(value), "%s",
                      g_music_mode == 1 ? "BIOS ONLY" : "GTA V ONLY");

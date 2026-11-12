@@ -96,8 +96,12 @@ assert "PS3SCALE_MUSIC2_PATH" in src
 assert "music_mode=%d" in src
 assert "music_next=%d" in src
 assert "open_music_track(next_track)" in src
-assert "g_music_fade_remaining = 48000u" in src
-assert "AUTO: BIOS > GTA V" in settings
+assert "mpg123_tell(g_mpg123)" in src
+assert "mpg123_length(g_mpg123)" in src
+assert "music_sample_fade" in src
+assert "Keep this block on one track" in src
+assert "AUTO: %s > %s" in settings
+assert "draw_ps_symbol(407.0f, 22.0f" in src
 assert "MUSIC 1: BIOS - ZORROVIAN (USB IMPORT)" in settings
 assert "MUSIC 2: GTA V (BUILT IN)" in settings
 assert "START GAME" in src
