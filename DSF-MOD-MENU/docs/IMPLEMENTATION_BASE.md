@@ -1,50 +1,38 @@
-# Implementation base discovered: simple-cheat-menu
+# Implementation base: Simple Cheat Menu
 
-## Why this is the best existing PS3-side foundation found
+The user approved the upstream **short PS-button press** trigger. This avoids adding a raw-controller polling hook during gameplay.
 
-Repository: https://github.com/mohasi/ps3-dev
+## Upstream plugin
 
-Source path:
-- https://github.com/mohasi/ps3-dev/tree/main/plugins/simple-cheat-menu
+- Repository: https://github.com/mohasi/ps3-dev/tree/main/plugins/simple-cheat-menu
+- Release: https://github.com/mohasi/ps3-dev/releases/tag/191-3541f8d
+- Asset: simple-cheat-menu.sprx
+- Size: 59,315 bytes
+- SHA-256: cbb556217faf63d2ae2c5480318397f0f4b1fa4b1ad52b39f55384c59a10ee90
+- License: Apache-2.0
 
-The project's own README describes a real in-game PAF overlay, live cheat toggles, read-back verification, original-byte snapshots and restore, AoB scanning, automatic cheat downloads, community confidence scores, and optional live texture patches. It operates as one VSH plugin and writes to game memory cross-process through Cobra/PS3MAPI; it does not inject a module into the game process.
+The plugin draws a PAF overlay, toggles cheats with live read-back verification, supports AoB searches, shows per-build confidence badges, and can download cheat files per Title ID. It writes to the game process through Cobra/PS3MAPI and does not replace the game's EBOOT.
 
-The repository is Apache-2.0 licensed (root LICENSE and NOTICE must be retained if this code is reused or modified). The cheat data is separate and attributes original Artemis authors.
+## Installer design
 
-## BLES00891 is already represented in its cheat database
+The separate PSL1GHT app in DSF-MOD-MENU-Installer bundles the pinned SPRX and installs it to /dev_hdd0/plugins/simple-cheat-menu.sprx. It adds exactly one line to /dev_hdd0/boot_plugins.txt, preserves other entries, creates one-time backups, and includes a remove/restore option.
 
-Companion database:
-- https://github.com/mohasi/game-cheats/blob/main/source/BLES00891.txt
+The installer creates settings mode=fetch only when no settings file already exists. This downloads cheat data but does not submit anonymous votes by default. Existing user settings are preserved.
 
-The file contains:
+## BLES00891 data and version caution
+
+The public BLES00891 file includes:
 - Car Health Never Decreases
-- Infinite WP (999,999)
+- Infinite WP
 - Max Money On Gain
-- Three entries labelled Memory Unknown Code 1–3
+- Three unknown memory entries
 
-Do not enable the unknown entries. The public Artemis codelist indexes BLES00891 as version 01.01 (2.1 KB). The user's XMB screen showed 1.00, so the exact installed PARAM.SFO APP_VER must be read before applying any of these codes. The plugin itself reads APP_VER from the installed PKG directory first, which is a useful design feature for this digital installation.
+The user's XMB shows version 1.00. The public Artemis codelist indexes BLES00891 at 01.01, and the shared cheat file has no confirmed green score for the user's exact 1.00 build. Do not treat these cheats as tested for 1.00; avoid amber/red entries if stability is the priority.
 
-## Existing prebuilt artifact found
+## RageX reference
 
-GitHub release tag:
-- https://github.com/mohasi/ps3-dev/releases/tag/191-3541f8d
+TEAM RageX V1.0.3T advertises hiding traffic/pedestrians, spawning vehicles and a Square-button boost. It is a separate third-party binary package with no source code in the announcement, and the release post acknowledges remaining minor issues. Those functions are not part of this open-source installer and are not claimed as implemented.
 
-The release API lists `simple-cheat-menu.sprx` (59,315 bytes; SHA-256 `cbb556217faf63d2ae2c5480318397f0f4b1fa4b1ad52b39f55384c59a10ee90`). This is a third-party build, not a DSF-specific build and not a PKG installer. Its exact runtime compatibility with the user's CEX 4.93 / Cobra 8.5 console still requires hardware testing.
+## Validation
 
-## Critical hotkey limitation
-
-The plugin's documented and implemented trigger is a short PS-button press. It uses the PS overlay as the safe point where VSH regains controller ownership. Its source explicitly says:
-- During normal gameplay, the game owns the pad and VSH `cellPadGetData` is silent.
-- Continuously polling the raw HID handle across game-launch/controller-ownership transitions can hard-lock LV2.
-- Raw HID reads are therefore restricted to the period when the PS overlay is open.
-
-This means changing the VSH-only trigger to D-pad UP + SELECT is not a safe one-line keybind edit. To detect that combo while the game owns the controller, a game-process input hook or a separate sensor module would be needed. That is a materially different, game-sensitive injection path and cannot honestly be called crash-free without BLES00891-specific implementation and console tests.
-
-## Recommended release decision
-
-Two possible targets must not be conflated:
-
-1. **Safer generic VSH menu** — reuse/adapt the Apache-2.0 simple-cheat-menu foundation, keep its PS-button trigger, install via a reversible PKG installer, and test on CEX 4.93 / Cobra 8.5.
-2. **Exact UP + SELECT trigger** — requires a separate game-process input hook for BLES00891 and additional rendering/input testing. Do not claim compatibility or package it as a stable release until that hook has been proven on the user's exact EBOOT.
-
-The user asked for UP + SELECT. Do not silently substitute the PS button without consent.
+CI can validate the installer source, build the PKG, and verify its package header. It cannot validate the plugin on the user's physical PS3. Hardware testing is required for boot loading, PS-button overlay behavior, webMAN coexistence, game launch, and uninstall/rollback.
