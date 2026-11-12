@@ -1008,20 +1008,35 @@ static void draw_gear_outline(float cx, float cy, float radius, u32 color)
 
 static void draw_menu_icon(int index, float x, float y, int selected)
 {
-    u32 ink = selected ? 0xcaff39ff : 0x7c859aff;
-    u32 tile = selected ? 0xeeeaffff : 0xf8f9fcff;
+    u32 ink = selected ? 0x875be8ff : 0x514b69ff;
+    u32 tile = selected ? 0xeeeaffee : 0xf8f9fcee;
     u32 border = selected ? 0x8068e6ff : 0xd9deebff;
     draw_solid_rect(x, y, 42.0f, 42.0f, tile);
     draw_outline_rect(x, y, 42.0f, 42.0f, border);
     if (index == 0) {
-        draw_circle_outline(x + 16.0f, y + 16.0f, 9.0f, ink);
-        draw_icon_line(x + 23.0f, y + 23.0f, x + 33.0f, y + 33.0f, ink);
-        draw_icon_line(x + 12.0f, y + 14.0f, x + 19.0f, y + 14.0f, ink);
-        draw_icon_line(x + 12.0f, y + 18.0f, x + 18.0f, y + 18.0f, ink);
+        draw_icon_line(x + 8.0f, y + 15.0f, x + 14.0f, y + 9.0f, ink);
+        draw_icon_line(x + 14.0f, y + 9.0f, x + 28.0f, y + 9.0f, ink);
+        draw_icon_line(x + 28.0f, y + 9.0f, x + 35.0f, y + 15.0f, ink);
+        draw_icon_line(x + 35.0f, y + 15.0f, x + 38.0f, y + 27.0f, ink);
+        draw_icon_line(x + 38.0f, y + 27.0f, x + 33.0f, y + 32.0f, ink);
+        draw_icon_line(x + 33.0f, y + 32.0f, x + 27.0f, y + 27.0f, ink);
+        draw_icon_line(x + 27.0f, y + 27.0f, x + 15.0f, y + 27.0f, ink);
+        draw_icon_line(x + 15.0f, y + 27.0f, x + 9.0f, y + 32.0f, ink);
+        draw_icon_line(x + 9.0f, y + 32.0f, x + 4.0f, y + 27.0f, ink);
+        draw_icon_line(x + 4.0f, y + 27.0f, x + 8.0f, y + 15.0f, ink);
+        draw_icon_line(x + 10.0f, y + 18.0f, x + 18.0f, y + 18.0f, ink);
+        draw_icon_line(x + 14.0f, y + 14.0f, x + 14.0f, y + 22.0f, ink);
+        draw_circle_outline(x + 28.0f, y + 17.0f, 2.2f, ink);
+        draw_circle_outline(x + 33.0f, y + 22.0f, 2.2f, ink);
     } else if (index == 1) {
-        draw_solid_rect(x + 8.0f, y + 9.0f, 26.0f, 7.0f, ink);
-        draw_solid_rect(x + 8.0f, y + 18.0f, 26.0f, 7.0f, ink);
-        draw_solid_rect(x + 8.0f, y + 27.0f, 26.0f, 7.0f, ink);
+        draw_icon_line(x + 8.0f, y + 15.0f, x + 21.0f, y + 7.0f, ink);
+        draw_icon_line(x + 21.0f, y + 7.0f, x + 34.0f, y + 15.0f, ink);
+        draw_icon_line(x + 34.0f, y + 15.0f, x + 21.0f, y + 23.0f, ink);
+        draw_icon_line(x + 21.0f, y + 23.0f, x + 8.0f, y + 15.0f, ink);
+        draw_icon_line(x + 8.0f, y + 22.0f, x + 21.0f, y + 30.0f, ink);
+        draw_icon_line(x + 21.0f, y + 30.0f, x + 34.0f, y + 22.0f, ink);
+        draw_icon_line(x + 8.0f, y + 29.0f, x + 21.0f, y + 37.0f, ink);
+        draw_icon_line(x + 21.0f, y + 37.0f, x + 34.0f, y + 29.0f, ink);
     } else if (index == 2) {
         draw_gear_outline(x + 21.0f, y + 21.0f, 15.0f, ink);
         draw_circle_outline(x + 21.0f, y + 21.0f, 5.0f, ink);
@@ -1040,6 +1055,19 @@ static void draw_menu_icon(int index, float x, float y, int selected)
         draw_solid_rect(x + 19.5f, y + 15.0f, 3.0f, 12.0f, ink);
         draw_solid_rect(x + 19.5f, y + 10.0f, 3.0f, 3.0f, ink);
     }
+}
+
+static void draw_ps_symbol(float x, float y, u32 color)
+{
+    draw_icon_line(x + 5.0f, y + 2.0f, x + 5.0f, y + 32.0f, color);
+    draw_icon_line(x + 5.0f, y + 2.0f, x + 21.0f, y + 7.0f, color);
+    draw_icon_line(x + 21.0f, y + 7.0f, x + 21.0f, y + 24.0f, color);
+    draw_icon_line(x + 21.0f, y + 24.0f, x + 5.0f, y + 19.0f, color);
+    draw_icon_line(x + 5.0f, y + 19.0f, x + 27.0f, y + 31.0f, color);
+    draw_icon_line(x + 27.0f, y + 31.0f, x + 38.0f, y + 26.0f, color);
+    draw_icon_line(x + 38.0f, y + 26.0f, x + 38.0f, y + 22.0f, color);
+    draw_icon_line(x + 38.0f, y + 22.0f, x + 27.0f, y + 18.0f, color);
+    draw_icon_line(x + 27.0f, y + 18.0f, x + 16.0f, y + 22.0f, color);
 }
 
 static int game_is_ps3(const ps3scale_game_t *game)
