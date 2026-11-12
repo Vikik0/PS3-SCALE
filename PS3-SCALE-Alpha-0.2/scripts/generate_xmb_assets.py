@@ -150,15 +150,18 @@ def generate(font):
     bg.text(1087,58,"PS3 SLIM",2,(52,42,82),font)
     bg.save(PKG/"PIC1.PNG")
 
-    # Compact dark XMB tile matching the app mark shown in the reference image.
-    icon=Canvas(320,176,(32,27,58),(7,8,24))
-    stairs(icon,9,-34,174,9,12,246,20,
-           (255,255,255),(221,214,241),(150,135,190))
-    playstation_mark(icon,31,27,0.84,(255,255,255))
-    icon.text(101,30,"PS3",4,(255,255,255),font)
-    icon.text(101,72,"SCALE",4,(187,139,255),font)
-    icon.rect(101,119,188,2,(151,104,231))
-    icon.text(106,134,"GAME ENHANCER",1,(228,220,248),font)
+    # Compact dark XMB tile: keep the stair art to the left and a clean
+    # dark logo field to the right so the mark never gets lost in the steps.
+    icon=Canvas(320,176,(31,26,55),(6,7,22))
+    stairs(icon,8,-44,178,8,10,188,15,
+           (255,255,255),(224,217,243),(151,137,191))
+    icon.rect(112,8,208,160,(10,10,30))
+    outline(icon,112,8,208,160,(82,65,128),2)
+    playstation_mark(icon,194,20,0.70,(255,255,255))
+    icon.text(132,72,"PS3",4,(255,255,255),font)
+    icon.text(132,111,"SCALE",4,(190,145,255),font)
+    icon.rect(132,151,154,2,(151,104,231))
+    icon.text(137,159,"GAME ENHANCER",1,(228,220,248),font)
     icon.save(PKG/"ICON0.PNG")
 
     # XMB preview image shares the bright purple staircase identity.
