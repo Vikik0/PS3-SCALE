@@ -3675,41 +3675,75 @@ static int save_support_report(void)
     return 0;
 }
 
+static void draw_app_icon_preview(float x, float y)
+{
+    int i;
+    draw_solid_rect(x, y, 164.0f, 190.0f, 0x28223fff);
+    draw_outline_rect(x, y, 164.0f, 190.0f, 0xb99affff);
+    for (i = 0; i < 8; i++) {
+        float sx = x + 10.0f + (float)i * 4.0f;
+        float sy = y + 154.0f - (float)i * 11.0f;
+        float sw = 142.0f - (float)i * 8.0f;
+        draw_solid_rect(sx, sy, sw, 7.0f,
+                        (i % 2) ? 0xd8cff0ff : 0xfaf8ffff);
+        draw_solid_rect(sx, sy + 7.0f, sw, 3.0f, 0xaaa0caff);
+    }
+    draw_ps_symbol(x + 56.0f, y + 18.0f, 0xfaf8ffff);
+    set_ui_font_size(16, 24);
+    draw_text(x + 22.0f, y + 78.0f, 0xfaf8ffff, "PS3");
+    draw_text(x + 69.0f, y + 78.0f, 0xb995ffff, "SCALE");
+    set_ui_font_size(6, 9);
+    draw_text(x + 24.0f, y + 112.0f, 0xe6dff6ff,
+              "GAME ENHANCEMENT");
+    draw_text(x + 24.0f, y + 126.0f, 0xe6dff6ff,
+              "MANAGEMENT");
+    set_ui_font_size(14, 22);
+}
+
 static void draw_about(void)
 {
     draw_page_header("About", "Credits, hardware and safety information");
-    draw_soft_card(24.0f, 92.0f, 806.0f, 340.0f, 0);
+    draw_soft_card(20.0f, 88.0f, 586.0f, 356.0f, 0);
+    draw_soft_card(620.0f, 88.0f, 214.0f, 356.0f, 0);
     set_ui_font_size(12, 18);
-    draw_text(48.0f, 116.0f, 0xffffffff,
+    draw_text(42.0f, 112.0f, 0x29243fff,
               "PS3 / PS2 Game Library & Enhancement Manager");
-    set_ui_font_size(8, 12);
-    draw_text(48.0f, 158.0f, 0x77718fff,
-              "PS3 SCALE helps organize game libraries and review version-matched community profiles.");
-    draw_text(48.0f, 188.0f, 0x77718fff,
-              "Scanning is read-only. Original game files are never replaced by a scan.");
-    draw_text(48.0f, 218.0f, 0x77718fff,
-              "No universal upscaler or frame generation is claimed.");
-    draw_text(48.0f, 260.0f, 0xffffffff, "Hardware Information");
+    set_ui_font_size(7, 11);
+    draw_text(42.0f, 150.0f, 0x77718fff,
+              "Organize local games and review exact version-matched community profiles.");
+    draw_text(42.0f, 174.0f, 0x77718fff,
+              "Scanning is read-only. Original game files are never replaced.");
+    draw_text(42.0f, 198.0f, 0x77718fff,
+              "No universal upscaler or guaranteed 60 FPS is claimed.");
+    set_ui_font_size(9, 14);
+    draw_text(42.0f, 238.0f, 0x29243fff, "Hardware Information");
     if (g_hardware_info_valid) {
-        draw_text(48.0f, 292.0f, 0x514b69ff, "Detected model:");
-        draw_text(190.0f, 292.0f, 0x514b69ff, g_hardware_info.model_series);
-        draw_text(48.0f, 322.0f, 0x514b69ff, "Console type:");
-        draw_text(190.0f, 322.0f, 0x514b69ff,
+        set_ui_font_size(7, 11);
+        draw_text(42.0f, 270.0f, 0x514b69ff, "Detected model:");
+        draw_text(176.0f, 270.0f, 0x514b69ff, g_hardware_info.model_series);
+        draw_text(42.0f, 296.0f, 0x514b69ff, "Console type:");
+        draw_text(176.0f, 296.0f, 0x514b69ff,
                   ps3scale_console_type_name(g_hardware_info.console_type));
-        draw_text(48.0f, 352.0f, 0x514b69ff, "Firmware:");
-        draw_text(190.0f, 352.0f, 0x514b69ff,
+        draw_text(42.0f, 322.0f, 0x514b69ff, "Firmware:");
+        draw_text(176.0f, 322.0f, 0x514b69ff,
                   g_hardware_info.firmware_version);
-        draw_text(48.0f, 382.0f, 0x514b69ff, "Platform ID:");
-        draw_text(190.0f, 382.0f, 0x514b69ff,
+        draw_text(42.0f, 348.0f, 0x514b69ff, "Platform ID:");
+        draw_text(176.0f, 348.0f, 0x514b69ff,
                   g_hardware_info.platform_id);
     } else {
-        draw_text(48.0f, 292.0f, 0xffcc66ff,
+        draw_text(42.0f, 270.0f, 0xffcc66ff,
                   "Hardware information is unavailable.");
     }
-    set_ui_font_size(7, 11);
-    draw_text(48.0f, 412.0f, 0x77718fff,
-              "Alpha 0.2  |  CFW 4.92  |  PS3 FAT / SLIM / SUPER SLIM");
-    draw_text(24.0f, 478.0f, 0x77718fff, "CIRCLE: BACK");
+    set_ui_font_size(6, 9);
+    draw_text(42.0f, 400.0f, 0x77718fff,
+              "ALPHA 0.21  |  CFW 4.92  |  PS3 FAT / SLIM / SUPER SLIM");
+
+    draw_text(644.0f, 106.0f, 0x29243fff, "XMB APP ICON");
+    draw_app_icon_preview(645.0f, 136.0f);
+    set_ui_font_size(6, 9);
+    draw_text(644.0f, 342.0f, 0x77718fff, "PS3 SCALE");
+    draw_text(644.0f, 358.0f, 0x77718fff, "WHITE / LAVENDER THEME");
+    draw_text(644.0f, 390.0f, 0x875be8ff, "CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
 
