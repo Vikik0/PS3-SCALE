@@ -3515,16 +3515,19 @@ static void draw_online_database(void)
                  selected_community->app_ver[0] ?
                  selected_community->app_ver : "Not specified");
         draw_text(414.0f, 306.0f, 0x514b69ff, line);
-        snprintf(line, sizeof(line), "SOURCE: %.38s", selected_community->repository);
+        snprintf(line, sizeof(line), "REGION: %s",
+                 ps3scale_community_region_label(selected_community->title_id));
         draw_text(414.0f, 330.0f, 0x514b69ff, line);
-        snprintf(line, sizeof(line), "FILE: %.44s", selected_community->path);
+        snprintf(line, sizeof(line), "SOURCE: %.38s", selected_community->repository);
         draw_text(414.0f, 354.0f, 0x514b69ff, line);
+        snprintf(line, sizeof(line), "FILE: %.44s", selected_community->path);
+        draw_text(414.0f, 378.0f, 0x514b69ff, line);
         snprintf(line, sizeof(line), "SIZE: %u KB",
                  (unsigned)((selected_community->file_size + 1023u) / 1024u));
-        draw_text(414.0f, 378.0f, 0x514b69ff, line);
-        draw_text(414.0f, 402.0f, 0x875be8ff,
+        draw_text(414.0f, 402.0f, 0x514b69ff, line);
+        draw_text(414.0f, 426.0f, 0x875be8ff,
                   "X: DOWNLOAD TO COMMUNITY_DOWNLOADS");
-        draw_text(414.0f, 420.0f, 0xffa85cff,
+        draw_text(414.0f, 444.0f, 0xffa85cff,
                   "DATA ONLY - NEVER EXECUTED OR AUTO-APPLIED");
     } else {
         draw_text(414.0f, 232.0f, 0x77718fff,
