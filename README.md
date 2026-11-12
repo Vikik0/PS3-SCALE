@@ -1,35 +1,47 @@
 # PS3 SCALE
 
-PS3 SCALE is a homebrew project for safely cataloguing PS3 and PS2 titles and, in later releases, managing verified per-title graphics and compatibility enhancements.
+PS3 SCALE is a PS3 homebrew application for managing PS3/PS2 game libraries and title-specific enhancement profiles.
 
 ## Current status — Alpha 0.2
 
-- Read-only PS3/PS2 game discovery and metadata parsing.
-- Tiny3D-based PS3 application UI with native vector icons on the main menu.
-- PS3 folder, installed-title, PS3 ISO and PS2 ISO discovery.
-- PARAM.SFO parsing and PS2 ISO9660 SYSTEM.CNF serial extraction.
-- GitHub Actions builds ELF, SELF, debug PKG and finalized NPDRM PKG.
-- Host-side tests pass.
-- The previous Alpha build has launched on the target CECH-2504A console; the latest icon-enabled build awaits a visual re-check.
+The main branch has a successful embedded-theme build. The development branch **feature/online-graphics-database** adds:
 
-**Important:** Alpha 0.2 does not apply game patches or provide a universal in-game upscaler. Real enhancement work must be title-specific and verified against the exact game ID/version. Original game files remain read-only.
+- A 40-entry starter catalogue of community-reported PS3 profiles.
+- HTTPS catalogue synchronization with certificate verification, a download-size cap and validated cache replacement.
+- Exact Title ID + APP_VER matching.
+- A guarded, one-launch webMAN MOD script for single-write profiles, requiring explicit confirmation.
+- Exact-address/original-byte checks, Title ID + APP_VER fingerprinting, full script-body integrity verification, stale-script handling and self-removal after the launch attempt.
+- Multi-write profiles remain disabled for automatic application.
+
+**Safety status:** the catalogue entries are community-reported, not independently verified on the user's PS3. The webMAN batch path cannot report a verified post-write memory value, so PS3 SCALE does not show a success popup. The patch changes the running game's memory only; original game files remain unchanged. Exiting the game clears the process-memory change.
+
+The feature branch passed host tests and the PS3 package build in [Run #178](https://github.com/Vikik0/PS3-SCALE/actions/runs/42532501388). Its GNPDRM PKG is available in the run's Artifacts. The branch is still [Draft PR #6](https://github.com/Vikik0/PS3-SCALE/pull/6) and has not yet received a physical-console smoke test. There is no universal AI upscaler or frame generation.
+
+## Latest verified main build
+
+[GitHub Actions Run #162 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42524757054)
+
+This build is from main and **does not yet include** the online graphics-profile branch. The feature-branch CI result is available in Run #178. Use that run's GNPDRM PKG for a first hardware smoke test; it is not yet hardware-validated.
 
 ## Build and install
 
-See [the latest successful build](https://github.com/Vikik0/PS3-SCALE/actions/runs/42484129338) and download the PS3-SCALE-Alpha-0.2-build artifact. Use ps3scale.gnpdrm.pkg for the finalized package.
+See the workflow run above, open **Artifacts**, and download the finalized PS3 package artifact. Use **ps3scale.gnpdrm.pkg** for installation on a compatible CFW/HEN console.
 
 ## Documentation
 
-- [Arabic setup and install notes](PS3-SCALE-Alpha-0.2/README_AR.md)\n- [UI flow](PS3-SCALE-Alpha-0.2/docs/UI_FLOW.md)\n- [Game enhancement lifecycle](PS3-SCALE-Alpha-0.2/docs/GAME_ENHANCEMENT_WORKFLOW.md)\n- [Startup theme audio](PS3-SCALE-Alpha-0.2/docs/AUDIO_THEME.md)
+- [Arabic setup and install notes](PS3-SCALE-Alpha-0.2/README_AR.md)
+- [UI flow](PS3-SCALE-Alpha-0.2/docs/UI_FLOW.md)
+- [Game enhancement lifecycle](PS3-SCALE-Alpha-0.2/docs/GAME_ENHANCEMENT_WORKFLOW.md)
+- [Online profile catalogue](PS3-SCALE-Alpha-0.2/docs/ONLINE_DATABASE.md)
+- [Patch trust policy](PS3-SCALE-Alpha-0.2/docs/PATCH_TRUST_POLICY.md)
+- [Optional webMAN MOD / PS3MAPI integration](PS3-SCALE-Alpha-0.2/docs/WEBMAN_MAPI_INTEGRATION.md)
+- [Startup theme audio](PS3-SCALE-Alpha-0.2/docs/AUDIO_THEME.md)
 - [Roadmap](PS3-SCALE-Alpha-0.2/docs/ROADMAP.md)
-- [Verified build report](PS3-SCALE-Alpha-0.2/docs/BUILD_STATUS.md)
+- [Build status](PS3-SCALE-Alpha-0.2/docs/BUILD_STATUS.md)
 - [Graphics engine feasibility](PS3-SCALE-Alpha-0.2/docs/GRAPHICS_ENGINE_REALITY.md)
-- [PS2 CONFIG route](PS3-SCALE-Alpha-0.2/docs/PS2_ENGINE.md)\n- [Optional webMAN MOD / PS3MAPI integration](PS3-SCALE-Alpha-0.2/docs/WEBMAN_MAPI_INTEGRATION.md)
-- [Patch trust and rollback policy](PS3-SCALE-Alpha-0.2/docs/PATCH_TRUST_POLICY.md)
+- [PS2 CONFIG route](PS3-SCALE-Alpha-0.2/docs/PS2_ENGINE.md)
 - [Developer research notes](PS3-SCALE-Alpha-0.2/docs/RESEARCH_NOTES.md)
 
-## First hardware target
+## Hardware target
 
-CECH-2504A Slim · CEX CFW 4.93 · Cobra 8.5.
-
-The application does not require PSN.
+Primary target: PS3 Slim, CFW 4.92. The exact CECH model, CEX/DEX type and Cobra version are not yet confirmed for the user's console. FAT and Super Slim compatibility remains a broader project target and must be checked on real hardware.

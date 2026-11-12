@@ -22,8 +22,9 @@ INCLUDES := include source/ps3
 LIBDIRS := $(PORTLIBS)
 
 LIBS := -lya2d -lfont3d -ltiny3d -lsimdmath -lgcm_sys -lrsx -lio -lsysutil \
-        -lpngdec -ljpgdec -lpng -lz -lfreetype -lpixman-1 \
-        -lmpg123 -laudio -lrt -llv2 -lsysmodule -lsysfs -lnet -lm
+        -lpngdec -ljpgdec -lpng -lfreetype -lpixman-1 \
+        -lmpg123 -laudio -lcurl -lmbedtls -lmbedx509 -lmbedcrypto \
+        -lnetctl -lnet -lz -lm -lrt -lsysfs -lsysmodule -llv2
 
 CFLAGS = -O2 -Wall -Wextra -std=gnu99 -mcpu=cell $(MACHDEP) $(INCLUDE) \
          -I$(PORTLIBS)/include/soundlib
@@ -80,6 +81,15 @@ $(BUILD):
 # This recipe ensures packaging cannot race object compilation/linking under -j.
 pkg: $(BUILD)
 	@python3 scripts/prepare_theme.py
+	@python3 scripts/generate_xmb_assets.py
+	@test -s pkgfiles/ICON0.PNG
+	@test -s pkgfiles/PIC1.PNG
+	@test -s pkgfiles/PIC0.PNG
+	@test -s pkgfiles/USRDIR/apollo-save.png
+	@cp data/online_profiles.tsv pkgfiles/USRDIR/graphics_catalog.tsv
+	@cp data/community_game_files.tsv pkgfiles/USRDIR/community_game_files.tsv
+	@cp data/ps2_config_index.tsv pkgfiles/USRDIR/ps2_config_index.tsv
+	@test -s pkgfiles/USRDIR/cacert.pem
 	@$(MAKE) --no-print-directory $(OUTPUT).pkg
 
 else

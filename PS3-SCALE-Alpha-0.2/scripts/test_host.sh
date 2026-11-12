@@ -37,6 +37,13 @@ cc -std=c99 -Wall -Wextra -Werror \
 
 cc -std=c99 -Wall -Wextra -Werror \
   -I"$ROOT/include" \
+  "$ROOT/source/core/ps2_config_db.c" \
+  "$ROOT/tests/test_ps2_config_db.c" \
+  -o "$OUT/test_ps2_config_db"
+"$OUT/test_ps2_config_db"
+
+cc -std=c99 -Wall -Wextra -Werror \
+  -I"$ROOT/include" \
   "$ROOT/source/core/locale.c" \
   "$ROOT/tests/test_locale.c" \
   -o "$OUT/test_locale"
@@ -48,6 +55,39 @@ cc -std=c99 -Wall -Wextra -Werror \
   "$ROOT/tests/test_hardware_info.c" \
   -o "$OUT/test_hardware_info"
 "$OUT/test_hardware_info"
+
+cc -std=c99 -Wall -Wextra -Werror \
+  -I"$ROOT/include" \
+  "$ROOT/source/core/game.c" \
+  "$ROOT/source/core/catalog.c" \
+  "$ROOT/tests/test_catalog.c" \
+  -o "$OUT/test_catalog"
+"$OUT/test_catalog"
+
+cc -std=c99 -Wall -Wextra -Werror \
+  -I"$ROOT/include" \
+  "$ROOT/source/core/community.c" \
+  "$ROOT/tests/test_community.c" \
+  -o "$OUT/test_community"
+"$OUT/test_community"
+
+python3 "$ROOT/tests/test_community_index_builder.py"
+
+cc -std=c99 -Wall -Wextra -Werror \
+  -I"$ROOT/include" \
+  "$ROOT/source/core/webman_command.c" \
+  "$ROOT/tests/test_webman_command.c" \
+  -o "$OUT/test_webman_command"
+"$OUT/test_webman_command"
+
+cc -std=c99 -Wall -Wextra -Werror \
+  -DPS3SCALE_WEBMAN_TMP_DIR='"/tmp/ps3scale-profile-apply-test"' \
+  -DPS3SCALE_WEBMAN_SCRIPT_DIR='"/tmp/ps3scale-profile-apply-test/wm_ingame"' \
+  -I"$ROOT/include" \
+  "$ROOT/source/ps3/profile_apply.c" \
+  "$ROOT/tests/test_profile_apply.c" \
+  -o "$OUT/test_profile_apply"
+"$OUT/test_profile_apply"
 
 python3 "$ROOT/tests/test_ui_contract.py" "$ROOT/source/ps3/main.c"
 python3 "$ROOT/tests/test_theme_bundle.py" "$ROOT"

@@ -118,6 +118,8 @@ int main(void)
     snprintf(path, sizeof(path), "%s/PS2ISO", root); make_dir(path);
     snprintf(path, sizeof(path), "%s/PS2ISO/God of War II.iso", root);
     write_file(path);
+    snprintf(path, sizeof(path), "%s/PS2ISO/Crash Twinsanity [SLUS_209.09].BIN.ENC", root);
+    write_file(path);
 
     snprintf(path, sizeof(path), "%s/PS3ISO", root); make_dir(path);
     snprintf(path, sizeof(path), "%s/PS3ISO/Gran Turismo 6 [BCES01893].iso", root);
@@ -131,8 +133,8 @@ int main(void)
     ps3scale_game_list_init(&list);
     found = ps3scale_scan_device(root, &list);
 
-    assert(found == 5);
-    assert(list.count == 5);
+    assert(found == 6);
+    assert(list.count == 6);
     assert(list.items[0].kind == PS3SCALE_GAME_PS3_FOLDER);
     assert(list.items[1].kind == PS3SCALE_GAME_PS2_CLASSIC ||
            list.items[2].kind == PS3SCALE_GAME_PS2_CLASSIC);
@@ -145,6 +147,7 @@ int main(void)
         int saw_ps3_iso_id = 0;
         int saw_ps2_cover = 0;
         int saw_ps3_cover = 0;
+        int saw_encrypted_ps2 = 0;
         for (i = 0; i < list.count; i++) {
             if (strcmp(list.items[i].title_id, "BLES12345") == 0) {
                 saw_mounted = 1;
@@ -158,11 +161,15 @@ int main(void)
             if (strcmp(list.items[i].title, "Demo PS3 Game") == 0 &&
                 list.items[i].cover_path[0] != '\0')
                 saw_ps3_cover = 1;
+            if (list.items[i].kind == PS3SCALE_GAME_PS2_CLASSIC &&
+                strcmp(list.items[i].disc_id, "SLUS_209.09") == 0)
+                saw_encrypted_ps2 = 1;
         }
         assert(saw_mounted);
         assert(saw_ps3_iso_id);
         assert(saw_ps2_cover);
         assert(saw_ps3_cover);
+        assert(saw_encrypted_ps2);
     }
 
     puts("PS3 SCALE scanner tests: PASS");

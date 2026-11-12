@@ -91,3 +91,25 @@ int ps3scale_ps2_config_validate_generated(const uint8_t *data, size_t size)
 
     return seen ? 0 : -7;
 }
+
+
+int ps3scale_ps2_config_validate_external(const uint8_t *data, size_t size,
+                                          const char *type)
+{
+    if (!data || !type)
+        return -1;
+    if (strcmp(type, "ENC") == 0) {
+        if (size < 16u || size > (PS3SCALE_PS2_CONFIG_MAX_BYTES * 2u) ||
+            memcmp(data, "PS2\0", 4) != 0)
+            return -2;
+        return 0;
+    }
+    if (strcmp(type, "CUSTOM") != 0 && strcmp(type, "NET") != 0 &&
+        strcmp(type, "GX") != 0 && strcmp(type, "SOFT") != 0)
+        return -3;
+    if (size < sizeof(ps2_config_header) ||
+        size > PS3SCALE_PS2_CONFIG_MAX_BYTES ||
+        memcmp(data, ps2_config_header, 4) != 0)
+        return -4;
+    return 0;
+}

@@ -1,69 +1,38 @@
-# PS3 SCALE Alpha 0.2 — Build status
+# PS3 SCALE Alpha 0.22 — visible staircase and XMB redesign
 
-Date: 2026-11-08
+Date: 2026-11-12
 
-## Latest verified CI build
+## Why the previous console build did not match the reference
+The previous build contained a Tiny3D staircase routine, but the console screenshot showed that the 3D pass was not visible. The UI therefore displayed only the flat gradient, orbital rings and particles. The Home card descriptions also overflowed their card widths, and an older saved settings file could keep the playlist on a single track.
 
-- Workflow run: [#119 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42494932138)
-- Source commit: `7a984e43c279d33c5e5056883c27b21b40a5870f`
-- Artifact ID: `13622478698`
-- Artifact ZIP size: 1,203,134 bytes
-- Artifact ZIP SHA-256: `3be24fe4d3b93cc8dd2f538da2c1ea1aaa9995e216a9f3a52d64a7f2044705ee`
+## Corrections in Alpha 0.22
+- Replaced the invisible 3D draw pass with a perspective-projected spiral staircase rendered in the regular 2D UI pass. Its 24 wedge-shaped treads, shaded risers, central support and handrail move in a slow, periodic loop.
+- Removed the depth-buffer clear dependency that hid the earlier staircase.
+- Kept the staircase behind every screen, not only Home, while preserving the animation ON/OFF setting.
+- Shortened Home card descriptions so they fit without running into neighboring cards.
+- Rebuilt the external XMB PIC1 wallpaper with a perspective spiral staircase; ICON0 and PIC0 remain generated in the same lavender visual identity.
+- Added a Settings control for track fade duration (500 / 1000 / 1500 / 2000 ms).
+- Added settings version migration: older settings files are moved to the requested AUTO playlist (BIOS - Zorrovian, then GTA V; the first track alternates on the next app launch) rather than remaining pinned to BIOS ONLY.
+- Preserved Music ON/OFF, volume, animation toggle, language, Help, About and in-app issue reporting.
+- Updated the displayed and package version to 00.22.
 
-## Build outputs
+## Music assets
+- Music 2 (GTA V pause-menu theme) is embedded in the PKG.
+- Music 1 (BIOS - Zorrovian) is still imported from USB to the internal HDD; it is not embedded in the repository build inputs. The runtime supports the supplied original filename and the normalized `music1.mp3` name.
+- AUTO playlist and configurable fade are available once Music 1 has been imported.
 
-| File | Size | SHA-256 |
-|---|---:|---|
-| `ps3scale.elf` | 1,646,258 bytes | `d57b00e2e86983dc1d7e38099890acd788e8ced6426b416b809b2d6162b73f5c` |
-| `ps3scale.self` | 220,544 bytes | `185b2e9e010dced8736c97089218f215bc2f78248e87791c8980cf8bb4c47573` |
-| `ps3scale.pkg` | 262,032 bytes | `aeacb3af5aa427f3d3406235647d45c33ab39bfd29ebd6ce82251a6da7d68bb2` |
-| `ps3scale.gnpdrm.pkg` | 262,032 bytes | `8a0f86d8bfaa139d5828b80336196bea55f15e2d0200b92e420b4a0cdc301add` |
+## Validation
+- Latest GitHub Actions host-side tests: PASS.
+- PS3 ELF / SELF / standard PKG / GNPDRM PKG build: PASS.
+- XMB asset generation and package content checks: PASS (ICON0 320x176, PIC1 1280x720, PIC0 310x176; Apollo Save logo and Music 2 embedded).
+- Physical PS3 Slim / CFW 4.92 verification: required. CI cannot prove the actual RSX appearance or audio playback on the console.
 
-The finalized package header is `7f504b47 8000 0001` (PS3 package, finalized revision).
+## Existing safety boundaries
+- Scanning remains read-only; original game files are not replaced.
+- Community NCL/TXT entries are downloaded as inert data only (HTTPS, 2 MB maximum, text-only extensions, no overwrite). They are never executed or auto-applied.
+- Exact Title ID + APP_VER matching remains required for graphics profiles.
+- Multi-write profiles remain disabled for automatic application.
+- No universal AI upscaler, frame generation or guaranteed 60 FPS is claimed.
 
-## CI tests
-
-- Host SFO parser tests: PASS.
-- Host scanner tests: PASS.
-- Host ISO metadata tests: PASS.
-- Host PS2 CONFIG builder tests: PASS.
-- Host locale / UTF-8 glyph mapping / keyboard layout tests: PASS.
-- Static UI contract tests: PASS.
-- PPU ELF, CEX SELF, debug PKG and finalized NPDRM PKG: built successfully.
-
-## Implemented in Run #119
-
-- First-run language selection: English, Arabic and Spanish; saved in `USRDIR/settings.cfg`.
-- Spanish translations and an embedded compact Arabic bitmap glyph atlas derived from Noto Sans Arabic.
-- Focused Arabic contextual letter shaping and right-to-left run ordering for translated UI strings.
-- In-app controller keyboard with English, Spanish and Arabic layouts; SELECT and START open it. Native PS3 OSK is no longer used.
-- UTF-8 search input and code-point-aware backspace.
-- Staged startup/loading screen with local app-file check, companion-tool detection and worker-thread game-library scan.
-- Slow low-poly 3D wireframe home emblem with two orbit rings; can be disabled in Settings.
-- Settings persist language, music, volume and animation.
-- Existing scanner, cover-art layout, companion-tool discovery and music streaming remain in the build. The music is assembled into `USRDIR/theme.mp3` during the package build; the Settings screen no longer exposes a copy-to-HDD action.
-
-## Localization scope
-
-Arabic rendering is tailored to the app's translated interface and common Arabic letters. This is not a full Unicode shaping/bidi stack; advanced mixed-direction cases, diacritics and unsupported characters in arbitrary game titles may fall back or render imperfectly. See `docs/LOCALIZATION_AND_STARTUP.md` and `docs/THIRD_PARTY_LICENSES.txt`.
-
-## Music
-
-The user-supplied MP3 is embedded inside the PKG at `USRDIR/theme.mp3`. The build reconstructs it from ordered binary chunks and verifies its SHA-256. Playback reads only `/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`; no USB fallback or copy-to-HDD setting remains.
-
-## Update and download policy
-
-Startup performs local checks only. It does not need internet access and does not download arbitrary files. The USB update check only discovers a PKG with PS3 package magic; it does not verify a signed release manifest or auto-install. A secure online updater remains future work.
-
-## Physical console validation
-
-A previous Alpha build was confirmed by the user to launch, scan the library, display cover art and play the supplied music. Run #119 passes host CI and builds the final PKG, but the new Arabic glyph rendering, language persistence, custom keyboard navigation, 3D frame pacing, startup scan behavior and audio still need a fresh physical-console smoke test on the target PS3. Host CI does not replace hardware validation.
-
-## Not implemented
-
-- No verified online graphics-profile catalog or automatic patch download/application.
-- No game-file backup/rollback workflow because the current app does not modify game files.
-- No verified graphics-profile catalogue or automatic graphics memory patch is enabled yet.
-- The Start Game action uses webMAN MOD to launch a matching mounted PS3 title and play a sound popup; the in-game success notification remains disabled until a patch is verified.
-- No universal AI upscaler or frame generation.
-- USB update discovery does not verify a signed release manifest and does not install packages automatically.
+## Console verification order
+Install the Alpha 0.22 GNPDRM package over the previous build, then check: splash, visible moving staircase, Home card text fit, Scan Games, Details, Online DB, Settings (AUTO playlist and fade duration), Help, About, and the external XMB preview. Confirm both music tracks play in the selected order after Music 1 is imported.

@@ -1,0 +1,4 @@
+project_id = "ps3scale-support"
+
+[functions.ps3scale-support]
+verify_jwt = false

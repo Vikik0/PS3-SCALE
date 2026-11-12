@@ -129,7 +129,107 @@ static const locale_entry_t locale_entries[] = {
     {"PLATFORM ID:", "معرّف المنصة:", "ID de plataforma:"},
     {"CONSOLE TYPE:", "نوع الجهاز:", "Tipo de consola:"},
     {"HARDWARE INFO UNAVAILABLE.", "معلومات الجهاز غير متاحة.", "Información de hardware no disponible."},
-    {"TARGET HARDWARE: PS3 FAT / SLIM / SUPER SLIM.", "الأجهزة المستهدفة: PS3 FAT وSLIM وSUPER SLIM.", "Hardware objetivo: PS3 FAT / SLIM / SUPER SLIM."}
+    {"TARGET HARDWARE: PS3 FAT / SLIM / SUPER SLIM.", "الأجهزة المستهدفة: PS3 FAT وSLIM وSUPER SLIM.", "Hardware objetivo: PS3 FAT / SLIM / SUPER SLIM."},
+
+    {"ONLINE GRAPHICS DATABASE", "قاعدة بيانات تحسين الرسوم", "Base de datos de mejoras gráficas"},
+    {"MATCHED GAMES", "الألعاب المتطابقة", "Juegos coincidentes"},
+    {"PROFILE DETAILS", "تفاصيل الملف", "Detalles del perfil"},
+    {"DATABASE STATUS", "حالة قاعدة البيانات", "Estado de la base de datos"},
+    {"NO EXACT MATCHES IN YOUR PS3 LIBRARY.", "لا توجد مطابقات دقيقة في مكتبة PS3.", "No hay coincidencias exactas en tu biblioteca PS3."},
+    {"THE DATABASE IS VERSION-SPECIFIC.", "قاعدة البيانات مرتبطة بإصدار اللعبة.", "La base de datos depende de la versión."},
+    {"RESCAN GAMES AFTER INSTALLING UPDATES.", "أعد فحص الألعاب بعد تثبيت التحديثات.", "Vuelve a escanear tras instalar actualizaciones."},
+    {"TRUST: COMMUNITY-REPORTED", "الموثوقية: بلاغات مجتمعية", "Confianza: reportado por la comunidad"},
+    {"AUTO APPLY: AVAILABLE AFTER CONFIRMATION", "التطبيق التلقائي: متاح بعد التأكيد", "Aplicación automática: disponible tras confirmar"},
+    {"AUTO APPLY: DISABLED FOR MULTI-WRITE SAFETY", "التطبيق التلقائي: متوقف لأمان التعديلات المتعددة", "Aplicación automática: desactivada por seguridad"},
+    {"MATCH: EXACT TITLE ID + APP_VER", "المطابقة: معرّف اللعبة وإصدارها", "Coincidencia: ID y versión exactos"},
+    {"SOURCE: COMMUNITY MAPI PATCH NOTES", "المصدر: تعديلات MAPI المجتمعية", "Fuente: parches MAPI comunitarios"},
+    {"UP/DOWN: SELECT  CROSS: OPEN  SQUARE: CACHE  TRIANGLE: ALL  START: SYNC  CIRCLE: BACK", "أعلى/أسفل: اختيار  X: فتح  مربع: حفظ  مثلث: الكل  START: مزامنة  دائرة: رجوع", "Arriba/abajo: elegir  X: abrir  Cuadrado: guardar  Triángulo: todos  START: sincronizar  Círculo: volver"},
+    {"LOCAL SCAN + OPTIONAL ONLINE PROFILE SYNC", "فحص محلي مع مزامنة اختيارية للملفات", "Escaneo local y sincronización opcional"},
+    {"NO EXACT ONLINE PROFILE FOR THIS UPDATE.", "لا يوجد ملف أونلاين مطابق لهذا التحديث.", "No hay perfil en línea exacto para esta actualización."},
+    {"TRUST: COMMUNITY-REPORTED - REVIEW BEFORE USE.", "المصدر مجتمعي؛ راجع التعديل قبل استخدامه.", "Origen comunitario; revisa el parche antes de usarlo."},
+    {"TITLE ID AND APP VERSION MUST BOTH MATCH.", "يجب تطابق معرّف اللعبة وإصدارها معاً.", "Deben coincidir el ID y la versión del juego."},
+    {"OPEN ONLINE DATABASE TO CHECK SUPPORTED PROFILES.", "افتح قاعدة البيانات لمعرفة الملفات المدعومة.", "Abre la base de datos para ver perfiles compatibles."},
+    {"COMMUNITY PATCH: TRIANGLE CONFIRMS INSTALL; CIRCLE CANCELS.", "تعديل مجتمعي: مثلث للتثبيت ودائرة للإلغاء.", "Parche comunitario: Triángulo instala; Círculo cancela."},
+    {"START GAME", "تشغيل اللعبة", "Iniciar juego"},
+    {"EXACT ONLINE PROFILE FOUND. REVIEW BEFORE INSTALL.", "تم العثور على ملف مطابق؛ راجعه قبل التثبيت.", "Perfil exacto encontrado; revísalo antes de instalar."},
+    {"NO EXACT ONLINE PROFILE FOR THIS GAME UPDATE.", "لا يوجد ملف أونلاين مطابق لهذا التحديث.", "No hay perfil en línea exacto para esta actualización."},
+    {"MULTI-WRITE PROFILE: AUTO APPLY DISABLED FOR SAFETY.", "الملف يتطلب تعديلات متعددة؛ التطبيق التلقائي متوقف للأمان.", "Perfil con varias escrituras; aplicación automática desactivada."},
+    {"ONE-LAUNCH PROFILE SCRIPT REMOVED FROM WEBMAN.", "تمت إزالة سكربت التحسين لمرة واحدة من webMAN.", "Script de perfil de un solo inicio eliminado de webMAN."},
+    {"COULD NOT REMOVE THE PS3 SCALE PROFILE SCRIPT.", "تعذرت إزالة سكربت PS3 SCALE.", "No se pudo eliminar el script de PS3 SCALE."},
+    {"A USER WEBMAN SCRIPT EXISTS. IT WAS NOT OVERWRITTEN.", "يوجد سكربت webMAN خاص بك؛ لم يتم استبداله.", "Ya existe un script de webMAN; no se sobrescribió."},
+    {"COMMUNITY PATCH. TRIANGLE TO ARM ONE-LAUNCH PROFILE.", "تعديل مجتمعي؛ اضغط مثلث لتجهيز التحسين للتشغيل مرة واحدة.", "Parche comunitario; pulsa Triángulo para preparar el perfil de un solo inicio."},
+    {"PROFILE INSTALL CANCELLED.", "تم إلغاء تثبيت الملف.", "Instalación del perfil cancelada."},
+    {"STALE PROFILE SCRIPT. REMOVE IT BEFORE STARTING.", "سكربت التحسين قديم؛ أزِله قبل تشغيل اللعبة.", "Script de perfil obsoleto. Elimínalo antes de iniciar."},
+    {"PS3MAPI IS NOT ACTIVE. ENABLE IT IN WEBMAN SETTINGS.", "PS3MAPI غير نشط؛ فعّله من إعدادات webMAN.", "PS3MAPI no está activo; actívalo en webMAN."},
+    {"ONE-LAUNCH PROFILE WILL CHECK THE EXACT ADDRESS AND ORIGINAL BYTES.", "سيُفحص العنوان والبايتات الأصلية قبل تطبيق التحسين لمرة واحدة.", "El perfil comprobará la dirección exacta y los bytes originales al iniciar."},
+    {"EXACT PROFILE FOUND, BUT ONE-LAUNCH APPLY IS NOT ARMED. STARTING UNMODIFIED.", "عُثر على ملف مطابق، لكن التحسين لم يُجهّز؛ ستبدأ اللعبة دون تعديل.", "Perfil exacto encontrado, pero no está preparado; el juego iniciará sin cambios."},
+    {"NO EXACT ONLINE PROFILE. STARTING UNMODIFIED GAME.", "لا يوجد ملف أونلاين مطابق؛ ستبدأ اللعبة دون تعديل.", "No hay perfil exacto; el juego se iniciará sin cambios."},
+    {"ENABLE WEBMAN PS3MAPI SERVER BEFORE INSTALLING.", "فعّل خادم PS3MAPI في webMAN قبل التثبيت.", "Activa el servidor PS3MAPI de webMAN antes de instalar."},
+    {"WAIT FOR ONLINE DATABASE SYNC TO FINISH.", "انتظر حتى تنتهي مزامنة قاعدة البيانات.", "Espera a que termine la sincronización de la base de datos."},
+    {"WAIT FOR ONLINE DATABASE SYNC TO FINISH BEFORE STARTING.", "انتظر انتهاء مزامنة قاعدة البيانات قبل التشغيل.", "Espera a que termine la sincronización antes de iniciar."},
+    {"MOUNT THE EXACT GAME VERSION BEFORE ARMING THIS PROFILE.", "ركّب إصدار اللعبة المطابق قبل تجهيز ملف التحسين.", "Monta la versión exacta del juego antes de preparar el perfil."},
+    {"MANUAL-ONLY PROFILE. ONE-LAUNCH APPLY IS NOT SUPPORTED.", "هذا الملف يدوي فقط؛ التطبيق لمرة واحدة غير مدعوم له.", "Perfil manual; la aplicación de un solo inicio no está disponible."},
+    {"TRUST: COMMUNITY-REPORTED / MANUAL ONLY", "الثقة: تقرير مجتمعي / يدوي فقط", "Confianza: informe comunitario / solo manual"},
+    {"MANUAL ONLY: RE-APPLY REQUIRED IN GAME", "يدوي فقط: يجب إعادة التطبيق داخل اللعبة", "Solo manual: hay que volver a aplicarlo dentro del juego"},
+    {"NO PROFILE FOR THIS TITLE. GAME WILL START UNMODIFIED.", "لا يوجد ملف تحسين لهذه اللعبة؛ ستعمل دون تعديلات.", "No hay perfil para este título; el juego iniciará sin modificaciones."},
+    {"STARTING GAME WITH ONE-LAUNCH PROFILE.", "جارٍ تشغيل اللعبة مع ملف تحسين لمرة واحدة.", "Iniciando el juego con un perfil de una sola ejecución."},
+    {"PROFILE NOT ARMED. STARTING GAME UNMODIFIED.", "لم يتم تجهيز ملف التحسين؛ ستعمل اللعبة دون تعديلات.", "Perfil no activado; el juego iniciará sin modificaciones."},
+    {"NO EXACT PROFILE. STARTING GAME UNMODIFIED.", "لا يوجد ملف مطابق؛ ستعمل اللعبة دون تحسينات.", "No hay perfil exacto; el juego iniciará sin modificaciones."},
+    {"WEBMAN ACCEPTED START REQUEST.", "قبل webMAN طلب تشغيل اللعبة.", "webMAN aceptó la solicitud de inicio."},
+    {"PS3MAPI NOT ACTIVE. PROFILE WAS NOT APPLIED.", "PS3MAPI غير مفعّل؛ لم يُطبّق ملف التحسين.", "PS3MAPI no está activo; no se aplicó el perfil."},
+    {"WEBMAN START FAILED. APP STILL RESPONSIVE.", "فشل تشغيل اللعبة عبر webMAN؛ التطبيق ما زال يستجيب.", "webMAN no pudo iniciar el juego; la aplicación sigue respondiendo."},
+    {"GAME UPDATE CHANGED. RESCAN BEFORE APPLYING PROFILE.", "تغيّر إصدار اللعبة؛ أعد الفحص قبل تجهيز التحسين.", "Cambió la actualización; vuelve a escanear antes de activar el perfil."},
+    {"GAME UPDATE CHANGED. RESCAN BEFORE STARTING PROFILE.", "تغيّر إصدار اللعبة؛ أعد الفحص قبل تشغيل التحسين.", "Cambió la actualización; vuelve a escanear antes de iniciar el perfil."},
+    {"MOUNT THE EXACT GAME VERSION BEFORE STARTING PROFILE.", "ركّب إصدار اللعبة المطابق قبل تشغيل ملف التحسين.", "Monta la versión exacta antes de iniciar el perfil."},
+    {"WAIT FOR ONLINE DATABASE OR GAME ACTION TO FINISH.", "انتظر انتهاء مزامنة قاعدة البيانات أو عملية اللعبة.", "Espera a que termine la sincronización o la acción del juego."},
+    {"GAME START REQUEST IS ALREADY RUNNING.", "طلب تشغيل اللعبة قيد التنفيذ بالفعل.", "La solicitud de inicio ya está en curso."},
+    {"START UNMODIFIED", "تشغيل دون تحسين", "Iniciar sin modificaciones"},
+    {"START WITH PROFILE", "تشغيل مع التحسين", "Iniciar con perfil"},
+    {"STARTING...", "جارٍ التشغيل...", "Iniciando..."},
+    {"COULD NOT START GAME LAUNCH WORKER. APP IS READY.", "تعذر بدء مهمة التشغيل؛ التطبيق جاهز.", "No se pudo iniciar la tarea; la aplicación está lista."},
+    {"CHECKING WEBMAN AND ARMING PROFILE.", "جارٍ التحقق من webMAN وتجهيز ملف التحسين.", "Comprobando webMAN y activando el perfil."},
+    {"ONE-LAUNCH PROFILE ARMED. START THIS GAME.", "تم تجهيز ملف التحسين لمرة واحدة؛ شغّل هذه اللعبة.", "Perfil de una sola ejecución activado; inicia este juego."},
+    {"WEBMAN MOD NOT RESPONDING. PROFILE NOT ARMED.", "webMAN MOD لا يستجيب؛ لم يتم تجهيز ملف التحسين.", "webMAN MOD no responde; el perfil no se activó."},
+    {"PS3MAPI NOT ACTIVE. PROFILE NOT ARMED.", "PS3MAPI غير مفعّل؛ لم يتم تجهيز ملف التحسين.", "PS3MAPI no está activo; el perfil no se activó."},
+    {"COULD NOT START PROFILE WORKER. NO PATCH WAS ARMED.", "تعذر بدء مهمة التجهيز؛ لم يتم تفعيل أي تعديل.", "No se pudo iniciar la tarea; no se activó ningún parche."},
+    {"WAIT FOR PROFILE ARMING TO FINISH.", "انتظر حتى ينتهي تجهيز ملف التحسين.", "Espera a que termine la activación del perfil."},
+    {"GAME OR PROFILE ACTION IS ALREADY RUNNING.", "هناك عملية تشغيل أو تجهيز ملف تحسين قيد التنفيذ.", "Ya hay una acción de juego o perfil en curso."},
+    {"ARMING PROFILE...", "جارٍ تجهيز التحسين...", "Activando perfil..."},
+
+
+    {"SETTINGS RESTORED TO DEFAULTS.", "تمت استعادة الإعدادات الافتراضية.", "Se restauraron los ajustes predeterminados."},
+
+    {"ONE-LAUNCH PROFILE ARMED. START THE MOUNTED GAME.", "تم تجهيز ملف التحسين للتشغيل مرة واحدة؛ شغّل اللعبة المركّبة.", "Perfil de un solo inicio preparado; inicia el juego montado."},
+    {"MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY.", "الملف يتطلب تعديلات متعددة؛ التطبيق التلقائي متوقف للأمان.", "Perfil de varias escrituras; aplicación automática desactivada."},
+    {"PROFILE SCRIPT INSTALL FAILED. NO GAME FILES CHANGED.", "فشل تثبيت السكربت؛ لم تتغير ملفات اللعبة.", "Falló el script; no se modificaron archivos del juego."},
+    {"PROFILE DATA SAVED TO INTERNAL HDD. NOT APPLIED YET.", "تم حفظ بيانات الملف على القرص الداخلي ولم تُطبّق بعد.", "Perfil guardado en HDD; todavía no se ha aplicado."},
+    {"COULD NOT SAVE PROFILE DATA TO INTERNAL HDD.", "تعذر حفظ بيانات الملف على القرص الداخلي.", "No se pudo guardar el perfil en el HDD."},
+    {"NO EXACT TITLE ID / APP VERSION MATCH IS SELECTED.", "لا يوجد تطابق دقيق لمعرّف اللعبة وإصدارها.", "No hay coincidencia exacta de ID y versión seleccionada."},
+    {"NO EXACT MATCH IS SELECTED.", "لم يتم تحديد تطابق دقيق.", "No hay una coincidencia exacta seleccionada."},
+    {"NO ONLINE DATABASE IS LOADED.", "لم يتم تحميل قاعدة بيانات أونلاين.", "No se ha cargado la base de datos en línea."},
+    {"DATABASE SYNC IS ALREADY RUNNING.", "مزامنة قاعدة البيانات قيد التشغيل بالفعل.", "La sincronización ya está en curso."},
+    {"DATABASE UPDATED. EXACT GAME MATCHES ARE READY.", "تم تحديث قاعدة البيانات وأصبحت المطابقات جاهزة.", "Base de datos actualizada; coincidencias listas."},
+    {"UPDATE FAILED. YOUR LAST VALID DATABASE IS STILL AVAILABLE.", "فشل التحديث؛ ما زالت قاعدة البيانات السابقة متاحة.", "Falló la actualización; se conserva la base anterior."},
+    {"CONNECT THE PS3 TO THE INTERNET AND PRESS START TO RETRY.", "صل جهاز PS3 بالإنترنت واضغط START لإعادة المحاولة.", "Conecta la PS3 a Internet y pulsa START para reintentar."},
+    {"NO VALID LOCAL DATABASE", "لا توجد قاعدة بيانات محلية صالحة", "No hay una base de datos local válida"},
+    {"BUNDLED / CACHED DATABASE READY", "قاعدة البيانات المرفقة / المحفوظة جاهزة", "Base de datos incluida / en caché lista"},
+    {"CONNECTING TO GITHUB DATABASE", "جارٍ الاتصال بقاعدة بيانات GitHub", "Conectando con la base de datos de GitHub"},
+    {"ONLINE DATABASE UPDATED", "تم تحديث قاعدة البيانات عبر الإنترنت", "Base de datos en línea actualizada"},
+    {"UPDATE FAILED - USING CACHED DATABASE", "فشل التحديث؛ سيتم استخدام النسخة المحفوظة", "Falló la actualización; se usa la copia guardada"},
+    {"OFFLINE - NO VALID DATABASE", "غير متصل - لا توجد قاعدة بيانات صالحة", "Sin conexión - no hay base de datos válida"},
+    {"ONLINE THREAD COULD NOT START", "تعذر بدء مهمة الاتصال بالإنترنت", "No se pudo iniciar la tarea en línea"},
+    {"SELECT A MATCHED GAME OR PRESS START TO SYNC.", "اختر لعبة متطابقة أو اضغط START للمزامنة.", "Elige un juego coincidente o pulsa START para sincronizar."},
+    {"ONE-LAUNCH PROFILE: ARMED", "تحسين لمرة واحدة: جاهز", "Perfil de un solo inicio: preparado"},
+    {"ONE-LAUNCH PROFILE: NOT ARMED", "تحسين لمرة واحدة: غير مجهّز", "Perfil de un solo inicio: no preparado"},
+    {"PROFILE SCRIPT: STALE - REMOVE", "سكربت التحسين: قديم - أزِله", "Script de perfil: obsoleto - eliminar"},
+    {"PROFILE SCRIPT: USER-OWNED - NOT TOUCHED", "سكربت المستخدم: لن يغيّره PS3 SCALE", "Script del usuario: PS3 SCALE no lo modifica"},
+    {"ONE-LAUNCH APPLY: AVAILABLE AFTER CONFIRMATION", "التطبيق لمرة واحدة: متاح بعد التأكيد", "Aplicación de un solo inicio: disponible tras confirmar"},
+    {"OLD PROFILE SCRIPT DOES NOT MATCH THIS CATALOG.", "سكربت التحسين القديم لا يطابق قاعدة البيانات.", "El script de perfil antiguo no coincide con esta base de datos."},
+    {"REMOVE IT BEFORE STARTING THIS GAME.", "أزِله قبل تشغيل هذه اللعبة.", "Elimínalo antes de iniciar este juego."},
+    {"NO EXACT PROFILE IS AVAILABLE FOR THIS UPDATE.", "لا يوجد ملف مطابق لهذا التحديث.", "No hay un perfil exacto para esta actualización."},
+    {"A USER WEBMAN SCRIPT EXISTS FOR THIS TITLE.", "يوجد سكربت webMAN خاص بك لهذه اللعبة.", "Existe un script de webMAN del usuario para este título."},
+    {"PS3 SCALE WILL NOT MODIFY OR REMOVE IT.", "لن يغيّره PS3 SCALE أو يحذفه.", "PS3 SCALE no lo modificará ni lo eliminará."},
+    {"NO EXACT ONLINE PROFILE IS AVAILABLE.", "لا يوجد ملف تحسين مطابق عبر الإنترنت.", "No hay un perfil en línea exacto disponible."}
 };
 
 typedef struct locale_prefix {
@@ -152,7 +252,15 @@ static const locale_prefix_t locale_prefixes[] = {
     {"STATUS: ", "الحالة: ", "Estado: "},
     {"AUDIO ENGINE: READY  |  SOURCE: ", "الصوت: جاهز | المصدر: ", "Audio: listo | origen: "},
     {"SCAN COMPLETE: ", "اكتمل الفحص: ", "Escaneo completo: "},
-    {"UPDATE PKG FOUND ON USB", "تم العثور على حزمة تحديث على USB", "Paquete de actualización encontrado en USB"}
+    {"UPDATE PKG FOUND ON USB", "تم العثور على حزمة تحديث على USB", "Paquete de actualización encontrado en USB"},
+    {"ONLINE MATCHES: ", "مطابقات أونلاين: ", "Coincidencias en línea: "},
+    {"TITLE ID: ", "معرّف اللعبة: ", "ID del juego: "},
+    {"APP VERSION: ", "إصدار التطبيق: ", "Versión de la aplicación: "},
+    {"ONLINE PROFILE: ", "ملف أونلاين: ", "Perfil en línea: "},
+    {"EFFECT: ", "التأثير: ", "Efecto: "},
+    {"AUTO APPLY: ", "التطبيق التلقائي: ", "Aplicación automática: "},
+    {"MEMORY WRITES: ", "عمليات تعديل الذاكرة: ", "Escrituras de memoria: "},
+    {"DATABASE: ", "قاعدة البيانات: ", "Base de datos: "}
 };
 
 static void copy_string(char *out, size_t cap, const char *src)
@@ -196,6 +304,47 @@ int ps3scale_locale_translate(int language, const char *source,
             snprintf(output, output_size, "PS3: %u | PS2: %u | Resultados: %u",
                      ps3, ps2, results);
         return 1;
+    }
+
+    if (strncmp(source, "DATABASE: ", 10) == 0) {
+        char translated_status[128];
+        (void)ps3scale_locale_translate(language, source + 10,
+                                        translated_status,
+                                        sizeof(translated_status));
+        if (language == PS3SCALE_LANG_ARABIC)
+            snprintf(output, output_size, "قاعدة البيانات: %s", translated_status);
+        else
+            snprintf(output, output_size, "Base de datos: %s", translated_status);
+        return 1;
+    }
+
+    {
+        unsigned profiles, matches, cached;
+        if (sscanf(source, "PROFILES: %u  |  EXACT LIBRARY MATCHES: %u",
+                   &profiles, &matches) == 2) {
+            if (language == PS3SCALE_LANG_ARABIC)
+                snprintf(output, output_size,
+                         "الملفات: %u | مطابقات المكتبة الدقيقة: %u",
+                         profiles, matches);
+            else
+                snprintf(output, output_size,
+                         "Perfiles: %u | coincidencias exactas: %u",
+                         profiles, matches);
+            return 1;
+        }
+        if (sscanf(source,
+                   "CACHED %u MATCHED PROFILE RECORDS. GAME FILES WERE NOT CHANGED.",
+                   &cached) == 1) {
+            if (language == PS3SCALE_LANG_ARABIC)
+                snprintf(output, output_size,
+                         "تم حفظ %u ملفات مطابقة. لم تتغير ملفات الألعاب.",
+                         cached);
+            else
+                snprintf(output, output_size,
+                         "Guardados %u perfiles. No se cambiaron juegos.",
+                         cached);
+            return 1;
+        }
     }
 
     for (i = 0; i < sizeof(locale_prefixes) / sizeof(locale_prefixes[0]); i++) {

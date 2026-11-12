@@ -102,6 +102,84 @@ int main(void)
     assert(strcmp(ps3scale_locale_language_name(PS3SCALE_LANG_ARABIC),
                   "العربية") == 0);
 
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "ONLINE GRAPHICS DATABASE", translated, sizeof(translated)) != 1 ||
+        strcmp(translated, "قاعدة بيانات تحسين الرسوم") != 0)
+        return 8;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "PROFILES: 40  |  EXACT LIBRARY MATCHES: 2",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "40") == NULL || strstr(translated, "2") == NULL)
+        return 9;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "WAIT FOR ONLINE DATABASE SYNC TO FINISH.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "مزامنة قاعدة البيانات") == NULL)
+        return 13;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "MOUNT THE EXACT GAME VERSION BEFORE ARMING THIS PROFILE.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "إصدار اللعبة المطابق") == NULL)
+        return 14;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "MANUAL-ONLY PROFILE. ONE-LAUNCH APPLY IS NOT SUPPORTED.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "يدوي فقط") == NULL)
+        return 15;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "MANUAL ONLY: RE-APPLY REQUIRED IN GAME",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "إعادة التطبيق") == NULL)
+        return 16;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "NO PROFILE FOR THIS TITLE. GAME WILL START UNMODIFIED.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "دون تعديلات") == NULL)
+        return 18;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "WEBMAN START FAILED. APP STILL RESPONSIVE.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "ما زال يستجيب") == NULL)
+        return 19;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "CHECKING WEBMAN AND ARMING PROFILE.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "تجهيز ملف التحسين") == NULL)
+        return 21;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "WEBMAN MOD NOT RESPONDING. PROFILE NOT ARMED.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "لم يتم تجهيز") == NULL)
+        return 22;
+
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "START UNMODIFIED",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "دون تحسين") == NULL)
+        return 20;
+
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "SETTINGS RESTORED TO DEFAULTS.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "الإعدادات الافتراضية") == NULL)
+        return 17;
+
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "ONE-LAUNCH PROFILE ARMED. START THE MOUNTED GAME.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "مرة واحدة") == NULL)
+        return 10;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "STALE PROFILE SCRIPT. REMOVE IT BEFORE STARTING.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "قديم") == NULL)
+        return 11;
+    if (ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "ONE-LAUNCH PROFILE WILL CHECK THE EXACT ADDRESS AND ORIGINAL BYTES.",
+            translated, sizeof(translated)) != 1 ||
+        strstr(translated, "البايتات الأصلية") == NULL)
+        return 12;
+
     puts("PS3 SCALE locale tests: PASS");
     return 0;
 }
