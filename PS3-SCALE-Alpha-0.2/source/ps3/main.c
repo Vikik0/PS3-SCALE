@@ -104,6 +104,14 @@ static char g_ps2_config_download_url[512];
 static char g_ps2_config_download_path[PS3SCALE_PATH_MAX];
 static char g_ps2_config_download_temp_path[PS3SCALE_PATH_MAX];
 static char g_ps2_config_download_type[PS3SCALE_PS2_CONFIG_TYPE_MAX];
+static volatile int g_community_download_running = 0;
+static volatile int g_community_download_done = 0;
+static volatile int g_community_download_result = -1;
+static int g_community_download_thread_started = 0;
+static sys_ppu_thread_t g_community_download_thread;
+static char g_community_download_url[1024];
+static char g_community_download_path[PS3SCALE_PATH_MAX];
+static char g_community_download_temp_path[PS3SCALE_PATH_MAX];
 static char g_search[64] = "";
 static u32 *g_font_texture = NULL;
 static ya2d_Texture *g_cover_texture = NULL;
@@ -262,10 +270,14 @@ static void service_game_launch(void);
 static void service_profile_arm(void);
 static void service_ps2_config_download(void);
 static void start_ps2_config_download(void);
+static void service_community_download(void);
+static void start_community_file_download(const ps3scale_community_file_t *entry);
 static const ps3scale_ps2_config_entry_t *ps2_config_for_game(const ps3scale_game_t *game);
 static const char *ps2_config_preferred_type(void);
 static void service_ps2_config_download(void);
 static void start_ps2_config_download(void);
+static void service_community_download(void);
+static void start_community_file_download(const ps3scale_community_file_t *entry);
 static const ps3scale_ps2_config_entry_t *ps2_config_for_game(const ps3scale_game_t *game);
 
 static void app_sysutil_callback(u64 status, u64 param, void *userdata)
@@ -2740,6 +2752,271 @@ static void start_ps2_config_download(void)
     set_details_message("DOWNLOADING VERIFIED PS2 CONFIG. ORIGINAL GAME FILE IS UNCHANGED.");
 }
 
+static int community_extension_is(const char *extension, const char *expected)
+{
+    while (*extension && *expected) {
+        if (tolower((unsigned char)*extension) !=
+            tolower((unsigned char)*expected))
+            return 0;
+        extension++;
+        expected++;
+    }
+    return *extension == '\0' && *expected == '\0';
+}
+
+static int community_component_is_safe(const char *value, int allow_slash)
+{
+    const unsigned char *p = (const unsigned char *)value;
+    if (!value || !value[0]) return 0;
+    if (strstr(value, "..") || strchr(value, '\\')) return 0;
+    if (value[0] == '/' || value[strlen(value) - 1] == '/') return 0;
+    for (; *p; p++) {
+        if (isalnum(*p) || *p == '-' || *p == '_' || *p == '.' ||
+            *p == '~' || *p == ' ' || *p == '(' || *p == ')' ||
+            *p == '[' || *p == ']')
+            continue;
+        if (allow_slash && *p == '/') continue;
+        return 0;
+    }
+    return 1;
+}
+
+static int community_url_encode(char *out, size_t capacity,
+                                const char *input, int keep_slash)
+{
+    static const char hex[] = "0123456789ABCDEF";
+    size_t used = 0;
+    const unsigned char *p = (const unsigned char *)input;
+    if (!out || !capacity || !input) return -1;
+    while (*p) {
+        unsigned char c = *p++;
+        int safe = isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~' ||
+                   (keep_slash && c == '/');
+        if (safe) {
+            if (used + 1 >= capacity) return -1;
+            out[used++] = (char)c;
+        } else {
+            if (used + 3 >= capacity) return -1;
+            out[used++] = '%';
+            out[used++] = hex[(c >> 4) & 15];
+            out[used++] = hex[c & 15];
+        }
+    }
+    out[used] = '\0';
+    return 0;
+}
+
+static void community_download_worker(void *arg)
+{
+    FILE *fp = NULL;
+    unsigned char header[256];
+    size_t got = 0;
+    long file_size = -1;
+    int result = -1;
+    struct stat st;
+    (void)arg;
+
+    if (ps3scale_online_download_limited(
+            g_community_download_url,
+            g_community_download_temp_path,
+            PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT) == 0) {
+        fp = fopen(g_community_download_temp_path, "rb");
+        if (!fp) {
+            result = -3;
+        } else {
+            if (fseek(fp, 0, SEEK_END) == 0)
+                file_size = ftell(fp);
+            if (file_size <= 0 ||
+                (unsigned long)file_size > PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT ||
+                fseek(fp, 0, SEEK_SET) != 0) {
+                result = -3;
+            } else {
+                got = fread(header, 1, sizeof(header), fp);
+                if (ferror(fp) || got == 0 ||
+                    (got >= 4 && header[0] == 0x7f &&
+                     header[1] == 'E' && header[2] == 'L' && header[3] == 'F') ||
+                    (got >= 4 && header[0] == 0x7f &&
+                     header[1] == 'P' && header[2] == 'K' && header[3] == 'G') ||
+                    memchr(header, 0, got) != NULL) {
+                    result = -4;
+                } else if (stat(g_community_download_path, &st) == 0) {
+                    result = -2;
+                } else if (rename(g_community_download_temp_path,
+                                  g_community_download_path) == 0) {
+                    result = 0;
+                } else {
+                    result = -5;
+                }
+            }
+            fclose(fp);
+            fp = NULL;
+        }
+    }
+
+    if (result != 0)
+        (void)unlink(g_community_download_temp_path);
+    g_community_download_result = result;
+    g_community_download_running = 0;
+    g_community_download_done = 1;
+}
+
+static void start_community_file_download(const ps3scale_community_file_t *entry)
+{
+    static const char download_dir[] =
+        "/dev_hdd0/game/PS3SCALE1/USRDIR/community_downloads";
+    struct stat st;
+    char encoded_branch[192];
+    char encoded_path[640];
+    char filename[160];
+    char safe_title[24];
+    const char *base;
+    const char *dot;
+    size_t i, n;
+    int written;
+
+    if (!entry) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "SELECT A COMMUNITY FILE FIRST.");
+        return;
+    }
+    if (g_community_download_running || g_community_download_done ||
+        g_community_download_thread_started ||
+        g_catalog_sync_running || g_ps2_config_download_running) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "WAIT FOR THE CURRENT ONLINE TASK TO FINISH.");
+        return;
+    }
+    if (!community_component_is_safe(entry->repository, 1) ||
+        !community_component_is_safe(entry->branch, 1) ||
+        !community_component_is_safe(entry->path, 1) ||
+        strchr(entry->repository, '/') == NULL ||
+        strchr(strchr(entry->repository, '/') + 1, '/') != NULL) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DOWNLOAD REJECTED: UNSAFE GITHUB PATH.");
+        return;
+    }
+    if (entry->file_size > PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DOWNLOAD REJECTED: FILE EXCEEDS 2 MB LIMIT.");
+        return;
+    }
+    dot = strrchr(entry->path, '.');
+    if (!dot || (!community_extension_is(dot, ".ncl") &&
+                 !community_extension_is(dot, ".txt"))) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "ONLY NCL AND TEXT DATA FILES CAN BE DOWNLOADED.");
+        return;
+    }
+    if (community_url_encode(encoded_branch, sizeof(encoded_branch),
+                             entry->branch, 1) != 0 ||
+        community_url_encode(encoded_path, sizeof(encoded_path),
+                             entry->path, 1) != 0) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DOWNLOAD REJECTED: GITHUB PATH IS TOO LONG.");
+        return;
+    }
+    written = snprintf(g_community_download_url,
+                       sizeof(g_community_download_url),
+                       "https://raw.githubusercontent.com/%s/%s/%s",
+                       entry->repository, encoded_branch, encoded_path);
+    if (written < 0 || (size_t)written >= sizeof(g_community_download_url)) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DOWNLOAD REJECTED: SOURCE URL IS TOO LONG.");
+        return;
+    }
+
+    base = strrchr(entry->path, '/');
+    base = base ? base + 1 : entry->path;
+    n = 0;
+    for (i = 0; base[i] && n + 1 < sizeof(filename); i++) {
+        unsigned char c = (unsigned char)base[i];
+        filename[n++] = (char)(isalnum(c) || c == '.' || c == '_' || c == '-' ?
+                               c : '_');
+    }
+    filename[n] = '\0';
+    n = 0;
+    for (i = 0; entry->title_id[i] && n + 1 < sizeof(safe_title); i++) {
+        unsigned char c = (unsigned char)entry->title_id[i];
+        safe_title[n++] = (char)(isalnum(c) || c == '-' || c == '_' ? c : '_');
+    }
+    safe_title[n] = '\0';
+    if (!safe_title[0])
+        snprintf(safe_title, sizeof(safe_title), "COMMUNITY");
+
+    if (mkdir(download_dir, 0777) != 0 &&
+        (stat(download_dir, &st) != 0 || !S_ISDIR(st.st_mode))) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "COULD NOT CREATE COMMUNITY DOWNLOAD FOLDER.");
+        return;
+    }
+    written = snprintf(g_community_download_path,
+                       sizeof(g_community_download_path),
+                       "%s/%s_%s", download_dir, safe_title, filename);
+    if (written < 0 || (size_t)written >= sizeof(g_community_download_path)) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DOWNLOAD REJECTED: DESTINATION PATH IS TOO LONG.");
+        return;
+    }
+    if (stat(g_community_download_path, &st) == 0) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "FILE ALREADY EXISTS IN COMMUNITY_DOWNLOADS.");
+        return;
+    }
+    written = snprintf(g_community_download_temp_path,
+                       sizeof(g_community_download_temp_path),
+                       "%s.ps3scale.tmp", g_community_download_path);
+    if (written < 0 || (size_t)written >= sizeof(g_community_download_temp_path)) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DOWNLOAD REJECTED: TEMPORARY PATH IS TOO LONG.");
+        return;
+    }
+
+    g_community_download_result = -1;
+    g_community_download_done = 0;
+    g_community_download_running = 1;
+    if (sysThreadCreate(&g_community_download_thread,
+                        community_download_worker, NULL,
+                        1001, 64 * 1024, 0,
+                        "ps3scale_community") != 0) {
+        g_community_download_running = 0;
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "COULD NOT START COMMUNITY DOWNLOAD WORKER.");
+        return;
+    }
+    g_community_download_thread_started = 1;
+    snprintf(g_online_message, sizeof(g_online_message),
+             "DOWNLOADING NCL/TEXT DATA. IT WILL NOT BE EXECUTED.");
+}
+
+static void service_community_download(void)
+{
+    if (!g_community_download_done) return;
+    if (g_community_download_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_community_download_thread, &thread_result);
+        g_community_download_thread_started = 0;
+    }
+    if (g_community_download_result == 0) {
+        const char *base = strrchr(g_community_download_path, '/');
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DOWNLOADED %s TO COMMUNITY_DOWNLOADS. NOT APPLIED.",
+                 base ? base + 1 : g_community_download_path);
+    } else if (g_community_download_result == -2) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "FILE ALREADY EXISTS. IT WAS NOT OVERWRITTEN.");
+    } else if (g_community_download_result == -4) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DOWNLOAD REJECTED: FILE IS NOT SAFE TEXT DATA.");
+    } else if (g_community_download_result == -5) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DOWNLOAD VALIDATED BUT COULD NOT BE SAVED.");
+    } else {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "COMMUNITY DOWNLOAD FAILED. CHECK NETWORK AND SOURCE.");
+    }
+    g_community_download_done = 0;
+}
+
 static void service_ps2_config_download(void)
 {
     if (!g_ps2_config_download_done)
@@ -3231,18 +3508,24 @@ static void draw_online_database(void)
         snprintf(line, sizeof(line), "GAME: %.42s", selected_community->title);
         draw_text(414.0f, 232.0f, 0xffffffff, line);
         snprintf(line, sizeof(line), "TITLE ID: %.18s", selected_community->title_id);
-        draw_text(414.0f, 260.0f, 0x514b69ff, line);
+        draw_text(414.0f, 258.0f, 0x514b69ff, line);
         snprintf(line, sizeof(line), "CATEGORY: %.24s", selected_community->category);
-        draw_text(414.0f, 286.0f, 0x514b69ff, line);
+        draw_text(414.0f, 282.0f, 0x514b69ff, line);
         snprintf(line, sizeof(line), "VERSION: %.18s",
                  selected_community->app_ver[0] ?
                  selected_community->app_ver : "Not specified");
-        draw_text(414.0f, 312.0f, 0x514b69ff, line);
-        snprintf(line, sizeof(line), "REGION: %s",
-                 ps3scale_community_region_label(selected_community->title_id));
-        draw_text(414.0f, 342.0f, 0x514b69ff, line);
-        draw_text(414.0f, 370.0f, 0xffcc66ff,
-                  "APPLY: REFERENCE ONLY - NOT INSTALLED");
+        draw_text(414.0f, 306.0f, 0x514b69ff, line);
+        snprintf(line, sizeof(line), "SOURCE: %.38s", selected_community->repository);
+        draw_text(414.0f, 330.0f, 0x514b69ff, line);
+        snprintf(line, sizeof(line), "FILE: %.44s", selected_community->path);
+        draw_text(414.0f, 354.0f, 0x514b69ff, line);
+        snprintf(line, sizeof(line), "SIZE: %u KB",
+                 (unsigned)((selected_community->file_size + 1023u) / 1024u));
+        draw_text(414.0f, 378.0f, 0x514b69ff, line);
+        draw_text(414.0f, 402.0f, 0x875be8ff,
+                  "X: DOWNLOAD TO COMMUNITY_DOWNLOADS");
+        draw_text(414.0f, 420.0f, 0xffa85cff,
+                  "DATA ONLY - NEVER EXECUTED OR AUTO-APPLIED");
     } else {
         draw_text(414.0f, 232.0f, 0x77718fff,
                   g_online_result_count ?
@@ -4359,6 +4642,7 @@ int main(int argc, char *argv[])
         service_game_launch();
         service_profile_arm();
         service_ps2_config_download();
+        service_community_download();
         g_frame_counter++;
 
         if (pad_ready && ioPadGetInfo(&pad_info) == 0) {
@@ -4652,8 +4936,17 @@ int main(int argc, char *argv[])
             }
             if (triangle && !old_triangle)
                 (void)open_online_search_keyboard();
-            if (cross && !old_cross)
-                open_selected_online_match();
+            if (cross && !old_cross) {
+                const ps3scale_profile_t *profile = NULL;
+                const ps3scale_community_file_t *community = NULL;
+                const ps3scale_ps2_config_entry_t *ps2_config = NULL;
+                if (online_result_at(g_online_selected, &profile,
+                                     &community, &ps2_config) == 0 &&
+                    community)
+                    start_community_file_download(community);
+                else
+                    open_selected_online_match();
+            }
             if (start && !old_start)
                 start_catalog_sync_worker(1);
             if (circle && !old_circle)
@@ -4841,6 +5134,11 @@ int main(int argc, char *argv[])
         u64 thread_result = 0;
         (void)sysThreadJoin(g_ps2_config_download_thread, &thread_result);
         g_ps2_config_download_thread_started = 0;
+    }
+    if (g_community_download_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_community_download_thread, &thread_result);
+        g_community_download_thread_started = 0;
     }
     ps3scale_ps2_config_db_free(&g_ps2_config_db);
     shutdown_audio_backend();
