@@ -1,37 +1,26 @@
-# PS3 SCALE startup music
+# PS3 SCALE background music
 
-## Music 2 — existing bundled theme
+## Music 2 — embedded in the PKG
 - Track: GTA V - Greyhound Pause Menu Theme Remix
-- Packaged format: MP3, stereo, 44.1 kHz, 96 kbps CBR
-- Packaged size: 5,182,732 bytes
+- Format: MP3, stereo, 44.1 kHz, 96 kbps CBR
+- Size: 5,182,732 bytes
 - Duration: approximately 7 minutes, 11.856 seconds
 - SHA-256: `b8a7b1c2573ea8a397c2fbc3a6c731b25dcb71f572aedf5af8568785620d1b64`
 - Installed path: `/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3`
 
-## Music 1 — requested Zorrovian BIOS track
+## Music 1 — Zorrovian BIOS
 - Intended installed path: `/dev_hdd0/game/PS3SCALE1/USRDIR/music1.mp3`
-- The Music 1 binary is not yet embedded in the repository build inputs.
-- The app now searches `/dev_usb000` through `/dev_usb003` for `music1.mp3` or the exact supplied filename `BIOS - Zorrovian [Official Visualiser] (1).mp3`, at the USB root or in a `PS3SCALE/` folder. Before the audio thread starts, it copies a valid file to the internal HDD path above using a temporary file and atomic rename.
-- Once imported, the app plays the internal HDD copy on every launch; the USB drive can be removed after the copy completes.
-- If the file is neither embedded nor found on USB, the app reports the missing asset and falls back to Music 2.
-- `scripts/prepare_theme.py` packages Music 1 automatically when `audio-source/music1.mp3` or ordered `audio-source/music1.mp3.part-*` files are present.
+- The MP3 is not yet part of the GitHub build inputs, so it is not embedded in this PKG.
+- The app searches USB000–USB003 for `music1.mp3`, or the supplied filename `BIOS - Zorrovian [Official Visualiser] (1).mp3` / `BIOS - Zorrovian [Official Visualiser] (1)(2).mp3`, at the USB root or inside `PS3SCALE/`.
+- It copies the file to a temporary internal-HDD path, validates it with mpg123, then atomically renames it to `USRDIR/music1.mp3`. The USB can be removed after import.
+- If Music 1 is unavailable, the app reports that condition and plays the embedded Music 2 fallback.
+- The build automatically packages Music 1 if `audio-source/music1.mp3` or ordered `audio-source/music1.mp3.part-*` inputs are added.
 
 ## Playlist behavior
-- **Auto:** first app launch starts Music 1, then Music 2 when Music 1 ends. The next app launch starts Music 2 first, then Music 1. The starting order alternates on every app launch.
-- **Music 1 only:** loops Music 1.
-- **Music 2 only:** loops Music 2.
-- The Settings page exposes Auto, Music 1 only and Music 2 only.
-- A one-second fade-in is applied at startup and when switching tracks after the previous track ends.
-- Music ON/OFF and volume remain available; Music OFF shuts down the decoder, audio port and worker thread.
+- Auto alternates the first track on each app launch: one launch begins with Music 1 then Music 2; the next begins with Music 2 then Music 1.
+- Music 1 only and Music 2 only are selectable in Settings.
+- A one-second fade-in is applied at startup and when switching tracks.
+- Music ON/OFF and volume remain available. Music OFF shuts down the decoder, audio port and worker thread.
 
-## Implementation
-PS3 SCALE uses the LGPL mpg123 decoder and the native PSL1GHT audio-port API. MP3 is decoded in 48 kHz stereo PCM blocks; the full track is not loaded into RAM. The track switch occurs in the audio worker, not the controller/UI loop.
-
-## Build and verification
-The build reconstructs Music 2 from ordered source chunks and verifies its exact SHA-256 inside the finalized PKG. The package verifier also checks that the Apollo Save logo is present with its expected size and SHA-256.
-
-- [x] Existing Music 2 theme is embedded and verified.
-- [x] Two-track playback and persisted alternating launch order are implemented.
-- [x] Playlist selector and fade-in are implemented.
-- [ ] Add the requested Zorrovian BIOS MP3 to the repository build inputs so it ships inside the PKG without a USB import.
-- [ ] Verify both tracks, transitions, volume and clean shutdown on the user's PS3 hardware.
+## Implementation and verification
+PS3 SCALE uses the LGPL mpg123 decoder and the native PSL1GHT audio-port API. MP3 data is decoded to 48 kHz stereo PCM blocks; the full track is not loaded into RAM. CI verifies the embedded Music 2 file and its SHA-256 inside the finalized GNPDRM PKG. Music 1 remains USB-importable but is not claimed as embedded until its binary is included in the source inputs.
