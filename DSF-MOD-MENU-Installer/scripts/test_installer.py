@@ -5,7 +5,7 @@ from pathlib import Path
 source = Path("source/main.c").read_text(encoding="utf-8")
 assert '"/dev_hdd0/plugins/simple-cheat-menu.sprx"' in source
 assert '"/dev_hdd0/boot_plugins.txt"' in source
-assert '"/dev_hdd0/game/DSFMOD01/USRDIR/simple-cheat-menu.sprx"' in source
+assert '"/dev_hdd0/game/DSFMOD001/USRDIR/simple-cheat-menu.sprx"' in source
 assert 'mode=fetch\\n' in source
 assert "boot_add_plugin_line" in source
 assert "boot_remove_plugin_line" in source
