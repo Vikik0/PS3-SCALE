@@ -3662,7 +3662,7 @@ static int save_support_report(void)
     } else {
         fprintf(fp, "MODEL: UNKNOWN\nFIRMWARE: UNKNOWN\n");
     }
-    fprintf(fp, "APP VERSION: ALPHA 0.2\n");
+    fprintf(fp, "APP VERSION: ALPHA 0.21\n");
     if (fclose(fp) != 0) {
         snprintf(g_support_status, sizeof(g_support_status),
                  "REPORT SAVE FAILED.");
