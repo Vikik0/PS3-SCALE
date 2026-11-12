@@ -10,6 +10,6 @@
   <value name="RESOLUTION" type="integer">63</value>
   <value name="SOUND_FORMAT" type="integer">0</value>
   <value name="TITLE" type="string">DSF MOD MENU</value>
-  <value name="TITLE_ID" type="string">DSFMOD01</value>
+  <value name="TITLE_ID" type="string">DSFMOD001</value>
   <value name="VERSION" type="string">00.01</value>
 </sfo>
