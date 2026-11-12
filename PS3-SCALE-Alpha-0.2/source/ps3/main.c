@@ -35,8 +35,11 @@
 #include "font_bitmap_z.h"
 
 enum {
-    LIBRARY_PS3 = 0,
-    LIBRARY_PS2 = 1
+    LIBRARY_ALL = 0,
+    LIBRARY_PS3 = 1,
+    LIBRARY_PS2 = 2,
+    LIBRARY_FAVORITES = 3,
+    LIBRARY_RECENT = 4
 };
 
 typedef enum app_screen {
@@ -57,7 +60,20 @@ typedef enum app_screen {
 
 static ps3scale_game_list_t g_games;
 static int g_selected = 0;
-static int g_library = LIBRARY_PS3;
+static int g_library = LIBRARY_ALL;
+static int g_scan_sidebar_selected = LIBRARY_ALL;
+static int g_scan_focus_sidebar = 0;
+static char g_scan_message[128] = "";
+static char g_favorite_ids[256][32];
+static size_t g_favorite_count = 0;
+static int g_recent_indices[256];
+static time_t g_recent_mtimes[256];
+static size_t g_recent_count = 0;
+#define PS3SCALE_SCAN_GRID_COUNT 8
+static ya2d_Texture *g_scan_cover_textures[PS3SCALE_SCAN_GRID_COUNT];
+static char g_scan_cover_paths[PS3SCALE_SCAN_GRID_COUNT][PS3SCALE_PATH_MAX];
+static int g_scan_cover_page = -1;
+static int g_scan_cover_library = -1;
 static int g_config_preview = 0;
 static int g_exit_requested = 0;
 static int g_home_selected = 0;
@@ -94,6 +110,7 @@ static ya2d_Texture *g_apollo_texture = NULL;
 static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 
 #define PS3SCALE_MUSIC_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/theme.mp3"
+#define PS3SCALE_FAVORITES_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/favorites.txt"
 #define PS3SCALE_MUSIC1_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/music1.mp3"
 #define PS3SCALE_MUSIC2_PATH PS3SCALE_MUSIC_PATH
 #define PS3SCALE_APOLLO_LOGO_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/apollo-save.png"
@@ -1086,6 +1103,113 @@ static int game_is_ps2(const ps3scale_game_t *game)
            game->kind == PS3SCALE_GAME_PS2_ISO;
 }
 
+static void favorite_identity(const ps3scale_game_t *game,
+                              char *out, size_t capacity)
+{
+    uLong hash;
+    if (!out || capacity == 0) return;
+    out[0] = '\0';
+    if (!game) return;
+    if (game->title_id[0]) {
+        snprintf(out, capacity, "T:%s", game->title_id);
+    } else if (game->disc_id[0]) {
+        snprintf(out, capacity, "D:%s", game->disc_id);
+    } else {
+        hash = crc32(0L, Z_NULL, 0);
+        hash = crc32(hash, (const Bytef *)game->path,
+                     (uInt)strlen(game->path));
+        snprintf(out, capacity, "P:%08lX", (unsigned long)hash);
+    }
+}
+
+static int favorite_key_index(const char *key)
+{
+    size_t i;
+    for (i = 0; i < g_favorite_count; i++)
+        if (strcmp(g_favorite_ids[i], key) == 0)
+            return (int)i;
+    return -1;
+}
+
+static int game_is_favorite(const ps3scale_game_t *game)
+{
+    char key[32];
+    if (!game) return 0;
+    favorite_identity(game, key, sizeof(key));
+    return key[0] && favorite_key_index(key) >= 0;
+}
+
+static void load_favorites(void)
+{
+    FILE *fp = fopen(PS3SCALE_FAVORITES_PATH, "r");
+    char line[64];
+    g_favorite_count = 0;
+    if (!fp) return;
+    while (g_favorite_count < 256 && fgets(line, sizeof(line), fp)) {
+        size_t n = strlen(line);
+        while (n > 0 && (line[n - 1] == '\n' || line[n - 1] == '\r'))
+            line[--n] = '\0';
+        if (n > 0 && favorite_key_index(line) < 0) {
+            snprintf(g_favorite_ids[g_favorite_count],
+                     sizeof(g_favorite_ids[g_favorite_count]), "%s", line);
+            g_favorite_count++;
+        }
+    }
+    fclose(fp);
+}
+
+static int save_favorites(void)
+{
+    FILE *fp = fopen(PS3SCALE_FAVORITES_PATH, "w");
+    size_t i;
+    if (!fp) return -1;
+    for (i = 0; i < g_favorite_count; i++)
+        fprintf(fp, "%s\n", g_favorite_ids[i]);
+    return fclose(fp) == 0 ? 0 : -1;
+}
+
+static void toggle_favorite(const ps3scale_game_t *game)
+{
+    char key[32];
+    int index;
+    if (!game) return;
+    favorite_identity(game, key, sizeof(key));
+    if (!key[0]) return;
+    index = favorite_key_index(key);
+    if (index >= 0) {
+        if ((size_t)index + 1 < g_favorite_count)
+            memmove(g_favorite_ids[index], g_favorite_ids[index + 1],
+                    (g_favorite_count - (size_t)index - 1) *
+                    sizeof(g_favorite_ids[0]));
+        g_favorite_count--;
+        snprintf(g_scan_message, sizeof(g_scan_message),
+                 "REMOVED FROM FAVORITES.");
+    } else if (g_favorite_count < 256) {
+        snprintf(g_favorite_ids[g_favorite_count],
+                 sizeof(g_favorite_ids[g_favorite_count]), "%s", key);
+        g_favorite_count++;
+        snprintf(g_scan_message, sizeof(g_scan_message),
+                 "ADDED TO FAVORITES.");
+    } else {
+        snprintf(g_scan_message, sizeof(g_scan_message),
+                 "FAVORITES LIST IS FULL.");
+        return;
+    }
+    if (save_favorites() != 0)
+        snprintf(g_scan_message, sizeof(g_scan_message),
+                 "FAVORITE SAVE FAILED.");
+}
+
+static int game_matches_filter(const ps3scale_game_t *game, int filter)
+{
+    if (!game) return 0;
+    if (filter == LIBRARY_ALL || filter == LIBRARY_RECENT) return 1;
+    if (filter == LIBRARY_PS3) return game_is_ps3(game);
+    if (filter == LIBRARY_PS2) return game_is_ps2(game);
+    if (filter == LIBRARY_FAVORITES) return game_is_favorite(game);
+    return 0;
+}
+
 static int text_contains_ci(const char *text, const char *query)
 {
     size_t i, j;
@@ -1106,20 +1230,24 @@ static int text_contains_ci(const char *text, const char *query)
 
 static int game_matches_library(const ps3scale_game_t *game)
 {
-    int platform_match =
-        (g_library == LIBRARY_PS3) ? game_is_ps3(game) : game_is_ps2(game);
-
-    return platform_match && text_contains_ci(game->title, g_search);
+    return game_matches_filter(game, g_library) &&
+           text_contains_ci(game->title, g_search);
 }
 
 static size_t library_count(int library)
 {
     size_t i, count = 0;
+    if (library == LIBRARY_RECENT) {
+        for (i = 0; i < g_recent_count; i++) {
+            const ps3scale_game_t *game =
+                &g_games.items[g_recent_indices[i]];
+            if (text_contains_ci(game->title, g_search)) count++;
+        }
+        return count;
+    }
     for (i = 0; i < g_games.count; i++) {
-        int platform_match =
-            (library == LIBRARY_PS3) ? game_is_ps3(&g_games.items[i])
-                                     : game_is_ps2(&g_games.items[i]);
-        if (platform_match && text_contains_ci(g_games.items[i].title, g_search))
+        if (game_matches_filter(&g_games.items[i], library) &&
+            text_contains_ci(g_games.items[i].title, g_search))
             count++;
     }
     return count;
@@ -1128,24 +1256,58 @@ static size_t library_count(int library)
 static size_t library_total_count(int library)
 {
     size_t i, count = 0;
-    for (i = 0; i < g_games.count; i++) {
-        int match = (library == LIBRARY_PS3) ?
-            game_is_ps3(&g_games.items[i]) : game_is_ps2(&g_games.items[i]);
-        if (match) count++;
-    }
+    if (library == LIBRARY_ALL) return g_games.count;
+    if (library == LIBRARY_RECENT) return g_recent_count;
+    for (i = 0; i < g_games.count; i++)
+        if (game_matches_filter(&g_games.items[i], library)) count++;
     return count;
 }
 
 static const ps3scale_game_t *library_game_at(size_t visible_index)
 {
     size_t i, current = 0;
+    if (g_library == LIBRARY_RECENT) {
+        for (i = 0; i < g_recent_count; i++) {
+            const ps3scale_game_t *game =
+                &g_games.items[g_recent_indices[i]];
+            if (!text_contains_ci(game->title, g_search)) continue;
+            if (current++ == visible_index) return game;
+        }
+        return NULL;
+    }
     for (i = 0; i < g_games.count; i++) {
         if (!game_matches_library(&g_games.items[i])) continue;
-        if (current == visible_index) return &g_games.items[i];
-        current++;
+        if (current++ == visible_index) return &g_games.items[i];
     }
     return NULL;
 }
+
+static void rebuild_recent_indices(void)
+{
+    size_t i, j;
+    g_recent_count = g_games.count;
+    for (i = 0; i < g_recent_count; i++) {
+        struct stat st;
+        g_recent_indices[i] = (int)i;
+        g_recent_mtimes[i] = 0;
+        if (stat(g_games.items[i].path, &st) == 0)
+            g_recent_mtimes[i] = st.st_mtime;
+    }
+    for (i = 1; i < g_recent_count; i++) {
+        int index = g_recent_indices[i];
+        time_t modified = g_recent_mtimes[i];
+        j = i;
+        while (j > 0 && g_recent_mtimes[j - 1] < modified) {
+            g_recent_indices[j] = g_recent_indices[j - 1];
+            g_recent_mtimes[j] = g_recent_mtimes[j - 1];
+            j--;
+        }
+        g_recent_indices[j] = index;
+        g_recent_mtimes[j] = modified;
+    }
+}
+
+
 
 static const ps3scale_game_t *selected_game(void)
 {
@@ -1182,20 +1344,63 @@ static void format_hex(char *out, size_t capacity,
 }
 
 
+static void clear_scan_cover_cache(void)
+{
+    size_t i;
+    for (i = 0; i < PS3SCALE_SCAN_GRID_COUNT; i++) {
+        if (g_scan_cover_textures[i]) {
+            ya2d_freeTexture(g_scan_cover_textures[i]);
+            g_scan_cover_textures[i] = NULL;
+        }
+        g_scan_cover_paths[i][0] = '\0';
+    }
+    g_scan_cover_page = -1;
+    g_scan_cover_library = -1;
+}
+
+static void update_scan_cover_cache(void)
+{
+    size_t i;
+    size_t start = ((size_t)(g_selected < 0 ? 0 : g_selected) /
+                    PS3SCALE_SCAN_GRID_COUNT) * PS3SCALE_SCAN_GRID_COUNT;
+    if (g_scan_cover_page != (int)start ||
+        g_scan_cover_library != g_library) {
+        clear_scan_cover_cache();
+        g_scan_cover_page = (int)start;
+        g_scan_cover_library = g_library;
+    }
+    for (i = 0; i < PS3SCALE_SCAN_GRID_COUNT; i++) {
+        const ps3scale_game_t *game = library_game_at(start + i);
+        const char *cover = (game && game->cover_path[0]) ?
+                            game->cover_path : "";
+        if (strcmp(cover, g_scan_cover_paths[i]) == 0) continue;
+        if (g_scan_cover_textures[i]) {
+            ya2d_freeTexture(g_scan_cover_textures[i]);
+            g_scan_cover_textures[i] = NULL;
+        }
+        snprintf(g_scan_cover_paths[i], sizeof(g_scan_cover_paths[i]),
+                 "%s", cover);
+        if (cover[0])
+            g_scan_cover_textures[i] = ya2d_loadPNGfromFile(cover);
+    }
+}
+
 static void update_selected_cover(void)
 {
-    const ps3scale_game_t *game = selected_game();
-    const char *path = (game && game->cover_path[0]) ? game->cover_path : "";
-
-    if (strcmp(path, g_cover_path) == 0)
+    const ps3scale_game_t *game;
+    const char *path;
+    if (g_screen == SCREEN_SCAN) {
+        update_scan_cover_cache();
         return;
-
+    }
+    game = selected_game();
+    path = (game && game->cover_path[0]) ? game->cover_path : "";
+    if (strcmp(path, g_cover_path) == 0) return;
     if (g_cover_texture) {
         ya2d_freeTexture(g_cover_texture);
         g_cover_texture = NULL;
     }
     g_cover_path[0] = '\0';
-
     if (path[0]) {
         g_cover_texture = ya2d_loadPNGfromFile(path);
         if (g_cover_texture)
@@ -3025,110 +3230,124 @@ static void draw_online_database(void)
 }
 
 
+static void draw_library_filter_item(float x, float y, float w,
+                                      const char *label, size_t count,
+                                      int selected, int focused)
+{
+    char number[16];
+    draw_solid_rect(x + 2.0f, y + 3.0f, w, 24.0f,
+                    selected ? 0x6b5b8f30 : 0x60718f24);
+    draw_solid_rect(x, y, w, 24.0f,
+                    selected ? 0xeee7ffed : 0xf8f6ffea);
+    draw_outline_rect(x, y, w, 24.0f,
+                      selected ? 0x9568edff : 0xd9d1eaff);
+    set_ui_font_size(6, 9);
+    draw_text(x + 8.0f, y + 7.0f,
+              selected ? 0x875be8ff : 0x514b69ff, label);
+    snprintf(number, sizeof(number), "%u", (unsigned)count);
+    draw_text(x + w - 25.0f, y + 7.0f, 0x77718fff, number);
+    if (focused)
+        draw_outline_rect(x - 2.0f, y - 2.0f, w + 4.0f, 28.0f,
+                          0x875be8ff);
+}
+
 static void draw_scan(void)
 {
+    static const char *filter_labels[5] = {
+        "All Games", "PS3 Games", "PS2 Games", "Favorites", "Recently Added"
+    };
     char line[192];
-    size_t count = library_count(g_library);
-    size_t ps3_count = library_total_count(LIBRARY_PS3);
-    size_t ps2_count = library_total_count(LIBRARY_PS2);
-    size_t start = (g_selected > 7) ? (size_t)(g_selected - 7) : 0;
+    size_t count;
+    size_t start;
     size_t i;
-    const ps3scale_game_t *selected;
-
     clamp_selection();
-    selected = selected_game();
-    draw_page_header("Game Library", "Browse your PS3 and PS2 collection");
-    draw_soft_card(20.0f, 88.0f, 144.0f, 364.0f, 0);
-    set_ui_font_size(8, 12);
-    draw_text(34.0f, 104.0f, 0xffffffff, "LIBRARY");
-    draw_soft_chip(30.0f, 130.0f, 124.0f, "All Games", 0);
-    draw_soft_chip(30.0f, 162.0f, 124.0f, "PS3 Games", g_library == LIBRARY_PS3);
-    draw_soft_chip(30.0f, 194.0f, 124.0f, "PS2 Games", g_library == LIBRARY_PS2);
-    draw_soft_chip(30.0f, 226.0f, 124.0f, "Favorites", 0);
-    draw_soft_chip(30.0f, 258.0f, 124.0f, "Recently Added", 0);
-    set_ui_font_size(7, 11);
-    snprintf(line, sizeof(line), "PS3  %u", (unsigned)ps3_count);
-    draw_text(34.0f, 320.0f, 0x77718fff, line);
-    snprintf(line, sizeof(line), "PS2  %u", (unsigned)ps2_count);
-    draw_text(34.0f, 342.0f, 0x77718fff, line);
-    snprintf(line, sizeof(line), "TOTAL  %u", (unsigned)(ps3_count + ps2_count));
-    draw_text(34.0f, 364.0f, 0xcaff39ff, line);
+    count = library_count(g_library);
+    start = ((size_t)(g_selected < 0 ? 0 : g_selected) /
+             PS3SCALE_SCAN_GRID_COUNT) * PS3SCALE_SCAN_GRID_COUNT;
+    draw_page_header("Game Library", "Browse, filter and select games from your local storage");
 
-    draw_soft_card(176.0f, 82.0f, 656.0f, 34.0f, 0);
+    draw_soft_card(20.0f, 88.0f, 150.0f, 356.0f, 0);
     set_ui_font_size(8, 12);
-    snprintf(line, sizeof(line), "Search games: %.44s",
-             g_search[0] ? g_search : "All titles");
-    draw_text(194.0f, 93.0f, 0x77718fff, line);
-    draw_text(754.0f, 93.0f, 0xcaff39ff, "GRID");
+    draw_text(34.0f, 104.0f, 0x29243fff, "LIBRARY");
+    for (i = 0; i < 5; i++) {
+        draw_library_filter_item(28.0f, 130.0f + (float)i * 34.0f,
+                                 134.0f, filter_labels[i],
+                                 library_total_count((int)i),
+                                 g_library == (int)i,
+                                 g_scan_focus_sidebar &&
+                                 g_scan_sidebar_selected == (int)i);
+    }
+    set_ui_font_size(6, 9);
+    draw_text(34.0f, 338.0f, 0x77718fff, "LOCAL STORAGE");
+    snprintf(line, sizeof(line), "%u TITLES DETECTED",
+             (unsigned)library_total_count(LIBRARY_ALL));
+    draw_text(34.0f, 358.0f, 0x514b69ff, line);
+    snprintf(line, sizeof(line), "%u FAVORITES",
+             (unsigned)library_total_count(LIBRARY_FAVORITES));
+    draw_text(34.0f, 382.0f, 0x77718fff, line);
+    draw_text(34.0f, 402.0f, 0x77718fff, "RECENT: FILE DATE");
 
-    for (i = 0; i < 8 && start + i < count; i++) {
+    draw_soft_card(184.0f, 88.0f, 650.0f, 34.0f, 0);
+    draw_circle_outline(202.0f, 105.0f, 6.0f, 0x514b69ff);
+    draw_icon_line(207.0f, 110.0f, 212.0f, 115.0f, 0x514b69ff);
+    set_ui_font_size(8, 12);
+    snprintf(line, sizeof(line), "Search games...  %s",
+             g_search[0] ? g_search : "");
+    draw_text(222.0f, 99.0f, 0x77718fff, line);
+    draw_solid_rect(788.0f, 96.0f, 14.0f, 11.0f, 0x875be8ff);
+    draw_solid_rect(788.0f, 110.0f, 14.0f, 3.0f, 0x875be8ff);
+
+    for (i = 0; i < PS3SCALE_SCAN_GRID_COUNT && start + i < count; i++) {
         const ps3scale_game_t *game = library_game_at(start + i);
-        int is_selected = ((int)(start + i) == g_selected);
-        float x = 176.0f + (float)(i % 4) * 94.0f;
-        float y = 128.0f + (float)(i / 4) * 154.0f;
+        int selected = ((int)(start + i) == g_selected);
+        float x = 184.0f + (float)(i % 4) * 160.0f;
+        float y = 132.0f + (float)(i / 4) * 154.0f;
         u32 tile_color = (i % 3 == 0) ? 0xe9e1f8ff :
                          (i % 3 == 1) ? 0xe4e9f5ff : 0xf0e6f3ff;
         if (!game) continue;
-        draw_soft_card(x, y, 86.0f, 146.0f, is_selected);
-        draw_solid_rect(x + 6.0f, y + 7.0f, 74.0f, 91.0f, tile_color);
-        if (is_selected && g_cover_texture) {
-            ya2d_drawTextureEx(g_cover_texture, x + 6.0f, y + 7.0f,
-                               0.0f, 74.0f, 91.0f);
+        draw_soft_card(x, y, 150.0f, 148.0f, selected);
+        if (g_scan_cover_textures[i]) {
+            ya2d_drawTextureEx(g_scan_cover_textures[i],
+                               x + 7.0f, y + 7.0f, 0.0f, 136.0f, 96.0f);
         } else {
-            draw_solid_rect(x + 12.0f, y + 16.0f, 62.0f, 3.0f, 0xb69affff);
-            draw_solid_rect(x + 12.0f, y + 25.0f, 44.0f, 2.0f, 0xcfc4e8ff);
-            draw_solid_rect(x + 12.0f, y + 76.0f, 54.0f, 2.0f, 0xcfc4e8ff);
-            draw_solid_rect(x + 12.0f, y + 83.0f, 38.0f, 2.0f, 0xcfc4e8ff);
+            char initial[2];
+            draw_solid_rect(x + 7.0f, y + 7.0f, 136.0f, 96.0f, tile_color);
+            draw_solid_rect(x + 7.0f, y + 7.0f, 136.0f, 4.0f, 0xb69affff);
+            initial[0] = game->title[0] ?
+                (char)toupper((unsigned char)game->title[0]) : '?';
+            initial[1] = '\0';
+            set_ui_font_size(28, 42);
+            draw_text_centered(x + 10.0f, y + 31.0f, 130.0f,
+                               0x875be8ff, initial);
         }
         set_ui_font_size(6, 9);
-        snprintf(line, sizeof(line), "%.12s", game->title);
-        draw_text(x + 7.0f, y + 105.0f, 0xffffffff, line);
-        draw_text(x + 7.0f, y + 120.0f,
-                  0xcaff39ff,
-                  (game->kind == PS3SCALE_GAME_PS2_ISO ||
-                   game->kind == PS3SCALE_GAME_PS2_CLASSIC ||
-                   game->kind == PS3SCALE_GAME_PS2_HDD) ? "PS2" : "PS3");
+        snprintf(line, sizeof(line), "%.22s", game->title);
+        draw_text(x + 8.0f, y + 109.0f, 0x29243fff, line);
+        draw_soft_chip(x + 8.0f, y + 122.0f, 42.0f,
+                       game_is_ps3(game) ? "PS3" : "PS2", selected);
+        if (selected)
+            draw_outline_rect(x + 4.0f, y + 4.0f, 142.0f, 140.0f,
+                              0x9568edff);
     }
 
-    draw_soft_card(560.0f, 128.0f, 272.0f, 300.0f, 0);
-    set_ui_font_size(9, 14);
-    draw_text(578.0f, 146.0f, 0xffffffff, "Selected Game");
-    if (selected) {
-        snprintf(line, sizeof(line), "%.24s", selected->title);
+    if (count == 0) {
+        draw_soft_card(184.0f, 132.0f, 650.0f, 296.0f, 0);
         set_ui_font_size(10, 15);
-        draw_text(578.0f, 176.0f, 0xcaff39ff, line);
-        set_ui_font_size(7, 11);
-        snprintf(line, sizeof(line), "TYPE: %.24s",
-                 ps3scale_game_kind_name(selected->kind));
-        draw_text(578.0f, 214.0f, 0x514b69ff, line);
-        if (game_is_ps3(selected))
-            snprintf(line, sizeof(line), "TITLE ID: %.18s", selected->title_id);
-        else
-            snprintf(line, sizeof(line), "PS2 SERIAL: %.18s",
-                     selected->disc_id[0] ? selected->disc_id : selected->title_id);
-        draw_text(578.0f, 238.0f, 0x514b69ff, line);
-        snprintf(line, sizeof(line), "PATH: %.25s", selected->path);
-        draw_text(578.0f, 262.0f, 0x77718fff, line);
-        draw_text(578.0f, 302.0f, 0x2c9f8eff, "CROSS: OPEN DETAILS");
-        draw_text(578.0f, 326.0f, 0x77718fff,
-                  "Original game files stay untouched.");
-        if (g_cover_texture)
-            ya2d_drawTextureEx(g_cover_texture, 738.0f, 342.0f,
-                               0.0f, 78.0f, 72.0f);
-    } else {
-        draw_text(578.0f, 184.0f, 0x77718fff, "No matching games found.");
-        draw_text(578.0f, 210.0f, 0x77718fff, "Scan or change platform.");
+        draw_text_centered(204.0f, 252.0f, 610.0f,
+                           0x77718fff, "No games match this filter.");
     }
-
-    if (g_games.truncated)
-        draw_text(178.0f, 442.0f, 0xffcc66ff,
-                  "WARNING: LIBRARY LIMIT REACHED (256 TITLES)");
     set_ui_font_size(7, 11);
-    draw_text(24.0f, 478.0f,
-              0x77718fff,
-              "L1 / R1: PS3 / PS2   |   UP / DOWN: MOVE   |   CROSS: DETAILS");
+    snprintf(line, sizeof(line), "%u GAMES FOUND", (unsigned)count);
+    draw_text(188.0f, 446.0f, 0x514b69ff, line);
+    if (g_scan_message[0])
+        draw_text(360.0f, 446.0f, 0x875be8ff, g_scan_message);
+    if (g_games.truncated)
+        draw_text(188.0f, 462.0f, 0xffcc66ff,
+                  "WARNING: LIBRARY LIMIT REACHED (256 TITLES)");
+    draw_text(24.0f, 480.0f, 0x77718fff,
+              "D-PAD: MOVE   |   LEFT EDGE: FILTERS   |   CROSS: DETAILS   |   CIRCLE: BACK");
     draw_text(24.0f, 496.0f, 0x875be8ff,
-              "SELECT / START: SEARCH   |   SQUARE: RESCAN   |   CIRCLE: BACK");
+              "SQUARE: FAVORITE   |   SELECT+SQUARE: RESCAN   |   START / SELECT: SEARCH");
     set_ui_font_size(14, 22);
 }
 
@@ -3840,6 +4059,8 @@ static void scan_library(void)
     if (g_games.count > 1)
         qsort(g_games.items, g_games.count, sizeof(g_games.items[0]),
               compare_game_titles);
+    rebuild_recent_indices();
+    clear_scan_cover_cache();
     g_selected = 0;
     clamp_selection();
 }
@@ -4038,6 +4259,7 @@ int main(int argc, char *argv[])
 
     ps3scale_game_list_init(&g_games);
     load_app_settings();
+    load_favorites();
     if (g_music_mode == 0) {
         g_music_start_track = g_music_next_track;
         g_music_next_track = (g_music_start_track == 1) ? 2 : 1;
@@ -4168,6 +4390,8 @@ int main(int argc, char *argv[])
                 if (g_home_selected == 0) {
                     g_screen = SCREEN_SCAN;
                     g_selected = 0;
+                    g_scan_focus_sidebar = 0;
+                    g_scan_sidebar_selected = g_library;
                 } else if (g_home_selected == 1) {
                     g_screen = SCREEN_ONLINE_DB;
                     g_online_selected = 0;
@@ -4225,46 +4449,89 @@ int main(int argc, char *argv[])
             if (circle && !old_circle)
                 g_screen = SCREEN_HELP;
         } else if (g_screen == SCREEN_SCAN) {
-            if (l1 && !old_l1) {
+            size_t count = library_count(g_library);
+            if (l1 && r1 && (!old_l1 || !old_r1)) {
+                g_library = LIBRARY_ALL;
+                g_scan_sidebar_selected = LIBRARY_ALL;
+                g_selected = 0;
+                g_scan_focus_sidebar = 0;
+            } else if (l1 && !old_l1) {
                 g_library = LIBRARY_PS3;
+                g_scan_sidebar_selected = LIBRARY_PS3;
                 g_selected = 0;
                 g_config_preview = 0;
-            }
-            if (r1 && !old_r1) {
+                g_scan_focus_sidebar = 0;
+            } else if (r1 && !old_r1) {
                 g_library = LIBRARY_PS2;
+                g_scan_sidebar_selected = LIBRARY_PS2;
                 g_selected = 0;
                 g_config_preview = 0;
+                g_scan_focus_sidebar = 0;
             }
-            if (up && !old_up && library_count(g_library)) {
-                int count = (int)library_count(g_library);
-                g_selected = (g_selected > 0) ? g_selected - 1 : count - 1;
+            if (g_scan_focus_sidebar) {
+                if (up && !old_up)
+                    g_scan_sidebar_selected =
+                        (g_scan_sidebar_selected + 4) % 5;
+                if (down && !old_down)
+                    g_scan_sidebar_selected =
+                        (g_scan_sidebar_selected + 1) % 5;
+                if ((right && !old_right) || (cross && !old_cross)) {
+                    g_library = g_scan_sidebar_selected;
+                    g_selected = 0;
+                    g_scan_focus_sidebar = 0;
+                    clamp_selection();
+                }
+                if (left && !old_left)
+                    g_scan_focus_sidebar = 0;
+            } else {
+                if (left && !old_left) {
+                    if ((g_selected % 4) == 0) {
+                        g_scan_focus_sidebar = 1;
+                        g_scan_sidebar_selected = g_library;
+                    } else if (g_selected > 0) {
+                        g_selected--;
+                    }
+                }
+                if (right && !old_right && (size_t)g_selected + 1 < count)
+                    g_selected++;
+                if (up && !old_up && g_selected >= 4)
+                    g_selected -= 4;
+                if (down && !old_down && (size_t)g_selected + 4 < count)
+                    g_selected += 4;
+                if (cross && !old_cross && selected_game()) {
+                    const ps3scale_profile_t *profile =
+                        profile_for_game(selected_game());
+                    g_profile_confirm_pending = 0;
+                    if (profile)
+                        set_details_message("EXACT ONLINE PROFILE FOUND. REVIEW BEFORE INSTALL.");
+                    else if (selected_game() &&
+                             (selected_game()->kind == PS3SCALE_GAME_PS2_ISO ||
+                              selected_game()->kind == PS3SCALE_GAME_PS2_CLASSIC))
+                        set_details_message(ps2_config_for_game(selected_game()) ?
+                            "VERIFIED PS2 CONFIG FOUND. TRIANGLE TO DOWNLOAD." :
+                            "NO VERIFIED PS2 CONFIG FOUND FOR THIS GAME ID.");
+                    else
+                        set_details_message("NO EXACT ONLINE PROFILE FOR THIS GAME UPDATE.");
+                    g_screen = SCREEN_DETAILS;
+                }
+                if (square && !old_square && !select && !start) {
+                    toggle_favorite(selected_game());
+                    clamp_selection();
+                }
             }
-            if (down && !old_down && library_count(g_library))
-                g_selected = (g_selected + 1) % (int)library_count(g_library);
-            if ((select && !old_select) || (start && !old_start))
-                (void)open_search_keyboard();
-            if (square && !old_square)
-                scan_library();
+            if ((select && !old_select) || (start && !old_start)) {
+                if (square)
+                    scan_library();
+                else
+                    (void)open_search_keyboard();
+            }
             if (triangle && !old_triangle && g_library == LIBRARY_PS2)
                 g_config_preview = !g_config_preview;
-            if (cross && !old_cross && selected_game()) {
-                const ps3scale_profile_t *profile = profile_for_game(selected_game());
-                g_profile_confirm_pending = 0;
-                if (profile)
-                    set_details_message("EXACT ONLINE PROFILE FOUND. REVIEW BEFORE INSTALL.");
-                else if (selected_game() &&
-                         (selected_game()->kind == PS3SCALE_GAME_PS2_ISO ||
-                          selected_game()->kind == PS3SCALE_GAME_PS2_CLASSIC))
-                    set_details_message(ps2_config_for_game(selected_game()) ?
-                        "VERIFIED PS2 CONFIG FOUND. TRIANGLE TO DOWNLOAD." :
-                        "NO VERIFIED PS2 CONFIG FOUND FOR THIS GAME ID.");
-                else
-                    set_details_message("NO EXACT ONLINE PROFILE FOR THIS GAME UPDATE.");
-                g_screen = SCREEN_DETAILS;
-            }
             if (circle && !old_circle)
                 g_screen = SCREEN_HOME;
         } else if (g_screen == SCREEN_DETAILS) {
+
+} else if (g_screen == SCREEN_DETAILS) {
             const ps3scale_game_t *game = selected_game();
             const ps3scale_profile_t *profile = profile_for_game(game);
             if (square && !old_square && game && game_is_ps3(game)) {
@@ -4544,6 +4811,7 @@ int main(int argc, char *argv[])
     ps3scale_ps2_config_db_free(&g_ps2_config_db);
     shutdown_audio_backend();
     sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
+    clear_scan_cover_cache();
     if (g_cover_texture) ya2d_freeTexture(g_cover_texture);
     g_cover_texture = NULL;
     if (g_apollo_texture) ya2d_freeTexture(g_apollo_texture);
