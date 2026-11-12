@@ -13,7 +13,7 @@
 
 #include "font8x12.h"
 
-#define APP_PLUGIN_SOURCE "/dev_hdd0/game/DSFMOD01/USRDIR/simple-cheat-menu.sprx"
+#define APP_PLUGIN_SOURCE "/dev_hdd0/game/DSFMOD001/USRDIR/simple-cheat-menu.sprx"
 #define PLUGIN_DIR        "/dev_hdd0/plugins"
 #define PLUGIN_PATH       "/dev_hdd0/plugins/simple-cheat-menu.sprx"
 #define PLUGIN_TEMP       "/dev_hdd0/plugins/simple-cheat-menu.sprx.dsf-tmp"
