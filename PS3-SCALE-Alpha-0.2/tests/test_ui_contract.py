@@ -367,6 +367,8 @@ assert "PIC1.PNG" in makefile and "ICON0.PNG" in makefile and "PIC0.PNG" in make
 xmb_generator = (project_root / "scripts/generate_xmb_assets.py").read_text(encoding="utf-8")
 assert '("PIC1.PNG",(1280,720))' in xmb_generator
 assert '("ICON0.PNG",(320,176))' in xmb_generator
+assert "def spiral_staircase" in xmb_generator
+assert "spiral_staircase(bg,28" in xmb_generator
 assert "import_music1_from_usb" in src
 assert '"/dev_usb000/music1.mp3"' in src
 assert '"/dev_usb003/PS3SCALE/music1.mp3"' in src
