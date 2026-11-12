@@ -349,7 +349,8 @@ assert "grant all on table public.ps3scale_support_reports to service_role" in s
 assert "draw_scene_background();" in draw_ui_impl
 assert "daylight" in src and "night" in src
 assert "tiny3d_AlphaTest(1, 0x10, TINY3D_ALPHA_FUNC_GEQUAL);" in draw_ui_impl
-assert "TINY3D_CLEAR_ZBUFFER" in draw_ui_impl
+assert "TINYD_CLEAR_ZBUFFER" not in draw_ui_impl
+assert "draw_home_ambient();" in draw_ui_impl
 assert "draw_app_icon_preview" in src
 assert "XMB APP ICON" in src
 assert "scene_project_point" in src
