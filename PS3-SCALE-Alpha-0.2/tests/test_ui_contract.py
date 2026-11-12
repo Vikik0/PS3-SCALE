@@ -93,8 +93,11 @@ assert "PS3SCALE_MUSIC2_PATH" in src
 assert "music_mode=%d" in src
 assert "music_next=%d" in src
 assert "open_music_track(next_track)" in src
-assert "g_music_fade_remaining = 48000u" in src
-assert "AUTO: MUSIC 1 > MUSIC 2" in settings
+assert "mpg123_tell(g_mpg123)" in src
+assert "mpg123_length(g_mpg123)" in src
+assert "music_sample_fade" in src
+assert "Keep this block on one track" in src
+assert "AUTO: MUSIC 2 > MUSIC 1" in settings
 assert "MUSIC 1 IS NOT BUNDLED IN THIS BUILD" in settings
 assert "START GAME" in src
 assert "start_selected_game()" in main
@@ -110,8 +113,8 @@ assert "NO PROFILE FOR THIS TITLE. GAME WILL START UNMODIFIED." in src
 assert "START UNMODIFIED" in src
 assert "APP VERSION:" in src
 assert "if (g_music_enabled) {" in main
-assert "g_music_start_track = g_music_next_track;" in main
-assert "g_music_next_track = (g_music_start_track == 1) ? 2 : 1;" in main
+assert "g_music_start_track = 2;" in main
+assert "g_music_next_track = 2;" in main
 assert "set_background_music_enabled(0);" in main
 assert "set_background_music_enabled(1);" in main
 assert "g_language = LANGUAGE_ENGLISH;" in main
