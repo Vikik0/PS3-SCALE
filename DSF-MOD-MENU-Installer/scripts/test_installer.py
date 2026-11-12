@@ -10,6 +10,11 @@ assert 'mode=fetch\\n' in source
 assert "boot_add_plugin_line" in source
 assert "boot_remove_plugin_line" in source
 assert "BOOT_BACKUP" in source and "PLUGIN_BACKUP" in source
+makefile = Path("Makefile").read_text(encoding="utf-8")
+sfo = Path("sfo.xml").read_text(encoding="utf-8")
+assert "APPID := DSFMOD001" in makefile
+assert '<value name="TITLE_ID" type="string">DSFMOD001</value>' in sfo
+assert len("DSFMOD001") == 9
 
 plugin_line = "/dev_hdd0/plugins/simple-cheat-menu.sprx"
 
