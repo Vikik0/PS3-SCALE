@@ -94,54 +94,80 @@ def stairs(c,n,x0,y0,dx,dy,w0,dw,top,front,side):
         c.line(x,y,x+w,y-16,(255,252,255),2)
         c.line(x+8,y+11,x+w+18,y-5,(170,145,225),1)
 
+def playstation_mark(c, x, y, scale, color):
+    # A compact geometric PlayStation-style PS mark for the external XMB identity.
+    width = max(1, int(scale*3))
+    c.line(x + 4*scale, y, x + 4*scale, y + 38*scale, color, width)
+    c.line(x + 4*scale, y, x + 24*scale, y + 6*scale, color, width)
+    c.line(x + 24*scale, y + 6*scale, x + 24*scale, y + 22*scale, color, width)
+    c.line(x + 24*scale, y + 22*scale, x + 4*scale, y + 16*scale, color, width)
+    c.line(x + 4*scale, y + 16*scale, x + 38*scale, y + 27*scale, color, width)
+    c.line(x + 38*scale, y + 27*scale, x + 20*scale, y + 34*scale, color, width)
+    c.line(x + 20*scale, y + 34*scale, x + 4*scale, y + 30*scale, color, width)
+
+def outline(c, x, y, w, h, color, width=2):
+    c.line(x, y, x+w, y, color, width)
+    c.line(x+w, y, x+w, y+h, color, width)
+    c.line(x+w, y+h, x, y+h, color, width)
+    c.line(x, y+h, x, y, color, width)
+
 def generate(font):
     PKG.mkdir(parents=True,exist_ok=True)
 
-    # Bright XMB wallpaper: pale lavender, soft glow and ascending staircase.
-    bg=Canvas(1280,720,(250,248,255),(222,214,241))
+    # XMB wallpaper: pale lavender staircase and restrained purple glow.
+    bg=Canvas(1280,720,(251,249,255),(222,214,241))
     for wave in range(4):
         prev=None
         for x in range(0,1281,16):
-            y=68+wave*154+math.sin(x*0.004+wave*0.85)*20
+            y=78+wave*150+math.sin(x*0.004+wave*0.85)*19
             point=(x,y)
             if prev:
                 bg.line(prev[0],prev[1],point[0],point[1],
-                        (232-wave*4,222-wave*3,250),2)
+                        (235-wave*4,228-wave*3,250),2)
             prev=point
-    for i in range(58):
-        x=(i*197+83)%1280; y=(i*113+29)%660
-        bg.rect(x,y,2,2,(225,216,245))
-    bg.circle(1030,132,96,(224,211,248),3)
-    bg.circle(1030,132,78,(237,229,251),2)
-    stairs(bg,34,8,704,23,18,890,19,
-           (255,254,255),(226,220,242),(190,178,220))
-    bg.line(20,678,720,48,(208,187,244),4)
-    bg.line(40,704,760,74,(242,231,255),3)
-    bg.rect(720,280,510,226,(250,248,255))
-    bg.rect(720,280,510,3,(187,151,246))
-    bg.text(760,326,"PS3",6,(35,29,58),font)
-    bg.text(940,326,"SCALE",6,(143,65,221),font)
-    bg.text(760,430,"PS3 & PS2 ENHANCEMENT",2,(100,87,132),font)
-    bg.text(760,468,"MANAGEMENT",3,(100,87,132),font)
+    for i in range(72):
+        x=(i*197+83)%1280; y=(i*113+29)%690
+        bg.rect(x,y,2,2,(226,218,246))
+    bg.circle(1110,145,105,(229,216,250),3)
+    bg.circle(1110,145,84,(239,232,252),2)
+    stairs(bg,38,-170,720,31,18,1260,23,
+           (255,254,255),(228,222,244),(192,181,222))
+    bg.line(18,685,735,42,(207,185,245),4)
+    bg.line(40,710,770,68,(244,236,255),3)
+
+    # Header lockup and console badges remain legible over the staircase art.
+    bg.rect(42,38,620,150,(251,249,255))
+    playstation_mark(bg,72,62,1.18,(34,29,57))
+    bg.text(142,66,"PS3",6,(34,29,57),font)
+    bg.text(270,66,"SCALE",6,(142,65,220),font)
+    bg.text(146,132,"PS3 & PS2 ENHANCEMENT MANAGEMENT",2,(100,87,132),font)
+
+    bg.rect(905,42,148,46,(251,249,255))
+    outline(bg,905,42,148,46,(211,201,234),2)
+    bg.text(920,58,"CFW 4.92",2,(52,42,82),font)
+    bg.rect(1070,42,174,46,(251,249,255))
+    outline(bg,1070,42,174,46,(211,201,234),2)
+    bg.text(1087,58,"PS3 SLIM",2,(52,42,82),font)
     bg.save(PKG/"PIC1.PNG")
 
-    # XMB icon remains bright and legible at compact PS3 menu size.
-    icon=Canvas(320,176,(252,250,255),(231,224,246))
-    stairs(icon,9,-10,166,8,12,190,15,
-           (255,255,255),(230,223,246),(192,179,224))
-    icon.circle(52,58,31,(207,188,245),2)
-    icon.text(112,38,"PS3",4,(35,29,58),font)
-    icon.text(112,80,"SCALE",4,(143,65,221),font)
-    icon.rect(112,128,180,2,(180,147,236))
-    icon.text(118,140,"GAME ENHANCER",1,(95,83,126),font)
+    # Compact dark XMB tile matching the app mark shown in the reference image.
+    icon=Canvas(320,176,(32,27,58),(7,8,24))
+    stairs(icon,9,-34,174,9,12,246,20,
+           (255,255,255),(221,214,241),(150,135,190))
+    playstation_mark(icon,31,27,0.84,(255,255,255))
+    icon.text(101,30,"PS3",4,(255,255,255),font)
+    icon.text(101,72,"SCALE",4,(187,139,255),font)
+    icon.rect(101,119,188,2,(151,104,231))
+    icon.text(106,134,"GAME ENHANCER",1,(228,220,248),font)
     icon.save(PKG/"ICON0.PNG")
 
-    # Small preview uses the same white/lavender staircase identity.
+    # XMB preview image shares the bright purple staircase identity.
     pic0=Canvas(310,176,(250,248,255),(224,216,242))
-    stairs(pic0,11,-18,174,8,11,250,14,
+    stairs(pic0,12,-18,176,8,11,252,14,
            (255,255,255),(230,223,246),(193,180,224))
-    pic0.text(18,20,"PS3 SCALE",3,(43,34,68),font)
-    pic0.text(20,78,"GRAPHICS / GAME PROFILES",1,(126,93,173),font)
+    playstation_mark(pic0,20,24,0.62,(43,34,68))
+    pic0.text(58,27,"PS3 SCALE",3,(43,34,68),font)
+    pic0.text(58,78,"PS3 & PS2 ENHANCEMENT",1,(126,93,173),font)
     pic0.save(PKG/"PIC0.PNG")
 
     for name,size in (("ICON0.PNG",(320,176)),("PIC1.PNG",(1280,720)),("PIC0.PNG",(310,176))):
