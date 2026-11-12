@@ -3538,8 +3538,10 @@ static void draw_online_database(void)
     if (g_online_message[0])
         draw_text(24.0f, 470.0f, 0xffcc66ff, g_online_message);
     set_ui_font_size(7, 11);
+    draw_text(24.0f, 480.0f, 0x77718fff,
+              "D-PAD SELECT   |   CROSS DOWNLOAD / OPEN   |   L1/R1 PREV/NEXT");
     draw_text(24.0f, 496.0f, 0x77718fff,
-              "D-PAD SELECT   |   L1/R1 PREV/NEXT   |   TRIANGLE SEARCH   |   SQUARE FILTER   |   START SYNC   |   CIRCLE BACK");
+              "TRIANGLE SEARCH   |   SQUARE FILTER   |   START SYNC   |   CIRCLE BACK");
     set_ui_font_size(14, 22);
 }
 
