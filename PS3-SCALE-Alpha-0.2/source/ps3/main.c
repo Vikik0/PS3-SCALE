@@ -1449,85 +1449,101 @@ static void update_selected_cover(void)
     }
 }
 
-static void draw_ambient_ring(float radius, float tilt, float spin,
-                               float x, float y, float z, u32 color)
+typedef struct ps3scale_scene_point {
+    float x;
+    float y;
+    float z;
+} ps3scale_scene_point_t;
+
+typedef struct ps3scale_scene_face {
+    float depth;
+    float x[4];
+    float y[4];
+    u32 color;
+    u32 edge;
+} ps3scale_scene_face_t;
+
+#define PS3SCALE_STAIR_STEPS 24
+#define PS3SCALE_STAIR_FACE_MAX (PS3SCALE_STAIR_STEPS * 3)
+
+static ps3scale_scene_point_t scene_world_point(float center_x,
+                                                 float center_y,
+                                                 float center_z,
+                                                 float radius,
+                                                 float angle,
+                                                 float y)
 {
-    MATRIX rotation, scale, translation, model;
+    ps3scale_scene_point_t point;
+    point.x = center_x + cosf(angle) * radius;
+    point.y = center_y + y;
+    point.z = center_z + sinf(angle) * radius;
+    return point;
+}
+
+/* Tiny3D's 2D layer is stable across CFW video modes. Project the animated
+   staircase in software, then draw its shaded faces in the normal 2D pass.
+   This avoids the depth-buffer state that hid the previous 3D scene. */
+static void scene_project_point(ps3scale_scene_point_t point,
+                                float focal_length,
+                                float *screen_x,
+                                float *screen_y)
+{
+    float depth = point.z;
+    if (depth < 4.0f) depth = 4.0f;
+    *screen_x = 427.0f + point.x * focal_length / depth;
+    *screen_y = 256.0f - point.y * focal_length / depth;
+}
+
+static void scene_push_face(ps3scale_scene_face_t *faces,
+                            size_t *face_count,
+                            const ps3scale_scene_point_t points[4],
+                            float focal_length,
+                            u32 color,
+                            u32 edge)
+{
+    ps3scale_scene_face_t *face;
+    float depth = 0.0f;
     int i;
-    rotation = MatrixMultiply(MatrixRotationY(spin), MatrixRotationX(tilt));
-    scale = MatrixScale(radius, radius, radius);
-    translation = MatrixTranslation(x, y, z);
-    model = MatrixMultiply(MatrixMultiply(scale, rotation), translation);
-    tiny3d_SetMatrixModelView(&model);
+    if (!faces || !face_count || *face_count >= PS3SCALE_STAIR_FACE_MAX)
+        return;
+    face = &faces[(*face_count)++];
+    for (i = 0; i < 4; i++) {
+        depth += points[i].z * 0.25f;
+        scene_project_point(points[i], focal_length,
+                            &face->x[i], &face->y[i]);
+    }
+    face->depth = depth;
+    face->color = color;
+    face->edge = edge;
+}
+
+static int compare_scene_face_depth(const void *left, const void *right)
+{
+    const ps3scale_scene_face_t *a = (const ps3scale_scene_face_t *)left;
+    const ps3scale_scene_face_t *b = (const ps3scale_scene_face_t *)right;
+    if (a->depth < b->depth) return 1;
+    if (a->depth > b->depth) return -1;
+    return 0;
+}
+
+static void draw_scene_face(const ps3scale_scene_face_t *face)
+{
+    int i;
+    if (!face) return;
+    tiny3d_SetPolygon(TINY3D_QUADS);
+    for (i = 0; i < 4; i++) {
+        tiny3d_VertexPos(face->x[i], face->y[i], 65535.0f);
+        tiny3d_VertexColor(face->color);
+    }
+    tiny3d_End();
+
     tiny3d_SetPolygon(TINY3D_LINE_LOOP);
-    for (i = 0; i < 48; i++) {
-        float angle = 6.28318530718f * (float)i / 48.0f;
-        tiny3d_VertexPos(cosf(angle), sinf(angle), 0.0f);
-        tiny3d_VertexColor(ui_theme_color(color));
+    for (i = 0; i < 4; i++) {
+        tiny3d_VertexPos(face->x[i], face->y[i], 65535.0f);
+        if (i == 0) tiny3d_VertexColor(face->edge);
     }
     tiny3d_End();
 }
-
-static void draw_ambient_satellite(float orbit_radius, float angle,
-                                   float tilt, float spin,
-                                   float x, float y, float z, u32 color)
-{
-    MATRIX rotation, translation, model;
-    float px = cosf(angle) * orbit_radius;
-    float py = sinf(angle) * orbit_radius;
-    rotation = MatrixMultiply(MatrixRotationY(spin), MatrixRotationX(tilt));
-    translation = MatrixTranslation(x, y, z);
-    model = MatrixMultiply(rotation, translation);
-    tiny3d_SetMatrixModelView(&model);
-    tiny3d_SetPolygon(TINY3D_LINES);
-    tiny3d_VertexPos(px - 0.72f, py, 0.0f);
-    tiny3d_VertexColor(ui_theme_color(color));
-    tiny3d_VertexPos(px + 0.72f, py, 0.0f);
-    tiny3d_VertexColor(ui_theme_color(color));
-    tiny3d_VertexPos(px, py - 0.72f, 0.0f);
-    tiny3d_VertexColor(ui_theme_color(color));
-    tiny3d_VertexPos(px, py + 0.72f, 0.0f);
-    tiny3d_VertexColor(ui_theme_color(color));
-    tiny3d_VertexPos(px, py, -0.72f);
-    tiny3d_VertexColor(ui_theme_color(color));
-    tiny3d_VertexPos(px, py, 0.72f);
-    tiny3d_VertexColor(ui_theme_color(color));
-    tiny3d_End();
-}
-
-static void draw_stair_face(float ax, float ay, float az,
-                            float bx, float by, float bz,
-                            float cx, float cy, float cz,
-                            float dx, float dy, float dz, u32 color)
-{
-    tiny3d_SetPolygon(TINY3D_QUADS);
-    tiny3d_VertexPos(ax, ay, az); tiny3d_VertexColor(color);
-    tiny3d_VertexPos(bx, by, bz); tiny3d_VertexColor(color);
-    tiny3d_VertexPos(cx, cy, cz); tiny3d_VertexColor(color);
-    tiny3d_VertexPos(dx, dy, dz); tiny3d_VertexColor(color);
-    tiny3d_End();
-}
-
-static void draw_stair_tread(float width, float height, float depth, int index)
-{
-    float x = width * 0.5f;
-    float y = height * 0.5f;
-    float z = depth * 0.5f;
-    u32 front = (index % 3 == 0) ? 0xded8eeff : 0xe7e2f3ff;
-    u32 side = (index % 2 == 0) ? 0xcac0e2ff : 0xd5cceaff;
-
-    draw_stair_face(-x, y, -z, x, y, -z, x, y, z, -x, y, z,
-                    0xfffeffff);
-    draw_stair_face(-x, -y, z, x, -y, z, x, y, z, -x, y, z,
-                    front);
-    draw_stair_face(x, -y, -z, x, -y, z, x, y, z, x, y, -z,
-                    side);
-    draw_stair_face(-x, -y, -z, -x, y, -z, -x, y, z, -x, -y, z,
-                    0xf1edfbff);
-    draw_stair_face(-x, -y, -z, x, -y, -z, x, y, -z, -x, y, -z,
-                    0xe6e0f3ff);
-}
-
 
 static u32 scene_blend(u32 a, u32 b, float t)
 {
@@ -1625,60 +1641,117 @@ static void draw_scene_background(void)
 
 static void draw_home_ambient(void)
 {
-    MATRIX projection, rotation, scale, translation, model;
+    ps3scale_scene_face_t faces[PS3SCALE_STAIR_FACE_MAX];
     const float tau = 6.28318530718f;
     const float phase =
         (float)(g_frame_counter % 21600ul) / 21600.0f * tau;
+    const float center_x = 7.2f;
+    const float center_y = 0.0f;
+    const float center_z = 43.0f;
+    const float outer_radius = 9.6f;
+    const float inner_radius = 1.25f;
+    const float angle_step = 0.48f;
+    const float focal_length = 780.0f;
     const float bob = sinf(phase) * 0.12f;
-    const float center_x = -5.8f;
-    const float center_z = 25.0f;
-    int i;
+    size_t face_count = 0, i;
+    int j;
 
-    tiny3d_Project3D();
-    projection = MatrixProjPerspective(68.0f, 16.0f / 9.0f,
-                                       0.1f, 240.0f);
-    tiny3d_SetProjectionMatrix(&projection);
-    tiny3d_SetLightsOff();
+    /* The halo is intentionally soft so the game cards remain readable. */
+    draw_circle_outline(565.0f, 250.0f, 178.0f, 0xa58bdf35);
+    draw_circle_outline(565.0f, 250.0f, 164.0f, 0xd7c9f340);
 
-    /* Thirty-two low-poly treads form a slow, continuously turning spiral. */
-    for (i = 0; i < 32; i++) {
-        float angle = (float)i * 0.235f + phase;
-        float radius = 4.5f +
-            sinf(phase + (float)i * 0.15f) * 0.045f;
-        float y = ((float)i - 15.5f) * 0.46f + bob;
-        rotation = MatrixMultiply(MatrixRotationX(0.76f),
-                                  MatrixRotationY(angle));
-        scale = MatrixScale(2.0f, 2.0f, 2.0f);
-        translation = MatrixTranslation(center_x + cosf(angle) * radius,
-                                         y,
-                                         center_z + sinf(angle) * radius);
-        model = MatrixMultiply(MatrixMultiply(scale, rotation), translation);
-        tiny3d_SetMatrixModelView(&model);
-        draw_stair_tread(4.8f, 0.28f, 2.45f, i);
+    /* A luminous central support sits behind the floating spiral treads. */
+    {
+        ps3scale_scene_point_t lower, upper;
+        float x1, y1, x2, y2;
+        lower.x = center_x; lower.y = -10.0f; lower.z = center_z;
+        upper.x = center_x; upper.y = 10.0f; upper.z = center_z;
+        scene_project_point(lower, focal_length, &x1, &y1);
+        scene_project_point(upper, focal_length, &x2, &y2);
+        draw_icon_line(x1 - 2.0f, y1, x2 - 2.0f, y2, 0x9476d880);
+        draw_icon_line(x1 + 2.0f, y1, x2 + 2.0f, y2, 0xf2eaffb0);
     }
 
-    /* A fine lilac edge traces the spiral; the cycle wraps without a jump. */
-    tiny3d_SetMatrixModelView(NULL);
+    /* Each tread is a real perspective wedge with a shaded riser and side.
+       The entire orbit repeats exactly after one full phase cycle. */
+    for (i = 0; i < PS3SCALE_STAIR_STEPS; i++) {
+        float angle = (float)i * angle_step + phase;
+        float next_angle = angle + angle_step * 0.92f;
+        float y = ((float)i - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
+                  0.72f + bob;
+        ps3scale_scene_point_t top[4], riser[4], side[4];
+        u32 top_color = (i % 4u == 0u) ? 0xc8b4f1d8 : 0xb59de7d8;
+        u32 riser_color = (i % 2u == 0u) ? 0x755daee8 : 0x856dbce8;
+        u32 side_color = 0x9c83d0d8;
+
+        top[0] = scene_world_point(center_x, center_y, center_z,
+                                   inner_radius, angle, y + 0.14f);
+        top[1] = scene_world_point(center_x, center_y, center_z,
+                                   outer_radius, angle, y + 0.14f);
+        top[2] = scene_world_point(center_x, center_y, center_z,
+                                   outer_radius, next_angle, y + 0.14f);
+        top[3] = scene_world_point(center_x, center_y, center_z,
+                                   inner_radius, next_angle, y + 0.14f);
+
+        riser[0] = scene_world_point(center_x, center_y, center_z,
+                                     outer_radius, angle, y - 0.20f);
+        riser[1] = scene_world_point(center_x, center_y, center_z,
+                                     outer_radius, next_angle, y - 0.20f);
+        riser[2] = top[2];
+        riser[3] = top[1];
+
+        side[0] = scene_world_point(center_x, center_y, center_z,
+                                    inner_radius, next_angle, y - 0.20f);
+        side[1] = riser[1];
+        side[2] = top[2];
+        side[3] = top[3];
+
+        scene_push_face(faces, &face_count, top, focal_length,
+                        top_color, 0xf5edffff);
+        scene_push_face(faces, &face_count, riser, focal_length,
+                        riser_color, 0xc5b2edc0);
+        scene_push_face(faces, &face_count, side, focal_length,
+                        side_color, 0xd9caffb0);
+    }
+
+    /* Painter's order gives reliable depth without relying on RSX Z state. */
+    qsort(faces, face_count, sizeof(faces[0]), compare_scene_face_depth);
+    for (i = 0; i < face_count; i++)
+        draw_scene_face(&faces[i]);
+
+    /* Spiral handrail: a smooth, slowly rotating lavender ribbon. */
     tiny3d_SetPolygon(TINY3D_LINE_STRIP);
-    for (i = 0; i <= 64; i++) {
-        float angle = (float)i * 0.115f + phase;
-        float y = ((float)i * 0.5f - 15.5f) * 0.46f + bob;
-        tiny3d_VertexPos(center_x + cosf(angle) * 4.58f,
-                         y,
-                         center_z + sinf(angle) * 4.58f);
-        tiny3d_VertexColor(0xc0a8ff88);
+    for (j = 0; j <= PS3SCALE_STAIR_STEPS * 6; j++) {
+        float t = (float)j / 6.0f;
+        float angle = t * angle_step + phase;
+        float y = (t - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
+                  0.72f + 1.15f + bob;
+        ps3scale_scene_point_t point =
+            scene_world_point(center_x, center_y, center_z,
+                              outer_radius + 0.62f, angle, y);
+        float x, sy;
+        scene_project_point(point, focal_length, &x, &sy);
+        tiny3d_VertexPos(x, sy, 65535.0f);
+        if (j == 0) tiny3d_VertexColor(0x9b7bdcff);
     }
     tiny3d_End();
 
-    draw_ambient_ring(10.0f, 1.42f, phase,
-                      center_x + 1.5f, -0.5f, center_z,
-                      0xb9a4ff50);
-    draw_ambient_satellite(12.0f, phase, 0.52f, phase,
-                           center_x + 1.5f, 0.0f, center_z,
-                           0xc6b6ff88);
-
-    tiny3d_Project2D();
-    tiny3d_SetMatrixModelView(NULL);
+    /* Small balusters connect the rail to selected treads. */
+    for (i = 0; i < PS3SCALE_STAIR_STEPS; i += 3) {
+        float angle = (float)i * angle_step + phase;
+        float y = ((float)i - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
+                  0.72f + bob;
+        ps3scale_scene_point_t base =
+            scene_world_point(center_x, center_y, center_z,
+                              outer_radius, angle, y + 0.18f);
+        ps3scale_scene_point_t top =
+            scene_world_point(center_x, center_y, center_z,
+                              outer_radius + 0.62f, angle, y + 1.15f);
+        float x1, y1, x2, y2;
+        scene_project_point(base, focal_length, &x1, &y1);
+        scene_project_point(top, focal_length, &x2, &y2);
+        draw_icon_line(x1, y1, x2, y2, 0xc4aaf0b0);
+    }
 }
 
 static void set_settings_message(const char *message)
@@ -3331,8 +3404,8 @@ static void draw_home(void)
         "Scan Games", "Online DB", "Settings", "Help", "About"
     };
     static const char *descriptions[5] = {
-        "Detect PS3 & PS2 Titles", "Community Updates", "Customize Application",
-        "Usage Guide & Support", "Credits & Information"
+        "PS3 / PS2 Library", "Game Profiles", "Music & Theme",
+        "Guide & Support", "App Info"
     };
     char line[192];
     int i;
@@ -4319,18 +4392,10 @@ static void draw_ui(void)
     tiny3d_Project2D();
     draw_scene_background();
 
-    /* The 2D gradient wrote depth; clear only Z before the 3D staircase. */
-    if (g_animation_enabled) {
-        tiny3d_Clear(0x00000000, TINY3D_CLEAR_ZBUFFER);
-        tiny3d_AlphaTest(1, 0x10, TINY3D_ALPHA_FUNC_GEQUAL);
-        tiny3d_BlendFunc(1,
-            TINY3D_BLEND_FUNC_SRC_RGB_SRC_ALPHA |
-            TINY3D_BLEND_FUNC_SRC_ALPHA_SRC_ALPHA,
-            TINY3D_BLEND_FUNC_DST_RGB_ONE_MINUS_SRC_ALPHA |
-            TINY3D_BLEND_FUNC_DST_ALPHA_ONE_MINUS_SRC_ALPHA,
-            TINY3D_BLEND_RGB_FUNC_ADD | TINY3D_BLEND_ALPHA_FUNC_ADD);
+    /* The animated perspective staircase is projected into the 2D UI pass,
+       so it remains visible on every RSX depth-buffer configuration. */
+    if (g_animation_enabled)
         draw_home_ambient();
-    }
 
     if (g_screen != SCREEN_HOME && g_screen != SCREEN_SPLASH &&
         g_screen != SCREEN_BOOT) {
