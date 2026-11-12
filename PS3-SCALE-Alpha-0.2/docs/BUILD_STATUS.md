@@ -21,7 +21,7 @@ Date: 2026-11-12
 
 ## Existing safety boundaries
 - Scanning is read-only; original game files are not replaced.
-- Community NCL index entries remain searchable references only; arbitrary community files are not executed.
+- Community NCL/TXT entries can be downloaded into `USRDIR/community_downloads` as inert data (HTTPS only, 2 MB maximum, text extensions only, existing files are not overwritten). Downloaded community data is never executed or auto-applied.
 - Exact Title ID + APP_VER matching remains required for graphics profiles.
 - Multi-write profiles remain disabled for automatic application.
 - No universal AI upscaler, frame generation or guaranteed 60 FPS is claimed.
