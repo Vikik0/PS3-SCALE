@@ -1,6 +1,6 @@
 # DSF MOD MENU Installer
 
-This is a PSL1GHT homebrew PKG that installs the open-source Simple Cheat Menu VSH plugin.
+This is a PSL1GHT homebrew PKG (TITLE_ID `DSFMOD001`) that installs the open-source Simple Cheat Menu VSH plugin. The package ID is nine characters, matching the PS3 PARAM.SFO title-ID format.
 
 ## Build result
 
