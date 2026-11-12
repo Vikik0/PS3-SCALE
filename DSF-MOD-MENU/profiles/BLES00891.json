@@ -15,7 +15,7 @@
   "approved_menu_hotkey": [
     "PS_SHORT_PRESS"
   ],
-  "profile_status": "installer_source_added_build_pending",
+  "profile_status": "ci_build_passed_hardware_test_pending",
   "memory_patches_enabled": false,
   "installer": {
     "title": "DSF MOD MENU",
@@ -26,12 +26,18 @@
     "settings_path": "/dev_hdd0/tmp/simple-cheat-menu/settings.txt",
     "default_sync_mode": "fetch",
     "backup_suffix": ".dsf-backup",
-    "package_status": "source_added_not_built"
+    "package_status": "ci_build_passed_hardware_test_pending",
+    "pkg_name": "dsfmod.gnpdrm.pkg",
+    "pkg_size_bytes": 159248,
+    "pkg_sha256": "90ba2498c2ee47f703df81912c514eac9137cf7daaa6192c3e9fe993a3413c2e",
+    "workflow_run_id": 43308505549,
+    "artifact_id": 13983524872
   },
   "upstream_plugin": {
     "project": "mohasi/ps3-dev",
     "release": "191-3541f8d",
     "asset": "simple-cheat-menu.sprx",
+    "size_bytes": 59315,
     "sha256": "cbb556217faf63d2ae2c5480318397f0f4b1fa4b1ad52b39f55384c59a10ee90",
     "trigger": "short PS-button press",
     "license": "Apache-2.0"
@@ -43,6 +49,7 @@
     "The user explicitly approved the upstream short PS-button trigger instead of D-Pad UP + SELECT.",
     "The installer app is designed to preserve existing boot_plugins entries and back up any existing plugin before replacement.",
     "The installer creates mode=fetch only if no settings file exists; it does not submit anonymous cheat votes by default.",
+    "The PKG passed the GitHub Actions host build, header checks, and host policy tests; it has not been installed on the user's physical PS3.",
     "Do not enable amber or red cheat entries on the displayed 1.00 build; no exact-build green confidence has been established.",
     "Do not add memory offsets until the exact EBOOT build and expected original bytes are verified."
   ],
@@ -73,7 +80,8 @@
       "hardware_tested": false
     },
     "reversible_installer": {
-      "status": "source_added_build_pending"
+      "status": "ci_build_passed",
+      "hardware_tested": false
     },
     "game_memory_cheats": {
       "status": "not_enabled_pending_exact_version_validation"
