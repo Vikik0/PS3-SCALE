@@ -3950,13 +3950,13 @@ static void draw_help(void)
 {
     static const char *step_titles[5] = {
         "Scan Games", "Select a Game", "Review Profile",
-        "Apply Safely", "Start Game"
+        "Download Safely", "Start Game"
     };
     static const char *step_lines[5] = {
         "Find PS3 / PS2 titles.",
         "Choose a library game.",
         "Check version and match.",
-        "Apply a verified profile.",
+        "Save NCL / TXT data only.",
         "Start and enjoy your game."
     };
     static const char *actions[2] = { "Report an Issue", "Send Feedback" };
@@ -3991,7 +3991,7 @@ static void draw_help(void)
     draw_soft_button(486.0f, 362.0f, 220.0f, 42.0f,
                      actions[0], g_help_selected == 0);
     draw_text(38.0f, 414.0f, 0x77718fff,
-              "Reports include console model and firmware; saved locally before sending.");
+              "Community downloads are saved as data only and are never auto-executed.");
     set_ui_font_size(7, 11);
     draw_text(24.0f, 478.0f, 0x77718fff,
               "UP / DOWN: CHOOSE SUPPORT ACTION   |   CROSS: OPEN   |   CIRCLE: BACK");
