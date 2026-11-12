@@ -1,75 +1,35 @@
 # DSF MOD MENU Installer
 
-This is a small PSL1GHT homebrew PKG that installs the open-source Simple Cheat Menu VSH plugin. The plugin is a generic in-game cheat overlay; it selects the cheat database by the currently running game's Title ID.
+This is a PSL1GHT homebrew PKG that installs the open-source Simple Cheat Menu VSH plugin.
 
-## Approved menu trigger
+## Build result
 
-The user approved the plugin's existing **short PS-button press** trigger. A long PS press is left to the normal PS3 system menu. The installer does not attempt to poll the controller during raw gameplay and does not add a custom input hook.
+GitHub Actions completed successfully:
+- Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/43308505549
+- Artifact: DSF-MOD-MENU-Installer-test-build
+- PKG: dsfmod.gnpdrm.pkg
+- Size: 159,248 bytes
+- SHA-256: 90ba2498c2ee47f703df81912c514eac9137cf7daaa6192c3e9fe993a3413c2e
 
-In-game controls:
-- Short PS press: open the overlay.
-- D-pad up/down: select a cheat.
-- CROSS: toggle the selected cheat.
-- TRIANGLE: re-fetch the current game's cheat list (online mode).
-- CIRCLE: return to the in-game XMB.
-- PS: resume the game.
+The package passed CI host tests, PPU ELF/SELF compilation, PKG generation, and PKG header/revision checks. It has not yet been installed on the target physical console.
 
-## What the PKG does
+## Install steps
 
-The PKG installs the pinned upstream plugin at:
-- /dev_hdd0/plugins/simple-cheat-menu.sprx
+1. Install DSF MOD MENU PKG from the PS3 Package Manager.
+2. Open the DSF MOD MENU application from the Games column.
+3. Choose INSTALL / UPDATE PLUGIN with CROSS.
+4. Reboot the PS3.
+5. Launch Driver: San Francisco.
+6. Press the PS button briefly to open the in-game overlay.
 
-It adds exactly one line to:
-- /dev_hdd0/boot_plugins.txt
+The installer creates a mode=fetch settings file only if one does not already exist. Fetch mode downloads cheat data but does not submit anonymous votes.
 
-It preserves other plugin lines and keeps one-time backups:
-- /dev_hdd0/plugins/simple-cheat-menu.sprx.dsf-backup
-- /dev_hdd0/boot_plugins.txt.dsf-backup
+## Remove
 
-It creates /dev_hdd0/tmp/simple-cheat-menu/settings.txt with mode=fetch only if that settings file does not already exist. This avoids the upstream default contribute mode and does not overwrite an existing user's settings. Fetch downloads cheats but does not send votes.
+Open DSF MOD MENU, choose REMOVE PLUGIN, then reboot. The app removes only its own boot_plugins entry and restores the plugin backup if it created one. Other plugin entries and game files are left untouched.
 
-The app never writes to the game's EBOOT.BIN, PARAM.SFO, or other game files. Remove Plugin deletes only its own boot entry and restores the plugin backup if one exists. It leaves downloaded cheat data and user settings untouched.
+## Important limitations
 
-## Pinned upstream component
+This is the upstream Simple Cheat Menu overlay, not a custom recreation of RageX. It does not include RageX's vehicle spawner, traffic hiding or Square-button speed boost.
 
-- Project: https://github.com/mohasi/ps3-dev/tree/main/plugins/simple-cheat-menu
-- Release: https://github.com/mohasi/ps3-dev/releases/tag/191-3541f8d
-- Asset: simple-cheat-menu.sprx
-- SHA-256: cbb556217faf63d2ae2c5480318397f0f4b1fa4b1ad52b39f55384c59a10ee90
-- License: Apache-2.0; attribution and license copy are retained under third_party/.
-
-## Target console and game
-
-Target reported for this build:
-- PS3 Slim CECH-2504A
-- CEX CFW 4.93
-- Cobra 8.5
-- Driver: San Francisco, BLES00891, digital PKG
-- XMB displayed game version 1.00; installed PARAM.SFO APP_VER and EBOOT hash have not yet been read from the console.
-
-The plugin is intended for CFW with Cobra support. Its upstream author documents CFW operation and the PS-button trigger. A PSX-Place discussion includes the author reporting use alongside webMAN MOD 1.47.48, but this is not a guarantee for every plugin combination or every webMAN build.
-
-## Driver: San Francisco cheat data
-
-The public BLES00891 cheat file currently contains named entries for:
-- Car Health Never Decreases
-- Infinite WP
-- Max Money On Gain
-
-It also contains three entries labelled Memory Unknown Code 1–3; these are deliberately not curated or renamed by this installer.
-
-The public cheat file does not currently provide a confirmed green confidence score for the user's displayed 1.00 build. The overlay uses green for confirmed on the exact build, amber for unproven, and red for codes only known to work on another build. Do not enable amber or red entries on the 1.00 game build if avoiding crashes is the priority. The installer does not falsely mark these cheats as tested.
-
-## Features not bundled
-
-The separate RageX V1.0.3T announcement describes traffic/pedestrian hiding, vehicle spawning and a Square-button speed boost. It is a third-party binary installer with no source code available in the release post, and the author says minor issues remain. Those functions are not included in this open-source installer and must not be presented as if this plugin provides them.
-
-## Build
-
-The GitHub Actions workflow downloads the pinned SPRX, verifies its SHA-256, builds the installer with the repository's PSL1GHT/Tiny3D toolchain, validates the PKG header, and uploads dsfmod.gnpdrm.pkg.
-
-A successful GitHub build proves the package compiled and passed host-side checks. It does not prove it has been installed and tested on the user's physical PS3. Hardware testing is still required for the plugin-load, menu-open, webMAN coexistence, game launch, and uninstall paths.
-
-## Safety and rollback
-
-No PS3 plugin can be honestly guaranteed 100% crash-free on every console/game combination. Keep a recovery route available before enabling a boot plugin. If the console fails to boot normally, use the existing recovery method for the user's CFW to remove the added line from /dev_hdd0/boot_plugins.txt or restore the .dsf-backup files. Do not delete the other plugin entries.
+The user's displayed game version is 1.00. The current BLES00891 community cheat data does not have a confirmed green score for that exact build. Do not activate amber or red cheats if stability is the priority. The package build is not a hardware test and no crash-free guarantee is possible.
