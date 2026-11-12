@@ -1,93 +1,30 @@
-# PS3 SCALE Alpha 0.2 — Build status
+# PS3 SCALE Alpha 0.21 — UI correction build
 
-Date: 2026-11-09
+Date: 2026-11-12
 
-## Latest feature-branch CI build
+## Corrections made after the first console screenshot
+- Enabled RSX alpha testing and source-alpha blending for bitmap text, PNGs, translucent cards and glow layers. This targets the black rectangular text backgrounds visible in the earlier console screenshot.
+- Cleared only the depth buffer between the 2D gradient and 3D scene so the background no longer occludes the staircase.
+- Corrected per-vertex color submission for stair faces, orbital rings and satellite lines.
+- Rebuilt the in-app staircase as a 32-tread Tiny3D spiral with a fixed periodic phase.
+- Reworked the Home screen around the PS3 SCALE logo, five larger glass cards, CFW / console badges, library counts and controller hints.
+- Reworked the external XMB ICON0, PIC1 wallpaper and PIC0 preview in the white/lavender staircase style.
+- Added an XMB icon preview to the About screen.
+- Updated the package version to 00.21.
+- Music 2 (GTA V pause-menu theme) remains embedded and SHA-256 checked. Music 1 (BIOS - Zorrovian) is recognized under the exact uploaded filename and can be imported from USB; it is not embedded in this build because the MP3 is not present in the GitHub source inputs.
 
-- Workflow run: [#239 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42537225780)
-- Pull request: [#6 — draft, not merged](https://github.com/Vikik0/PS3-SCALE/pull/6)
-- Source branch: feature/online-graphics-database
-- Source commit: 77d1be60c982df55b11a7316b4c8453c4c00fef0
-- Artifact: PS3-SCALE-Alpha-0.2-build-with-embedded-theme
-- Artifact ID: 13640026610
-- Artifact ZIP size: 14,187,869 bytes
-- Artifact ZIP SHA-256: 1bc94cb2e6196e0ee38b5484122502bbc527af4183b6adee5ca954c5722188f1
+## Validation status
+- Source changes are committed to `feature/online-graphics-database`.
+- Host tests and PS3 ELF / SELF / PKG / GNPDRM build: pending the latest GitHub Actions run.
+- XMB asset dimensions and package contents: pending CI verification.
+- Physical PS3 Slim / CFW 4.92 visual verification: still required. CI cannot prove the exact RSX appearance on the console.
 
-## Build outputs
+## Existing safety boundaries
+- Scanning is read-only; original game files are not replaced.
+- Community NCL index entries remain searchable references only; arbitrary community files are not executed.
+- Exact Title ID + APP_VER matching remains required for graphics profiles.
+- Multi-write profiles remain disabled for automatic application.
+- No universal AI upscaler, frame generation or guaranteed 60 FPS is claimed.
 
-| File | Size | SHA-256 |
-|---|---:|---|
-| ps3scale.elf | 3,414,232 bytes | 9dbcdae1341b51966a61a2084b9d6adea4d570d1d8ddc3817aa3ad00ec6086c4 |
-| ps3scale.self | 731,408 bytes | d2ff3eb7a897e4a53f0f8fcb57c95f4097de2366f04fc60b804d1d26f410acab |
-| ps3scale.pkg | 6,201,760 bytes | e2180e08d0d40e705c4eebb2ad174bfabdc3fc3e4bdb66ba50aed715a8c986ed |
-| ps3scale.gnpdrm.pkg | 6,201,760 bytes | d81faf08281566320a730b02e4d708ad1f1a85d05f41c2afe0b5759a19b58631 |
-
-Package headers:
-- Debug PKG: 7f504b47 00000001
-- GNPDRM PKG: 7f504b47 80000001
-
-The GNPDRM package is the intended install package for the user's CFW console. The ZIP artifact contains both packages plus the ELF and SELF build outputs. The artifact and extracted package headers and SHA-256 values were checked after download.
-
-## CI tests
-
-- Host SFO parser tests: PASS.
-- Host scanner tests: PASS.
-- Host ISO metadata tests: PASS.
-- Host PS2 CONFIG builder tests: PASS.
-- Host catalog parsing, duplicate detection and invalid patch rejection tests: PASS.
-- One-launch webMAN script tests: PASS, including aligned/unaligned address guards, V1 stale-script removal, full-body tamper detection/repair and preservation of user-owned scripts.
-- webMAN launch command tests: PASS for PS3 HDD Title ID routes, folder/ISO URL encoding, mounted-disc launch, and rejection of unsafe paths/invalid IDs.
-- Host locale / UTF-8 glyph mapping / keyboard layout tests: PASS.
-- Static UI contract tests: PASS.
-- PPU ELF, CEX SELF, debug PKG and finalized GNPDRM PKG: built successfully.
-- Embedded theme assembly and asset integrity check: PASS.
-
-## Implemented in Run #240
-
-- First-run language selection: English, Arabic and Spanish; saved in USRDIR/settings.cfg.
-- Spanish translations and an embedded compact Arabic bitmap glyph atlas derived from Noto Sans Arabic.
-- Focused Arabic contextual letter shaping and right-to-left run ordering for translated UI strings.
-- In-app controller keyboard with English, Spanish and Arabic layouts; SELECT and START open it. Native PS3 OSK is no longer used.
-- UTF-8 search input and code-point-aware backspace.
-- Staged startup/loading screen with local app-file check, companion-tool detection and worker-thread game-library scan.
-- Slow low-poly 3D wireframe home emblem with two orbit rings; can be disabled in Settings.
-- Settings persist language, music ON/OFF, volume and animation ON/OFF. Music OFF skips audio initialization at startup and shuts down the decoder, audio port and thread immediately; Music ON restarts them.
-- Reset Settings restores English, Music ON, default volume and Home Animation ON.
-- Online catalogue refresh is deferred until the user opens Online Graphics Database; normal startup and game launching remain offline.
-- The supplied MP3 is assembled into USRDIR/theme.mp3 inside the PKG; no USB copy-to-HDD action is needed.
-- PS3/PS2 library scanning, PARAM.SFO metadata, cover layout, companion-tool discovery and webMAN Start Game support.
-- Start Game now launches installed PS3 HDD/NPDRM titles with webMAN's `/play.ps3?<TITLE_ID>` route and folder/ISO titles with `/play.ps3<URL-encoded-path>`; no pre-mounted disc is required for installed HDD games.
-- Start Game and profile readiness/arming run in worker threads. The local webMAN HTTP client uses a 3-second connect timeout and bounded readable waits, so a failed webMAN request does not block controller input.
-- If no exact Title ID + APP_VER profile exists, the game still starts unmodified. Before arming an HDD profile, the installed PARAM.SFO is re-scanned and its Title ID, APP_VER and path are revalidated.
-- Online catalogue with 40 starter PS3 profiles, HTTPS verification, 64 KiB response cap, strict parsing and safe cache replacement.
-- Exact Title ID + APP_VER profile matching; profile data is not selected by title name alone.
-- One-launch webMAN scripts for single-write B_COMMUNITY profiles after explicit confirmation. Script headers fingerprint Title ID, APP_VER and patch data.
-- Runtime check of Title ID, in-game state, exact memory address and expected original bytes. The search step is constrained to one candidate address.
-- Before Start Game, PS3 SCALE compares the complete V2 script body with the deterministic expected script. A matching header alone is insufficient; manually edited or appended commands are treated as stale.
-- Legacy V1 and stale PS3 SCALE scripts are detected; user-owned webMAN scripts are never overwritten or deleted.
-- Multi-write profiles remain disabled for automatic application. The one-launch script deletes itself after the launch attempt.
-- No success popup is shown because the current webMAN batch path cannot verify the post-write memory value.
-
-## Profile trust and limitations
-
-The 40 starter entries comprise 33 single-write B_COMMUNITY profiles eligible for one-launch confirmation, 6 multi-write B_COMMUNITY profiles disabled for automation, and 1 B_COMMUNITY_MANUAL profile (Brütal Legend) excluded because the source requires main-menu application and reapplication after the game resets it. All are community-reported and not independently hardware-verified by PS3 SCALE. A successful CI build verifies compilation and host-side contracts, not that a specific profile works on every console or game revision.
-
-The webMAN batch language does not expose a direct APP_VER condition. PS3 SCALE checks APP_VER before arming and against the mounted game when Start Game is used. Do not update a game between arming and launching the profile. The patch changes only the running game process memory; original game files remain unchanged. Exiting the game clears the process-memory patch.
-
-No universal AI upscaler or frame generation is provided, and no fixed 60 FPS result is guaranteed.
-
-## Physical console validation
-
-The target device information currently available is PS3 Slim with CFW 4.92; the exact CECH model, CEX/DEX type and Cobra version are not yet confirmed. A previous Alpha build was confirmed by the user to launch, scan the library, display cover art and play the supplied music. **This feature-branch package has not yet been installed or smoke-tested on the physical console.**
-
-The latest console screenshots show the installed title `RXKIR1131` (Kirby - Nightmare in Dream Land), APP_VER 01.00. This Title ID is not present in the 40-entry starter catalogue, so the correct result is **0 exact enhancement matches**; the title should launch normally without a graphics profile.
-
-Recommended first hardware check: install the GNPDRM PKG, verify launch/library scan/music/settings, then test only one reversible single-write profile after confirming the exact game Title ID and APP_VER. Keep the original game files untouched and exit the game to clear the in-memory patch.
-
-## Not implemented
-
-- No universal AI upscaler, frame generation or guaranteed 60 FPS.
-- No automatic multi-write profile application.
-- No post-write memory verification or success popup.
-- No game-file backup/rollback workflow because this implementation does not modify game files.
-- No signed online updater or automatic package installation; USB update discovery remains a separate local feature.
+## Next console check
+Install the new GNPDRM package over the previous Alpha build and verify, in order: splash, moving staircase, clean text without black boxes, Home cards, Scan Games, Details, Online DB, Settings, Help and About. Confirm Music 2 plays; to use Music 1, copy the supplied MP3 to a USB drive root with its original filename or rename it to `music1.mp3`. Then test one game launch and report any freeze or rendering artifact.
