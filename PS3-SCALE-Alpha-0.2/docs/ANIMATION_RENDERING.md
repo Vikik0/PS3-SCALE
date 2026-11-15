@@ -20,7 +20,7 @@ The Apollo Save logo remains a separate splash asset and is not recolored.
 ## Rendering and performance
 - The staircase is procedural 3D geometry with a perspective camera transform, projected in software into Tiny3D's stable 2D rendering pass. This deliberately avoids relying on RSX depth-buffer behavior that previously hid the scene.
 - Faces are transformed into camera space and sorted back-to-front; faces and line segments crossing the near plane are skipped rather than stretched across the screen.
-- The inner and outer rails, balusters, and tread-edge highlights are submitted in batched line draws.
+- Tread surfaces and outlines are submitted in two batched draws; inner and outer rails, balusters, and tread-edge highlights use batched line draws to reduce RSX submission overhead.
 - RSX alpha testing and source-alpha blending remain enabled for transparent bitmap glyphs, PNG cover art, glass cards, and glow layers.
 - The same scene is drawn behind Home, Scan, Details, Online DB, Settings, Tools, About, Help, Support, language selection, and keyboard screens.
 - No heap allocations, texture creation, or file I/O occur in the frame loop.
