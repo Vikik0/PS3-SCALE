@@ -1865,8 +1865,12 @@ static void draw_home_ambient(void)
                                      outer_radius, angle, y - 0.20f);
         riser[1] = scene_world_point(center_x, center_y, center_z,
                                      outer_radius, next_angle, y - 0.20f);
-        riser[2] = top[2];
-        riser[3] = top[1];
+        /* End the riser at the underside of the bevel: coplanar faces
+           do not overlap, so the pearl highlight cannot flicker/vanish. */
+        riser[2] = scene_world_point(center_x, center_y, center_z,
+                                     outer_radius, next_angle, y + 0.025f);
+        riser[3] = scene_world_point(center_x, center_y, center_z,
+                                     outer_radius, angle, y + 0.025f);
 
         side[0] = scene_world_point(center_x, center_y, center_z,
                                     inner_radius, next_angle, y - 0.20f);
@@ -1892,7 +1896,7 @@ static void draw_home_ambient(void)
                                               outer_radius, angle, y - 0.29f);
 
         scene_push_face(faces, &face_count, top, focal_length,
-                        top_color, 0xf8f5ffcf);
+                        top_color, 0); /* Bevel supplies the visible edge. */
         scene_push_face(faces, &face_count, riser, focal_length,
                         riser_color, 0);
         scene_push_face(faces, &face_count, side, focal_length,
