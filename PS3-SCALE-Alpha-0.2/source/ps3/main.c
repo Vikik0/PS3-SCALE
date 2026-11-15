@@ -1797,39 +1797,42 @@ static void draw_home_ambient(void)
     const float center_z = 34.0f;
     const float inner_radius = 2.0f;
     const float outer_radius = 14.0f;
-    const float angle_step = 0.36f;
+    const float angle_step = tau / 18.0f;
+    const float rise_per_tread = 0.72f;
     const float focal_length = 780.0f;
     unsigned long frame_in_loop =
         g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES;
     float phase = (float)frame_in_loop /
                   (float)PS3SCALE_STAIR_LOOP_FRAMES * tau;
-    float camera_x = 1.8f * (1.0f - cosf(phase));
-    float camera_y = 0.18f * sinf(phase);
-    float camera_z = 3.0f * sinf(phase);
+    /* Each cycle advances exactly one spiral revolution. Relocating the
+       repeating 32-step window is equivalent to the camera moving forward
+       forever through an endless helix: no easing, reverse or hard reset. */
+    float camera_steps = phase / tau * 18.0f;
+    int camera_step_whole = (int)camera_steps;
+    float camera_y = (camera_steps - (float)camera_step_whole) *
+                     rise_per_tread;
     size_t face_count = 0, i;
     int j;
 
-    /* A slow forward dolly with a shallow lateral arc keeps the staircase
-       centered. The camera follows a closed path, so its loop has no cut. */
-    scene_set_camera(camera_x, camera_y, camera_z,
-                     center_x, center_y, center_z);
+    /* Straight, continuously advancing camera; geometry repeats by one
+       tread whenever camera_step_whole increases. */
+    scene_set_camera(0.0f, camera_y, 0.0f,
+                     center_x, camera_y, center_z);
 
     draw_circle_outline(565.0f, 250.0f, 178.0f, 0xcbb8e830);
     draw_circle_outline(565.0f, 250.0f, 164.0f, 0xe3d8f240);
 
-    /* White and silver spiral treads remain fixed; camera parallax creates motion. */
+    /* White/silver treads stream past the camera with no visible end. */
     for (i = 0; i < PS3SCALE_STAIR_STEPS; i++) {
-        float angle = (float)i * angle_step;
+        float angle = ((float)i + (float)camera_step_whole) * angle_step;
         float next_angle = angle + angle_step * 0.92f;
         float y = ((float)i - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
-                  0.72f;
+                  rise_per_tread;
         ps3scale_scene_point_t top[4], riser[4], side[4];
-        u32 top_color = (i % 4u == 0u) ? 0xf4f1f9ee :
-                        (i % 4u == 1u) ? 0xe5e1edee :
-                        (i % 4u == 2u) ? 0xfaf9ffff : 0xebe7f3ee;
-        u32 riser_color = (i % 2u == 0u) ?
-                          0xbcb5cce8 : 0xcac3d9e8;
-        u32 side_color = 0xd4cde2e0;
+        float light = 0.67f + 0.22f * cosf(angle + 0.42f);
+        u32 top_color = scene_blend(0xe1dcedff, 0xfffefeff, light);
+        u32 riser_color = scene_blend(0xb7b0caff, 0xded7e9ff, light);
+        u32 side_color = scene_blend(0xcbc5daff, 0xe8e0eeff, light);
 
         top[0] = scene_world_point(center_x, center_y, center_z,
                                    inner_radius, angle, y + 0.14f);
@@ -1870,8 +1873,8 @@ static void draw_home_ambient(void)
     for (j = 0; j < PS3SCALE_STAIR_STEPS * 6; j++) {
         float t = (float)j / 6.0f;
         float next_t = (float)(j + 1) / 6.0f;
-        float angle = t * angle_step;
-        float next_angle = next_t * angle_step;
+        float angle = (t + (float)camera_step_whole) * angle_step;
+        float next_angle = (next_t + (float)camera_step_whole) * angle_step;
         float y = (t - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
                   0.72f;
         float next_y = (next_t - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
@@ -1895,7 +1898,7 @@ static void draw_home_ambient(void)
 
     /* Fine balusters and tread-edge glints complete the staircase silhouette. */
     for (i = 0; i < PS3SCALE_STAIR_STEPS; i += 3) {
-        float angle = (float)i * angle_step;
+        float angle = ((float)i + (float)camera_step_whole) * angle_step;
         float y = ((float)i - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
                   0.72f;
         ps3scale_scene_point_t base, rail, edge_a, edge_b;
