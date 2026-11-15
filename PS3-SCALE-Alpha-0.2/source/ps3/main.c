@@ -1614,21 +1614,33 @@ static int compare_scene_face_depth(const void *left, const void *right)
     return 0;
 }
 
-static void draw_scene_face(const ps3scale_scene_face_t *face)
+static void draw_scene_faces(const ps3scale_scene_face_t *faces,
+                             size_t face_count)
 {
-    int i;
-    if (!face) return;
+    size_t i;
+    int j;
+    if (!faces || face_count == 0)
+        return;
+
+    /* Keep painter order but submit all tread surfaces in one quad batch. */
     tiny3d_SetPolygon(TINY3D_QUADS);
-    for (i = 0; i < 4; i++) {
-        tiny3d_VertexPos(face->x[i], face->y[i], 65535.0f);
-        tiny3d_VertexColor(face->color);
+    for (i = 0; i < face_count; i++) {
+        for (j = 0; j < 4; j++) {
+            tiny3d_VertexPos(faces[i].x[j], faces[i].y[j], 65535.0f);
+            tiny3d_VertexColor(faces[i].color);
+        }
     }
     tiny3d_End();
 
-    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
-    for (i = 0; i < 4; i++) {
-        tiny3d_VertexPos(face->x[i], face->y[i], 65535.0f);
-        if (i == 0) tiny3d_VertexColor(face->edge);
+    /* Batch every tread outline as line pairs instead of one draw per face. */
+    tiny3d_SetPolygon(TINY3D_LINES);
+    for (i = 0; i < face_count; i++) {
+        for (j = 0; j < 4; j++) {
+            int next = (j + 1) & 3;
+            tiny3d_VertexPos(faces[i].x[j], faces[i].y[j], 65535.0f);
+            tiny3d_VertexColor(faces[i].edge);
+            tiny3d_VertexPos(faces[i].x[next], faces[i].y[next], 65535.0f);
+        }
     }
     tiny3d_End();
 }
@@ -1823,8 +1835,7 @@ static void draw_home_ambient(void)
 
     /* Painter's order gives reliable depth without relying on RSX Z state. */
     qsort(faces, face_count, sizeof(faces[0]), compare_scene_face_depth);
-    for (i = 0; i < face_count; i++)
-        draw_scene_face(&faces[i]);
+    draw_scene_faces(faces, face_count);
 
     /* Inner and outer spiral handrails are batched to keep frame cost low. */
     tiny3d_SetPolygon(TINY3D_LINES);
