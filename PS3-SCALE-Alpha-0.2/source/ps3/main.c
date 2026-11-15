@@ -3836,7 +3836,7 @@ static void draw_online_database(void)
                     (game ? game->title : "GitHub data file");
             if (game && ps3scale_community_file_matches_exact_game(
                             community, game)) {
-                kind = "ID+VER";
+                kind = "VER OK";
                 badge_color = 0x468f78ff;
             } else if (game) {
                 kind = "REVIEW";
@@ -3873,9 +3873,13 @@ static void draw_online_database(void)
     }
 
     set_ui_font_size(7, 11);
-    snprintf(line, sizeof(line), "RESULTS %u  |  PAGE %u/%u",
-             (unsigned)g_online_result_count,
-             (unsigned)current_page, (unsigned)total_pages);
+    if (g_online_result_count) {
+        snprintf(line, sizeof(line), "RESULTS %u  |  PAGE %u/%u",
+                 (unsigned)g_online_result_count,
+                 (unsigned)current_page, (unsigned)total_pages);
+    } else {
+        snprintf(line, sizeof(line), "RESULTS 0  |  NO MATCHES");
+    }
     draw_text(38.0f, 424.0f, 0x514b69ff, line);
 
     /* Cache status is not a claim that GitHub is currently online or that
@@ -3972,7 +3976,7 @@ static void draw_online_database(void)
             ps3scale_community_file_matches_exact_game(selected_community,
                                                         selected)) {
             draw_text(414.0f, 357.0f, 0x26794bff,
-                      "MATCH: TITLE ID / VERSION METADATA");
+                      "MATCH: ID OR TITLE/REGION + VERSION");
         } else if (selected) {
             draw_text(414.0f, 357.0f, 0xb27b35ff,
                       "MATCH: REVIEW TITLE ID / VERSION");
