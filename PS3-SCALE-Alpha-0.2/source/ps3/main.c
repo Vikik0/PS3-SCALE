@@ -3948,6 +3948,10 @@ static void draw_online_database(void)
 
         draw_soft_chip(414.0f, 190.0f, 182.0f,
                        "GITHUB COMMUNITY DATA", 1);
+        set_ui_font_size(6, 9);
+        draw_text(612.0f, 197.0f, 0x875be8ff,
+                  selected ? "X: GAME DETAILS" : "X: DOWNLOAD DATA");
+        set_ui_font_size(7, 11);
         snprintf(line, sizeof(line), "GAME: %.54s", selected_community->title);
         draw_text(414.0f, 224.0f, 0x29243fff, line);
         snprintf(line, sizeof(line), "TITLE ID: %.18s", selected_community->title_id);
@@ -3980,7 +3984,8 @@ static void draw_online_database(void)
         draw_text(414.0f, 381.0f, 0x514b69ff, line);
         if (can_download) {
             draw_text(414.0f, 405.0f, 0x875be8ff,
-                      "X: DOWNLOAD TO COMMUNITY_DOWNLOADS");
+                      selected ? "SELECT: SAVE TO COMMUNITY_DOWNLOADS" :
+                                 "X: DOWNLOAD TO COMMUNITY_DOWNLOADS");
         } else {
             draw_text(414.0f, 405.0f, 0xb27b35ff,
                       "NO DOWNLOAD: ONLY NCL/TXT UP TO 2 MB");
@@ -4010,7 +4015,7 @@ static void draw_online_database(void)
     }
     set_ui_font_size(6, 9);
     draw_text(24.0f, 482.0f, 0x514b69ff,
-              "D-PAD SELECT | LEFT/RIGHT PAGE | L1/R1 PREV/NEXT | CROSS DOWNLOAD / OPEN");
+              "D-PAD SELECT | LEFT/RIGHT PAGE | L1/R1 PREV/NEXT | CROSS OPEN/DOWNLOAD");
     draw_text(24.0f, 497.0f, 0x875be8ff,
               "TRIANGLE SEARCH | SQUARE FILTER | START SYNC | CIRCLE BACK");
     set_ui_font_size(14, 22);
@@ -5486,6 +5491,18 @@ int main(int argc, char *argv[])
                     start_community_file_download(community);
                 else
                     open_selected_online_match();
+            }
+            /* An installed-game community match uses CROSS for Game
+               Details. SELECT safely saves the linked NCL/TXT as inert
+               data, without altering any game file or applying a patch. */
+            if (select && !old_select && matches) {
+                const ps3scale_profile_t *profile = NULL;
+                const ps3scale_community_file_t *community = NULL;
+                const ps3scale_ps2_config_entry_t *ps2_config = NULL;
+                (void)online_result_at((size_t)g_online_selected,
+                                       &profile, &community, &ps2_config);
+                if (community)
+                    start_community_file_download(community);
             }
             if (start && !old_start)
                 start_catalog_sync_worker(1);
