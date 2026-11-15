@@ -252,6 +252,27 @@ assert "tiny3d_AlphaTest(1, 0x10, TINY3D_ALPHA_FUNC_GEQUAL);" in draw_ui_impl
 assert "tiny3d_BlendFunc(1," in draw_ui_impl
 assert "TINY3D_CLEAR_ZBUFFER" not in draw_ui_impl
 
+# The library/detail UI upgrade must not touch scanner, launch or apply paths.
+library_ui = section("static void draw_library_filter_item(", "static void draw_settings(void)")
+assert "draw_rounded_rect(x, y, w, 24.0f, 7.0f" in library_ui
+assert "draw_rounded_outline(x - 2.0f, y - 2.0f, w + 4.0f" in library_ui
+assert "draw_rounded_rect(x + 107.0f, y + 82.0f" in library_ui
+assert "game_is_ps3(game) ? \"PS3\" : \"PS2\"" in library_ui
+assert "PAGE %u / %u" in library_ui
+assert "PS3SCALE_SCAN_GRID_COUNT" in library_ui
+assert "MATCHED PROFILE - REVIEW FIRST" in library_ui
+assert "MATCHED PS2 CONFIG - REVIEW FIRST" in library_ui
+assert "NO MATCHED FILE - PLAY UNMODIFIED" in library_ui
+assert "CONCEPT PREVIEW" in library_ui
+assert "This is NOT an HD texture replacement." in library_ui
+assert "Illustration only; not real game footage." in library_ui
+assert "Higher Resolution (profile-dependent)" not in library_ui
+assert "Improved Texture Sharpness" not in library_ui
+assert "Smoother Performance (game-specific)" not in library_ui
+assert "TRIANGLE: APPLY PROFILE" in library_ui
+assert "TRIANGLE: DOWNLOAD CONFIG" in library_ui
+assert "CROSS: START GAME" in library_ui
+
 # Library sorting and companion-tool boundaries remain intact.
 assert "qsort(g_games.items" in src
 assert "SCREEN_TOOLS" in src
