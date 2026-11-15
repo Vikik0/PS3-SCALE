@@ -168,19 +168,40 @@ assert "ps3scale_hardware_info_parse" in hardware_detect_src
 assert "ps3scale_console_type_name" in about
 assert "IDPS" not in hardware_detect_src and "PSID" not in hardware_detect_src
 
-# Home animation is a visible, slowly looping perspective spiral staircase.
+# Home animation is a straight camera ascent through a seamless helical staircase.
 ambient = section("static void draw_home_ambient(void)", "static void set_settings_message")
-assert "PS3SCALE_STAIR_STEPS 24" in src
-assert "scene_project_point" in ambient
+assert "PS3SCALE_STAIR_STEPS 48" in src
+assert "PS3SCALE_STAIR_STEPS_PER_TURN 24" in src
+assert "PS3SCALE_STAIR_LOOP_FRAMES 21600ul" in src
+assert "PS3SCALE_STAIR_STEP_RISE 0.48f" in src
+assert "scene_project_point" in src
 assert "scene_push_face" in ambient
 assert "compare_scene_face_depth" in ambient
 assert "qsort(faces, face_count" in ambient
-assert "Spiral handrail" in ambient
-assert "TINY3D_LINE_STRIP" in ambient
-assert "g_frame_counter % 21600ul" in ambient
-assert "sinf(phase)" in ambient
-assert "outer_radius = 9.6f" in ambient
-assert "const float center_x = 7.2f;" in ambient
+assert "camera rises in a straight line" in ambient
+assert "Spiral handrails" in ambient
+assert "TINY3D_LINES" in ambient
+assert "g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES" in ambient
+assert "camera_step = loop_progress *" in ambient
+assert "step_fraction = camera_step -" in ambient
+assert "cycle_count *" in ambient
+assert "scene_stair_point" in ambient
+assert "outer_radius = 10.4f" in ambient
+assert "inner_radius = 2.0f" in ambient
+assert "PS3SCALE_STAIR_STEP_RISE" in ambient
+assert "if (points[i].z <= 2.5f)" in src
+assert "if (a.z <= 2.5f || b.z <= 2.5f)" in src
+
+# One camera cycle advances exactly one 24-tread revolution and returns to
+# the same camera-relative geometry without reversing direction.
+def staircase_pose(camera_step, offset):
+    whole = int(camera_step)
+    fraction = camera_step - whole
+    return ((whole + offset) % 24,
+            round((offset - fraction) * 0.48, 6))
+
+for offset in range(-24, 24):
+    assert staircase_pose(0.0, offset) == staircase_pose(24.0, offset)
 assert "case 0xffffff00u: rgb = 0x29243f00u;" in src
 assert 'sscanf(line, "animation_v2=%d"' in src
 assert 'fprintf(fp, "animation_v2=%d\\n"' in src
@@ -354,8 +375,8 @@ assert "draw_home_ambient();" in draw_ui_impl
 assert "draw_app_icon_preview" in src
 assert "XMB APP ICON" in src
 assert "scene_project_point" in src
-assert "PS3SCALE_STAIR_STEPS 24" in src
-assert "g_frame_counter % 21600ul" in src
+assert "PS3SCALE_STAIR_STEPS 48" in src
+assert "g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES" in src
 assert "draw_home_card" not in src  # home cards are rendered in the main menu loop
 assert "PS3" in home and "SCALE" in home and "COMPANION TOOLS" in home
 assert '"PS3 / PS2 Library"' in home and '"Game Profiles"' in home
