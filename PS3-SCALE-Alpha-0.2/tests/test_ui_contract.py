@@ -273,6 +273,49 @@ assert "TRIANGLE: APPLY PROFILE" in library_ui
 assert "TRIANGLE: DOWNLOAD CONFIG" in library_ui
 assert "CROSS: START GAME" in library_ui
 
+# Stage 5: Settings, Help, About and profile toast share the pearl UI language.
+settings_ui = section("static void draw_settings(void)", "static void draw_tools(void)")
+assert "PREFERENCES" in settings_ui
+assert "GROUP AUTO-HIGHLIGHTS" in settings_ui
+assert 'draw_soft_chip(28.0f, 136.0f, 132.0f, "General", active_group == 0)' in settings_ui
+assert 'draw_soft_chip(28.0f, 184.0f, 132.0f, "Display", active_group == 1)' in settings_ui
+assert 'draw_soft_chip(28.0f, 232.0f, 132.0f, "Audio", active_group == 2)' in settings_ui
+assert 'draw_soft_chip(28.0f, 280.0f, 132.0f, "System", active_group == 3)' in settings_ui
+assert "draw_rounded_rect(198.0f, y - 5.0f, 620.0f, 28.0f" in settings_ui
+assert "draw_rounded_outline(198.0f, y - 5.0f, 620.0f, 28.0f" in settings_ui
+assert "draw_rounded_rect(748.0f, y, 54.0f, 18.0f, 9.0f" in settings_ui
+assert "g_music_volume" in settings_ui and "g_animation_enabled" in settings_ui
+assert "g_music_track1_missing" in settings_ui
+help_ui = section("static void draw_help(void)", "static void draw_support_form(void)")
+for token in ("Scan Games", "Select a Game", "Review Match",
+              "Save Data Safely", "Start Game", "support@ps3scale.app",
+              "Report an Issue", "Send Feedback",
+              "never auto-executed"):
+    assert token in help_ui
+assert "draw_soft_card(x, 112.0f, 154.0f, 202.0f, 0)" in help_ui
+assert "draw_rounded_rect(x + 12.0f, 126.0f, 28.0f, 24.0f" in help_ui
+about_ui = section("static void draw_about(void)", "static void draw_profile_toast(void)")
+for token in ("READ-ONLY SCANNING", "VERSION-MATCHED DATA",
+              "NO AUTO-APPLY", "Hardware Information",
+              "CONSOLE DETECTED", "NOT AVAILABLE",
+              "No universal upscaler or guaranteed 60 FPS is claimed.",
+              "draw_app_icon_preview(645.0f, 136.0f)"):
+    assert token in about_ui
+icon_ui = section("static void draw_app_icon_preview(float x, float y)",
+                  "static void draw_about(void)")
+assert "draw_rounded_rect(x, y, 164.0f, 190.0f, 18.0f" in icon_ui
+assert "PS3" in icon_ui and "SCALE" in icon_ui
+toast_ui = section("static void draw_profile_toast(void)", "static void draw_ui(void)")
+assert "draw_rounded_rect(568.0f, 16.0f, 264.0f, 48.0f, 10.0f" in toast_ui
+assert "ONE-LAUNCH PROFILE ARMED" in toast_ui
+settings_input = section("} else if (g_screen == SCREEN_SETTINGS) {",
+                         "} else if (g_screen == SCREEN_HELP) {")
+assert "g_settings_selected = (g_settings_selected + 1) % SETTINGS_COUNT" in settings_input
+assert "set_background_music_enabled" in settings_input
+assert "g_animation_enabled = !g_animation_enabled" in settings_input
+assert "scan_library();" in settings_input
+assert "save_app_settings();" in settings_input
+
 # Library sorting and companion-tool boundaries remain intact.
 assert "qsort(g_games.items" in src
 assert "SCREEN_TOOLS" in src
