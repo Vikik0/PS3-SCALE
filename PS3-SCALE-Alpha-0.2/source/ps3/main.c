@@ -2312,8 +2312,9 @@ static void rebuild_online_results(void)
         }
     }
 
-    /* PS2 CONFIG search is title-name based and does not require a local ISO. */
-    if (g_online_query[0] && g_ps2_config_db.items) {
+    /* PS2 configs are compatibility files, not graphics upgrades.
+       Show them only under ALL FILES, and only for an explicit search. */
+    if (!graphics_only && g_online_query[0] && g_ps2_config_db.items) {
         for (j = 0; j < g_ps2_config_db.count; j++) {
             const ps3scale_ps2_config_entry_t *entry = &g_ps2_config_db.items[j];
             const ps3scale_ps2_config_entry_t *best;
