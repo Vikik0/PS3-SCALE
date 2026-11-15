@@ -3915,7 +3915,7 @@ static void draw_online_database(void)
         snprintf(line, sizeof(line), "EFFECT: %.42s", selected_profile->effect);
         draw_text(414.0f, 328.0f, 0x514b69ff, line);
         draw_text(414.0f, 359.0f, 0xb27b35ff,
-                  "REVIEW PROFILE SAFETY IN GAME DETAILS");
+                  "APPLY: REVIEW + CONFIRM IN DETAILS");
         draw_text(414.0f, 390.0f, 0x875be8ff,
                   "CROSS: OPEN GAME DETAILS");
         draw_text(414.0f, 418.0f, 0x77718fff,
@@ -3959,9 +3959,10 @@ static void draw_online_database(void)
         draw_text(414.0f, 247.0f, 0x514b69ff, line);
         snprintf(line, sizeof(line), "CATEGORY: %.24s", selected_community->category);
         draw_text(414.0f, 269.0f, 0x514b69ff, line);
-        snprintf(line, sizeof(line), "VERSION: %.18s",
+        snprintf(line, sizeof(line), "VERSION: %.18s | REGION: %s",
                  selected_community->app_ver[0] ?
-                 selected_community->app_ver : "Not specified");
+                 selected_community->app_ver : "Not specified",
+                 ps3scale_community_region_label(selected_community->title_id));
         draw_text(414.0f, 291.0f, 0x514b69ff, line);
         snprintf(line, sizeof(line), "SOURCE: %.38s", selected_community->repository);
         draw_text(414.0f, 313.0f, 0x514b69ff, line);
