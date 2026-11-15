@@ -26,9 +26,9 @@ The Apollo Save logo remains a separate splash asset and is not recolored.
 - No heap allocations, texture creation, or file I/O occur in the frame loop.
 
 ## XMB artwork
-- \`ICON0.PNG\` is the external PS3 SCALE application icon.
-- \`PIC1.PNG\` is the bright white/lavender staircase wallpaper with quiet negative space for XMB icons.
-- \`PIC0.PNG\` is the compact XMB preview tile.
+- `ICON0.PNG` is the external PS3 SCALE application icon.
+- `PIC1.PNG` is the bright white/lavender staircase wallpaper with quiet negative space for XMB icons.
+- `PIC0.PNG` is the compact XMB preview tile.
 - These are static package artwork; the in-app staircase is generated and animated at runtime.
 
 ## Verification
