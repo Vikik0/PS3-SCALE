@@ -176,6 +176,8 @@ assert "PS3SCALE_STAIR_LOOP_FRAMES 21600ul" in src
 assert "scene_camera_space_point" in src
 assert "scene_project_camera_point" in src
 assert "scene_push_face" in ambient
+assert "draw_scene_faces(faces, face_count);" in ambient
+assert "tiny3d_SetPolygon(TINY3D_QUADS);" in src
 assert "compare_scene_face_depth" in ambient
 assert "qsort(faces, face_count" in ambient
 assert "slow forward dolly with a shallow lateral arc" in ambient
