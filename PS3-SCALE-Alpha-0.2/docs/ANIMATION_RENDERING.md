@@ -2,7 +2,7 @@
 
 ## Visual design
 The in-app background follows the approved pearl-white / pale-lavender PS3 SCALE reference:
-- a floating spiral staircase with 24 broad, softly shaded treads,
+- a floating spiral staircase with 32 broad, softly shaded treads,
 - white and silver tread tops, pale-lilac risers, and restrained violet edge lighting,
 - inner and outer spiral handrails with fine balusters,
 - a quiet lavender gradient, subtle light ribbons, a restrained halo, and low-contrast particles,
