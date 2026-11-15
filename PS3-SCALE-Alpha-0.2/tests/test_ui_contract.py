@@ -395,6 +395,9 @@ for total in [0, 1, 7, 8, 9, 15, 16, 17, 61]:
 online_input = section("} else if (g_screen == SCREEN_ONLINE_DB) {", "} else if (g_screen == SCREEN_SETTINGS) {")
 assert "up && !old_up" in online_input
 assert "down && !old_down" in online_input
+# GRAPHICS-only result filters must not include PS2 compatibility configs.
+online_results_source = section("static void rebuild_online_results(void)", "static const ps3scale_game_t *online_result_at(")
+assert "if (!graphics_only && g_online_query[0] && g_ps2_config_db.items)" in online_results_source
 assert "PS3SCALE_ONLINE_PAGE_SIZE" in online_input
 assert "(left && !old_left)" in online_input
 assert "(right && !old_right)" in online_input
