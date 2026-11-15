@@ -159,7 +159,7 @@ assert "ya2d_freeTexture(g_apollo_texture)" in main
 assert "ps3scale_hardware_detect(&g_hardware_info)" in main
 about = section("static void draw_about(void)", "static void draw_ui(void)")
 for token in ("Hardware Information", "Model", "Console type",
-              "Firmware", "Platform ID", "Hardware information is unavailable.")
+              "Firmware", "Platform ID", "Hardware information is unavailable."):
     assert token in about
 hardware_detect_path = source_path.with_name("hardware_detect.c")
 hardware_detect_src = hardware_detect_path.read_text(encoding="utf-8")
