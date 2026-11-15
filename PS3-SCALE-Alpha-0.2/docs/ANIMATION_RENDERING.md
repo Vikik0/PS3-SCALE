@@ -11,11 +11,11 @@ The in-app background follows the approved pearl-white / pale-lavender PS3 SCALE
 The Apollo Save logo remains a separate splash asset and is not recolored.
 
 ## Camera motion and seamless loop
-- The staircase geometry remains fixed; the camera supplies the motion through perspective and parallax.
-- The camera follows a slow forward dolly with a shallow lateral arc while continuously looking toward the staircase. It does not pause at the loop boundary.
-- The path is periodic over 21,600 frames (six minutes at 60 FPS). Camera position, viewing direction, background light phase, and glow all return to their initial values together.
-- The path is built from sine and cosine functions, so the camera travels continuously around a closed cinematic track instead of moving forward and then abruptly teleporting or reversing.
-- Home Animation can be disabled in Settings.
+- The reference background remains pearl-white, silver and pale lavender, with thin violet illumination. The procedural stairs are a stylized, low-memory approximation; they are not yet photorealistic.
+- The camera travels straight ahead through an **endlessly repeating staircase**, with a camera-relative window of 32 visible treads.
+- The helix repeats its angle every 18 treads. A continuous fractional camera position moves upward through those steps; at each whole-tread boundary, the tread window shifts by one index. The same positions remain in view, so no visible camera teleport or reverse is required.
+- A complete visual revolution advances over 21,600 frames (six minutes **if** the PS3 sustains 60 FPS). This is currently frame-based timing, not real-time clock timing, so actual speed depends on measured frame rate.
+- The background lighting and particles use the same periodic phase. The player can disable animation in Settings.
 
 ## Rendering and performance
 - The staircase is procedural 3D geometry with a perspective camera transform, projected in software into Tiny3D's stable 2D rendering pass. This deliberately avoids relying on RSX depth-buffer behavior that previously hid the scene.

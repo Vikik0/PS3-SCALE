@@ -1083,54 +1083,82 @@ static void draw_gear_outline(float cx, float cy, float radius, u32 color)
     tiny3d_End();
 }
 
+/* Tiny3D draws the icon shapes in vector geometry at the current video
+   resolution, avoiding enlarged low-resolution bitmap icons. */
+static void draw_icon_diamond(float cx, float cy,
+                              float rx, float ry, u32 color)
+{
+    tiny3d_SetPolygon(TINY3D_QUADS);
+    tiny3d_VertexPos(cx, cy - ry, 65535.0f);
+    tiny3d_VertexColor(ui_theme_color(color));
+    tiny3d_VertexPos(cx + rx, cy, 65535.0f);
+    tiny3d_VertexPos(cx, cy + ry, 65535.0f);
+    tiny3d_VertexPos(cx - rx, cy, 65535.0f);
+    tiny3d_End();
+}
+
 static void draw_menu_icon(int index, float x, float y, int selected)
 {
-    u32 ink = selected ? 0x875be8ff : 0x514b69ff;
-    u32 tile = selected ? 0xeeeaffee : 0xf8f9fcee;
-    u32 border = selected ? 0x8068e6ff : 0xd9deebff;
+    u32 ink = selected ? 0xfffbffff : 0x32294fff;
+    u32 detail = selected ? 0x6120bfff : 0xf6f1ffff;
+    u32 tile = selected ? 0x833be3ff : 0xf7f5fdf4;
+    u32 border = selected ? 0xb67affff : 0xe1d9eeff;
+
+    /* Soft plate shadow, body and single top-edge specular highlight. */
+    draw_solid_rect(x + 2.0f, y + 4.0f, 42.0f, 42.0f,
+                    selected ? 0x50258c55 : 0x88809d32);
     draw_solid_rect(x, y, 42.0f, 42.0f, tile);
     draw_outline_rect(x, y, 42.0f, 42.0f, border);
+    draw_solid_rect(x + 4.0f, y + 3.0f, 34.0f, 2.0f,
+                    selected ? 0xb77bffb8 : 0xffffffc8);
+
     if (index == 0) {
-        draw_icon_line(x + 8.0f, y + 15.0f, x + 14.0f, y + 9.0f, ink);
-        draw_icon_line(x + 14.0f, y + 9.0f, x + 28.0f, y + 9.0f, ink);
-        draw_icon_line(x + 28.0f, y + 9.0f, x + 35.0f, y + 15.0f, ink);
-        draw_icon_line(x + 35.0f, y + 15.0f, x + 38.0f, y + 27.0f, ink);
-        draw_icon_line(x + 38.0f, y + 27.0f, x + 33.0f, y + 32.0f, ink);
-        draw_icon_line(x + 33.0f, y + 32.0f, x + 27.0f, y + 27.0f, ink);
-        draw_icon_line(x + 27.0f, y + 27.0f, x + 15.0f, y + 27.0f, ink);
-        draw_icon_line(x + 15.0f, y + 27.0f, x + 9.0f, y + 32.0f, ink);
-        draw_icon_line(x + 9.0f, y + 32.0f, x + 4.0f, y + 27.0f, ink);
-        draw_icon_line(x + 4.0f, y + 27.0f, x + 8.0f, y + 15.0f, ink);
-        draw_icon_line(x + 10.0f, y + 18.0f, x + 18.0f, y + 18.0f, ink);
-        draw_icon_line(x + 14.0f, y + 14.0f, x + 14.0f, y + 22.0f, ink);
-        draw_circle_outline(x + 28.0f, y + 17.0f, 2.2f, ink);
-        draw_circle_outline(x + 33.0f, y + 22.0f, 2.2f, ink);
+        /* Filled, symmetric controller glyph with bright shoulder buttons. */
+        draw_solid_rect(x + 8.0f, y + 14.0f, 26.0f, 15.0f, ink);
+        draw_solid_rect(x + 6.0f, y + 18.0f, 6.0f, 13.0f, ink);
+        draw_solid_rect(x + 30.0f, y + 18.0f, 6.0f, 13.0f, ink);
+        draw_solid_rect(x + 9.0f, y + 12.0f, 10.0f, 3.0f, ink);
+        draw_solid_rect(x + 23.0f, y + 12.0f, 10.0f, 3.0f, ink);
+        draw_solid_rect(x + 13.0f, y + 19.0f, 3.0f, 11.0f, detail);
+        draw_solid_rect(x + 9.0f, y + 23.0f, 11.0f, 3.0f, detail);
+        draw_circle_outline(x + 28.0f, y + 20.5f, 2.2f, detail);
+        draw_circle_outline(x + 32.0f, y + 25.5f, 2.2f, detail);
+        draw_solid_rect(x + 20.0f, y + 18.0f, 3.0f, 2.0f,
+                        selected ? 0xeccaffff : 0x9275c3ff);
     } else if (index == 1) {
-        draw_icon_line(x + 8.0f, y + 15.0f, x + 21.0f, y + 7.0f, ink);
-        draw_icon_line(x + 21.0f, y + 7.0f, x + 34.0f, y + 15.0f, ink);
-        draw_icon_line(x + 34.0f, y + 15.0f, x + 21.0f, y + 23.0f, ink);
-        draw_icon_line(x + 21.0f, y + 23.0f, x + 8.0f, y + 15.0f, ink);
-        draw_icon_line(x + 8.0f, y + 22.0f, x + 21.0f, y + 30.0f, ink);
-        draw_icon_line(x + 21.0f, y + 30.0f, x + 34.0f, y + 22.0f, ink);
-        draw_icon_line(x + 8.0f, y + 29.0f, x + 21.0f, y + 37.0f, ink);
-        draw_icon_line(x + 21.0f, y + 37.0f, x + 34.0f, y + 29.0f, ink);
+        /* Three stacked 3D-looking layers, like the reference screenshot. */
+        draw_icon_diamond(x + 21.0f, y + 12.0f, 15.0f, 7.0f, ink);
+        draw_icon_diamond(x + 21.0f, y + 22.0f, 15.0f, 7.0f, ink);
+        draw_icon_diamond(x + 21.0f, y + 32.0f, 15.0f, 7.0f, ink);
+        draw_icon_line(x + 9.0f, y + 13.0f, x + 21.0f, y + 19.0f, detail);
+        draw_icon_line(x + 21.0f, y + 19.0f, x + 33.0f, y + 13.0f, detail);
     } else if (index == 2) {
+        /* Thick, high-contrast gear with a clear central bearing. */
         draw_gear_outline(x + 21.0f, y + 21.0f, 15.0f, ink);
-        draw_circle_outline(x + 21.0f, y + 21.0f, 5.0f, ink);
+        draw_gear_outline(x + 21.0f, y + 21.0f, 13.0f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 5.6f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 4.0f, detail);
     } else if (index == 3) {
+        /* Help: legible question mark inside a double-ring circle. */
         draw_circle_outline(x + 21.0f, y + 21.0f, 15.0f, ink);
-        draw_icon_line(x + 15.0f, y + 13.0f, x + 25.0f, y + 13.0f, ink);
-        draw_icon_line(x + 25.0f, y + 13.0f, x + 28.0f, y + 19.0f, ink);
-        draw_icon_line(x + 28.0f, y + 19.0f, x + 21.0f, y + 24.0f, ink);
-        draw_icon_line(x + 21.0f, y + 24.0f, x + 21.0f, y + 29.0f, ink);
-        draw_solid_rect(x + 19.5f, y + 33.0f, 3.0f, 3.0f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 13.0f, ink);
+        draw_icon_line(x + 14.0f, y + 16.0f, x + 18.0f, y + 12.0f, ink);
+        draw_icon_line(x + 18.0f, y + 12.0f, x + 24.0f, y + 12.0f, ink);
+        draw_icon_line(x + 24.0f, y + 12.0f, x + 28.0f, y + 17.0f, ink);
+        draw_icon_line(x + 28.0f, y + 17.0f, x + 21.0f, y + 24.0f, ink);
+        draw_solid_rect(x + 20.0f, y + 23.0f, 3.0f, 5.0f, ink);
+        draw_solid_rect(x + 20.0f, y + 31.0f, 3.0f, 3.0f, ink);
     } else if (index == 4) {
+        /* Companion tools / enhancements. */
         draw_gear_outline(x + 21.0f, y + 21.0f, 14.0f, ink);
-        draw_icon_line(x + 8.0f, y + 34.0f, x + 34.0f, y + 8.0f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 5.0f, ink);
+        draw_icon_line(x + 10.0f, y + 32.0f, x + 32.0f, y + 10.0f, ink);
     } else {
+        /* About: information glyph matches the main dashboard reference. */
         draw_circle_outline(x + 21.0f, y + 21.0f, 15.0f, ink);
-        draw_solid_rect(x + 19.5f, y + 15.0f, 3.0f, 12.0f, ink);
-        draw_solid_rect(x + 19.5f, y + 10.0f, 3.0f, 3.0f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 13.0f, ink);
+        draw_solid_rect(x + 19.5f, y + 18.0f, 3.0f, 12.0f, ink);
+        draw_solid_rect(x + 19.5f, y + 12.0f, 3.0f, 3.0f, ink);
     }
 }
 
@@ -1769,39 +1797,42 @@ static void draw_home_ambient(void)
     const float center_z = 34.0f;
     const float inner_radius = 2.0f;
     const float outer_radius = 14.0f;
-    const float angle_step = 0.36f;
+    const float angle_step = tau / 18.0f;
+    const float rise_per_tread = 0.72f;
     const float focal_length = 780.0f;
     unsigned long frame_in_loop =
         g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES;
     float phase = (float)frame_in_loop /
                   (float)PS3SCALE_STAIR_LOOP_FRAMES * tau;
-    float camera_x = 1.8f * (1.0f - cosf(phase));
-    float camera_y = 0.18f * sinf(phase);
-    float camera_z = 3.0f * sinf(phase);
+    /* Each cycle advances exactly one spiral revolution. Relocating the
+       repeating 32-step window is equivalent to the camera moving forward
+       forever through an endless helix: no easing, reverse or hard reset. */
+    float camera_steps = phase / tau * 18.0f;
+    int camera_step_whole = (int)camera_steps;
+    float camera_y = (camera_steps - (float)camera_step_whole) *
+                     rise_per_tread;
     size_t face_count = 0, i;
     int j;
 
-    /* A slow forward dolly with a shallow lateral arc keeps the staircase
-       centered. The camera follows a closed path, so its loop has no cut. */
-    scene_set_camera(camera_x, camera_y, camera_z,
-                     center_x, center_y, center_z);
+    /* Straight, continuously advancing camera; geometry repeats by one
+       tread whenever camera_step_whole increases. */
+    scene_set_camera(0.0f, camera_y, 0.0f,
+                     center_x, camera_y, center_z);
 
     draw_circle_outline(565.0f, 250.0f, 178.0f, 0xcbb8e830);
     draw_circle_outline(565.0f, 250.0f, 164.0f, 0xe3d8f240);
 
-    /* White and silver spiral treads remain fixed; camera parallax creates motion. */
+    /* White/silver treads stream past the camera with no visible end. */
     for (i = 0; i < PS3SCALE_STAIR_STEPS; i++) {
-        float angle = (float)i * angle_step;
+        float angle = ((float)i + (float)camera_step_whole) * angle_step;
         float next_angle = angle + angle_step * 0.92f;
         float y = ((float)i - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
-                  0.72f;
+                  rise_per_tread;
         ps3scale_scene_point_t top[4], riser[4], side[4];
-        u32 top_color = (i % 4u == 0u) ? 0xf4f1f9ee :
-                        (i % 4u == 1u) ? 0xe5e1edee :
-                        (i % 4u == 2u) ? 0xfaf9ffff : 0xebe7f3ee;
-        u32 riser_color = (i % 2u == 0u) ?
-                          0xbcb5cce8 : 0xcac3d9e8;
-        u32 side_color = 0xd4cde2e0;
+        float light = 0.67f + 0.22f * cosf(angle + 0.42f);
+        u32 top_color = scene_blend(0xe1dcedff, 0xfffefeff, light);
+        u32 riser_color = scene_blend(0xb7b0caff, 0xded7e9ff, light);
+        u32 side_color = scene_blend(0xcbc5daff, 0xe8e0eeff, light);
 
         top[0] = scene_world_point(center_x, center_y, center_z,
                                    inner_radius, angle, y + 0.14f);
@@ -1842,8 +1873,8 @@ static void draw_home_ambient(void)
     for (j = 0; j < PS3SCALE_STAIR_STEPS * 6; j++) {
         float t = (float)j / 6.0f;
         float next_t = (float)(j + 1) / 6.0f;
-        float angle = t * angle_step;
-        float next_angle = next_t * angle_step;
+        float angle = (t + (float)camera_step_whole) * angle_step;
+        float next_angle = (next_t + (float)camera_step_whole) * angle_step;
         float y = (t - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
                   0.72f;
         float next_y = (next_t - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
@@ -1867,7 +1898,7 @@ static void draw_home_ambient(void)
 
     /* Fine balusters and tread-edge glints complete the staircase silhouette. */
     for (i = 0; i < PS3SCALE_STAIR_STEPS; i += 3) {
-        float angle = (float)i * angle_step;
+        float angle = ((float)i + (float)camera_step_whole) * angle_step;
         float y = ((float)i - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
                   0.72f;
         ps3scale_scene_point_t base, rail, edge_a, edge_b;
@@ -3488,20 +3519,101 @@ static void draw_keyboard(void)
 }
 
 
+/* Light-weight rounded panels: rendered as two rectangular strips plus a
+   single batch of corner triangles, with no textures or frame allocations. */
+static void draw_rounded_rect(float x, float y, float w, float h,
+                              float radius, u32 color)
+{
+    int corner, segment, colored = 0;
+    const int segments = 6;
+    const float pi = 3.14159265359f;
+    float r = radius;
+    float cx[4], cy[4], start[4];
+
+    if (r > w * 0.5f) r = w * 0.5f;
+    if (r > h * 0.5f) r = h * 0.5f;
+    if (r <= 0.0f) {
+        draw_solid_rect(x, y, w, h, color);
+        return;
+    }
+
+    draw_solid_rect(x + r, y, w - r * 2.0f, h, color);
+    draw_solid_rect(x, y + r, r, h - r * 2.0f, color);
+    draw_solid_rect(x + w - r, y + r, r, h - r * 2.0f, color);
+
+    cx[0] = x + w - r; cy[0] = y + r;     start[0] = pi * 1.5f;
+    cx[1] = x + w - r; cy[1] = y + h - r; start[1] = 0.0f;
+    cx[2] = x + r;     cy[2] = y + h - r; start[2] = pi * 0.5f;
+    cx[3] = x + r;     cy[3] = y + r;     start[3] = pi;
+
+    tiny3d_SetPolygon(TINY3D_TRIANGLES);
+    for (corner = 0; corner < 4; corner++) {
+        for (segment = 0; segment < segments; segment++) {
+            float a = start[corner] + (pi * 0.5f) *
+                      (float)segment / (float)segments;
+            float b = start[corner] + (pi * 0.5f) *
+                      (float)(segment + 1) / (float)segments;
+            tiny3d_VertexPos(cx[corner], cy[corner], 65535.0f);
+            if (!colored) {
+                tiny3d_VertexColor(ui_theme_color(color));
+                colored = 1;
+            }
+            tiny3d_VertexPos(cx[corner] + cosf(a) * r,
+                             cy[corner] + sinf(a) * r, 65535.0f);
+            tiny3d_VertexPos(cx[corner] + cosf(b) * r,
+                             cy[corner] + sinf(b) * r, 65535.0f);
+        }
+    }
+    tiny3d_End();
+}
+
+static void draw_rounded_outline(float x, float y, float w, float h,
+                                 float radius, u32 color)
+{
+    int corner, segment;
+    const int segments = 6;
+    const float pi = 3.14159265359f;
+    float r = radius;
+    float cx[4], cy[4], start[4];
+
+    if (r > w * 0.5f) r = w * 0.5f;
+    if (r > h * 0.5f) r = h * 0.5f;
+
+    cx[0] = x + w - r; cy[0] = y + r;     start[0] = pi * 1.5f;
+    cx[1] = x + w - r; cy[1] = y + h - r; start[1] = 0.0f;
+    cx[2] = x + r;     cy[2] = y + h - r; start[2] = pi * 0.5f;
+    cx[3] = x + r;     cy[3] = y + r;     start[3] = pi;
+
+    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+    for (corner = 0; corner < 4; corner++) {
+        for (segment = 0; segment <= segments; segment++) {
+            float angle = start[corner] +
+                pi * 0.5f * (float)segment / (float)segments;
+            tiny3d_VertexPos(cx[corner] + cosf(angle) * r,
+                             cy[corner] + sinf(angle) * r, 65535.0f);
+            if (corner == 0 && segment == 0)
+                tiny3d_VertexColor(ui_theme_color(color));
+        }
+    }
+    tiny3d_End();
+}
+
 static void draw_soft_card(float x, float y, float w, float h, int selected)
 {
-    draw_solid_rect(x + 4.0f, y + 7.0f, w, h,
-                    selected ? 0x665b8f50 : 0x5e718f35);
-    draw_solid_rect(x, y, w, h,
-                    selected ? 0xf4efffe8 : 0xfaf8ffe8);
-    draw_outline_rect(x, y, w, h,
-                      selected ? 0x9568edff : 0xd9d1eaff);
-    draw_solid_rect(x + 8.0f, y + 5.0f, w - 16.0f, 1.5f, 0xffffffb8);
+    const float corner = 9.0f;
+    draw_rounded_rect(x + 3.0f, y + 6.0f, w, h, corner,
+                      selected ? 0x665b8f50 : 0x5e718f35);
+    draw_rounded_rect(x, y, w, h, corner,
+                      selected ? 0xf4efffe8 : 0xfaf8ffe8);
+    draw_rounded_outline(x, y, w, h, corner,
+                         selected ? 0x9568edff : 0xd9d1eaff);
+    draw_solid_rect(x + 10.0f, y + 5.0f, w - 20.0f, 1.5f, 0xfefcffb8);
     if (selected) {
-        draw_outline_rect(x - 2.0f, y - 2.0f, w + 4.0f, h + 4.0f,
-                          0xb99aff70);
-        draw_solid_rect(x + 10.0f, y + h - 5.0f,
-                        w - 20.0f, 3.0f, 0x875be8ff);
+        draw_rounded_outline(x - 2.0f, y - 2.0f,
+                             w + 4.0f, h + 4.0f, corner + 2.0f,
+                             0xb99aff70);
+        draw_solid_rect(x + 12.0f, y + h - 5.0f,
+                        w - 24.0f, 2.5f, 0x875be8ff);
     }
 }
 
@@ -3517,9 +3629,9 @@ static void draw_text_centered(float x, float y, float w,
 static void draw_soft_chip(float x, float y, float w, const char *label,
                            int selected)
 {
-    draw_solid_rect(x, y, w, 24.0f,
+    draw_rounded_rect(x, y, w, 24.0f, 7.0f,
                     selected ? 0xeee7ffff : 0xf8f6ffff);
-    draw_outline_rect(x, y, w, 24.0f,
+    draw_rounded_outline(x, y, w, 24.0f, 7.0f,
                       selected ? 0x9568edff : 0xd9d1eaff);
     set_ui_font_size(7, 11);
     draw_text_centered(x + 4.0f, y + 7.0f, w - 8.0f,
