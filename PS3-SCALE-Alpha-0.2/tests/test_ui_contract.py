@@ -209,6 +209,17 @@ for boundary in (1200, 2400, 21600):
         assert before[0] == after[0]
         assert abs(before[1] - after[1]) < 0.001
 
+# Glass cards and settings chips use real rounded geometry with no textures.
+card = section("static void draw_soft_card(", "static void draw_text_centered(")
+chip = section("static void draw_soft_chip(", "static void draw_page_header(")
+assert "static void draw_rounded_rect(" in src
+assert "static void draw_rounded_outline(" in src
+assert "TINY3D_TRIANGLES" in src
+assert "draw_rounded_rect(x, y, w, h, corner," in card
+assert "draw_rounded_outline(x, y, w, h, corner," in card
+assert "draw_rounded_rect(x, y, w, 24.0f, 7.0f," in chip
+assert "draw_rounded_outline(x, y, w, 24.0f, 7.0f," in chip
+
 # Five vector icons and their selected/normal states retain the home navigation.
 icons = section("static void draw_menu_icon(", "static void draw_ps_symbol")
 assert "static void draw_icon_diamond(" in src
