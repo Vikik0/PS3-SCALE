@@ -309,7 +309,7 @@ toast_ui = section("static void draw_profile_toast(void)", "static void draw_ui(
 assert "draw_rounded_rect(568.0f, 16.0f, 264.0f, 48.0f, 10.0f" in toast_ui
 assert "ONE-LAUNCH PROFILE ARMED" in toast_ui
 settings_input = section("} else if (g_screen == SCREEN_SETTINGS) {",
-                         "} else if (g_screen == SCREEN_SCAN) {")
+                         "} else if (g_screen == SCREEN_TOOLS) {")
 assert "g_settings_selected = (g_settings_selected + 1) % SETTINGS_COUNT" in settings_input
 assert "set_background_music_enabled" in settings_input
 assert "g_animation_enabled = !g_animation_enabled" in settings_input
