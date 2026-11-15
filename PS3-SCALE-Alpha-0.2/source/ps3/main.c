@@ -3607,7 +3607,7 @@ static void draw_soft_card(float x, float y, float w, float h, int selected)
                       selected ? 0xf4efffe8 : 0xfaf8ffe8);
     draw_rounded_outline(x, y, w, h, corner,
                          selected ? 0x9568edff : 0xd9d1eaff);
-    draw_solid_rect(x + 10.0f, y + 5.0f, w - 20.0f, 1.5f, 0xffffffb8);
+    draw_solid_rect(x + 10.0f, y + 5.0f, w - 20.0f, 1.5f, 0xfefcffb8);
     if (selected) {
         draw_rounded_outline(x - 2.0f, y - 2.0f,
                              w + 4.0f, h + 4.0f, corner + 2.0f,
