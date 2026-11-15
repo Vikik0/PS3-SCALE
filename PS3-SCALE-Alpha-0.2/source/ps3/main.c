@@ -202,6 +202,7 @@ static int g_ui_font_height = 22;
 #define PS3SCALE_COMMUNITY_INDEX_URL "https://raw.githubusercontent.com/Vikik0/PS3-SCALE/feature/online-graphics-database/PS3-SCALE-Alpha-0.2/data/community_game_files.tsv"
 #define PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT (2u * 1024u * 1024u)
 #define PS3SCALE_MAX_ONLINE_RESULTS (PS3SCALE_COMMUNITY_MAX_FILES + PS3SCALE_MAX_GAMES + PS3SCALE_PS2_CONFIG_MAX_ENTRIES)
+#define PS3SCALE_ONLINE_PAGE_SIZE 8u
 
 typedef enum online_result_kind {
     ONLINE_RESULT_PROFILE = 0,
@@ -2311,8 +2312,9 @@ static void rebuild_online_results(void)
         }
     }
 
-    /* PS2 CONFIG search is title-name based and does not require a local ISO. */
-    if (g_online_query[0] && g_ps2_config_db.items) {
+    /* PS2 configs are compatibility files, not graphics upgrades.
+       Show them only under ALL FILES, and only for an explicit search. */
+    if (!graphics_only && g_online_query[0] && g_ps2_config_db.items) {
         for (j = 0; j < g_ps2_config_db.count; j++) {
             const ps3scale_ps2_config_entry_t *entry = &g_ps2_config_db.items[j];
             const ps3scale_ps2_config_entry_t *best;
@@ -3774,155 +3776,254 @@ static void draw_online_database(void)
     const ps3scale_community_file_t *selected_community = NULL;
     const ps3scale_ps2_config_entry_t *selected_ps2_config = NULL;
     const ps3scale_game_t *selected = NULL;
-    char line[192];
+    const size_t page_size = PS3SCALE_ONLINE_PAGE_SIZE;
+    size_t page_start = 0;
+    size_t total_pages = 0;
+    size_t current_page = 0;
     size_t i, visible_count = 0;
+    char line[192];
 
-    draw_page_header("Online DB", "ONLINE GAME DATABASE | Profiles, community files and verified PS2 configurations");
+    if (g_online_result_count) {
+        page_start = ((size_t)g_online_selected / page_size) * page_size;
+        total_pages = (g_online_result_count + page_size - 1u) / page_size;
+        current_page = page_start / page_size + 1u;
+    }
+
+    draw_page_header("Online DB", "ONLINE GAME DATABASE | PS3 profiles, GitHub data and PS2 configs");
     draw_soft_card(20.0f, 88.0f, 360.0f, 360.0f, 0);
     draw_soft_card(394.0f, 88.0f, 440.0f, 360.0f, 0);
 
-    set_ui_font_size(8, 12);
-    draw_text(38.0f, 104.0f, 0xffffffff, "Search updates");
+    set_ui_font_size(10, 15);
+    draw_text(38.0f, 102.0f, 0x29243fff, "Search & Browse");
+    set_ui_font_size(7, 11);
     snprintf(line, sizeof(line), "QUERY: %.36s",
-             g_online_query[0] ? g_online_query : "All local titles");
-    draw_text(38.0f, 128.0f, 0x77718fff, line);
-    snprintf(line, sizeof(line), "FILTER: %.26s", online_filter_label());
-    draw_text(38.0f, 152.0f, 0xcaff39ff, line);
+             g_online_query[0] ? g_online_query : "Installed games");
+    draw_text(38.0f, 125.0f, 0x514b69ff, line);
+    set_ui_font_size(6, 9);
+    snprintf(line, sizeof(line), "FILTER: %.42s", online_filter_label());
+    draw_text(38.0f, 149.0f, 0x875be8ff, line);
 
     selected = online_result_at((size_t)g_online_selected,
                                 &selected_profile,
                                 &selected_community,
                                 &selected_ps2_config);
 
-    for (i = 0; i < g_online_result_count; i++) {
+    /* Only draw the selected result's page. This fixes the old first-eight
+       behavior where navigating beyond result #8 hid the selection. */
+    for (i = page_start;
+         i < g_online_result_count && visible_count < page_size;
+         i++) {
         const ps3scale_profile_t *profile = NULL;
         const ps3scale_community_file_t *community = NULL;
         const ps3scale_ps2_config_entry_t *ps2_config = NULL;
         const ps3scale_game_t *game =
             online_result_at(i, &profile, &community, &ps2_config);
-        const char *title;
-        const char *kind;
+        const char *title, *kind;
+        u32 badge_color;
+        int focused = ((int)i == g_online_selected);
         char row[128];
-        float y;
+        float y = 178.0f + (float)visible_count * 30.0f;
 
-        if (!game && !community && !ps2_config) continue;
-        if (visible_count >= 8) break;
+        if (!game && !community && !ps2_config)
+            continue;
+
         if (ps2_config) {
             title = ps2_config->title;
             kind = "PS2 CFG";
+            badge_color = 0x7e67baff;
         } else if (community) {
             title = community->title[0] ? community->title :
-                    (game ? game->title : "GitHub Game File");
-            kind = "GITHUB";
+                    (game ? game->title : "GitHub data file");
+            if (game && ps3scale_community_file_matches_exact_game(
+                            community, game)) {
+                kind = "VER OK";
+                badge_color = 0x468f78ff;
+            } else if (game) {
+                kind = "REVIEW";
+                badge_color = 0xae884bff;
+            } else {
+                kind = "GITHUB";
+                badge_color = 0x7e67baff;
+            }
         } else {
-            title = game ? game->title : "Game Profile";
+            title = game ? game->title : "Game profile";
             kind = "PROFILE";
+            badge_color = 0x468f78ff;
         }
-        y = 182.0f + (float)visible_count * 30.0f;
-        draw_soft_card(32.0f, y, 334.0f, 26.0f,
-                       (int)i == g_online_selected);
-        draw_solid_rect(40.0f, y + 4.0f, 20.0f, 18.0f,
-                        (i % 3 == 0) ? 0xe5dcf6ff :
-                        (i % 3 == 1) ? 0xe0e7f4ff : 0xf0e3f2ff);
-        draw_outline_rect(40.0f, y + 4.0f, 20.0f, 18.0f, 0xd2c6eaff);
-        draw_solid_rect(44.0f, y + 8.0f, 12.0f, 2.0f, 0xb69affff);
-        draw_solid_rect(44.0f, y + 13.0f, 8.0f, 2.0f, 0xcfc4e8ff);
+
+        draw_rounded_rect(32.0f, y, 334.0f, 27.0f, 7.0f,
+                          focused ? 0xf2eafff4 : 0xfaf9ffed);
+        draw_rounded_outline(32.0f, y, 334.0f, 27.0f, 7.0f,
+                             focused ? 0x9568edff : 0xe6dff1ff);
+        if (focused)
+            draw_solid_rect(35.0f, y + 6.0f, 3.0f, 15.0f, 0x875be8ff);
+        draw_rounded_rect(42.0f, y + 5.0f, 20.0f, 18.0f, 5.0f,
+                          focused ? 0x875be8ff : 0xe9e2f6ff);
+        draw_solid_rect(47.0f, y + 9.0f, 10.0f, 2.0f,
+                        focused ? 0xfaf7ffff : 0xa58acbff);
+        draw_solid_rect(47.0f, y + 14.0f, 7.0f, 2.0f,
+                        focused ? 0xfaf7ffff : 0xa58acbff);
+
         set_ui_font_size(6, 9);
-        snprintf(row, sizeof(row), "%.30s", title);
-        draw_text(68.0f, y + 4.0f,
-                  (int)i == g_online_selected ? 0xcaff39ff : 0xffffffff, row);
-        draw_text(302.0f, y + 4.0f, 0x77718fff, kind);
+        snprintf(row, sizeof(row), "%.28s", title);
+        draw_text(70.0f, y + 9.0f, 0x29243fff, row);
+        draw_text(298.0f, y + 9.0f,
+                  focused ? 0x875be8ff : badge_color, kind);
         visible_count++;
     }
 
-    set_ui_font_size(8, 12);
-    snprintf(line, sizeof(line), "RESULTS: %u",
-             (unsigned)g_online_result_count);
-    draw_text(38.0f, 422.0f, 0x77718fff, line);
+    set_ui_font_size(7, 11);
+    if (g_online_result_count) {
+        snprintf(line, sizeof(line), "RESULTS %u  |  PAGE %u/%u",
+                 (unsigned)g_online_result_count,
+                 (unsigned)current_page, (unsigned)total_pages);
+    } else {
+        snprintf(line, sizeof(line), "RESULTS 0  |  NO MATCHES");
+    }
+    draw_text(38.0f, 424.0f, 0x514b69ff, line);
 
-    draw_text(414.0f, 104.0f, 0xffffffff, "Community (GitHub)");
-    draw_text(414.0f, 128.0f, 0x77718fff,
-              "Profiles, configs & enhancements");
-    snprintf(line, sizeof(line), "CATALOG: %s",
-             g_catalog_ready ? "READY" : "OFFLINE");
-    draw_text(414.0f, 168.0f, 0x514b69ff, line);
-    snprintf(line, sizeof(line), "GITHUB INDEX: %s",
-             g_community_ready ? "READY" : "OFFLINE");
-    draw_text(414.0f, 192.0f, 0x514b69ff, line);
+    /* Cache status is not a claim that GitHub is currently online or that
+       any community file is safe to auto-apply. */
+    set_ui_font_size(10, 15);
+    draw_text(414.0f, 102.0f, 0x29243fff, "Selected Result");
+    set_ui_font_size(7, 11);
+    draw_text(414.0f, 127.0f, 0x77718fff,
+              g_catalog_sync_running ? "Syncing online metadata..." :
+                                       "Review source, match and file type.");
+    draw_rounded_rect(412.0f, 153.0f, 197.0f, 25.0f, 7.0f,
+                      g_catalog_ready ? 0xe8f5eced : 0xf3effbed);
+    draw_rounded_rect(616.0f, 153.0f, 202.0f, 25.0f, 7.0f,
+                      g_community_ready ? 0xe8f5eced : 0xf3effbed);
+    set_ui_font_size(7, 11);
+    draw_text(422.0f, 160.0f,
+              g_catalog_ready ? 0x26794bff : 0x77718fff,
+              g_catalog_ready ? "PROFILE CACHE: LOADED" :
+                                "PROFILE CACHE: EMPTY");
+    draw_text(624.0f, 160.0f,
+              g_community_ready ? 0x26794bff : 0x77718fff,
+              g_community_ready ? "GITHUB INDEX: LOADED" :
+                                  "GITHUB INDEX: EMPTY");
 
+    set_ui_font_size(7, 11);
     if (selected_profile && selected) {
-        int exact_match = selected_community ?
-            ps3scale_community_file_matches_exact_game(selected_community,
-                                                        selected) : 1;
-        draw_text(414.0f, 232.0f, 0xcaff39ff, "EXACT GAME PROFILE");
+        draw_soft_chip(414.0f, 190.0f, 182.0f,
+                       "MATCHED PS3 PROFILE", 1);
         snprintf(line, sizeof(line), "GAME: %.54s", selected->title);
-        draw_text(414.0f, 260.0f, 0xffffffff, line);
+        draw_text(414.0f, 227.0f, 0x29243fff, line);
         snprintf(line, sizeof(line), "TITLE ID: %.18s", selected->title_id);
-        draw_text(414.0f, 286.0f, 0x514b69ff, line);
+        draw_text(414.0f, 253.0f, 0x514b69ff, line);
         snprintf(line, sizeof(line), "VERSION: %.18s", selected_profile->app_ver);
-        draw_text(414.0f, 312.0f, 0x514b69ff, line);
-        draw_text(414.0f, 342.0f,
-                  exact_match ? 0x2c9f8eff : 0xffcc66ff,
-                  exact_match ? "MATCH: EXACT TITLE ID / VERSION" :
-                                "MATCH: REVIEW VERSION BEFORE INSTALL");
-        draw_text(414.0f, 370.0f, 0x77718fff,
-                  profile_for_game(selected) ?
-                  "SAFE PROFILE: AVAILABLE" : "SAFE PROFILE: NOT AVAILABLE");
-        draw_text(414.0f, 402.0f, 0x77718fff,
+        draw_text(414.0f, 277.0f, 0x514b69ff, line);
+        draw_text(414.0f, 303.0f, 0x26794bff,
+                  "MATCH: EXACT LOCAL GAME / PROFILE");
+        snprintf(line, sizeof(line), "EFFECT: %.42s", selected_profile->effect);
+        draw_text(414.0f, 328.0f, 0x514b69ff, line);
+        draw_text(414.0f, 359.0f, 0xb27b35ff,
                   "APPLY: REVIEW + CONFIRM IN DETAILS");
+        draw_text(414.0f, 390.0f, 0x875be8ff,
+                  "CROSS: OPEN GAME DETAILS");
+        draw_text(414.0f, 418.0f, 0x77718fff,
+                  "No automatic game-file replacement.");
     } else if (selected_ps2_config) {
-        draw_text(414.0f, 232.0f, 0xcaff39ff, "PS2 COMMUNITY CONFIG");
-        snprintf(line, sizeof(line), "GAME: %.42s", selected_ps2_config->title);
-        draw_text(414.0f, 260.0f, 0xffffffff, line);
-        snprintf(line, sizeof(line), "CONFIG TYPE: %.10s", selected_ps2_config->type);
-        draw_text(414.0f, 286.0f, 0x514b69ff, line);
+        draw_soft_chip(414.0f, 190.0f, 182.0f,
+                       "PS2 COMPATIBILITY", 1);
+        snprintf(line, sizeof(line), "GAME: %.48s", selected_ps2_config->title);
+        draw_text(414.0f, 227.0f, 0x29243fff, line);
         snprintf(line, sizeof(line), "GAME ID: %.18s", selected_ps2_config->title_id);
-        draw_text(414.0f, 312.0f, 0x514b69ff, line);
-        draw_text(414.0f, 342.0f, 0xffcc66ff,
+        draw_text(414.0f, 253.0f, 0x514b69ff, line);
+        snprintf(line, sizeof(line), "CONFIG TYPE: %.10s", selected_ps2_config->type);
+        draw_text(414.0f, 277.0f, 0x514b69ff, line);
+        draw_text(414.0f, 307.0f, 0xb27b35ff,
                   "APPLY: NOT A GRAPHICS PROFILE");
-        draw_text(414.0f, 370.0f, 0x77718fff,
-                  "Original ISO / classic files are never overwritten.");
+        draw_text(414.0f, 336.0f, 0x514b69ff,
+                  "PS2 compatibility is game-specific.");
+        draw_text(414.0f, 362.0f, 0x514b69ff,
+                  "Not an HD texture or 1080p upgrade.");
+        draw_text(414.0f, 394.0f, 0x875be8ff,
+                  "CROSS: OPEN / REVIEW MATCH");
+        draw_text(414.0f, 418.0f, 0x77718fff,
+                  "Original ISO / classic is not overwritten.");
     } else if (selected_community) {
-        snprintf(line, sizeof(line), "GAME: %.42s", selected_community->title);
-        draw_text(414.0f, 232.0f, 0xffffffff, line);
+        const char *dot = strrchr(selected_community->path, '.');
+        int can_download =
+            dot &&
+            (community_extension_is(dot, ".ncl") ||
+             community_extension_is(dot, ".txt")) &&
+            selected_community->file_size <= PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT;
+
+        draw_soft_chip(414.0f, 190.0f, 182.0f,
+                       "GITHUB COMMUNITY DATA", 1);
+        set_ui_font_size(6, 9);
+        draw_text(612.0f, 197.0f, 0x875be8ff,
+                  selected ? "X: GAME DETAILS" : "X: DOWNLOAD DATA");
+        set_ui_font_size(7, 11);
+        snprintf(line, sizeof(line), "GAME: %.54s", selected_community->title);
+        draw_text(414.0f, 224.0f, 0x29243fff, line);
         snprintf(line, sizeof(line), "TITLE ID: %.18s", selected_community->title_id);
-        draw_text(414.0f, 258.0f, 0x514b69ff, line);
+        draw_text(414.0f, 247.0f, 0x514b69ff, line);
         snprintf(line, sizeof(line), "CATEGORY: %.24s", selected_community->category);
-        draw_text(414.0f, 282.0f, 0x514b69ff, line);
-        snprintf(line, sizeof(line), "VERSION: %.18s",
+        draw_text(414.0f, 269.0f, 0x514b69ff, line);
+        snprintf(line, sizeof(line), "VERSION: %.18s | REGION: %s",
                  selected_community->app_ver[0] ?
-                 selected_community->app_ver : "Not specified");
-        draw_text(414.0f, 306.0f, 0x514b69ff, line);
-        snprintf(line, sizeof(line), "REGION: %s",
+                 selected_community->app_ver : "Not specified",
                  ps3scale_community_region_label(selected_community->title_id));
-        draw_text(414.0f, 330.0f, 0x514b69ff, line);
+        draw_text(414.0f, 291.0f, 0x514b69ff, line);
         snprintf(line, sizeof(line), "SOURCE: %.38s", selected_community->repository);
-        draw_text(414.0f, 354.0f, 0x514b69ff, line);
+        draw_text(414.0f, 313.0f, 0x514b69ff, line);
         snprintf(line, sizeof(line), "FILE: %.44s", selected_community->path);
-        draw_text(414.0f, 378.0f, 0x514b69ff, line);
-        snprintf(line, sizeof(line), "SIZE: %u KB",
-                 (unsigned)((selected_community->file_size + 1023u) / 1024u));
-        draw_text(414.0f, 402.0f, 0x514b69ff, line);
-        draw_text(414.0f, 426.0f, 0x875be8ff,
-                  "X: DOWNLOAD TO COMMUNITY_DOWNLOADS");
-        draw_text(414.0f, 444.0f, 0xffa85cff,
+        draw_text(414.0f, 335.0f, 0x514b69ff, line);
+        if (selected &&
+            ps3scale_community_file_matches_exact_game(selected_community,
+                                                        selected)) {
+            draw_text(414.0f, 357.0f, 0x26794bff,
+                      "MATCH: ID OR TITLE/REGION + VERSION");
+        } else if (selected) {
+            draw_text(414.0f, 357.0f, 0xb27b35ff,
+                      "MATCH: REVIEW TITLE ID / VERSION");
+        } else {
+            draw_text(414.0f, 357.0f, 0xb27b35ff,
+                      "SEARCH RESULT: NO LOCAL GAME MATCH");
+        }
+        snprintf(line, sizeof(line), "SIZE: %u KB | %s",
+                 (unsigned)((selected_community->file_size + 1023u) / 1024u),
+                 can_download ? "NCL/TXT DATA" : "UNSUPPORTED FILE");
+        draw_text(414.0f, 381.0f, 0x514b69ff, line);
+        if (can_download) {
+            draw_text(414.0f, 405.0f, 0x875be8ff,
+                      selected ? "SELECT: SAVE TO COMMUNITY_DOWNLOADS" :
+                                 "X: DOWNLOAD TO COMMUNITY_DOWNLOADS");
+        } else {
+            draw_text(414.0f, 405.0f, 0xb27b35ff,
+                      "NO DOWNLOAD: ONLY NCL/TXT UP TO 2 MB");
+        }
+        draw_text(414.0f, 426.0f, 0xb27b35ff,
                   "DATA ONLY - NEVER EXECUTED OR AUTO-APPLIED");
     } else {
-        draw_text(414.0f, 232.0f, 0x77718fff,
+        draw_text(414.0f, 215.0f, 0x77718fff,
                   g_online_result_count ?
                   "Select a result to review its match." :
-                  "No results for this search.");
-        draw_text(414.0f, 260.0f, 0x77718fff,
-                  "Try a game name, disc ID or title ID.");
+                  "No results in this filter.");
+        draw_text(414.0f, 241.0f, 0x514b69ff,
+                  "Search by title, disc ID or title ID.");
+        draw_text(414.0f, 273.0f, 0x875be8ff,
+                  "START: SYNC ONLINE METADATA");
+        draw_text(414.0f, 301.0f, 0x77718fff,
+                  "Offline cache can still be browsed.");
     }
 
-    if (g_online_message[0])
-        draw_text(24.0f, 470.0f, 0xffcc66ff, g_online_message);
-    set_ui_font_size(7, 11);
-    draw_text(24.0f, 480.0f, 0x77718fff,
-              "D-PAD SELECT   |   CROSS DOWNLOAD / OPEN   |   L1/R1 PREV/NEXT");
-    draw_text(24.0f, 496.0f, 0x77718fff,
-              "TRIANGLE SEARCH   |   SQUARE FILTER   |   START SYNC   |   CIRCLE BACK");
+    /* Separate task status from controls to avoid text overlap at 720p. */
+    if (g_online_message[0]) {
+        draw_rounded_rect(20.0f, 453.0f, 814.0f, 22.0f, 6.0f,
+                          0xf5effff0);
+        set_ui_font_size(6, 9);
+        snprintf(line, sizeof(line), "%.114s", g_online_message);
+        draw_text(29.0f, 460.0f, 0x514b69ff, line);
+    }
+    set_ui_font_size(6, 9);
+    draw_text(24.0f, 482.0f, 0x514b69ff,
+              "D-PAD SELECT | LEFT/RIGHT PAGE | L1/R1 PREV/NEXT | CROSS OPEN/DOWNLOAD");
+    draw_text(24.0f, 497.0f, 0x875be8ff,
+              "TRIANGLE SEARCH | SQUARE FILTER | START SYNC | CIRCLE BACK");
     set_ui_font_size(14, 22);
 }
 
@@ -5353,6 +5454,28 @@ int main(int argc, char *argv[])
             }
             if (r1 && !old_r1 && matches)
                 g_online_selected = (g_online_selected + 1) % (int)matches;
+            /* Left/right jump a result page while keeping the current row.
+               The final short page is clamped so selection always remains
+               visible; L1/R1 continue to move one result as before. */
+            if (((left && !old_left) || (right && !old_right)) && matches) {
+                size_t page_count =
+                    (matches + PS3SCALE_ONLINE_PAGE_SIZE - 1u) /
+                    PS3SCALE_ONLINE_PAGE_SIZE;
+                size_t current_page =
+                    (size_t)g_online_selected / PS3SCALE_ONLINE_PAGE_SIZE;
+                size_t row =
+                    (size_t)g_online_selected % PS3SCALE_ONLINE_PAGE_SIZE;
+                size_t next_page = current_page;
+                size_t next_selection;
+                if (left && !old_left)
+                    next_page = (current_page + page_count - 1u) % page_count;
+                else if (right && !old_right)
+                    next_page = (current_page + 1u) % page_count;
+                next_selection = next_page * PS3SCALE_ONLINE_PAGE_SIZE + row;
+                if (next_selection >= matches)
+                    next_selection = matches - 1u;
+                g_online_selected = (int)next_selection;
+            }
             if (square && !old_square) {
                 g_online_filter_mode =
                     (g_online_filter_mode + 1) % ONLINE_FILTER_MODE_COUNT;
@@ -5374,6 +5497,18 @@ int main(int argc, char *argv[])
                     start_community_file_download(community);
                 else
                     open_selected_online_match();
+            }
+            /* An installed-game community match uses CROSS for Game
+               Details. SELECT safely saves the linked NCL/TXT as inert
+               data, without altering any game file or applying a patch. */
+            if (select && !old_select && matches) {
+                const ps3scale_profile_t *profile = NULL;
+                const ps3scale_community_file_t *community = NULL;
+                const ps3scale_ps2_config_entry_t *ps2_config = NULL;
+                (void)online_result_at((size_t)g_online_selected,
+                                       &profile, &community, &ps2_config);
+                if (community)
+                    start_community_file_download(community);
             }
             if (start && !old_start)
                 start_catalog_sync_worker(1);
