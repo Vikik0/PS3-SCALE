@@ -38,6 +38,17 @@ jobs:
         working-directory: PS3-SCALE-Alpha-0.2
         run: python3 tests/render_font_preview.py
 
+      - name: Render staircase motion QA snapshots
+        working-directory: PS3-SCALE-Alpha-0.2
+        run: python3 scripts/preview_staircase_materials.py
+
+      - name: Upload staircase visual QA previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: PS3-SCALE-Staircase-Material-Motion-Preview
+          if-no-files-found: error
+          path: PS3-SCALE-Alpha-0.2/build-host/staircase-preview/*.png
+
       - name: Upload Arabic bitmap preview
         uses: actions/upload-artifact@v4
         with:

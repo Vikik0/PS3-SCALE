@@ -1507,12 +1507,13 @@ typedef struct ps3scale_scene_face {
     float x[4];
     float y[4];
     u32 color;
+    u32 vertex_color[4];
     u32 edge;
 } ps3scale_scene_face_t;
 
 #define PS3SCALE_STAIR_STEPS 32
 #define PS3SCALE_STAIR_LOOP_FRAMES 21600ul
-#define PS3SCALE_STAIR_FACE_MAX (PS3SCALE_STAIR_STEPS * 3)
+#define PS3SCALE_STAIR_FACE_MAX (PS3SCALE_STAIR_STEPS * 5)
 
 static ps3scale_scene_point_t g_scene_camera_position;
 static ps3scale_scene_point_t g_scene_camera_right;
@@ -1601,6 +1602,8 @@ static void scene_project_camera_point(ps3scale_scene_point_t point,
     *screen_y = 256.0f - point.y * focal_length / depth;
 }
 
+static u32 scene_blend(u32 a, u32 b, float t);
+
 static void scene_push_face(ps3scale_scene_face_t *faces,
                             size_t *face_count,
                             const ps3scale_scene_point_t points[4],
@@ -1631,6 +1634,16 @@ static void scene_push_face(ps3scale_scene_face_t *faces,
     face->depth = depth;
     face->color = color;
     face->edge = edge;
+    /* Pearl-like directional sheen at the front/outside corners plus
+       subtle depth haze. This is per-vertex shading (no expensive textures,
+       screen-space passes or per-frame allocations). */
+    for (i = 0; i < 4; i++) {
+        float haze = (camera_points[i].z - 25.0f) / 58.0f;
+        float reflection = (i == 1 || i == 2) ? 0.15f : 0.045f;
+        u32 shaded = scene_blend(color, 0xf7f4fcff, haze * 0.34f);
+        face->vertex_color[i] =
+            scene_blend(shaded, 0xffffffff, reflection);
+    }
 }
 
 static int compare_scene_face_depth(const void *left, const void *right)
@@ -1655,7 +1668,7 @@ static void draw_scene_faces(const ps3scale_scene_face_t *faces,
     for (i = 0; i < face_count; i++) {
         for (j = 0; j < 4; j++) {
             tiny3d_VertexPos(faces[i].x[j], faces[i].y[j], 65535.0f);
-            tiny3d_VertexColor(faces[i].color);
+            tiny3d_VertexColor(faces[i].vertex_color[j]);
         }
     }
     tiny3d_End();
@@ -1663,6 +1676,8 @@ static void draw_scene_faces(const ps3scale_scene_face_t *faces,
     /* Batch every tread outline as line pairs instead of one draw per face. */
     tiny3d_SetPolygon(TINY3D_LINES);
     for (i = 0; i < face_count; i++) {
+        if (faces[i].edge == 0)
+            continue; /* No wireframe on shaded risers or undersides. */
         for (j = 0; j < 4; j++) {
             int next = (j + 1) & 3;
             tiny3d_VertexPos(faces[i].x[j], faces[i].y[j], 65535.0f);
@@ -1829,10 +1844,13 @@ static void draw_home_ambient(void)
         float y = ((float)i - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
                   rise_per_tread;
         ps3scale_scene_point_t top[4], riser[4], side[4];
-        float light = 0.67f + 0.22f * cosf(angle + 0.42f);
-        u32 top_color = scene_blend(0xe1dcedff, 0xfffefeff, light);
-        u32 riser_color = scene_blend(0xb7b0caff, 0xded7e9ff, light);
-        u32 side_color = scene_blend(0xcbc5daff, 0xe8e0eeff, light);
+        ps3scale_scene_point_t pearl_lip[4], contact_shadow[4];
+        float light = 0.68f + 0.25f * cosf(angle + 0.42f);
+        u32 top_color = scene_blend(0xe3ddecff, 0xfffeffff, light);
+        u32 riser_color = scene_blend(0xb7accaff, 0xe2dcecff, light);
+        u32 side_color = scene_blend(0xbeb5d2ff, 0xe6e0efff, light);
+        u32 lip_color = scene_blend(0xded7efff, 0xfffeffff, light);
+        u32 contact_color = scene_blend(0x928aaeff, 0xbdb4d1ff, light);
 
         top[0] = scene_world_point(center_x, center_y, center_z,
                                    inner_radius, angle, y + 0.14f);
@@ -1847,8 +1865,12 @@ static void draw_home_ambient(void)
                                      outer_radius, angle, y - 0.20f);
         riser[1] = scene_world_point(center_x, center_y, center_z,
                                      outer_radius, next_angle, y - 0.20f);
-        riser[2] = top[2];
-        riser[3] = top[1];
+        /* End the riser at the underside of the bevel: coplanar faces
+           do not overlap, so the pearl highlight cannot flicker/vanish. */
+        riser[2] = scene_world_point(center_x, center_y, center_z,
+                                     outer_radius, next_angle, y + 0.025f);
+        riser[3] = scene_world_point(center_x, center_y, center_z,
+                                     outer_radius, angle, y + 0.025f);
 
         side[0] = scene_world_point(center_x, center_y, center_z,
                                     inner_radius, next_angle, y - 0.20f);
@@ -1856,12 +1878,33 @@ static void draw_home_ambient(void)
         side[2] = top[2];
         side[3] = top[3];
 
+        /* Polished bevel on the visible outer tread edge. The thin darker
+           strip under it gives the steps real thickness and contact shadow
+           instead of a flat 2D paper staircase. */
+        pearl_lip[0] = top[1];
+        pearl_lip[1] = top[2];
+        pearl_lip[2] = scene_world_point(center_x, center_y, center_z,
+                                         outer_radius, next_angle, y + 0.025f);
+        pearl_lip[3] = scene_world_point(center_x, center_y, center_z,
+                                         outer_radius, angle, y + 0.025f);
+
+        contact_shadow[0] = riser[0];
+        contact_shadow[1] = riser[1];
+        contact_shadow[2] = scene_world_point(center_x, center_y, center_z,
+                                              outer_radius, next_angle, y - 0.29f);
+        contact_shadow[3] = scene_world_point(center_x, center_y, center_z,
+                                              outer_radius, angle, y - 0.29f);
+
         scene_push_face(faces, &face_count, top, focal_length,
-                        top_color, 0xf8f4ffff);
+                        top_color, 0); /* Bevel supplies the visible edge. */
         scene_push_face(faces, &face_count, riser, focal_length,
-                        riser_color, 0xd9d1e9e8);
+                        riser_color, 0);
         scene_push_face(faces, &face_count, side, focal_length,
-                        side_color, 0xe6dff3e8);
+                        side_color, 0);
+        scene_push_face(faces, &face_count, pearl_lip, focal_length,
+                        lip_color, 0xfaf6ffff);
+        scene_push_face(faces, &face_count, contact_shadow, focal_length,
+                        contact_color, 0);
     }
 
     /* Painter's order gives reliable depth without relying on RSX Z state. */
