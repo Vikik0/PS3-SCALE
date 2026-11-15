@@ -209,6 +209,19 @@ for boundary in (1200, 2400, 21600):
         assert before[0] == after[0]
         assert abs(before[1] - after[1]) < 0.001
 
+# Pearl material upgrade: shaded 3D tread geometry must stay bounded.
+assert "#define PS3SCALE_STAIR_FACE_MAX (PS3SCALE_STAIR_STEPS * 5)" in src
+assert "u32 vertex_color[4];" in src
+assert "scene_blend(color, 0xf7f4fcff, haze * 0.34f)" in src
+assert "tiny3d_VertexColor(faces[i].vertex_color[j]);" in src
+assert "if (faces[i].edge == 0)" in src
+assert "ps3scale_scene_point_t pearl_lip[4], contact_shadow[4];" in ambient
+assert "pearl_lip[0] = top[1];" in ambient
+assert "contact_shadow[0] = riser[0];" in ambient
+assert "scene_push_face(faces, &face_count, pearl_lip" in ambient
+assert "scene_push_face(faces, &face_count, contact_shadow" in ambient
+assert "qsort(faces, face_count" in ambient
+
 # Glass cards and settings chips use real rounded geometry with no textures.
 card = section("static void draw_soft_card(", "static void draw_text_centered(")
 chip = section("static void draw_soft_chip(", "static void draw_page_header(")
