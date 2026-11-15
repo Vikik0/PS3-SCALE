@@ -179,7 +179,7 @@ assert "scene_push_face" in ambient
 assert "compare_scene_face_depth" in ambient
 assert "qsort(faces, face_count" in ambient
 assert "camera rises in a straight line" in ambient
-assert "Spiral handrails" in ambient
+assert "Inner and outer spiral handrails" in ambient
 assert "TINY3D_LINES" in ambient
 assert "g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES" in ambient
 assert "camera_step = loop_progress *" in ambient
