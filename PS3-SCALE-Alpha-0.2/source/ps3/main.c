@@ -4513,11 +4513,11 @@ static void draw_help(void)
         "Save Data Safely", "Start Game"
     };
     static const char *step_lines[5] = {
-        "Find local PS3 / PS2 titles.",
-        "Open a title from your library.",
-        "Check its ID and version.",
-        "Save supported NCL / TXT data.",
-        "Start the game when ready."
+        "Find PS3 / PS2 titles.",
+        "Choose a local title.",
+        "Check ID and version.",
+        "Save NCL / TXT data.",
+        "Launch when ready."
     };
     static const char *actions[2] = { "Report an Issue", "Send Feedback" };
     int i;
