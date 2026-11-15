@@ -3629,9 +3629,9 @@ static void draw_text_centered(float x, float y, float w,
 static void draw_soft_chip(float x, float y, float w, const char *label,
                            int selected)
 {
-    draw_solid_rect(x, y, w, 24.0f,
+    draw_rounded_rect(x, y, w, 24.0f, 7.0f,
                     selected ? 0xeee7ffff : 0xf8f6ffff);
-    draw_outline_rect(x, y, w, 24.0f,
+    draw_rounded_outline(x, y, w, 24.0f, 7.0f,
                       selected ? 0x9568edff : 0xd9d1eaff);
     set_ui_font_size(7, 11);
     draw_text_centered(x + 4.0f, y + 7.0f, w - 8.0f,
