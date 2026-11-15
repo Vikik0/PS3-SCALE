@@ -1482,7 +1482,10 @@ typedef struct ps3scale_scene_face {
     u32 edge;
 } ps3scale_scene_face_t;
 
-#define PS3SCALE_STAIR_STEPS 24
+#define PS3SCALE_STAIR_STEPS 48
+#define PS3SCALE_STAIR_STEPS_PER_TURN 24
+#define PS3SCALE_STAIR_LOOP_FRAMES 21600ul
+#define PS3SCALE_STAIR_STEP_RISE 0.48f
 #define PS3SCALE_STAIR_FACE_MAX (PS3SCALE_STAIR_STEPS * 3)
 
 static ps3scale_scene_point_t scene_world_point(float center_x,
@@ -1499,16 +1502,16 @@ static ps3scale_scene_point_t scene_world_point(float center_x,
     return point;
 }
 
-/* Tiny3D's 2D layer is stable across CFW video modes. Project the animated
-   staircase in software, then draw its shaded faces in the normal 2D pass.
-   This avoids the depth-buffer state that hid the previous 3D scene. */
+/* The camera-relative scene is projected in software before entering Tiny3D's
+   stable 2D pass. This keeps the animated environment independent of RSX
+   depth-buffer state while retaining perspective and a moving 3D viewpoint. */
 static void scene_project_point(ps3scale_scene_point_t point,
                                 float focal_length,
                                 float *screen_x,
                                 float *screen_y)
 {
     float depth = point.z;
-    if (depth < 4.0f) depth = 4.0f;
+    if (depth < 2.5f) depth = 2.5f;
     *screen_x = 427.0f + point.x * focal_length / depth;
     *screen_y = 256.0f - point.y * focal_length / depth;
 }
@@ -1525,6 +1528,13 @@ static void scene_push_face(ps3scale_scene_face_t *faces,
     int i;
     if (!faces || !face_count || *face_count >= PS3SCALE_STAIR_FACE_MAX)
         return;
+
+    /* Drop faces crossing the near plane instead of stretching them. */
+    for (i = 0; i < 4; i++) {
+        if (points[i].z <= 2.5f)
+            return;
+    }
+
     face = &faces[(*face_count)++];
     for (i = 0; i < 4; i++) {
         depth += points[i].z * 0.25f;
@@ -1582,7 +1592,10 @@ static u32 scene_blend(u32 a, u32 b, float t)
 static void draw_scene_background(void)
 {
     const float tau = 6.28318530718f;
-    float phase = (float)(g_frame_counter % 21600ul) / 21600.0f * tau;
+    unsigned long frame_in_loop =
+        g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES;
+    float phase = (float)frame_in_loop /
+                  (float)PS3SCALE_STAIR_LOOP_FRAMES * tau;
     float daylight = 0.82f + 0.12f * cosf(phase);
     float night = 1.0f - daylight;
     float dusk = 1.0f - fabsf(daylight - 0.82f) / 0.12f;
@@ -1595,8 +1608,8 @@ static void draw_scene_background(void)
         dusk = 0.0f;
     }
 
-    top = scene_blend(0xded8eeff, 0xfaf9ffff, daylight);
-    bottom = scene_blend(0xcfc5e6ff, 0xf0ecf9ff, daylight);
+    top = scene_blend(0xe8e5f0ff, 0xfdfcffff, daylight);
+    bottom = scene_blend(0xd8d2e7ff, 0xf2eff9ff, daylight);
     top = scene_blend(top, 0xe9defcff, dusk * 0.06f);
     bottom = scene_blend(bottom, 0xe0d4f5ff, dusk * 0.08f);
     accent = scene_blend(0x8b73c8ff, 0xb995ffff, daylight * 0.72f);
@@ -1608,7 +1621,7 @@ static void draw_scene_background(void)
                         scene_blend(top, bottom, t));
     }
 
-    /* Soft orbital halo and light ribbons: every motion is phase-periodic. */
+    /* Quiet light ribbons and particles add depth without competing with UI. */
     draw_circle_outline(738.0f + cosf(phase) * 12.0f,
                         112.0f + sinf(phase) * 7.0f,
                         74.0f, glow);
@@ -1658,79 +1671,134 @@ static void draw_scene_background(void)
     (void)dusk;
 }
 
+static ps3scale_scene_point_t scene_stair_point(int base_step,
+                                                 int offset,
+                                                 float substep,
+                                                 float step_fraction,
+                                                 float radius,
+                                                 float y_offset)
+{
+    const float angle_step =
+        6.28318530718f / (float)PS3SCALE_STAIR_STEPS_PER_TURN;
+    int wrapped_step = (base_step + offset) %
+                       PS3SCALE_STAIR_STEPS_PER_TURN;
+    float angle;
+    float relative_y;
+    if (wrapped_step < 0)
+        wrapped_step += PS3SCALE_STAIR_STEPS_PER_TURN;
+    angle = ((float)wrapped_step + substep) * angle_step;
+    relative_y = ((float)offset + substep - step_fraction) *
+                 PS3SCALE_STAIR_STEP_RISE + y_offset;
+    return scene_world_point(0.0f, 0.0f, 0.0f,
+                             radius, angle, relative_y);
+}
+
+/* Add one camera-visible segment to an already-open Tiny3D line batch. */
+static void scene_emit_line_segment(ps3scale_scene_point_t a,
+                                    ps3scale_scene_point_t b,
+                                    float focal_length,
+                                    u32 color)
+{
+    float x1, y1, x2, y2;
+    if (a.z <= 2.5f || b.z <= 2.5f)
+        return;
+    scene_project_point(a, focal_length, &x1, &y1);
+    scene_project_point(b, focal_length, &x2, &y2);
+    tiny3d_VertexPos(x1, y1, 65535.0f);
+    tiny3d_VertexColor(color);
+    tiny3d_VertexPos(x2, y2, 65535.0f);
+}
+
 static void draw_home_ambient(void)
 {
     ps3scale_scene_face_t faces[PS3SCALE_STAIR_FACE_MAX];
     const float tau = 6.28318530718f;
-    const float phase =
-        (float)(g_frame_counter % 21600ul) / 21600.0f * tau;
-    const float center_x = 7.2f;
+    const float center_x = 0.0f;
     const float center_y = 0.0f;
-    const float center_z = 43.0f;
-    const float outer_radius = 9.6f;
-    const float inner_radius = 1.25f;
-    const float angle_step = 0.48f;
-    const float focal_length = 780.0f;
-    const float bob = sinf(phase) * 0.12f;
+    const float center_z = 0.0f;
+    const float inner_radius = 2.0f;
+    const float outer_radius = 10.4f;
+    const float focal_length = 610.0f;
+    const float angle_step =
+        tau / (float)PS3SCALE_STAIR_STEPS_PER_TURN;
+    unsigned long frame_in_loop =
+        g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES;
+    unsigned long cycle_count =
+        g_frame_counter / PS3SCALE_STAIR_LOOP_FRAMES;
+    float loop_progress = (float)frame_in_loop /
+                         (float)PS3SCALE_STAIR_LOOP_FRAMES;
+    float phase = loop_progress * tau;
+    float camera_step = loop_progress *
+                        (float)PS3SCALE_STAIR_STEPS_PER_TURN;
+    int camera_step_whole = (int)floorf(camera_step);
+    int base_step = (int)(cycle_count *
+                   (unsigned long)PS3SCALE_STAIR_STEPS_PER_TURN) +
+                   camera_step_whole;
+    float step_fraction = camera_step - (float)camera_step_whole;
     size_t face_count = 0, i;
-    int j;
+    int half_steps = PS3SCALE_STAIR_STEPS / 2;
 
-    /* The halo is intentionally soft so the game cards remain readable. */
-    draw_circle_outline(565.0f, 250.0f, 178.0f, 0xa58bdf35);
-    draw_circle_outline(565.0f, 250.0f, 164.0f, 0xd7c9f340);
+    /* The camera rises in a straight line through the staircase's open core.
+       Twenty-four treads make one full helix turn, so the six-minute camera
+       cycle returns to the same view without reversing or visibly restarting. */
+    draw_circle_outline(427.0f + cosf(phase) * 5.0f,
+                        256.0f + sinf(phase) * 3.0f,
+                        166.0f, 0xd5c8ed28);
+    draw_circle_outline(427.0f + cosf(phase) * 5.0f,
+                        256.0f + sinf(phase) * 3.0f,
+                        150.0f, 0xe9e2f538);
 
-    /* A luminous central support sits behind the floating spiral treads. */
-    {
-        ps3scale_scene_point_t lower, upper;
-        float x1, y1, x2, y2;
-        lower.x = center_x; lower.y = -10.0f; lower.z = center_z;
-        upper.x = center_x; upper.y = 10.0f; upper.z = center_z;
-        scene_project_point(lower, focal_length, &x1, &y1);
-        scene_project_point(upper, focal_length, &x2, &y2);
-        draw_icon_line(x1 - 2.0f, y1, x2 - 2.0f, y2, 0x9476d880);
-        draw_icon_line(x1 + 2.0f, y1, x2 + 2.0f, y2, 0xf2eaffb0);
-    }
-
-    /* Each tread is a real perspective wedge with a shaded riser and side.
-       The entire orbit repeats exactly after one full phase cycle. */
+    /* Render a moving window of an effectively endless, camera-relative helix.
+       The first and last frames differ by exactly one full staircase turn. */
     for (i = 0; i < PS3SCALE_STAIR_STEPS; i++) {
-        float angle = (float)i * angle_step + phase;
-        float next_angle = angle + angle_step * 0.92f;
-        float y = ((float)i - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
-                  0.72f + bob;
+        int offset = (int)i - half_steps;
+        int step_index = base_step + offset;
+        int wrapped_step = step_index % PS3SCALE_STAIR_STEPS_PER_TURN;
+        float angle, next_angle, y;
         ps3scale_scene_point_t top[4], riser[4], side[4];
-        u32 top_color = (i % 4u == 0u) ? 0xc8b4f1d8 : 0xb59de7d8;
-        u32 riser_color = (i % 2u == 0u) ? 0x755daee8 : 0x856dbce8;
-        u32 side_color = 0x9c83d0d8;
+        u32 top_color, riser_color, side_color;
+        if (wrapped_step < 0)
+            wrapped_step += PS3SCALE_STAIR_STEPS_PER_TURN;
+        angle = (float)wrapped_step * angle_step;
+        next_angle = angle + angle_step * 0.92f;
+        y = ((float)offset - step_fraction) *
+            PS3SCALE_STAIR_STEP_RISE;
 
         top[0] = scene_world_point(center_x, center_y, center_z,
-                                   inner_radius, angle, y + 0.14f);
+                                   inner_radius, angle, y + 0.12f);
         top[1] = scene_world_point(center_x, center_y, center_z,
-                                   outer_radius, angle, y + 0.14f);
+                                   outer_radius, angle, y + 0.12f);
         top[2] = scene_world_point(center_x, center_y, center_z,
-                                   outer_radius, next_angle, y + 0.14f);
+                                   outer_radius, next_angle, y + 0.12f);
         top[3] = scene_world_point(center_x, center_y, center_z,
-                                   inner_radius, next_angle, y + 0.14f);
+                                   inner_radius, next_angle, y + 0.12f);
 
         riser[0] = scene_world_point(center_x, center_y, center_z,
-                                     outer_radius, angle, y - 0.20f);
+                                     outer_radius, angle, y - 0.28f);
         riser[1] = scene_world_point(center_x, center_y, center_z,
-                                     outer_radius, next_angle, y - 0.20f);
+                                     outer_radius, next_angle, y - 0.28f);
         riser[2] = top[2];
         riser[3] = top[1];
 
         side[0] = scene_world_point(center_x, center_y, center_z,
-                                    inner_radius, next_angle, y - 0.20f);
+                                    inner_radius, next_angle, y - 0.28f);
         side[1] = riser[1];
         side[2] = top[2];
         side[3] = top[3];
 
+        top_color = (wrapped_step % 4 == 0) ? 0xf4f1f9ee :
+                    (wrapped_step % 4 == 1) ? 0xe5e1edee :
+                    (wrapped_step % 4 == 2) ? 0xfaf9ffff : 0xebe7f3ee;
+        riser_color = (wrapped_step % 2 == 0) ?
+                      0xbcb5cce8 : 0xcac3d9e8;
+        side_color = 0xd4cde2e0;
+
         scene_push_face(faces, &face_count, top, focal_length,
-                        top_color, 0xf5edffff);
+                        top_color, 0xf8f4ffff);
         scene_push_face(faces, &face_count, riser, focal_length,
-                        riser_color, 0xc5b2edc0);
+                        riser_color, 0xd9d1e9e8);
         scene_push_face(faces, &face_count, side, focal_length,
-                        side_color, 0xd9caffb0);
+                        side_color, 0xe6dff3e8);
     }
 
     /* Painter's order gives reliable depth without relying on RSX Z state. */
@@ -1738,39 +1806,47 @@ static void draw_home_ambient(void)
     for (i = 0; i < face_count; i++)
         draw_scene_face(&faces[i]);
 
-    /* Spiral handrail: a smooth, slowly rotating lavender ribbon. */
-    tiny3d_SetPolygon(TINY3D_LINE_STRIP);
-    for (j = 0; j <= PS3SCALE_STAIR_STEPS * 6; j++) {
-        float t = (float)j / 6.0f;
-        float angle = t * angle_step + phase;
-        float y = (t - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
-                  0.72f + 1.15f + bob;
-        ps3scale_scene_point_t point =
-            scene_world_point(center_x, center_y, center_z,
-                              outer_radius + 0.62f, angle, y);
-        float x, sy;
-        scene_project_point(point, focal_length, &x, &sy);
-        tiny3d_VertexPos(x, sy, 65535.0f);
-        if (j == 0) tiny3d_VertexColor(0x9b7bdcff);
+    /* Inner and outer spiral handrails are batched to keep frame cost low. */
+    tiny3d_SetPolygon(TINY3D_LINES);
+    for (i = 0; i < PS3SCALE_STAIR_STEPS * 6; i++) {
+        int offset = (int)(i / 6) - half_steps;
+        float substep = (float)(i % 6) / 6.0f;
+        ps3scale_scene_point_t outer_a, outer_b, inner_a, inner_b;
+        outer_a = scene_stair_point(base_step, offset, substep,
+                                    step_fraction, outer_radius + 0.34f,
+                                    1.02f);
+        outer_b = scene_stair_point(base_step, offset, substep + (1.0f / 6.0f),
+                                    step_fraction, outer_radius + 0.34f,
+                                    1.02f);
+        inner_a = scene_stair_point(base_step, offset, substep,
+                                    step_fraction, inner_radius + 0.34f,
+                                    0.88f);
+        inner_b = scene_stair_point(base_step, offset, substep + (1.0f / 6.0f),
+                                    step_fraction, inner_radius + 0.34f,
+                                    0.88f);
+        scene_emit_line_segment(outer_a, outer_b, focal_length,
+                                0xb59adfff);
+        scene_emit_line_segment(inner_a, inner_b, focal_length,
+                                0xd8c9f0cc);
+    }
+
+    /* Fine balusters and tread-edge glints make the white steps read clearly. */
+    for (i = 0; i < PS3SCALE_STAIR_STEPS; i += 2) {
+        int offset = (int)i - half_steps;
+        ps3scale_scene_point_t base, rail;
+        ps3scale_scene_point_t edge_a, edge_b;
+        base = scene_stair_point(base_step, offset, 0.0f,
+                                 step_fraction, outer_radius, 0.12f);
+        rail = scene_stair_point(base_step, offset, 0.0f,
+                                 step_fraction, outer_radius + 0.34f, 1.02f);
+        edge_a = scene_stair_point(base_step, offset, 0.0f,
+                                   step_fraction, outer_radius, 0.14f);
+        edge_b = scene_stair_point(base_step, offset, 0.92f,
+                                   step_fraction, outer_radius, 0.14f);
+        scene_emit_line_segment(base, rail, focal_length, 0xb9a5dcbb);
+        scene_emit_line_segment(edge_a, edge_b, focal_length, 0xe6def4e8);
     }
     tiny3d_End();
-
-    /* Small balusters connect the rail to selected treads. */
-    for (i = 0; i < PS3SCALE_STAIR_STEPS; i += 3) {
-        float angle = (float)i * angle_step + phase;
-        float y = ((float)i - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
-                  0.72f + bob;
-        ps3scale_scene_point_t base =
-            scene_world_point(center_x, center_y, center_z,
-                              outer_radius, angle, y + 0.18f);
-        ps3scale_scene_point_t top =
-            scene_world_point(center_x, center_y, center_z,
-                              outer_radius + 0.62f, angle, y + 1.15f);
-        float x1, y1, x2, y2;
-        scene_project_point(base, focal_length, &x1, &y1);
-        scene_project_point(top, focal_length, &x2, &y2);
-        draw_icon_line(x1, y1, x2, y2, 0xc4aaf0b0);
-    }
 }
 
 static void set_settings_message(const char *message)
