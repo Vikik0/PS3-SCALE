@@ -1083,54 +1083,82 @@ static void draw_gear_outline(float cx, float cy, float radius, u32 color)
     tiny3d_End();
 }
 
+/* Tiny3D draws the icon shapes in vector geometry at the current video
+   resolution, avoiding enlarged low-resolution bitmap icons. */
+static void draw_icon_diamond(float cx, float cy,
+                              float rx, float ry, u32 color)
+{
+    tiny3d_SetPolygon(TINY3D_QUADS);
+    tiny3d_VertexPos(cx, cy - ry, 65535.0f);
+    tiny3d_VertexColor(ui_theme_color(color));
+    tiny3d_VertexPos(cx + rx, cy, 65535.0f);
+    tiny3d_VertexPos(cx, cy + ry, 65535.0f);
+    tiny3d_VertexPos(cx - rx, cy, 65535.0f);
+    tiny3d_End();
+}
+
 static void draw_menu_icon(int index, float x, float y, int selected)
 {
-    u32 ink = selected ? 0x875be8ff : 0x514b69ff;
-    u32 tile = selected ? 0xeeeaffee : 0xf8f9fcee;
-    u32 border = selected ? 0x8068e6ff : 0xd9deebff;
+    u32 ink = selected ? 0xfffbffff : 0x32294fff;
+    u32 detail = selected ? 0x6120bfff : 0xf6f1ffff;
+    u32 tile = selected ? 0x833be3ff : 0xf7f5fdf4;
+    u32 border = selected ? 0xb67affff : 0xe1d9eeff;
+
+    /* Soft plate shadow, body and single top-edge specular highlight. */
+    draw_solid_rect(x + 2.0f, y + 4.0f, 42.0f, 42.0f,
+                    selected ? 0x50258c55 : 0x88809d32);
     draw_solid_rect(x, y, 42.0f, 42.0f, tile);
     draw_outline_rect(x, y, 42.0f, 42.0f, border);
+    draw_solid_rect(x + 4.0f, y + 3.0f, 34.0f, 2.0f,
+                    selected ? 0xb77bffb8 : 0xffffffc8);
+
     if (index == 0) {
-        draw_icon_line(x + 8.0f, y + 15.0f, x + 14.0f, y + 9.0f, ink);
-        draw_icon_line(x + 14.0f, y + 9.0f, x + 28.0f, y + 9.0f, ink);
-        draw_icon_line(x + 28.0f, y + 9.0f, x + 35.0f, y + 15.0f, ink);
-        draw_icon_line(x + 35.0f, y + 15.0f, x + 38.0f, y + 27.0f, ink);
-        draw_icon_line(x + 38.0f, y + 27.0f, x + 33.0f, y + 32.0f, ink);
-        draw_icon_line(x + 33.0f, y + 32.0f, x + 27.0f, y + 27.0f, ink);
-        draw_icon_line(x + 27.0f, y + 27.0f, x + 15.0f, y + 27.0f, ink);
-        draw_icon_line(x + 15.0f, y + 27.0f, x + 9.0f, y + 32.0f, ink);
-        draw_icon_line(x + 9.0f, y + 32.0f, x + 4.0f, y + 27.0f, ink);
-        draw_icon_line(x + 4.0f, y + 27.0f, x + 8.0f, y + 15.0f, ink);
-        draw_icon_line(x + 10.0f, y + 18.0f, x + 18.0f, y + 18.0f, ink);
-        draw_icon_line(x + 14.0f, y + 14.0f, x + 14.0f, y + 22.0f, ink);
-        draw_circle_outline(x + 28.0f, y + 17.0f, 2.2f, ink);
-        draw_circle_outline(x + 33.0f, y + 22.0f, 2.2f, ink);
+        /* Filled, symmetric controller glyph with bright shoulder buttons. */
+        draw_solid_rect(x + 8.0f, y + 14.0f, 26.0f, 15.0f, ink);
+        draw_solid_rect(x + 6.0f, y + 18.0f, 6.0f, 13.0f, ink);
+        draw_solid_rect(x + 30.0f, y + 18.0f, 6.0f, 13.0f, ink);
+        draw_solid_rect(x + 9.0f, y + 12.0f, 10.0f, 3.0f, ink);
+        draw_solid_rect(x + 23.0f, y + 12.0f, 10.0f, 3.0f, ink);
+        draw_solid_rect(x + 13.0f, y + 19.0f, 3.0f, 11.0f, detail);
+        draw_solid_rect(x + 9.0f, y + 23.0f, 11.0f, 3.0f, detail);
+        draw_circle_outline(x + 28.0f, y + 20.5f, 2.2f, detail);
+        draw_circle_outline(x + 32.0f, y + 25.5f, 2.2f, detail);
+        draw_solid_rect(x + 20.0f, y + 18.0f, 3.0f, 2.0f,
+                        selected ? 0xeccaffff : 0x9275c3ff);
     } else if (index == 1) {
-        draw_icon_line(x + 8.0f, y + 15.0f, x + 21.0f, y + 7.0f, ink);
-        draw_icon_line(x + 21.0f, y + 7.0f, x + 34.0f, y + 15.0f, ink);
-        draw_icon_line(x + 34.0f, y + 15.0f, x + 21.0f, y + 23.0f, ink);
-        draw_icon_line(x + 21.0f, y + 23.0f, x + 8.0f, y + 15.0f, ink);
-        draw_icon_line(x + 8.0f, y + 22.0f, x + 21.0f, y + 30.0f, ink);
-        draw_icon_line(x + 21.0f, y + 30.0f, x + 34.0f, y + 22.0f, ink);
-        draw_icon_line(x + 8.0f, y + 29.0f, x + 21.0f, y + 37.0f, ink);
-        draw_icon_line(x + 21.0f, y + 37.0f, x + 34.0f, y + 29.0f, ink);
+        /* Three stacked 3D-looking layers, like the reference screenshot. */
+        draw_icon_diamond(x + 21.0f, y + 12.0f, 15.0f, 7.0f, ink);
+        draw_icon_diamond(x + 21.0f, y + 22.0f, 15.0f, 7.0f, ink);
+        draw_icon_diamond(x + 21.0f, y + 32.0f, 15.0f, 7.0f, ink);
+        draw_icon_line(x + 9.0f, y + 13.0f, x + 21.0f, y + 19.0f, detail);
+        draw_icon_line(x + 21.0f, y + 19.0f, x + 33.0f, y + 13.0f, detail);
     } else if (index == 2) {
+        /* Thick, high-contrast gear with a clear central bearing. */
         draw_gear_outline(x + 21.0f, y + 21.0f, 15.0f, ink);
-        draw_circle_outline(x + 21.0f, y + 21.0f, 5.0f, ink);
+        draw_gear_outline(x + 21.0f, y + 21.0f, 13.0f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 5.6f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 4.0f, detail);
     } else if (index == 3) {
+        /* Help: legible question mark inside a double-ring circle. */
         draw_circle_outline(x + 21.0f, y + 21.0f, 15.0f, ink);
-        draw_icon_line(x + 15.0f, y + 13.0f, x + 25.0f, y + 13.0f, ink);
-        draw_icon_line(x + 25.0f, y + 13.0f, x + 28.0f, y + 19.0f, ink);
-        draw_icon_line(x + 28.0f, y + 19.0f, x + 21.0f, y + 24.0f, ink);
-        draw_icon_line(x + 21.0f, y + 24.0f, x + 21.0f, y + 29.0f, ink);
-        draw_solid_rect(x + 19.5f, y + 33.0f, 3.0f, 3.0f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 13.0f, ink);
+        draw_icon_line(x + 14.0f, y + 16.0f, x + 18.0f, y + 12.0f, ink);
+        draw_icon_line(x + 18.0f, y + 12.0f, x + 24.0f, y + 12.0f, ink);
+        draw_icon_line(x + 24.0f, y + 12.0f, x + 28.0f, y + 17.0f, ink);
+        draw_icon_line(x + 28.0f, y + 17.0f, x + 21.0f, y + 24.0f, ink);
+        draw_solid_rect(x + 20.0f, y + 23.0f, 3.0f, 5.0f, ink);
+        draw_solid_rect(x + 20.0f, y + 31.0f, 3.0f, 3.0f, ink);
     } else if (index == 4) {
+        /* Companion tools / enhancements. */
         draw_gear_outline(x + 21.0f, y + 21.0f, 14.0f, ink);
-        draw_icon_line(x + 8.0f, y + 34.0f, x + 34.0f, y + 8.0f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 5.0f, ink);
+        draw_icon_line(x + 10.0f, y + 32.0f, x + 32.0f, y + 10.0f, ink);
     } else {
+        /* About: information glyph matches the main dashboard reference. */
         draw_circle_outline(x + 21.0f, y + 21.0f, 15.0f, ink);
-        draw_solid_rect(x + 19.5f, y + 15.0f, 3.0f, 12.0f, ink);
-        draw_solid_rect(x + 19.5f, y + 10.0f, 3.0f, 3.0f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 13.0f, ink);
+        draw_solid_rect(x + 19.5f, y + 18.0f, 3.0f, 12.0f, ink);
+        draw_solid_rect(x + 19.5f, y + 12.0f, 3.0f, 3.0f, ink);
     }
 }
 
