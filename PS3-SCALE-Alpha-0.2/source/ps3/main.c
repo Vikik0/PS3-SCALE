@@ -3519,20 +3519,101 @@ static void draw_keyboard(void)
 }
 
 
+/* Light-weight rounded panels: rendered as two rectangular strips plus a
+   single batch of corner triangles, with no textures or frame allocations. */
+static void draw_rounded_rect(float x, float y, float w, float h,
+                              float radius, u32 color)
+{
+    int corner, segment, colored = 0;
+    const int segments = 6;
+    const float pi = 3.14159265359f;
+    float r = radius;
+    float cx[4], cy[4], start[4];
+
+    if (r > w * 0.5f) r = w * 0.5f;
+    if (r > h * 0.5f) r = h * 0.5f;
+    if (r <= 0.0f) {
+        draw_solid_rect(x, y, w, h, color);
+        return;
+    }
+
+    draw_solid_rect(x + r, y, w - r * 2.0f, h, color);
+    draw_solid_rect(x, y + r, r, h - r * 2.0f, color);
+    draw_solid_rect(x + w - r, y + r, r, h - r * 2.0f, color);
+
+    cx[0] = x + w - r; cy[0] = y + r;     start[0] = pi * 1.5f;
+    cx[1] = x + w - r; cy[1] = y + h - r; start[1] = 0.0f;
+    cx[2] = x + r;     cy[2] = y + h - r; start[2] = pi * 0.5f;
+    cx[3] = x + r;     cy[3] = y + r;     start[3] = pi;
+
+    tiny3d_SetPolygon(TINY3D_TRIANGLES);
+    for (corner = 0; corner < 4; corner++) {
+        for (segment = 0; segment < segments; segment++) {
+            float a = start[corner] + (pi * 0.5f) *
+                      (float)segment / (float)segments;
+            float b = start[corner] + (pi * 0.5f) *
+                      (float)(segment + 1) / (float)segments;
+            tiny3d_VertexPos(cx[corner], cy[corner], 65535.0f);
+            if (!colored) {
+                tiny3d_VertexColor(ui_theme_color(color));
+                colored = 1;
+            }
+            tiny3d_VertexPos(cx[corner] + cosf(a) * r,
+                             cy[corner] + sinf(a) * r, 65535.0f);
+            tiny3d_VertexPos(cx[corner] + cosf(b) * r,
+                             cy[corner] + sinf(b) * r, 65535.0f);
+        }
+    }
+    tiny3d_End();
+}
+
+static void draw_rounded_outline(float x, float y, float w, float h,
+                                 float radius, u32 color)
+{
+    int corner, segment;
+    const int segments = 6;
+    const float pi = 3.14159265359f;
+    float r = radius;
+    float cx[4], cy[4], start[4];
+
+    if (r > w * 0.5f) r = w * 0.5f;
+    if (r > h * 0.5f) r = h * 0.5f;
+
+    cx[0] = x + w - r; cy[0] = y + r;     start[0] = pi * 1.5f;
+    cx[1] = x + w - r; cy[1] = y + h - r; start[1] = 0.0f;
+    cx[2] = x + r;     cy[2] = y + h - r; start[2] = pi * 0.5f;
+    cx[3] = x + r;     cy[3] = y + r;     start[3] = pi;
+
+    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+    for (corner = 0; corner < 4; corner++) {
+        for (segment = 0; segment <= segments; segment++) {
+            float angle = start[corner] +
+                pi * 0.5f * (float)segment / (float)segments;
+            tiny3d_VertexPos(cx[corner] + cosf(angle) * r,
+                             cy[corner] + sinf(angle) * r, 65535.0f);
+            if (corner == 0 && segment == 0)
+                tiny3d_VertexColor(ui_theme_color(color));
+        }
+    }
+    tiny3d_End();
+}
+
 static void draw_soft_card(float x, float y, float w, float h, int selected)
 {
-    draw_solid_rect(x + 4.0f, y + 7.0f, w, h,
-                    selected ? 0x665b8f50 : 0x5e718f35);
-    draw_solid_rect(x, y, w, h,
-                    selected ? 0xf4efffe8 : 0xfaf8ffe8);
-    draw_outline_rect(x, y, w, h,
-                      selected ? 0x9568edff : 0xd9d1eaff);
-    draw_solid_rect(x + 8.0f, y + 5.0f, w - 16.0f, 1.5f, 0xffffffb8);
+    const float corner = 9.0f;
+    draw_rounded_rect(x + 3.0f, y + 6.0f, w, h, corner,
+                      selected ? 0x665b8f50 : 0x5e718f35);
+    draw_rounded_rect(x, y, w, h, corner,
+                      selected ? 0xf4efffe8 : 0xfaf8ffe8);
+    draw_rounded_outline(x, y, w, h, corner,
+                         selected ? 0x9568edff : 0xd9d1eaff);
+    draw_solid_rect(x + 10.0f, y + 5.0f, w - 20.0f, 1.5f, 0xffffffb8);
     if (selected) {
-        draw_outline_rect(x - 2.0f, y - 2.0f, w + 4.0f, h + 4.0f,
-                          0xb99aff70);
-        draw_solid_rect(x + 10.0f, y + h - 5.0f,
-                        w - 20.0f, 3.0f, 0x875be8ff);
+        draw_rounded_outline(x - 2.0f, y - 2.0f,
+                             w + 4.0f, h + 4.0f, corner + 2.0f,
+                             0xb99aff70);
+        draw_solid_rect(x + 12.0f, y + h - 5.0f,
+                        w - 24.0f, 2.5f, 0x875be8ff);
     }
 }
 
