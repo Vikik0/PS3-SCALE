@@ -301,7 +301,7 @@ assert "community_downloads" in src
 assert "community_component_is_safe" in src
 assert "community_extension_is" in src
 assert "memchr(header, 0, got)" in src
-assert "CROSS DOWNLOAD / OPEN" in src
+assert "CROSS OPEN/DOWNLOAD" in src
 assert "SQUARE FILTER" in src
 assert "TRIANGLE SEARCH" in src
 assert "L1/R1 PREV/NEXT" in src
@@ -359,7 +359,9 @@ assert "START: SYNC ONLINE METADATA" in online_ui
 assert "draw_rounded_rect(32.0f, y, 334.0f" in online_ui
 assert "draw_soft_chip(414.0f, 190.0f" in online_ui
 assert "LEFT/RIGHT PAGE" in online_ui
-assert "CROSS DOWNLOAD / OPEN" in online_ui
+assert "CROSS OPEN/DOWNLOAD" in online_ui
+assert 'selected ? "X: GAME DETAILS" : "X: DOWNLOAD DATA"' in online_ui
+assert "SELECT: SAVE TO COMMUNITY_DOWNLOADS" in online_ui
 
 def online_page_state(total, selected, page_size=8):
     if total == 0:
@@ -397,6 +399,9 @@ assert "PS3SCALE_ONLINE_PAGE_SIZE" in online_input
 assert "(left && !old_left)" in online_input
 assert "(right && !old_right)" in online_input
 assert "next_selection >= matches" in online_input
+assert "if (select && !old_select && matches)" in online_input
+assert "start_community_file_download(community)" in online_input
+assert "open_selected_online_match();" in online_input
 assert "open_online_search_keyboard" in online_input
 assert "ONLINE_FILTER_MODE_COUNT" in online_input
 assert "feature/online-graphics-database" in src
