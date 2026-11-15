@@ -122,6 +122,16 @@ jobs:
           echo "SHA-256:"
           sha256sum ps3scale.elf ps3scale.self ps3scale.pkg ps3scale.gnpdrm.pkg
 
+      - name: Upload XMB artwork previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: PS3-SCALE-XMB-Pearl-Design-Preview
+          if-no-files-found: error
+          path: |
+            PS3-SCALE-Alpha-0.2/pkgfiles/ICON0.PNG
+            PS3-SCALE-Alpha-0.2/pkgfiles/PIC0.PNG
+            PS3-SCALE-Alpha-0.2/pkgfiles/PIC1.PNG
+
       - name: Upload PS3 build artifacts
         uses: actions/upload-artifact@v4
         with:
