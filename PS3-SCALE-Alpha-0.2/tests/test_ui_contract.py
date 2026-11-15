@@ -147,7 +147,7 @@ assert "g_home_selected = (g_home_selected + 1) % 5;" in main
 assert "SCREEN_HELP" in src and "SCREEN_SUPPORT_FORM" in src
 help_ui = section("static void draw_help(void)", "static void draw_about(void)")
 assert "Report an Issue" in help_ui and "Send Feedback" in help_ui
-assert "A quick step-by-step guide to PS3 SCALE" in help_ui
+assert "A quick guide to the main PS3 SCALE features" in help_ui
 assert "PS3SCALE_SUPPORT_OUTBOX_PATH" in src
 assert "SAVED TO LOCAL OUTBOX" in src
 assert "open_support_keyboard(0)" in main
@@ -158,8 +158,8 @@ assert "ya2d_freeTexture(g_apollo_texture)" in main
 # Read-only hardware detection reports firmware and the Platform ID without console IDs.
 assert "ps3scale_hardware_detect(&g_hardware_info)" in main
 about = section("static void draw_about(void)", "static void draw_ui(void)")
-for token in ("Hardware Information", "Detected model:", "Console type:",
-              "Firmware:", "Platform ID:", "Hardware information is unavailable."):
+for token in ("Hardware Information", "Model", "Console type",
+              "Firmware", "Platform ID", "Hardware information is unavailable.")
     assert token in about
 hardware_detect_path = source_path.with_name("hardware_detect.c")
 hardware_detect_src = hardware_detect_path.read_text(encoding="utf-8")
