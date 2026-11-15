@@ -3932,20 +3932,20 @@ static void draw_library_filter_item(float x, float y, float w,
                                       int selected, int focused)
 {
     char number[16];
-    draw_solid_rect(x + 2.0f, y + 3.0f, w, 24.0f,
-                    selected ? 0x6b5b8f30 : 0x60718f24);
-    draw_solid_rect(x, y, w, 24.0f,
-                    selected ? 0xeee7ffed : 0xf8f6ffea);
-    draw_outline_rect(x, y, w, 24.0f,
-                      selected ? 0x9568edff : 0xd9d1eaff);
+    draw_rounded_rect(x + 2.0f, y + 3.0f, w, 24.0f, 7.0f,
+                      selected ? 0x6b5b8f30 : 0x60718f24);
+    draw_rounded_rect(x, y, w, 24.0f, 7.0f,
+                      selected ? 0xeee7ffed : 0xf8f6ffea);
+    draw_rounded_outline(x, y, w, 24.0f, 7.0f,
+                         selected ? 0x9568edff : 0xd9d1eaff);
     set_ui_font_size(6, 9);
     draw_text(x + 8.0f, y + 7.0f,
               selected ? 0x875be8ff : 0x514b69ff, label);
     snprintf(number, sizeof(number), "%u", (unsigned)count);
     draw_text(x + w - 25.0f, y + 7.0f, 0x77718fff, number);
     if (focused)
-        draw_outline_rect(x - 2.0f, y - 2.0f, w + 4.0f, 28.0f,
-                          0x875be8ff);
+        draw_rounded_outline(x - 2.0f, y - 2.0f, w + 4.0f, 28.0f,
+                             9.0f, 0x875be8ff);
 }
 
 static void draw_scan(void)
@@ -3991,8 +3991,15 @@ static void draw_scan(void)
     snprintf(line, sizeof(line), "Search games...  %s",
              g_search[0] ? g_search : "");
     draw_text(222.0f, 99.0f, 0x77718fff, line);
-    draw_solid_rect(788.0f, 96.0f, 14.0f, 11.0f, 0x875be8ff);
-    draw_solid_rect(788.0f, 110.0f, 14.0f, 3.0f, 0x875be8ff);
+    /* Small grid glyph matches the pearl/violet home icon style. */
+    draw_rounded_rect(782.0f, 94.0f, 34.0f, 22.0f, 6.0f,
+                      0xf0e9ffed);
+    draw_rounded_outline(782.0f, 94.0f, 34.0f, 22.0f, 6.0f,
+                         0xb99affff);
+    draw_solid_rect(791.0f, 100.0f, 6.0f, 4.0f, 0x875be8ff);
+    draw_solid_rect(800.0f, 100.0f, 6.0f, 4.0f, 0x875be8ff);
+    draw_solid_rect(791.0f, 107.0f, 6.0f, 4.0f, 0x875be8ff);
+    draw_solid_rect(800.0f, 107.0f, 6.0f, 4.0f, 0x875be8ff);
 
     for (i = 0; i < PS3SCALE_SCAN_GRID_COUNT && start + i < count; i++) {
         const ps3scale_game_t *game = library_game_at(start + i);
@@ -4003,6 +4010,10 @@ static void draw_scan(void)
                          (i % 3 == 1) ? 0xe4e9f5ff : 0xf0e6f3ff;
         if (!game) continue;
         draw_soft_card(x, y, 150.0f, 148.0f, selected);
+        /* A slight recessed border keeps cover art separated from glass.
+           Textures remain cached by the existing scanner/cover loader. */
+        draw_rounded_rect(x + 5.0f, y + 5.0f, 140.0f, 100.0f,
+                          7.0f, selected ? 0xc4a6f3ff : 0xe6e0efff);
         if (g_scan_cover_textures[i]) {
             ya2d_drawTextureEx(g_scan_cover_textures[i],
                                x + 7.0f, y + 7.0f, 0.0f, 136.0f, 96.0f);
@@ -4017,14 +4028,24 @@ static void draw_scan(void)
             draw_text_centered(x + 10.0f, y + 31.0f, 130.0f,
                                0x875be8ff, initial);
         }
+        /* Overlay platform tag on the cover itself, not on the title line. */
+        draw_rounded_rect(x + 107.0f, y + 82.0f, 30.0f, 17.0f, 5.0f,
+                          0x5f299de8);
+        set_ui_font_size(7, 11);
+        draw_text(x + 109.0f, y + 84.0f, 0xfdfaffff,
+                  game_is_ps3(game) ? "PS3" : "PS2");
+        set_ui_font_size(7, 11);
+        snprintf(line, sizeof(line), "%.17s", game->title);
+        draw_text(x + 9.0f, y + 110.0f, 0x29243fff, line);
         set_ui_font_size(6, 9);
-        snprintf(line, sizeof(line), "%.22s", game->title);
-        draw_text(x + 8.0f, y + 109.0f, 0x29243fff, line);
-        draw_soft_chip(x + 8.0f, y + 122.0f, 42.0f,
-                       game_is_ps3(game) ? "PS3" : "PS2", selected);
-        if (selected)
-            draw_outline_rect(x + 4.0f, y + 4.0f, 142.0f, 140.0f,
-                              0x9568edff);
+        draw_text(x + 9.0f, y + 130.0f, 0x77718fff,
+                  game_is_ps3(game) ? "PlayStation 3" : "PlayStation 2");
+        if (selected) {
+            draw_rounded_outline(x + 2.0f, y + 2.0f, 146.0f,
+                                 144.0f, 10.0f, 0x9568edff);
+            draw_solid_rect(x + 16.0f, y + 143.0f, 118.0f, 2.0f,
+                            0x875be8ff);
+        }
     }
 
     if (count == 0) {
@@ -4036,6 +4057,14 @@ static void draw_scan(void)
     set_ui_font_size(7, 11);
     snprintf(line, sizeof(line), "%u GAMES FOUND", (unsigned)count);
     draw_text(188.0f, 446.0f, 0x514b69ff, line);
+    if (count > 0) {
+        size_t pages = (count + PS3SCALE_SCAN_GRID_COUNT - 1u) /
+                       PS3SCALE_SCAN_GRID_COUNT;
+        size_t page = start / PS3SCALE_SCAN_GRID_COUNT + 1u;
+        snprintf(line, sizeof(line), "PAGE %u / %u",
+                 (unsigned)page, (unsigned)pages);
+        draw_text(727.0f, 446.0f, 0x875be8ff, line);
+    }
     if (g_scan_message[0])
         draw_text(360.0f, 446.0f, 0x875be8ff, g_scan_message);
     if (g_games.truncated)
@@ -4080,6 +4109,15 @@ static void draw_details(void)
               "ORIGINAL FILES SAFE");
 
     draw_soft_card(186.0f, 92.0f, 326.0f, 292.0f, 0);
+    /* Status pill tells the user what is actually available. */
+    draw_rounded_rect(203.0f, 246.0f, 290.0f, 21.0f, 7.0f,
+                      (profile || ps2_config) ? 0xe5f5eaff : 0xfff3e5ff);
+    set_ui_font_size(7, 11);
+    draw_text(212.0f, 251.0f,
+              (profile || ps2_config) ? 0x26794bff : 0xb27b35ff,
+              profile ? "MATCHED PROFILE - REVIEW FIRST" :
+              ps2_config ? "MATCHED PS2 CONFIG - REVIEW FIRST" :
+                           "NO MATCHED FILE - PLAY UNMODIFIED");
     set_ui_font_size(11, 17);
     snprintf(line, sizeof(line), "%.26s", game->title);
     draw_text(204.0f, 110.0f, 0xffffffff, line);
@@ -4098,7 +4136,7 @@ static void draw_details(void)
     draw_text(204.0f, 202.0f, 0x514b69ff, line);
     snprintf(line, sizeof(line), "Location: %.25s", game->path);
     draw_text(204.0f, 228.0f, 0x77718fff, line);
-    draw_text(204.0f, 270.0f, 0xffffffff, "Enhancement Status");
+    draw_text(204.0f, 277.0f, 0x29243fff, "Enhancement Status");
     if (game_is_ps3(game)) {
         if (profile) {
             snprintf(line, sizeof(line), "Profile: %.30s", profile->effect);
@@ -4134,7 +4172,9 @@ static void draw_details(void)
 
     draw_soft_card(526.0f, 92.0f, 308.0f, 292.0f, 0);
     set_ui_font_size(9, 14);
-    draw_text(544.0f, 108.0f, 0xffffffff, "Original vs Enhanced");
+    draw_text(544.0f, 108.0f, 0x29243fff, "Original vs Enhanced");
+    set_ui_font_size(6, 9);
+    draw_text(698.0f, 122.0f, 0x875be8ff, "CONCEPT PREVIEW");
     draw_solid_rect(542.0f, 136.0f, 132.0f, 84.0f, 0xcbd8bfff);
     draw_solid_rect(680.0f, 136.0f, 136.0f, 84.0f, 0xc8d9c0ff);
     draw_solid_rect(542.0f, 136.0f, 132.0f, 28.0f, 0xa7c1a0ff);
@@ -4150,24 +4190,34 @@ static void draw_details(void)
     draw_text(744.0f, 228.0f, 0x875be8ff, "ENHANCED");
     draw_soft_chip(542.0f, 246.0f, 132.0f, "Enhancement Info", 1);
     draw_soft_chip(680.0f, 246.0f, 136.0f, "Compatibility", 0);
-    if (profile || ps2_config) {
-        draw_circle_outline(550.0f, 286.0f, 4.0f, 0x2c9f8eff);
-        draw_text(562.0f, 282.0f, 0x514b69ff,
-                  "Higher Resolution (profile-dependent)");
-        draw_circle_outline(550.0f, 304.0f, 4.0f, 0x2c9f8eff);
-        draw_text(562.0f, 300.0f, 0x514b69ff,
-                  "Improved Texture Sharpness");
-        draw_circle_outline(550.0f, 322.0f, 4.0f, 0x2c9f8eff);
-        draw_text(562.0f, 318.0f, 0x514b69ff,
-                  "Better Color & Lighting");
-        draw_circle_outline(550.0f, 340.0f, 4.0f, 0x2c9f8eff);
-        draw_text(562.0f, 336.0f, 0x514b69ff,
-                  "Smoother Performance (game-specific)");
+    /* Don't promise universal 1080p, HD textures or performance gains:
+       PS3 patches and PS2 compatibility configs do different jobs. */
+    set_ui_font_size(6, 9);
+    if (game_is_ps3(game) && profile) {
+        draw_text(544.0f, 285.0f, 0x26794bff,
+                  "VERIFIED MATCH - REVIEW THE EFFECT");
+        snprintf(line, sizeof(line), "Profile: %.27s", profile->effect);
+        draw_text(544.0f, 304.0f, 0x514b69ff, line);
+        draw_text(544.0f, 323.0f, 0x514b69ff,
+                  "Results depend on the exact game version.");
+        draw_text(544.0f, 342.0f, 0x875be8ff,
+                  "Illustration only; not real game footage.");
+    } else if (!game_is_ps3(game) && ps2_config) {
+        draw_text(544.0f, 285.0f, 0x26794bff,
+                  "PS2 CONFIGURATION AVAILABLE");
+        draw_text(544.0f, 304.0f, 0x514b69ff,
+                  "Compatibility settings are game-specific.");
+        draw_text(544.0f, 323.0f, 0x514b69ff,
+                  "This is NOT an HD texture replacement.");
+        draw_text(544.0f, 342.0f, 0x875be8ff,
+                  "Illustration only; not real game footage.");
     } else {
-        draw_text(544.0f, 292.0f, 0xffcc66ff,
-                  "No verified profile is available.");
-        draw_text(544.0f, 316.0f, 0x77718fff,
-                  "This game will start unmodified.");
+        draw_text(544.0f, 290.0f, 0xb27b35ff,
+                  "NO VERIFIED ENHANCEMENT AVAILABLE");
+        draw_text(544.0f, 311.0f, 0x514b69ff,
+                  "The game will start without changes.");
+        draw_text(544.0f, 334.0f, 0x875be8ff,
+                  "Illustration only; not real game footage.");
     }
 
     draw_soft_button(20.0f, 400.0f, 250.0f, 44.0f,
