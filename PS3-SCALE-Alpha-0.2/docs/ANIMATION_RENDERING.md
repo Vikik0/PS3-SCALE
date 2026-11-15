@@ -17,6 +17,24 @@ The Apollo Save logo remains a separate splash asset and is not recolored.
 - A complete visual revolution advances over 21,600 frames (six minutes **if** the PS3 sustains 60 FPS). This is currently frame-based timing, not real-time clock timing, so actual speed depends on measured frame rate.
 - The background lighting and particles use the same periodic phase. The player can disable animation in Settings.
 
+## Pearl material upgrade (visual stage 2)
+- A thin **polished bevel** is now drawn along the outside of each tread, with
+  a matching **contact-shadow strip** underneath the riser. Together they add
+  visible thickness while retaining white/pearl architecture.
+- Each projected face carries four tinted vertex colors for a restrained
+  reflection gradient and depth haze. The RSX interpolates these vertices;
+  this is geometry shading, **not** ray tracing, bump mapping or a 4K texture.
+- Riser and underside wireframes are intentionally hidden to avoid the
+  technical/cartoony outlined look. Bright top edges remain visible.
+- The scene stays within five surfaces per 32-tread window and uses the
+  existing batched Tiny3D render path.
+- `scripts/preview_staircase_materials.py` generates five approximate
+  **software previews** plus a contact sheet during CI. These are NOT actual
+  PS3 screenshots or a guarantee of real RSX material appearance.
+- The user-approved photo-like staircase is still a *target aesthetic*.
+  Captured PS3 screenshots, real frame pacing, alpha behavior, and the loop
+  boundary must be checked before merging this prototype.
+
 ## Rendering and performance
 - The staircase is procedural 3D geometry with a perspective camera transform, projected in software into Tiny3D's stable 2D rendering pass. This deliberately avoids relying on RSX depth-buffer behavior that previously hid the scene.
 - Faces are transformed into camera space and sorted back-to-front; faces and line segments crossing the near plane are skipped rather than stretched across the screen.
