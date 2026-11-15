@@ -131,13 +131,13 @@ def spiral_staircase(canvas, count, center_x, center_y, center_z,
         ]
         faces.append((sum(p[2] for p in top) / 4.0,
                       [project(p) for p in top],
-                      (195, 178, 239), (247, 241, 255)))
+                      (249, 247, 254), (255, 254, 255)))
         faces.append((sum(p[2] for p in riser) / 4.0,
                       [project(p) for p in riser],
-                      (103, 80, 160), (202, 186, 235)))
+                      (215, 207, 235), (241, 230, 250)))
         faces.append((sum(p[2] for p in side) / 4.0,
                       [project(p) for p in side],
-                      (143, 119, 197), (224, 211, 248)))
+                      (194, 185, 218), (232, 221, 246)))
 
     # Far treads are painted first; nearer treads cover them naturally.
     faces.sort(key=lambda item: item[0], reverse=True)
@@ -151,7 +151,7 @@ def spiral_staircase(canvas, count, center_x, center_y, center_z,
     pole_top = project((center_x, 11.0, center_z))
     pole_bottom = project((center_x, -11.0, center_z))
     canvas.line(pole_top[0], pole_top[1], pole_bottom[0], pole_bottom[1],
-                (139, 113, 194), 8)
+                (194, 182, 225), 8)
     canvas.line(pole_top[0], pole_top[1], pole_bottom[0], pole_bottom[1],
                 (247, 239, 255), 2)
 
@@ -165,7 +165,7 @@ def spiral_staircase(canvas, count, center_x, center_y, center_z,
         canvas.line(rail[j][0], rail[j][1], rail[j + 1][0],
                     rail[j + 1][1], (247, 239, 255), 4)
         canvas.line(rail[j][0], rail[j][1], rail[j + 1][0],
-                    rail[j + 1][1], (151, 119, 220), 1)
+                    rail[j + 1][1], (175, 145, 224), 1)
 
     for i in range(0, count, 3):
         angle = i * angle_step + 0.48
@@ -187,65 +187,100 @@ def ps_mark(canvas, x, y, scale, color):
 
 
 def generate(font):
-    PKG.mkdir(parents=True,exist_ok=True)
+    PKG.mkdir(parents=True, exist_ok=True)
 
-    # XMB wallpaper: clean lavender light, a broad stair sweep on the left,
-    # and quiet negative space on the right for the PS3 XMB icons.
-    bg=Canvas(1280,720,(253,252,255),(224,217,245))
-    for radius, color, width in (
-        (260,(236,228,251),3),(220,(242,236,253),2),(178,(247,243,255),2)
+    # PIC1: pearl-white cinematic XMB wallpaper. The staircase is the
+    # foreground subject, while the right side stays quiet for XMB labels.
+    bg = Canvas(1280, 720, (252, 252, 255), (231, 228, 243))
+    for y in range(720):
+        # Very subtle satin/lavender horizontal highlights, no harsh bands.
+        t = y / 719.0
+        wave = (math.sin(y * 0.014) + 1.0) * 0.5
+        c = (int(253 - 15*t + 2*wave),
+             int(252 - 18*t + 2*wave),
+             int(255 - 7*t))
+        bg.rect(0, y, 1280, 1, c)
+
+    # Wide translucent architectural lighting behind the stairs.
+    for r, c, width in (
+        (315, (237, 233, 249), 5),
+        (260, (245, 242, 253), 4),
+        (204, (250, 248, 255), 3)
     ):
-        bg.circle(1050,150,radius,color,width)
-    for wave in range(5):
-        prev=None
-        for x in range(0,1281,12):
-            y=90+wave*118+math.sin(x*0.0037+wave*0.78)*22
-            point=(x,y)
-            if prev:
-                bg.line(prev[0],prev[1],point[0],point[1],
-                        (238-wave*3,231-wave*3,251),2)
-            prev=point
-    for i in range(78):
-        x=(i*197+83)%1280; y=(i*113+29)%690
-        bg.rect(x,y,2 if i%4 else 3,2 if i%4 else 3,(229,220,247))
+        bg.circle(1102, 137, r, c, width)
+
+    # Satin light tracks extend across the 16:9 background.
+    for wave in range(4):
+        last = None
+        for x in range(0, 1281, 10):
+            y = 80 + wave*145 + math.sin(x * 0.004 + wave*0.72)*17
+            if last:
+                bg.line(last[0], last[1], x, y,
+                        (232 - wave*3, 225 - wave*3, 247), 2)
+            last = (x, y)
+
+    for i in range(58):
+        x=(i*197+83)%1280
+        y=(i*113+29)%690
+        bg.rect(x,y,2 if i%5 else 3,2 if i%5 else 3,(232,224,247))
+
+    # Exact asset dimensions and key call preserved for PS3 UI contract tests.
     spiral_staircase(bg,28,-10.5,0.0,58.0,1050.0,12.0,1.6,0.44,0.66)
-    bg.line(4,686,742,38,(203,184,241),3)
-    bg.line(26,710,774,64,(247,239,255),2)
-    bg.line(0,640,694,6,(232,221,251),2)
+    bg.line(0, 686, 759, 18, (200, 182, 232), 2)
+    bg.line(14, 717, 790, 35, (254, 250, 255), 3)
     bg.save(PKG/"PIC1.PNG")
 
-    # Dark, legible XMB tile: the staircase stays on the left and the
-    # PS3 SCALE wordmark sits on an uncluttered midnight-purple panel.
-    icon=Canvas(320,176,(30,25,54),(5,7,22))
-    stairs(icon,9,-36,174,8,10,156,10,
-           (255,255,255),(224,217,243),(150,137,190))
-    icon.rect(112,10,196,156,(10,10,29))
-    icon.line(112,10,308,10,(107,83,160),2)
-    icon.line(308,10,308,166,(107,83,160),2)
-    icon.line(308,166,112,166,(107,83,160),2)
-    icon.line(112,166,112,10,(107,83,160),2)
-    ps_mark(icon,202,18,0.76,(255,255,255))
-    icon.text(132,58,"PS3",4,(255,255,255),font)
-    icon.text(132,98,"SCALE",4,(190,145,255),font)
-    icon.rect(132,137,154,2,(151,104,231))
-    icon.text(136,149,"GAME ENHANCER",1,(228,220,248),font)
+    # ICON0: dark violet premium package icon, designed to be readable at
+    # real PS3 XMB thumbnail size (320 x 176), not only in a close-up.
+    icon=Canvas(320,176,(30,27,54),(9,10,27))
+    for y in range(176):
+        t=y/175.0
+        icon.rect(0,y,320,1,
+                  (int(38-29*t),int(30-20*t),int(64-36*t)))
+    # Left-side pale steps, with silver risers and soft lavender edges.
+    stairs(icon,10,-40,177,9,11,163,10,
+           (252,251,255),(214,206,237),(140,127,188))
+    icon.line(0, 154, 114, 25, (179,142,242), 2)
+    icon.line(2, 161, 122, 25, (245,235,255), 1)
+    # Right-side legible matte panel and thin polished frame.
+    icon.rect(126,8,184,160,(17,15,40))
+    icon.line(125,7,311,7,(123,86,205),2)
+    icon.line(311,7,311,166,(105,78,173),2)
+    icon.line(311,166,125,166,(72,62,125),2)
+    icon.line(125,166,125,7,(103,77,159),2)
+    icon.line(130,10,305,10,(210,191,249),1)
+    # PlayStation-like line illustration drawn by this project's ps_mark.
+    ps_mark(icon,234,18,1,(248,247,255))
+    # Two-line wordmark avoids tiny illegible glyphs.
+    icon.text(173,61,"PS3",3,(253,253,255),font)
+    icon.text(151,100,"SCALE",3,(197,155,255),font)
+    icon.rect(153,141,148,2,(155,94,246))
+    icon.rect(153,144,148,1,(83,57,141))
+    icon.text(161,151,"GAME ENHANCER",1,(230,218,249),font)
     icon.save(PKG/"ICON0.PNG")
 
-    # XMB preview tile matches the installed app icon.
-    pic0=Canvas(310,176,(250,248,255),(224,216,242))
-    stairs(pic0,12,-24,172,8,10,244,13,
-           (255,255,255),(230,223,246),(193,180,224))
-    ps_mark(pic0,22,24,1,(43,35,68))
-    pic0.text(70,24,"PS3 SCALE",3,(43,35,68),font)
-    pic0.text(72,66,"GAME ENHANCEMENT",1,(126,93,173),font)
-    pic0.text(72,82,"MANAGEMENT",1,(126,93,173),font)
+    # PIC0: a pearl-white preview tile matching the selected app identity.
+    pic0=Canvas(310,176,(252,252,255),(229,226,242))
+    for y in range(176):
+        t=y/175.0
+        pic0.rect(0,y,310,1,(int(251-18*t),int(251-21*t),int(255-11*t)))
+    stairs(pic0,12,-28,182,8,10,240,12,
+           (253,253,255),(226,221,240),(187,176,214))
+    pic0.rect(122,15,178,143,(246,243,252))
+    pic0.line(123,15,299,15,(175,144,226),2)
+    pic0.line(123,158,299,158,(207,191,233),2)
+    ps_mark(pic0,191,22,1,(42,34,70))
+    pic0.text(148,74,"PS3",3,(45,36,72),font)
+    pic0.text(147,111,"SCALE",3,(120,60,207),font)
     pic0.save(PKG/"PIC0.PNG")
 
-    for name,size in (("ICON0.PNG",(320,176)),("PIC1.PNG",(1280,720)),("PIC0.PNG",(310,176))):
+    for name,size in (("PIC1.PNG",(1280,720)),("ICON0.PNG",(320,176)),("PIC0.PNG",(310,176))):
         data=(PKG/name).read_bytes()
-        if data[:8]!=b"\x89PNG\r\n\x1a\n": raise RuntimeError(f"{name} is not PNG")
+        if data[:8]!=b"\x89PNG\r\n\x1a\n":
+            raise RuntimeError(f"{name} is not PNG")
         dims=struct.unpack_from(">II",data,16)
-        if dims!=size: raise RuntimeError(f"{name} dimensions {dims}, expected {size}")
+        if dims!=size:
+            raise RuntimeError(f"{name} dimensions {dims}, expected {size}")
         print(f"XMB asset ready: {name} {dims[0]}x{dims[1]}, {len(data):,} bytes")
 
 if __name__=="__main__":
