@@ -374,7 +374,7 @@ assert "draw_home_ambient();" in draw_ui_impl
 assert "draw_app_icon_preview" in src
 assert "XMB APP ICON" in src
 assert "scene_camera_space_point" in src
-assert "PS3SCALE_STAIR_STEPS 24" in src
+assert "PS3SCALE_STAIR_STEPS 32" in src
 assert "g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES" in src
 assert "draw_home_card" not in src  # home cards are rendered in the main menu loop
 assert "PS3" in home and "SCALE" in home and "COMPANION TOOLS" in home
