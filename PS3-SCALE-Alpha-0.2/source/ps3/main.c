@@ -5443,6 +5443,28 @@ int main(int argc, char *argv[])
             }
             if (r1 && !old_r1 && matches)
                 g_online_selected = (g_online_selected + 1) % (int)matches;
+            /* Left/right jump a result page while keeping the current row.
+               The final short page is clamped so selection always remains
+               visible; L1/R1 continue to move one result as before. */
+            if (((left && !old_left) || (right && !old_right)) && matches) {
+                size_t page_count =
+                    (matches + PS3SCALE_ONLINE_PAGE_SIZE - 1u) /
+                    PS3SCALE_ONLINE_PAGE_SIZE;
+                size_t current_page =
+                    (size_t)g_online_selected / PS3SCALE_ONLINE_PAGE_SIZE;
+                size_t row =
+                    (size_t)g_online_selected % PS3SCALE_ONLINE_PAGE_SIZE;
+                size_t next_page = current_page;
+                size_t next_selection;
+                if (left && !old_left)
+                    next_page = (current_page + page_count - 1u) % page_count;
+                else if (right && !old_right)
+                    next_page = (current_page + 1u) % page_count;
+                next_selection = next_page * PS3SCALE_ONLINE_PAGE_SIZE + row;
+                if (next_selection >= matches)
+                    next_selection = matches - 1u;
+                g_online_selected = (int)next_selection;
+            }
             if (square && !old_square) {
                 g_online_filter_mode =
                     (g_online_filter_mode + 1) % ONLINE_FILTER_MODE_COUNT;
