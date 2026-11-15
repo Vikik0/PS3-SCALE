@@ -171,7 +171,7 @@ assert "IDPS" not in hardware_detect_src and "PSID" not in hardware_detect_src
 
 # Home animation uses a slow camera dolly around the pearl-white spiral staircase.
 ambient = section("static void draw_home_ambient(void)", "static void set_settings_message")
-assert "PS3SCALE_STAIR_STEPS 24" in src
+assert "PS3SCALE_STAIR_STEPS 32" in src
 assert "PS3SCALE_STAIR_LOOP_FRAMES 21600ul" in src
 assert "scene_camera_space_point" in src
 assert "scene_project_camera_point" in src
@@ -186,9 +186,9 @@ assert "Inner and outer spiral handrails" in ambient
 assert "tiny3d_SetPolygon(TINY3D_LINES);" in ambient
 assert "scene_emit_line_segment" in ambient
 assert "g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES" in ambient
-assert "angle = (float)i * angle_step;" in ambient
-assert "outer_radius = 9.6f" in ambient
-assert "inner_radius = 1.25f" in ambient
+assert "const float angle_step = 0.36f;" in ambient
+assert "outer_radius = 14.0f" in ambient
+assert "inner_radius = 2.0f" in ambient
 assert "camera_points[i].z <= 2.5f" in src
 assert "camera_a.z <= 2.5f || camera_b.z <= 2.5f" in src
 
