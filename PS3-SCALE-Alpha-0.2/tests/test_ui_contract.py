@@ -339,9 +339,64 @@ assert "D-PAD SELECT" in online_ui
 assert "L1/R1 PREV/NEXT" in online_ui
 assert "%.54s" in online_ui
 assert "CATEGORY: %.24s" in online_ui
+# Online DB stage 4: page/selection must stay in sync for >8 results.
+assert "#define PS3SCALE_ONLINE_PAGE_SIZE 8u" in src
+assert "page_start = ((size_t)g_online_selected / page_size) * page_size;" in online_ui
+assert "i = page_start;" in online_ui
+assert "visible_count < page_size;" in online_ui
+assert "RESULTS %u  |  PAGE %u/%u" in online_ui
+assert "SEARCH RESULT: NO LOCAL GAME MATCH" in online_ui
+assert "MATCH: TITLE ID / VERSION METADATA" in online_ui
+assert "MATCH: REVIEW TITLE ID / VERSION" in online_ui
+assert "PROFILE CACHE: LOADED" in online_ui
+assert "GITHUB INDEX: LOADED" in online_ui
+assert "g_catalog_sync_running" in online_ui
+assert "DATA ONLY - NEVER EXECUTED OR AUTO-APPLIED" in online_ui
+assert "NO DOWNLOAD: ONLY NCL/TXT UP TO 2 MB" in online_ui
+assert "PS2 compatibility is game-specific." in online_ui
+assert "Not an HD texture or 1080p upgrade." in online_ui
+assert "START: SYNC ONLINE METADATA" in online_ui
+assert "draw_rounded_rect(32.0f, y, 334.0f" in online_ui
+assert "draw_soft_chip(414.0f, 190.0f" in online_ui
+assert "LEFT/RIGHT PAGE" in online_ui
+assert "CROSS DOWNLOAD / OPEN" in online_ui
+
+def online_page_state(total, selected, page_size=8):
+    if total == 0:
+        return 0, 0, 0
+    assert 0 <= selected < total
+    start = selected // page_size * page_size
+    return start, min(total, start + page_size), start // page_size + 1
+
+def move_page(total, selected, direction, page_size=8):
+    if not total:
+        return 0
+    count = (total + page_size - 1) // page_size
+    page, row = divmod(selected, page_size)
+    next_page = (page + (1 if direction > 0 else count - 1)) % count
+    return min(total - 1, next_page * page_size + row)
+
+for total in [0, 1, 7, 8, 9, 15, 16, 17, 61]:
+    for index in range(total):
+        lo, hi, page = online_page_state(total, index)
+        assert 0 <= lo <= index < hi <= total
+        assert hi - lo <= 8
+        assert 1 <= page <= (total + 7) // 8
+        for direction in [-1, 1]:
+            nxt = move_page(total, index, direction)
+            lo2, hi2, _ = online_page_state(total, nxt)
+            assert lo2 <= nxt < hi2
+    if total == 0:
+        assert online_page_state(0, 0) == (0, 0, 0)
+        assert move_page(0, 0, 1) == 0
+
 online_input = section("} else if (g_screen == SCREEN_ONLINE_DB) {", "} else if (g_screen == SCREEN_SETTINGS) {")
 assert "up && !old_up" in online_input
 assert "down && !old_down" in online_input
+assert "PS3SCALE_ONLINE_PAGE_SIZE" in online_input
+assert "(left && !old_left)" in online_input
+assert "(right && !old_right)" in online_input
+assert "next_selection >= matches" in online_input
 assert "open_online_search_keyboard" in online_input
 assert "ONLINE_FILTER_MODE_COUNT" in online_input
 assert "feature/online-graphics-database" in src
