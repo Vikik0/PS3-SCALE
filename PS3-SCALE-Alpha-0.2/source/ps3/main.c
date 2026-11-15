@@ -3788,7 +3788,7 @@ static void draw_online_database(void)
         current_page = page_start / page_size + 1u;
     }
 
-    draw_page_header("Online DB", "Search PS3 profiles, community data and PS2 compatibility configs");
+    draw_page_header("Online DB", "ONLINE GAME DATABASE | PS3 profiles, GitHub data and PS2 configs");
     draw_soft_card(20.0f, 88.0f, 360.0f, 360.0f, 0);
     draw_soft_card(394.0f, 88.0f, 440.0f, 360.0f, 0);
 
