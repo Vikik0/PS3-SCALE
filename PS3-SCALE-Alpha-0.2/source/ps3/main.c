@@ -1482,7 +1482,7 @@ typedef struct ps3scale_scene_face {
     u32 edge;
 } ps3scale_scene_face_t;
 
-#define PS3SCALE_STAIR_STEPS 24
+#define PS3SCALE_STAIR_STEPS 32
 #define PS3SCALE_STAIR_LOOP_FRAMES 21600ul
 #define PS3SCALE_STAIR_FACE_MAX (PS3SCALE_STAIR_STEPS * 3)
 
@@ -1754,10 +1754,10 @@ static void draw_home_ambient(void)
     const float tau = 6.28318530718f;
     const float center_x = 7.2f;
     const float center_y = 0.0f;
-    const float center_z = 43.0f;
-    const float inner_radius = 1.25f;
-    const float outer_radius = 9.6f;
-    const float angle_step = 0.48f;
+    const float center_z = 34.0f;
+    const float inner_radius = 2.0f;
+    const float outer_radius = 14.0f;
+    const float angle_step = 0.36f;
     const float focal_length = 780.0f;
     unsigned long frame_in_loop =
         g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES;
