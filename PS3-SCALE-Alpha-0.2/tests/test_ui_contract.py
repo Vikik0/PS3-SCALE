@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Static UI contract checks for PS3 SCALE's PS3-only UI."""
+import math
 import pathlib
 import sys
 
@@ -168,40 +169,38 @@ assert "ps3scale_hardware_info_parse" in hardware_detect_src
 assert "ps3scale_console_type_name" in about
 assert "IDPS" not in hardware_detect_src and "PSID" not in hardware_detect_src
 
-# Home animation is a straight camera ascent through a seamless helical staircase.
+# Home animation uses a slow camera dolly around the pearl-white spiral staircase.
 ambient = section("static void draw_home_ambient(void)", "static void set_settings_message")
-assert "PS3SCALE_STAIR_STEPS 48" in src
-assert "PS3SCALE_STAIR_STEPS_PER_TURN 24" in src
+assert "PS3SCALE_STAIR_STEPS 24" in src
 assert "PS3SCALE_STAIR_LOOP_FRAMES 21600ul" in src
-assert "PS3SCALE_STAIR_STEP_RISE 0.48f" in src
-assert "scene_project_point" in src
+assert "scene_camera_space_point" in src
+assert "scene_project_camera_point" in src
 assert "scene_push_face" in ambient
 assert "compare_scene_face_depth" in ambient
 assert "qsort(faces, face_count" in ambient
-assert "camera rises in a straight line" in ambient
+assert "slow forward dolly with a shallow lateral arc" in ambient
+assert "scene_set_camera(camera_x, camera_y, camera_z," in ambient
+assert "camera_x = 1.8f * (1.0f - cosf(phase));" in ambient
+assert "camera_z = 3.0f * sinf(phase);" in ambient
 assert "Inner and outer spiral handrails" in ambient
-assert "TINY3D_LINES" in ambient
+assert "tiny3d_SetPolygon(TINY3D_LINES);" in ambient
+assert "scene_emit_line_segment" in ambient
 assert "g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES" in ambient
-assert "camera_step = loop_progress *" in ambient
-assert "step_fraction = camera_step -" in ambient
-assert "cycle_count *" in ambient
-assert "scene_stair_point" in ambient
-assert "outer_radius = 10.4f" in ambient
-assert "inner_radius = 2.0f" in ambient
-assert "PS3SCALE_STAIR_STEP_RISE" in ambient
-assert "if (points[i].z <= 2.5f)" in src
-assert "if (a.z <= 2.5f || b.z <= 2.5f)" in src
+assert "angle = (float)i * angle_step;" in ambient
+assert "outer_radius = 9.6f" in ambient
+assert "inner_radius = 1.25f" in ambient
+assert "camera_points[i].z <= 2.5f" in src
+assert "camera_a.z <= 2.5f || camera_b.z <= 2.5f" in src
 
-# One camera cycle advances exactly one 24-tread revolution and returns to
-# the same camera-relative geometry without reversing direction.
-def staircase_pose(camera_step, offset):
-    whole = int(camera_step)
-    fraction = camera_step - whole
-    return ((whole + offset) % 24,
-            round((offset - fraction) * 0.48, 6))
+# The dolly path is moving throughout its cycle and returns to its exact start.
+def camera_path(phase):
+    return (round(1.8 * (1.0 - math.cos(phase)), 6),
+            round(0.18 * math.sin(phase), 6),
+            round(3.0 * math.sin(phase), 6))
 
-for offset in range(-24, 24):
-    assert staircase_pose(0.0, offset) == staircase_pose(24.0, offset)
+assert camera_path(0.0) == camera_path(2.0 * math.pi)
+assert camera_path(0.0) != camera_path(math.pi / 2.0)
+assert camera_path(math.pi / 2.0) != camera_path(math.pi)
 assert "case 0xffffff00u: rgb = 0x29243f00u;" in src
 assert 'sscanf(line, "animation_v2=%d"' in src
 assert 'fprintf(fp, "animation_v2=%d\\n"' in src
@@ -374,8 +373,8 @@ assert "TINY3D_CLEAR_ZBUFFER" not in draw_ui_impl
 assert "draw_home_ambient();" in draw_ui_impl
 assert "draw_app_icon_preview" in src
 assert "XMB APP ICON" in src
-assert "scene_project_point" in src
-assert "PS3SCALE_STAIR_STEPS 48" in src
+assert "scene_camera_space_point" in src
+assert "PS3SCALE_STAIR_STEPS 24" in src
 assert "g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES" in src
 assert "draw_home_card" not in src  # home cards are rendered in the main menu loop
 assert "PS3" in home and "SCALE" in home and "COMPANION TOOLS" in home
