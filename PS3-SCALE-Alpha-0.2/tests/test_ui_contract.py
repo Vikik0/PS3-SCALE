@@ -169,7 +169,7 @@ assert "ps3scale_hardware_info_parse" in hardware_detect_src
 assert "ps3scale_console_type_name" in about
 assert "IDPS" not in hardware_detect_src and "PSID" not in hardware_detect_src
 
-# Home animation uses a slow camera dolly around the pearl-white spiral staircase.
+# The staircase is an endless camera-relative scene, not a reversing dolly.
 ambient = section("static void draw_home_ambient(void)", "static void set_settings_message")
 assert "PS3SCALE_STAIR_STEPS 32" in src
 assert "PS3SCALE_STAIR_LOOP_FRAMES 21600ul" in src
@@ -180,29 +180,44 @@ assert "draw_scene_faces(faces, face_count);" in ambient
 assert "tiny3d_SetPolygon(TINY3D_QUADS);" in src
 assert "compare_scene_face_depth" in ambient
 assert "qsort(faces, face_count" in ambient
-assert "slow forward dolly with a shallow lateral arc" in ambient
-assert "scene_set_camera(camera_x, camera_y, camera_z," in ambient
-assert "camera_x = 1.8f * (1.0f - cosf(phase));" in ambient
-assert "camera_z = 3.0f * sinf(phase);" in ambient
+assert "scene_set_camera(0.0f, camera_y, 0.0f," in ambient
+assert "camera_steps = phase / tau * 18.0f;" in ambient
+assert "camera_step_whole = (int)camera_steps;" in ambient
+assert "camera_y = (camera_steps - (float)camera_step_whole)" in ambient
 assert "Inner and outer spiral handrails" in ambient
 assert "tiny3d_SetPolygon(TINY3D_LINES);" in ambient
 assert "scene_emit_line_segment" in ambient
 assert "g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES" in ambient
-assert "const float angle_step = 0.36f;" in ambient
+assert "angle_step = tau / 18.0f;" in ambient
 assert "outer_radius = 14.0f" in ambient
 assert "inner_radius = 2.0f" in ambient
 assert "camera_points[i].z <= 2.5f" in src
 assert "camera_a.z <= 2.5f || camera_b.z <= 2.5f" in src
 
-# The dolly path is moving throughout its cycle and returns to its exact start.
-def camera_path(phase):
-    return (round(1.8 * (1.0 - math.cos(phase)), 6),
-            round(0.18 * math.sin(phase), 6),
-            round(3.0 * math.sin(phase), 6))
+# Every camera advance presents the identical geometry in the next tread slot.
+# The 21,600-frame boundary advances an entire revolution with no camera cut.
+def streamed_tread(frame, index):
+    step = (frame % 21600) * (18.0 / 21600.0)
+    whole = int(step)
+    fraction = step - whole
+    return ((index + whole) % 18, (index - 15.5 - fraction) * 0.72)
 
-assert camera_path(0.0) == camera_path(2.0 * math.pi)
-assert camera_path(0.0) != camera_path(math.pi / 2.0)
-assert camera_path(math.pi / 2.0) != camera_path(math.pi)
+for boundary in (1200, 2400, 21600):
+    for index in range(1, 31):
+        before = streamed_tread(boundary - 1, index)
+        after = streamed_tread(boundary, index - 1)
+        assert before[0] == after[0]
+        assert abs(before[1] - after[1]) < 0.001
+
+# Five vector icons and their selected/normal states retain the home navigation.
+icons = section("static void draw_menu_icon(", "static void draw_ps_symbol")
+assert "static void draw_icon_diamond(" in src
+assert "draw_icon_diamond(x + 21.0f" in icons
+assert "u32 tile = selected ?" in icons
+assert "draw_gear_outline" in icons
+assert "draw_circle_outline" in icons
+assert "if (index == 0)" in icons and "index == 3" in icons
+
 assert "case 0xffffff00u: rgb = 0x29243f00u;" in src
 assert 'sscanf(line, "animation_v2=%d"' in src
 assert 'fprintf(fp, "animation_v2=%d\\n"' in src
