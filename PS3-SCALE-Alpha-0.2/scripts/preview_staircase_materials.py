@@ -56,7 +56,9 @@ def frames_geometry(frame):
                world(OUTER, following, y + .14),
                world(INNER, following, y + .14)]
         riser = [world(OUTER, angle, y - .20),
-                 world(OUTER, following, y - .20), top[2], top[1]]
+                 world(OUTER, following, y - .20),
+                 world(OUTER, following, y + .025),
+                 world(OUTER, angle, y + .025)]
         side = [world(INNER, following, y - .20),
                 riser[1], top[2], top[3]]
         lip = [top[1], top[2], world(OUTER, following, y + .025),
@@ -66,7 +68,7 @@ def frames_geometry(frame):
                   world(OUTER, angle, y - .29)]
         light = .68 + .25 * math.cos(angle + .42)
         palette = [
-            (top, blend((227,221,236), (255,254,255), light), True),
+            (top, blend((227,221,236), (255,254,255), light), False),
             (riser, blend((183,172,202), (226,220,236), light), False),
             (side, blend((190,181,210), (230,224,239), light), False),
             (lip, blend((222,215,239), (255,254,255), light), True),
