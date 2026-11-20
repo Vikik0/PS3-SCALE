@@ -788,4 +788,17 @@ assert "0xffffffff" not in details_ui
 assert "0xffffffff" not in tools_ui
 assert "0xffffffff" not in keyboard_ui
 assert 'draw_text(48.0f, 120.0f, 0x29243fff, "APOLLO SAVE TOOL")' in tools_ui
+# Animated background geometry is batched to protect PS3 frame pacing.
+background_ui = section("static void draw_scene_background(void)",
+                        "/* Add one camera-visible segment")
+assert background_ui.count("tiny3d_SetPolygon(TINY3D_QUADS)") == 2
+assert background_ui.count("tiny3d_SetPolygon(TINY3D_LINES)") == 1
+assert background_ui.count("tiny3d_End();") == 3
+assert "draw_solid_rect(" not in background_ui
+assert "draw_icon_line(" not in background_ui
+assert "for (i = 0; i < 24; i++)" in background_ui
+assert "for (wave = 0; wave < 3; wave++)" in background_ui
+assert "segment <= 28" in background_ui
+assert "for (i = 0; i < 22; i++)" in background_ui
+assert "for (i = 0; i < 14; i++)" in background_ui
 print("PS3 SCALE UI contract tests: PASS")
