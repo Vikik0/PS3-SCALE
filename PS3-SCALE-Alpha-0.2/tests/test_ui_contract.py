@@ -727,4 +727,23 @@ assert "static volatile int g_network_task_running = 0;" in src
 assert "static volatile int g_music_mode" in src
 assert "static volatile int g_music_fade_ms" in src
 
+# The spiral staircase camera must move continuously and close its loop.
+staircase = section("static void draw_home_ambient(void)",
+                    "static void set_settings_message(void)")
+assert "float camera_steps = phase / tau * 18.0f;" in staircase
+assert "float camera_y = camera_steps * rise_per_tread;" in staircase
+assert "center_y = camera_y;" in staircase
+assert "((float)i + camera_steps) * angle_step" in staircase
+assert "(t + camera_steps) * angle_step" in staircase
+assert "camera_step_whole" not in staircase
+loop_frames = 21600
+def staircase_phase(frame):
+    phase = (frame % loop_frames) / float(loop_frames) * (2.0 * math.pi)
+    steps = phase / (2.0 * math.pi) * 18.0
+    angle = steps * (2.0 * math.pi / 18.0)
+    return math.cos(angle), math.sin(angle)
+loop_start = staircase_phase(0)
+loop_end = staircase_phase(loop_frames - 1)
+assert math.hypot(loop_end[0] - loop_start[0],
+                  loop_end[1] - loop_start[1]) < 0.006
 print("PS3 SCALE UI contract tests: PASS")
