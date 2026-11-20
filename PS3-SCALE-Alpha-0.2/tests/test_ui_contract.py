@@ -598,7 +598,7 @@ for token in ("CHOOSE LANGUAGE", "اختر اللغة", "Elige el idioma",
     assert token in language_ui
 
 splash_ui = section("static void draw_splash(void)", "static void draw_boot(void)")
-for token in ("PS3 SCALE / CONSOLE MANAGEMENT", "ALPHA 0.22",
+for token in ("PS3 SCALE / CONSOLE MANAGEMENT", "PS3SCALE_APP_VERSION",
               "PS3 & PS2 Enhancement Management", "SPECIAL THANKS",
               "ARTEMIS", "APOLLO SAVE", "LOADING PS3 SCALE",
               "PRESS CROSS OR START TO SKIP", "draw_ps_symbol",
