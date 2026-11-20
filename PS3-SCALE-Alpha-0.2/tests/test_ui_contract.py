@@ -766,6 +766,7 @@ for token in ("SEARCH ONLINE DATABASE", "draw_rounded_rect(40.0f, 112.0f",
     assert token in keyboard_ui
 assert "0xcaff39ff" not in keyboard_ui
 assert "0x0d1722ff" not in keyboard_ui
+assert "Type to search the online database" in keyboard_ui
 support_form_ui = section("static void draw_support_form(void)",
                           "static int support_json_escape")
 assert "selected ? 0x875be8ff : 0x514b69ff" in support_form_ui
