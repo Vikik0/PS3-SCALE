@@ -21,16 +21,12 @@ This is an isolated research experiment for a two-player cooperative mode in the
 
 ## Compatibility policy
 
-The project will not claim one universal EBOOT/SPRX. It selects profiles by title ID, title update, firmware family and firmware version. Known regional IDs are registered in the source archive. The first target is CEX 4.93 + TU 1.16; DEX, HEN, other CEX versions and all title-ID variants require separate validation.
+The project will not claim one universal EBOOT/SPRX. It selects profiles by title ID, title update, firmware family and firmware version. Known regional IDs are registered in docs/compatibility-matrix.md. The first target is CEX 4.93 + TU 1.16; DEX, HEN, other CEX versions and all title-ID variants require separate validation.
 
 ## Verification
 
-Prototype 0.2 contains 15 passing Python unit tests. This validates only the lobby, protocol and compatibility registry. It does **not** validate a second player in Campaign.
-
-## Source
-
-Download and extract `ghosts-campaign-coop-prototype-0.2.zip` in this folder. The archive includes the server prototype, PS3 protocol header, compatibility matrix, feasibility notes and tests.
+Prototype 0.2 contains 15 passing Python unit tests in the local source snapshot. This validates only the lobby, protocol and compatibility registry. It does not validate a second player in Campaign.
 
 ## Important
 
-No retail game files, copyrighted game assets, EBOOT, SPRX or installable PKG are included. The Campaign co-op feasibility gate remains open until a second actor can be spawned safely in a user-owned game build and tested on real hardware.
+No retail game files, copyrighted game assets, EBOOT, SPRX or installable PKG are included. The Campaign co-op feasibility gate remains open until a second actor can be spawned safely in a user-owned game build and tested on real hardware. The source snapshot and test report are maintained separately from the PS3-SCALE main branch.
