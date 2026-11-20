@@ -726,9 +726,9 @@ for network_worker in (catalog_worker, support_worker, profile_worker,
     assert "g_network_task_running = 0;" in network_worker
 assert "static volatile int g_network_task_running = 0;" in src
 
-# Audio callback and UI share these two live settings while music is playing.
-assert "static volatile int g_music_mode" in src
-assert "static volatile int g_music_fade_ms" in src
+# The audio worker reads these settings while the UI can change them live.
+for setting in ("enabled", "volume", "mode", "fade_ms", "current_track"):
+    assert f"static volatile int g_music_{setting}" in src
 
 # The spiral staircase camera must move continuously and close its loop.
 staircase = section("static void draw_home_ambient(void)",
