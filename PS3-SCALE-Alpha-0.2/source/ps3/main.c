@@ -5492,7 +5492,16 @@ int main(int argc, char *argv[])
     g_apollo_texture = ya2d_loadPNGfromFile(PS3SCALE_APOLLO_LOGO_PATH);
     pad_ready = 1;
     g_font_texture = tiny3d_AllocTexture(2 * 1024 * 1024);
-    if (!g_font_texture) return 1;
+    if (!g_font_texture) {
+        /* ya2d has already initialized the video / pad layer. Release its
+         * texture and backend before returning from a failed startup. */
+        if (g_apollo_texture) {
+            ya2d_freeTexture(g_apollo_texture);
+            g_apollo_texture = NULL;
+        }
+        ya2d_deinit();
+        return 1;
+    }
 
     ResetFont();
     if (load_extended_font() != 0) {
@@ -5506,8 +5515,10 @@ int main(int argc, char *argv[])
     set_ui_font_size(14, 22);
 
     sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT0, app_sysutil_callback, NULL);
+    /* A partial install must not be reported as healthy. Both the
+     * executable and package metadata are required for a valid app layout. */
     g_app_files_ok =
-        file_exists_readonly("/dev_hdd0/game/PS3SCALE1/USRDIR/EBOOT.BIN") ||
+        file_exists_readonly("/dev_hdd0/game/PS3SCALE1/USRDIR/EBOOT.BIN") &&
         file_exists_readonly("/dev_hdd0/game/PS3SCALE1/PARAM.SFO");
 
     /* Start the bundled theme only when the saved Music setting is ON. */
