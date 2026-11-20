@@ -39,3 +39,8 @@ jobs:
       - name: Compile PS3 protocol header contract
         working-directory: experiments/ghosts-campaign-coop
         run: cc -std=c11 -Wall -Wextra -Werror -fsyntax-only tests/protocol_header_smoke.c
+      - name: Build and run portable PS3 GHC2 codec
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/ghc_protocol.c tests/protocol_c_test.c -o /tmp/ghc-protocol-test
+          /tmp/ghc-protocol-test
