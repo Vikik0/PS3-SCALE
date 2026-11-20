@@ -108,6 +108,7 @@ static char g_ps2_config_download_url[512];
 static char g_ps2_config_download_path[PS3SCALE_PATH_MAX];
 static char g_ps2_config_download_temp_path[PS3SCALE_PATH_MAX];
 static char g_ps2_config_download_type[PS3SCALE_PS2_CONFIG_TYPE_MAX];
+static volatile int g_network_task_running = 0;
 static volatile int g_community_download_running = 0;
 static volatile int g_community_download_done = 0;
 static volatile int g_community_download_result = -1;
@@ -2064,13 +2065,15 @@ static void catalog_sync_worker(void *arg)
      * overlap the final network teardown window. */
     g_catalog_sync_done = 1;
     g_catalog_sync_running = 0;
+    g_network_task_running = 0;
 }
 
 static void start_catalog_sync_worker(int force)
 {
     int rc;
 
-    if (g_catalog_sync_running || g_catalog_sync_done ||
+    if (g_network_task_running ||
+        g_catalog_sync_running || g_catalog_sync_done ||
         g_game_launch_running || g_game_launch_done ||
         g_profile_arm_running || g_profile_arm_done) {
         snprintf(g_online_message, sizeof(g_online_message),
@@ -2084,6 +2087,7 @@ static void start_catalog_sync_worker(int force)
     g_catalog_sync_done = 0;
     g_catalog_sync_result = 0;
     g_catalog_sync_running = 1;
+    g_network_task_running = 1;
     snprintf(g_catalog_status, sizeof(g_catalog_status),
              "CONNECTING TO GITHUB DATABASE");
     snprintf(g_online_message, sizeof(g_online_message),
@@ -2096,6 +2100,7 @@ static void start_catalog_sync_worker(int force)
     } else {
         g_catalog_sync_running = 0;
         g_catalog_sync_done = 0;
+        g_network_task_running = 0;
         snprintf(g_catalog_status, sizeof(g_catalog_status),
                  "ONLINE THREAD COULD NOT START");
     }
@@ -2970,6 +2975,7 @@ static void ps2_config_download_worker(void *arg)
     g_ps2_config_download_result = result;
     g_ps2_config_download_running = 0;
     g_ps2_config_download_done = 1;
+    g_network_task_running = 0;
 }
 
 static void start_ps2_config_download(void)
@@ -2982,7 +2988,8 @@ static void start_ps2_config_download(void)
     char temporary[PS3SCALE_PATH_MAX];
     int written;
 
-    if (g_ps2_config_download_running || g_ps2_config_download_done ||
+    if (g_network_task_running ||
+        g_ps2_config_download_running || g_ps2_config_download_done ||
         g_ps2_config_download_thread_started) {
         set_details_message("WAIT FOR THE CURRENT PS2 CONFIG TASK TO FINISH.");
         return;
@@ -3041,12 +3048,14 @@ static void start_ps2_config_download(void)
     g_ps2_config_download_result = -1;
     g_ps2_config_download_done = 0;
     g_ps2_config_download_running = 1;
+    g_network_task_running = 1;
 
     if (sysThreadCreate(&g_ps2_config_download_thread,
                         ps2_config_download_worker, NULL,
                         1001, 64 * 1024, THREAD_JOINABLE,
                         "ps3scale_ps2cfg") != 0) {
         g_ps2_config_download_running = 0;
+        g_network_task_running = 0;
         set_details_message("COULD NOT START PS2 CONFIG DOWNLOAD WORKER.");
         return;
     }
@@ -3160,6 +3169,7 @@ static void community_download_worker(void *arg)
     g_community_download_result = result;
     g_community_download_running = 0;
     g_community_download_done = 1;
+    g_network_task_running = 0;
 }
 
 static void start_community_file_download(const ps3scale_community_file_t *entry)
@@ -3181,7 +3191,8 @@ static void start_community_file_download(const ps3scale_community_file_t *entry
                  "SELECT A COMMUNITY FILE FIRST.");
         return;
     }
-    if (g_community_download_running || g_community_download_done ||
+    if (g_network_task_running ||
+        g_community_download_running || g_community_download_done ||
         g_community_download_thread_started ||
         g_catalog_sync_running || g_ps2_config_download_running) {
         snprintf(g_online_message, sizeof(g_online_message),
@@ -3276,11 +3287,13 @@ static void start_community_file_download(const ps3scale_community_file_t *entry
     g_community_download_result = -1;
     g_community_download_done = 0;
     g_community_download_running = 1;
+    g_network_task_running = 1;
     if (sysThreadCreate(&g_community_download_thread,
                         community_download_worker, NULL,
                         1001, 64 * 1024, THREAD_JOINABLE,
                         "ps3scale_community") != 0) {
         g_community_download_running = 0;
+        g_network_task_running = 0;
         snprintf(g_online_message, sizeof(g_online_message),
                  "COULD NOT START COMMUNITY DOWNLOAD WORKER.");
         return;
@@ -4844,6 +4857,7 @@ static void support_submit_worker(void *arg)
         &response_code);
     g_support_send_done = 1;
     g_support_send_running = 0;
+    g_network_task_running = 0;
 }
 
 static void start_support_send(void)
@@ -4855,7 +4869,8 @@ static void start_support_send(void)
                  "LOCAL SAVE OK; ONLINE OFF.");
         return;
     }
-    if (g_catalog_sync_running || g_catalog_thread_started ||
+    if (g_network_task_running ||
+        g_catalog_sync_running || g_catalog_thread_started ||
         g_game_launch_running || g_game_launch_thread_started ||
         g_profile_arm_running || g_profile_arm_thread_started) {
         snprintf(g_support_status, sizeof(g_support_status),
@@ -4876,6 +4891,7 @@ static void start_support_send(void)
     g_support_send_done = 0;
     g_support_send_result = -1;
     g_support_send_running = 1;
+    g_network_task_running = 1;
     rc = sysThreadCreate(&g_support_thread, support_submit_worker, NULL,
                          1400, 0x8000, THREAD_JOINABLE,
                          "PS3 SCALE Support");
@@ -4885,6 +4901,7 @@ static void start_support_send(void)
                  "REPORT QUEUED FOR ONLINE SEND.");
     } else {
         g_support_send_running = 0;
+        g_network_task_running = 0;
         snprintf(g_support_status, sizeof(g_support_status),
                  "LOCAL SAVE OK; SEND START FAILED.");
     }
