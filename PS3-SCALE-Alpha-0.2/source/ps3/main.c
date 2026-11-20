@@ -1710,7 +1710,7 @@ static void draw_scene_background(void)
     float daylight = 0.82f + 0.12f * cosf(phase);
     float night = 1.0f - daylight;
     float dusk = 1.0f - fabsf(daylight - 0.82f) / 0.12f;
-    u32 top, bottom, accent, glow;
+    u32 top, bottom, accent, glow, color;
     int i, wave;
 
     if (!g_animation_enabled) {
@@ -1727,11 +1727,22 @@ static void draw_scene_background(void)
     accent = scene_blend(0x8b73c8ff, 0xb995ffff, daylight * 0.72f);
     glow = scene_blend(0x8a73b8ff, 0xf4eaffff, daylight);
 
+    /* Batch the 24 gradient strips into one RSX submission. */
+    tiny3d_SetPolygon(TINY3D_QUADS);
     for (i = 0; i < 24; i++) {
         float t = (float)i / 23.0f;
-        draw_solid_rect(0.0f, (float)i * 22.0f, 854.0f, 23.0f,
-                        scene_blend(top, bottom, t));
+        float y = (float)i * 22.0f;
+        color = ui_theme_color(scene_blend(top, bottom, t));
+        tiny3d_VertexPos(0.0f, y, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(854.0f, y, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(854.0f, y + 23.0f, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(0.0f, y + 23.0f, 65535.0f);
+        tiny3d_VertexColor(color);
     }
+    tiny3d_End();
 
     /* Quiet light ribbons and particles add depth without competing with UI. */
     draw_circle_outline(738.0f + cosf(phase) * 12.0f,
@@ -1744,6 +1755,8 @@ static void draw_scene_background(void)
                         112.0f + sinf(phase) * 7.0f,
                         48.0f, 0xe8ddffff);
 
+    /* All three light ribbons are submitted in one line batch. */
+    tiny3d_SetPolygon(TINY3D_LINES);
     for (wave = 0; wave < 3; wave++) {
         float previous_x = 0.0f;
         float previous_y = 0.0f;
@@ -1753,33 +1766,58 @@ static void draw_scene_background(void)
             float y = 430.0f - (float)wave * 42.0f +
                 sinf(phase + x * 0.0065f + (float)wave * 0.85f) *
                 (8.0f + (float)wave * 2.0f);
-            if (segment > 0)
-                draw_icon_line(previous_x, previous_y, x, y,
-                               scene_blend(0xc4b1f5ff, 0xffffffcc,
-                                           daylight * 0.72f));
+            if (segment > 0) {
+                color = ui_theme_color(
+                    scene_blend(0xc4b1f5ff, 0xffffffcc,
+                                daylight * 0.72f));
+                tiny3d_VertexPos(previous_x, previous_y, 65535.0f);
+                tiny3d_VertexColor(color);
+                tiny3d_VertexPos(x, y, 65535.0f);
+                tiny3d_VertexColor(color);
+            }
             previous_x = x;
             previous_y = y;
         }
     }
+    tiny3d_End();
 
+    /* Batch both particle layers into one quad submission. */
+    tiny3d_SetPolygon(TINY3D_QUADS);
     for (i = 0; i < 22; i++) {
         float x = (float)((i * 137 + 31) % 842);
         float y = (float)((i * 83 + 19) % 470) +
                   sinf(phase + (float)i * 0.73f) * 3.0f;
         float pulse = 0.45f + 0.55f *
                       sinf(phase * 2.0f + (float)i * 1.17f);
-        draw_solid_rect(x, y, (i % 5 == 0) ? 3.0f : 2.0f,
-                        (i % 5 == 0) ? 3.0f : 2.0f,
-                        scene_blend(0x9e8bcf00, 0xffffffff,
-                                    pulse * daylight * 0.65f));
+        float size = (i % 5 == 0) ? 3.0f : 2.0f;
+        color = ui_theme_color(
+            scene_blend(0x9e8bcf00, 0xffffffff,
+                        pulse * daylight * 0.65f));
+        tiny3d_VertexPos(x, y, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(x + size, y, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(x + size, y + size, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(x, y + size, 65535.0f);
+        tiny3d_VertexColor(color);
     }
 
     for (i = 0; i < 14; i++) {
         float x = (float)((i * 173 + 67) % 840);
         float y = (float)((i * 97 + 33) % 300);
-        draw_solid_rect(x, y, 2.0f, 2.0f,
-                        scene_blend(0x66558a00, 0xf6edffcc, night * 0.82f));
+        color = ui_theme_color(
+            scene_blend(0x66558a00, 0xf6edffcc, night * 0.82f));
+        tiny3d_VertexPos(x, y, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(x + 2.0f, y, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(x + 2.0f, y + 2.0f, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(x, y + 2.0f, 65535.0f);
+        tiny3d_VertexColor(color);
     }
+    tiny3d_End();
     (void)dusk;
 }
 
