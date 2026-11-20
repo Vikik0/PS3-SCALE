@@ -5064,6 +5064,10 @@ static void draw_screen_transition(void)
     unsigned int alpha;
     float sweep_x;
 
+    if (!g_animation_enabled) {
+        g_transition_frames = PS3SCALE_TRANSITION_FRAMES;
+        return;
+    }
     if (g_transition_frames >= PS3SCALE_TRANSITION_FRAMES)
         return;
 
