@@ -20,6 +20,7 @@ int main(void) {
         0xba, 0x60, 0xf8, 0xc9, 0x88, 0xd0, 0xf0, 0x85,
         0x5a, 0x12, 0x17, 0x63, 0xd5, 0xdd, 0x9a, 0x72
     };
+    GhcClientPacket decoded_client;
     GhcServerPacket decoded;
     uint8_t tampered_server_packet[sizeof(server_packet)];
     size_t i;
@@ -36,6 +37,14 @@ int main(void) {
     assert(memcmp(output + 4, relay_id, sizeof(relay_id)) == 0);
     assert(memcmp(output + 24, payload, sizeof(payload)) == 0);
     assert(memcmp(output + output_length - GHC_MAC_SIZE, expected_mac, GHC_MAC_SIZE) == 0);
+    assert(ghc_decode_client_packet(relay_key, output, output_length, &decoded_client) == 0);
+    assert(memcmp(decoded_client.relay_id, relay_id, sizeof(relay_id)) == 0);
+    assert(decoded_client.sequence == 0x01020304u);
+    assert(decoded_client.payload_length == sizeof(payload));
+    assert(memcmp(decoded_client.payload, payload, sizeof(payload)) == 0);
+
+    output[output_length - 1] ^= 0x01;
+    assert(ghc_decode_client_packet(relay_key, output, output_length, &decoded_client) != 0);
 
     assert(ghc_decode_server_packet(
         relay_key, server_packet, sizeof(server_packet), &decoded
