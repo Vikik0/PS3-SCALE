@@ -1714,6 +1714,7 @@ static void draw_scene_background(void)
     int i, wave;
 
     if (!g_animation_enabled) {
+        phase = 0.0f;
         daylight = 0.86f;
         night = 0.14f;
         dusk = 0.0f;
@@ -3460,11 +3461,15 @@ static void draw_splash(void)
 {
     unsigned alpha = 255u;
     int frame = g_splash_frames;
-    float progress = frame >= 180 ? 1.0f : (float)frame / 180.0f;
+    float progress = !g_animation_enabled ? 1.0f :
+                     (frame >= 179 ? 1.0f : (float)frame / 179.0f);
     char progress_text[12];
 
-    if (frame < 30)
+    if (!g_animation_enabled) {
+        alpha = 255u;
+    } else if (frame < 30) {
         alpha = (unsigned)(frame * 255 / 30);
+    }
     if (alpha > 255u)
         alpha = 255u;
 
@@ -3835,7 +3840,9 @@ static void draw_home_animated_card(float x, float y, float w, float h,
     }
 
     if (focus > 0.04f) {
-        pulse = 0.5f + 0.5f * sinf((float)g_frame_counter * 0.12f);
+        pulse = g_animation_enabled ?
+                0.5f + 0.5f * sinf((float)g_frame_counter * 0.12f) :
+                0.5f;
         ring_alpha = (unsigned int)(focus * (48.0f + 48.0f * pulse));
         draw_circle_outline(card_x + card_w * 0.5f,
                             card_y + card_h - 18.0f,
