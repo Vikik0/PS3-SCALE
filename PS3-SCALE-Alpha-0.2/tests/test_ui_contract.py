@@ -646,4 +646,21 @@ assert "actions/checkout@v4" not in build_workflow + index_workflow
 assert "actions/upload-artifact@v4" not in build_workflow
 assert "actions/setup-python@v5" not in index_workflow
 
+# Keep the visible app, support payload and local report on one version.
+assert '#define PS3SCALE_APP_VERSION "ALPHA 0.22"' in src
+assert "ALPHA 0.21" not in src
+assert "CFW 4.92" not in src
+assert "PS3SCALE_APP_VERSION" in section("static void draw_splash(void)",
+                                         "static void draw_boot(void)")
+support_json = section("static int build_support_json(void)",
+                       "static void support_submit_worker(void)")
+assert '"app_version\\":\\"%s\\"' in support_json
+assert "PS3SCALE_APP_VERSION" in support_json
+support_save = section("static int save_support_report(void)",
+                       "static void draw_support_form(void)")
+assert 'fprintf(fp, "APP VERSION: %s\\\\n", PS3SCALE_APP_VERSION);' in support_save
+about_ui = section("static void draw_about(void)",
+                   "static void draw_profile_toast(void)")
+assert "version_line" in about_ui
+assert "ps3scale_hardware_family_name(g_hardware_info.family)" in about_ui
 print("PS3 SCALE UI contract tests: PASS")
