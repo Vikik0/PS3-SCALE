@@ -20,6 +20,13 @@ typedef enum {
 } GhcPlayerSlot;
 
 typedef struct {
+    uint8_t relay_id[GHC_RELAY_ID_SIZE];
+    uint32_t sequence;
+    const uint8_t *payload;
+    size_t payload_length;
+} GhcClientPacket;
+
+typedef struct {
     uint8_t sender_slot;
     uint32_t sequence;
     const uint8_t *payload;
@@ -36,6 +43,15 @@ int ghc_encode_client_packet(
     uint8_t *output,
     size_t output_capacity,
     size_t *output_length
+);
+
+// Authenticate and parse a peer/client packet using the peer's relay key.
+// Payload points into packet; relay_id is copied into decoded.
+int ghc_decode_client_packet(
+    const uint8_t peer_relay_key[GHC_RELAY_KEY_SIZE],
+    const uint8_t *packet,
+    size_t packet_length,
+    GhcClientPacket *decoded
 );
 
 // Authenticate and parse a relay-to-client packet. Payload points into packet.
