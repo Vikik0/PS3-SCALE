@@ -78,6 +78,7 @@ static int g_scan_cover_library = -1;
 static int g_config_preview = 0;
 static int g_exit_requested = 0;
 static int g_home_selected = 0;
+static float g_home_card_focus[5] = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 static int g_help_selected = 0;
 static int g_support_selected = 0;
 static int g_support_is_feedback = 0;
@@ -3763,6 +3764,76 @@ static void draw_soft_button(float x, float y, float w, float h,
                        selected ? 0xcaff39ff : 0xffffffff, label);
 }
 
+static void draw_home_animated_card(float x, float y, float w, float h,
+                                     float focus)
+{
+    float scale, card_w, card_h, card_x, card_y;
+    float pulse;
+    unsigned int halo_alpha, ring_alpha;
+
+    if (focus < 0.0f) focus = 0.0f;
+    if (focus > 1.0f) focus = 1.0f;
+
+    scale = 1.0f + focus * 0.035f;
+    card_w = w * scale;
+    card_h = h * scale;
+    card_x = x - (card_w - w) * 0.5f;
+    card_y = y - (card_h - h) * 0.5f - focus * 5.0f;
+
+    draw_rounded_rect(card_x + 3.0f, card_y + 6.0f,
+                      card_w, card_h, 9.0f,
+                      scene_blend(0x5e718f35, 0x665b8f50, focus));
+    draw_rounded_rect(card_x, card_y, card_w, card_h, 9.0f,
+                      scene_blend(0xfaf8ffe8, 0xf4efffe8, focus));
+    draw_rounded_outline(card_x, card_y, card_w, card_h, 9.0f,
+                         scene_blend(0xd9d1eaff, 0x9568edff, focus));
+    draw_solid_rect(card_x + 10.0f, card_y + 5.0f,
+                    card_w - 20.0f, 1.5f, 0xfefcffb8);
+
+    if (focus > 0.01f) {
+        halo_alpha = (unsigned int)(focus * 64.0f);
+        draw_rounded_outline(card_x - 2.0f, card_y - 2.0f,
+                             card_w + 4.0f, card_h + 4.0f,
+                             11.0f,
+                             color_with_alpha(0xb99affff, halo_alpha));
+        draw_rounded_rect(card_x + 12.0f, card_y + card_h - 5.0f,
+                          card_w - 24.0f, 2.5f, 1.25f,
+                          color_with_alpha(0x875be8ff,
+                                           (unsigned int)(focus * 255.0f)));
+    }
+
+    if (focus > 0.04f) {
+        pulse = 0.5f + 0.5f * sinf((float)g_frame_counter * 0.12f);
+        ring_alpha = (unsigned int)(focus * (48.0f + 48.0f * pulse));
+        draw_circle_outline(card_x + card_w * 0.5f,
+                            card_y + card_h - 18.0f,
+                            4.0f + 1.5f * pulse,
+                            color_with_alpha(0x9568edff, ring_alpha));
+        draw_circle_outline(card_x + card_w * 0.5f,
+                            card_y + card_h - 18.0f,
+                            7.0f + 2.0f * pulse,
+                            color_with_alpha(0xb99affff, ring_alpha / 2u));
+    }
+}
+
+static void update_home_card_animations(void)
+{
+    int i;
+
+    for (i = 0; i < 5; i++) {
+        float target = (i == g_home_selected) ? 1.0f : 0.0f;
+        float difference = target - g_home_card_focus[i];
+
+        if (!g_animation_enabled) {
+            g_home_card_focus[i] = target;
+        } else {
+            g_home_card_focus[i] += difference * 0.24f;
+            if (fabsf(difference) < 0.006f)
+                g_home_card_focus[i] = target;
+        }
+    }
+}
+
 static void draw_home(void)
 {
     static const char *items[5] = {
@@ -3773,7 +3844,19 @@ static void draw_home(void)
         "Guide & Support", "App Info"
     };
     char line[192];
+    char firmware_label[24];
+    char model_label[32];
     int i;
+
+    if (g_hardware_info_valid) {
+        snprintf(firmware_label, sizeof(firmware_label), "FW %s",
+                 g_hardware_info.firmware_version);
+        snprintf(model_label, sizeof(model_label), "PS3 %s",
+                 ps3scale_hardware_family_name(g_hardware_info.family));
+    } else {
+        snprintf(firmware_label, sizeof(firmware_label), "FW UNKNOWN");
+        snprintf(model_label, sizeof(model_label), "PS3 UNKNOWN");
+    }
 
     draw_ps_symbol(25.0f, 17.0f, 0x29243fff);
     set_ui_font_size(25, 37);
@@ -3787,30 +3870,37 @@ static void draw_home(void)
               "EXPLORE  |  ENHANCE  |  PLAY");
 
     draw_soft_card(568.0f, 18.0f, 116.0f, 32.0f, 0);
-    draw_text(582.0f, 28.0f, 0x875be8ff, "CFW 4.92");
     draw_soft_card(692.0f, 18.0f, 148.0f, 32.0f, 0);
-    draw_text(705.0f, 28.0f, 0x514b69ff, "PS3 SLIM (CECH-25xx)");
+    set_ui_font_size(7, 11);
+    draw_text(582.0f, 28.0f, 0x875be8ff, firmware_label);
+    draw_text(705.0f, 28.0f, 0x514b69ff, model_label);
+    set_ui_font_size(14, 22);
 
     draw_text(30.0f, 132.0f, 0x77718fff, "FEATURES");
     for (i = 0; i < 5; i++) {
         float x = 168.0f + (float)i * 134.0f;
         float y = 126.0f;
         const float w = 126.0f, h = 150.0f;
-        int selected = (i == g_home_selected);
-        draw_soft_card(x, y, w, h, selected);
-        draw_menu_icon(i == 4 ? 5 : i, x + 42.0f, y + 16.0f, selected);
+        float focus = g_home_card_focus[i];
+        float scale = 1.0f + focus * 0.035f;
+        float card_w = w * scale;
+        float card_h = h * scale;
+        float card_x = x - (card_w - w) * 0.5f;
+        float card_y = y - (card_h - h) * 0.5f - focus * 5.0f;
+        int selected = (focus >= 0.5f);
+
+        draw_home_animated_card(x, y, w, h, focus);
+        draw_menu_icon(i == 4 ? 5 : i,
+                       card_x + (card_w - 42.0f) * 0.5f,
+                       card_y + 16.0f, selected);
         set_ui_font_size(8, 12);
-        draw_text_centered(x + 5.0f, y + 77.0f, w - 10.0f,
-                           selected ? 0x875be8ff : 0x29243fff, items[i]);
+        draw_text_centered(card_x + 5.0f, card_y + 77.0f,
+                           card_w - 10.0f,
+                           scene_blend(0x29243fff, 0x875be8ff, focus),
+                           items[i]);
         set_ui_font_size(6, 9);
-        draw_text_centered(x + 6.0f, y + 103.0f, w - 12.0f,
-                           0x77718fff, descriptions[i]);
-        if (selected) {
-            draw_circle_outline(x + w * 0.5f, y + 132.0f, 4.0f,
-                                0x9568edff);
-            draw_circle_outline(x + w * 0.5f, y + 132.0f, 7.0f,
-                                0xb99aff70);
-        }
+        draw_text_centered(card_x + 6.0f, card_y + 103.0f,
+                           card_w - 12.0f, 0x77718fff, descriptions[i]);
     }
 
     snprintf(line, sizeof(line), "PS3  %u     PS2  %u     TOTAL  %u",
@@ -5828,6 +5918,7 @@ int main(int argc, char *argv[])
         old_left = left;
         old_right = right;
 
+        update_home_card_animations();
         if (g_screen == SCREEN_SCAN || g_screen == SCREEN_DETAILS)
             update_selected_cover();
         draw_ui();
