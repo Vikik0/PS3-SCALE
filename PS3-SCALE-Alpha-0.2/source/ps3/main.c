@@ -3624,6 +3624,7 @@ static void draw_keyboard(void)
         g_keyboard_online_mode ? "SEARCH ONLINE DATABASE" : "SEARCH GAMES";
     const char *subtitle = g_keyboard_support_mode ?
         "Enter text for your support report" :
+        g_keyboard_online_mode ? "Type to search the online database" :
         "Type to filter the selected game list";
 
     draw_ps_symbol(22.0f, 11.0f, 0x29243fff);
