@@ -1,7 +1,7 @@
 "use strict";
 
 const crypto = require("node:crypto");
-const { get, put, head, list, del } = require("@vercel/blob");
+const { get, put, list, del } = require("@vercel/blob");
 const {
   signGuestToken,
   verifyGuestToken,
@@ -36,25 +36,28 @@ function pathFor(code) {
 async function readRoom(code) {
   const result = await get(pathFor(code), { access: ACCESS });
   if (!result || result.statusCode !== 200 || !result.stream) return null;
-  return JSON.parse(await new Response(result.stream).text());
+  return {
+    room: JSON.parse(await new Response(result.stream).text()),
+    etag: result.blob.etag
+  };
 }
 
-async function saveRoom(code, room) {
-  const pathname = pathFor(code);
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    let metadata = null;
-    try { metadata = await head(pathname, { access: ACCESS }); } catch {}
-    try {
-      const options = metadata
-        ? { access: ACCESS, allowOverwrite: true, ifMatch: metadata.etag, contentType: "application/json" }
-        : { access: ACCESS, addRandomSuffix: false, contentType: "application/json" };
-      await put(pathname, JSON.stringify(room), options);
-      return;
-    } catch (error) {
-      if (attempt === 2) throw error;
-    }
-  }
-  throw new Error("Room write conflict");
+async function createRoom(code, room) {
+  await put(pathFor(code), JSON.stringify(room), {
+    access: ACCESS,
+    addRandomSuffix: false,
+    contentType: "application/json"
+  });
+}
+
+async function saveRoom(code, room, expectedEtag) {
+  if (!expectedEtag) throw new Error("Missing room version for conditional write");
+  await put(pathFor(code), JSON.stringify(room), {
+    access: ACCESS,
+    allowOverwrite: true,
+    ifMatch: expectedEtag,
+    contentType: "application/json"
+  });
 }
 
 function tokenClaims(req) {
@@ -83,8 +86,9 @@ async function listRooms() {
     const code = blob.pathname.slice(PREFIX.length).replace(/\.json$/, "");
     if (!/^[A-Z2-9]{6}$/.test(code)) continue;
     try {
-      const room = await readRoom(code);
-      if (!room) continue;
+      const record = await readRoom(code);
+      if (!record) continue;
+      const room = record.room;
       const active = (room.players || []).filter((p) => Date.now() - p.lastSeen <= PLAYER_TTL_MS);
       if (Date.now() - room.updatedAt > ROOM_TTL_MS || active.length === 0) {
         await del(pathFor(code), { access: ACCESS });
@@ -114,8 +118,9 @@ module.exports = async function handler(req, res) {
       if (!/^[A-Z2-9]{6}$/.test(code)) return reply(res, 400, { error: "Invalid room code." });
       const claims = tokenClaims(req);
       if (!claims || claims.room !== code) return reply(res, 401, { error: "A valid room guest token is required." });
-      const room = await readRoom(code);
-      if (!room) return reply(res, 404, { error: "Room not found." });
+      const record = await readRoom(code);
+      if (!record) return reply(res, 404, { error: "Room not found." });
+      const room = record.room;
       const player = findPlayer(room, claims.sub);
       if (!player) return reply(res, 403, { error: "You are no longer in this room." });
       const active = (room.players || []).filter((p) => Date.now() - p.lastSeen <= PLAYER_TTL_MS);
@@ -158,7 +163,7 @@ module.exports = async function handler(req, res) {
           nextSignalId: 1
         };
         try {
-          await saveRoom(code, room);
+          await createRoom(code, room);
           return reply(res, 201, {
             room: publicRoom(room),
             player: { id: playerId, name },
@@ -173,15 +178,16 @@ module.exports = async function handler(req, res) {
     if (action === "join") {
       const code = String(body.code || "").toUpperCase();
       if (!/^[A-Z2-9]{6}$/.test(code)) return reply(res, 400, { error: "Enter a valid six-character room code." });
-      const room = await readRoom(code);
-      if (!room) return reply(res, 404, { error: "Room not found." });
+      const record = await readRoom(code);
+      if (!record) return reply(res, 404, { error: "Room not found." });
+      const room = record.room;
       room.players = (room.players || []).filter((p) => Date.now() - p.lastSeen <= PLAYER_TTL_MS);
       if (room.status !== "waiting" || room.players.length >= MAX_PLAYERS) return reply(res, 409, { error: "Room is full or already playing." });
       const playerId = crypto.randomUUID();
       const now = Date.now();
       room.players.push({ id: playerId, name, ready: false, joinedAt: now, lastSeen: now });
       room.updatedAt = now;
-      await saveRoom(code, room);
+      await saveRoom(code, room, record.etag);
       return reply(res, 200, {
         room: publicRoom(room),
         player: { id: playerId, name },
@@ -192,8 +198,9 @@ module.exports = async function handler(req, res) {
     const claims = tokenClaims(req);
     if (!claims) return reply(res, 401, { error: "Guest token missing or expired." });
     const code = claims.room;
-    const room = await readRoom(code);
-    if (!room) return reply(res, 404, { error: "Room not found." });
+    const record = await readRoom(code);
+    if (!record) return reply(res, 404, { error: "Room not found." });
+    const room = record.room;
     const player = findPlayer(room, claims.sub);
     if (!player) return reply(res, 403, { error: "You are not a member of this room." });
     const now = Date.now();
@@ -204,7 +211,7 @@ module.exports = async function handler(req, res) {
       const activePlayers = room.players.filter((p) => now - p.lastSeen <= PLAYER_TTL_MS);
       room.status = activePlayers.length === 2 && activePlayers.every((p) => p.ready) ? "ready" : "waiting";
       room.updatedAt = now;
-      await saveRoom(code, room);
+      await saveRoom(code, room, record.etag);
       return reply(res, 200, { ok: true, players: room.players.map(({ id, name, ready }) => ({ id, name, ready })) });
     }
 
@@ -218,7 +225,7 @@ module.exports = async function handler(req, res) {
       room.signals.push({ id: room.nextSignalId++, from: player.id, to: target.id, type, payload: JSON.parse(payload), createdAt: now });
       room.signals = room.signals.slice(-32);
       room.updatedAt = now;
-      await saveRoom(code, room);
+      await saveRoom(code, room, record.etag);
       return reply(res, 202, { ok: true });
     }
 
@@ -234,7 +241,7 @@ module.exports = async function handler(req, res) {
       if (room.players.length === 0) await del(pathFor(code), { access: ACCESS });
       else {
         room.updatedAt = now;
-        await saveRoom(code, room);
+        await saveRoom(code, room, record.etag);
       }
       return reply(res, 200, { ok: true });
     }
@@ -242,6 +249,9 @@ module.exports = async function handler(req, res) {
     return reply(res, 400, { error: "Unknown action." });
   } catch (error) {
     console.error("Crash Bash room API error:", error?.message || error);
+    if (error?.name === "BlobPreconditionFailedError") {
+      return reply(res, 409, { error: "The room changed at the same time. Refresh and retry." });
+    }
     return reply(res, 500, { error: "Lobby request failed. Retry in a moment." });
   }
 };
