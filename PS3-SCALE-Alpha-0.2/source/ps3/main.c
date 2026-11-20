@@ -1416,26 +1416,6 @@ static void clamp_selection(void)
     else if (g_selected >= (int)count) g_selected = (int)count - 1;
 }
 
-static void format_hex(char *out, size_t capacity,
-                       const uint8_t *data, size_t size)
-{
-    size_t i, used = 0;
-    if (!out || capacity == 0) return;
-    out[0] = '\0';
-
-    for (i = 0; i < size && used < capacity; i++) {
-        int n = snprintf(out + used, capacity - used,
-                         i + 1 == size ? "%02X" : "%02X ",
-                         (unsigned)data[i]);
-        if (n < 0 || (size_t)n >= capacity - used) {
-            out[capacity - 1] = '\0';
-            return;
-        }
-        used += (size_t)n;
-    }
-}
-
-
 static void clear_scan_cover_cache(void)
 {
     size_t i;
