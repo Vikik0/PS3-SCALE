@@ -163,6 +163,13 @@ assert "update_home_card_animations();" in main
 assert "FW %s" in home and "PS3 %s" in home
 assert "g_hardware_info_valid" in home
 assert "ps3scale_hardware_family_name(g_hardware_info.family)" in home
+assert "pulse = g_animation_enabled ?" in home_animation
+scene_background = section("static void draw_scene_background(void)",
+                           "static void scene_emit_line_segment")
+assert "if (!g_animation_enabled)" in scene_background
+assert "phase = 0.0f;" in scene_background
+assert "progress = !g_animation_enabled ? 1.0f" in splash_ui
+assert "if (!g_animation_enabled)" in splash_ui
 assert "CFW 4.92" not in home
 assert "PS3 SLIM (CECH-25xx)" not in home
 assert "SCREEN_HELP" in src and "SCREEN_SUPPORT_FORM" in src
@@ -612,7 +619,7 @@ for token in ("PS3 SCALE / CONSOLE MANAGEMENT", "PS3SCALE_APP_VERSION",
     assert token in splash_ui
 assert "draw_rounded_rect(98.0f, 48.0f, 646.0f, 410.0f" in splash_ui
 assert "draw_rounded_rect(210.0f, 402.0f, 434.0f, 11.0f" in splash_ui
-assert "frame >= 180 ? 1.0f" in splash_ui
+assert "frame >= 179 ? 1.0f" in splash_ui
 
 boot_ui = section("static void draw_boot(void)", "static void draw_keyboard(void)")
 for token in ("Starting your game library", "SCANNING LOCAL GAME LIBRARY",
