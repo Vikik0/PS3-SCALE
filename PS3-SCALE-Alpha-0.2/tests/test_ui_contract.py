@@ -301,7 +301,7 @@ assert "draw_rounded_outline(198.0f, y - 5.0f, 620.0f, 28.0f" in settings_ui
 assert "draw_rounded_rect(748.0f, y, 54.0f, 18.0f, 9.0f" in settings_ui
 assert "g_music_volume" in settings_ui and "g_animation_enabled" in settings_ui
 assert "g_music_track1_missing" in settings_ui
-help_ui = section("static void draw_help(void)", "static void draw_support_form(void)")
+help_ui = section("static void draw_help(void)", "static void draw_app_icon_preview(float x, float y)")
 for token in ("Scan Games", "Select a Game", "Review Match",
               "Save Data Safely", "Start Game", "support@ps3scale.app",
               "Report an Issue", "Send Feedback",
@@ -653,8 +653,8 @@ assert "CFW 4.92" not in src
 assert "PS3SCALE_APP_VERSION" in section("static void draw_splash(void)",
                                          "static void draw_boot(void)")
 support_json = section("static int build_support_json(void)",
-                       "static void support_submit_worker(void)")
-assert '"app_version\\":\\"%s\\"' in support_json
+                       "static void support_submit_worker(void *arg)")
+assert r'\\"app_version\\":\\"%s\\"' in support_json
 assert "PS3SCALE_APP_VERSION" in support_json
 support_save = section("static int save_support_report(void)",
                        "static void draw_support_form(void)")
