@@ -658,7 +658,7 @@ support_json = section("static int build_support_json(void)",
                        "static void support_submit_worker(void *arg)")
 assert r'\"app_version\":\"%s\"' in support_json
 assert "PS3SCALE_APP_VERSION" in support_json
-assert 'fprintf(fp, "APP VERSION: %s\n", PS3SCALE_APP_VERSION);' in src
+assert 'fprintf(fp, "APP VERSION: %s\\n", PS3SCALE_APP_VERSION);' in src
 about_ui = section("static void draw_about(void)",
                    "static void draw_profile_toast(void)")
 assert "version_line" in about_ui
