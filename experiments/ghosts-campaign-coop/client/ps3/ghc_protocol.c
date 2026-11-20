@@ -1,6 +1,21 @@
 #include "ghc_protocol.h"
 
-#include <string.h>
+
+
+static void gh_copy(void *destination, const void *source, size_t length) {
+    uint8_t *out = (uint8_t *)destination;
+    const uint8_t *in = (const uint8_t *)source;
+    size_t i;
+    for (i = 0; i < length; ++i) out[i] = in[i];
+}
+
+static int gh_bytes_equal(const uint8_t *left, const uint8_t *right, size_t length) {
+    size_t i;
+    for (i = 0; i < length; ++i) {
+        if (left[i] != right[i]) return 0;
+    }
+    return 1;
+}
 
 typedef struct {
     uint32_t state[8];
@@ -74,7 +89,7 @@ static void gh_sha256_init(GhcSha256 *ctx) {
         0x6a09e667u, 0xbb67ae85u, 0x3c6ef372u, 0xa54ff53au,
         0x510e527fu, 0x9b05688cu, 0x1f83d9abu, 0x5be0cd19u
     };
-    memcpy(ctx->state, initial, sizeof(initial));
+    gh_copy(ctx->state, initial, sizeof(initial));
     ctx->bit_length = 0;
     ctx->block_length = 0;
 }
@@ -138,7 +153,7 @@ static void gh_hmac_sha256(
         gh_sha256_update(&ctx, key, key_length);
         gh_sha256_final(&ctx, normalized_key);
     } else if (key_length > 0) {
-        memcpy(normalized_key, key, key_length);
+        gh_copy(normalized_key, key, key_length);
     }
 
     for (i = 0; i < 64; ++i) {
@@ -202,15 +217,15 @@ int ghc_encode_client_packet(
     signed_length = GHC_CLIENT_HEADER_SIZE + payload_length;
     if (output_capacity < signed_length + GHC_MAC_SIZE) return -1;
 
-    memcpy(output, magic, sizeof(magic));
-    memcpy(output + 4, relay_id, GHC_RELAY_ID_SIZE);
+    gh_copy(output, magic, sizeof(magic));
+    gh_copy(output + 4, relay_id, GHC_RELAY_ID_SIZE);
     gh_write_u32_be(output + 20, sequence);
     if (payload_length > 0) {
-        memcpy(output + GHC_CLIENT_HEADER_SIZE, payload, payload_length);
+        gh_copy(output + GHC_CLIENT_HEADER_SIZE, payload, payload_length);
     }
 
     gh_hmac_sha256(relay_key, GHC_RELAY_KEY_SIZE, output, signed_length, digest);
-    memcpy(output + signed_length, digest, GHC_MAC_SIZE);
+    gh_copy(output + signed_length, digest, GHC_MAC_SIZE);
     *output_length = signed_length + GHC_MAC_SIZE;
     return 0;
 }
@@ -228,7 +243,7 @@ int ghc_decode_server_packet(
 
     if (!relay_key || !packet || !decoded) return -1;
     if (packet_length < GHC_SERVER_OVERHEAD || packet_length > GHC_MAX_DATAGRAM) return -1;
-    if (memcmp(packet, magic, sizeof(magic)) != 0) return -1;
+    if (!gh_bytes_equal(packet, magic, sizeof(magic))) return -1;
 
     slot = packet[4];
     if (slot != GHC_PLAYER_ONE && slot != GHC_PLAYER_TWO) return -1;
