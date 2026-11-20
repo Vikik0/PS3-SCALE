@@ -23,7 +23,12 @@ mkdir -p "$PORTLIBS/include" "$PORTLIBS/lib" "$WORK"
 export PATH="$TOOLCHAIN:$PATH"
 
 # Build the Apache-2.0 option of Mbed TLS for the PPU target.
-git clone --depth 1 https://github.com/bucanero/ps3libraries.git "$WORK/ps3libraries"
+PS3LIBRARIES_COMMIT="74095b14f6327420787ca2f7fe95b0c58c835cc4"
+git init "$WORK/ps3libraries"
+git -C "$WORK/ps3libraries" remote add origin https://github.com/bucanero/ps3libraries.git
+git -C "$WORK/ps3libraries" fetch --depth 1 origin "$PS3LIBRARIES_COMMIT"
+git -C "$WORK/ps3libraries" checkout --detach FETCH_HEAD
+test "$(git -C "$WORK/ps3libraries" rev-parse HEAD)" = "$PS3LIBRARIES_COMMIT"
 cd "$WORK"
 wget -q -O mbedtls-2.28.10.tar.bz2 \
   https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-2.28.10/mbedtls-2.28.10.tar.bz2
