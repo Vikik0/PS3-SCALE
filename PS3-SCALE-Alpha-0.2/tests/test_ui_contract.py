@@ -696,20 +696,30 @@ catalog_start = section("static void start_catalog_sync_worker(int force)",
                         "static void service_catalog_sync(void)")
 support_start = section("static void start_support_send(void)",
                         "static void service_support_send(void)")
+profile_start = section("static void confirm_profile_install(void)",
+                        "static int find_mounted_game(")
+game_start = section("static void start_selected_game(void)",
+                     "static void load_app_settings(void)")
 ps2_start = section("static void start_ps2_config_download(void)",
                     "static int community_extension_is")
 community_start = section("static void start_community_file_download(",
                           "static void service_community_download(void)")
-for network_start in (catalog_start, support_start, ps2_start, community_start):
+for network_start in (catalog_start, support_start, profile_start, game_start,
+                      ps2_start, community_start):
     assert "g_network_task_running" in network_start
     assert "g_network_task_running = 1;" in network_start
 catalog_worker = section("static void catalog_sync_worker(void *arg)",
                             "static void start_catalog_sync_worker(int force)")
 support_worker = section("static void support_submit_worker(void *arg)",
                          "static void start_support_send(void)")
+profile_worker = section("static void profile_arm_worker(void *arg)",
+                         "static void service_profile_arm(void)")
+game_worker = section("static void game_launch_worker(void *arg)",
+                      "static void service_game_launch(void)")
 community_worker = section("static void community_download_worker(void *arg)",
                            "static void start_community_file_download(")
-for network_worker in (catalog_worker, support_worker, ps2_worker, community_worker):
+for network_worker in (catalog_worker, support_worker, profile_worker,
+                       game_worker, ps2_worker, community_worker):
     assert "g_network_task_running = 0;" in network_worker
 assert "static volatile int g_network_task_running = 0;" in src
 
