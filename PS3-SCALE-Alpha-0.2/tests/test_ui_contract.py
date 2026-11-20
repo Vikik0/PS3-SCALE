@@ -659,7 +659,7 @@ support_json = section("static int build_support_json(void)",
 assert r'\"app_version\":\"%s\"' in support_json
 assert "PS3SCALE_APP_VERSION" in support_json
 support_save = section("static int save_support_report(void)",
-                       "static void draw_support_form(void)")
+                       "static void draw_app_icon_preview(float x, float y)")
 assert 'fprintf(fp, "APP VERSION: %s\\n", PS3SCALE_APP_VERSION);' in support_save
 about_ui = section("static void draw_about(void)",
                    "static void draw_profile_toast(void)")
