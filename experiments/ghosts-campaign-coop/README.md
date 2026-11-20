@@ -15,8 +15,9 @@ This is an isolated research experiment for a two-player cooperative mode in the
 
 - Guest lobby/session prototype: implemented and host-tested.
 - Six-character room codes, two-player cap and ready/start flow: implemented and tested.
-- UDP peer relay: implemented as a transport prototype.
+- UDP peer relay: implemented; local two-client UDP integration test passes.
 - Regional title-ID registry: implemented as metadata; profiles are untested.
+- Candidate TU 1.16 spawn primitives documented for offline research only.
 - PS3 client plugin, Campaign actor spawn, game-state replication, PSN identity and PKG/EBOOT/SPRX: not implemented.
 
 ## Compatibility policy
@@ -25,8 +26,8 @@ The project will not claim one universal EBOOT/SPRX. It selects profiles by titl
 
 ## Verification
 
-Prototype 0.2 contains 15 passing Python unit tests in the local source snapshot. This validates only the lobby, protocol and compatibility registry. It does not validate a second player in Campaign.
+Prototype 0.2 contains 16 passing Python unit and UDP integration tests. They validate the lobby state machine, protocol envelope, local UDP relay and compatibility registry. They do not validate a second player in Campaign.
 
 ## Important
 
-No retail game files, copyrighted game assets, EBOOT, SPRX or installable PKG are included. The Campaign co-op feasibility gate remains open until a second actor can be spawned safely in a user-owned game build and tested on real hardware. The source snapshot and test report are maintained separately from the PS3-SCALE main branch.
+No retail game files, copyrighted game assets, EBOOT, SPRX or installable PKG are included. The Campaign co-op feasibility gate remains open until a second actor can be spawned safely in a user-owned game build and tested on real hardware. The source tree is maintained on this isolated branch, separate from PS3-SCALE main.
