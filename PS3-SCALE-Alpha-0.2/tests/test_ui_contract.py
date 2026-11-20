@@ -749,4 +749,11 @@ loop_start = staircase_phase(0)
 loop_end = staircase_phase(loop_frames - 1)
 assert math.hypot(loop_end[0] - loop_start[0],
                   loop_end[1] - loop_start[1]) < 0.006
+# Pearl surfaces keep readable ink and lavender focus states.
+chip_ui = section("static void draw_soft_chip(", "static void draw_page_header(")
+button_ui = section("static void draw_soft_button(", "static void draw_home_animated_card(")
+assert "selected ? 0x875be8ff : 0x514b69ff" in chip_ui
+assert "selected ? 0x875be8ff : 0x29243fff" in button_ui
+assert "0xcaff39ff" not in chip_ui + button_ui
+assert "0xffffffff" not in chip_ui + button_ui
 print("PS3 SCALE UI contract tests: PASS")
