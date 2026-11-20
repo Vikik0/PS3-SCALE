@@ -210,9 +210,12 @@ assert "tiny3d_SetPolygon(TINY3D_QUADS);" in src
 assert "compare_scene_face_depth" in ambient
 assert "qsort(faces, face_count" in ambient
 assert "scene_set_camera(0.0f, camera_y, 0.0f," in ambient
-assert "camera_steps = phase / tau * 18.0f;" in ambient
-assert "camera_step_whole = (int)camera_steps;" in ambient
-assert "camera_y = (camera_steps - (float)camera_step_whole)" in ambient
+assert "float camera_steps = phase / tau * 18.0f;" in ambient
+assert "float camera_y = camera_steps * rise_per_tread;" in ambient
+assert "center_y = camera_y;" in ambient
+assert "((float)i + camera_steps) * angle_step" in ambient
+assert "(t + camera_steps) * angle_step" in ambient
+assert "camera_step_whole" not in ambient
 assert "Inner and outer spiral handrails" in ambient
 assert "tiny3d_SetPolygon(TINY3D_LINES);" in ambient
 assert "scene_emit_line_segment" in ambient
