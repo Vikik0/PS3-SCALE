@@ -1,0 +1,13 @@
+{
+  "name": "crash-bash-enhanced-web",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Crash Bash Enhanced lobby and signaling service",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.3.1"
+  }
+}
