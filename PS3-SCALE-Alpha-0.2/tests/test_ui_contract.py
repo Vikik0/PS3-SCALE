@@ -756,4 +756,21 @@ assert "selected ? 0x875be8ff : 0x514b69ff" in chip_ui
 assert "selected ? 0x875be8ff : 0x29243fff" in button_ui
 assert "0xcaff39ff" not in chip_ui + button_ui
 assert "0xffffffff" not in chip_ui + button_ui
+# Search and support text entry use the same pearl / lavender visual language.
+keyboard_ui = section("static void draw_keyboard(void)",
+                      "/* Light-weight rounded panels:")
+for token in ("SEARCH ONLINE DATABASE", "draw_rounded_rect(40.0f, 112.0f",
+              "0xeee7ffff", "0x9568edff", "0x29243fff",
+              "ps3scale_locale_keyboard_key(g_language, i)",
+              "ARROWS MOVE  |  CROSS SELECT  |  CIRCLE CANCEL"):
+    assert token in keyboard_ui
+assert "0xcaff39ff" not in keyboard_ui
+assert "0x0d1722ff" not in keyboard_ui
+support_form_ui = section("static void draw_support_form(void)",
+                          "static int support_json_escape")
+assert "selected ? 0x875be8ff : 0x514b69ff" in support_form_ui
+assert "g_support_title[0] ? 0x29243fff : 0x77718fff" in support_form_ui
+assert "g_support_details[0] ? 0x29243fff : 0x77718fff" in support_form_ui
+assert "0xcaff39ff" not in support_form_ui
+assert "0xffffffff" not in support_form_ui
 print("PS3 SCALE UI contract tests: PASS")
