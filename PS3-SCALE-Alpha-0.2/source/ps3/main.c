@@ -94,6 +94,9 @@ static char g_support_json[1024];
 static app_screen_t g_screen = SCREEN_HOME;
 static app_screen_t g_splash_next_screen = SCREEN_BOOT;
 static int g_splash_frames = 0;
+#define PS3SCALE_TRANSITION_FRAMES 16u
+static app_screen_t g_transition_screen = SCREEN_SPLASH;
+static unsigned int g_transition_frames = PS3SCALE_TRANSITION_FRAMES;
 static ps3scale_ps2_config_db_t g_ps2_config_db;
 static sys_ppu_thread_t g_ps2_config_download_thread;
 static int g_ps2_config_download_thread_started = 0;
@@ -3392,25 +3395,51 @@ static void refresh_companion_tool_status(void)
              "STATUS UPDATED. OPEN INSTALLED TOOLS FROM XMB.");
 }
 
+static void draw_rounded_rect(float x, float y, float w, float h,
+                              float radius, u32 color);
+static void draw_rounded_outline(float x, float y, float w, float h,
+                                 float radius, u32 color);
+
 static void draw_language_selection(void)
 {
     int i;
-    set_ui_font_size(15, 23);
-    draw_text(34, 28, 0xcaff39ff, "PS3 SCALE");
-    draw_text(34, 88, 0xffffffff, "CHOOSE LANGUAGE");
-    draw_text(34, 126, 0xdce3e8ff, "اختر اللغة");
-    draw_text(34, 164, 0xdce3e8ff, "Elige el idioma");
+
+    draw_rounded_rect(92.0f, 72.0f, 670.0f, 390.0f, 18.0f, 0xfaf8fff0);
+    draw_rounded_outline(92.0f, 72.0f, 670.0f, 390.0f, 18.0f, 0xd9d1eaff);
+    draw_ps_symbol(128.0f, 96.0f, 0x29243fff);
+
+    set_ui_font_size(23, 35);
+    draw_text(180.0f, 96.0f, 0x29243fff, "PS3 SCALE");
+    set_ui_font_size(10, 15);
+    draw_text(128.0f, 150.0f, 0x514b69ff, "CHOOSE LANGUAGE");
+    draw_text(128.0f, 178.0f, 0x514b69ff, "اختر اللغة");
+    draw_text(128.0f, 204.0f, 0x514b69ff, "Elige el idioma");
+
     for (i = 0; i < 3; i++) {
-        float y = 226.0f + (float)i * 58.0f;
+        float y = 250.0f + (float)i * 50.0f;
         int selected = (i == g_language_choice);
-        if (selected) draw_solid_rect(80.0f, y - 5.0f, 650.0f, 44.0f, 0x173a35ff);
-        draw_outline_rect(80.0f, y - 5.0f, 650.0f, 44.0f,
-                          selected ? 0x8bd450ff : 0x26445cff);
-        draw_text(112, y + 7.0f,
-                  selected ? 0xcaff39ff : 0xdce3e8ff,
+
+        draw_rounded_rect(128.0f, y, 598.0f, 40.0f, 9.0f,
+                          selected ? 0xeee7ffff : 0xf8f6ffff);
+        draw_rounded_outline(128.0f, y, 598.0f, 40.0f, 9.0f,
+                             selected ? 0x9568edff : 0xd9d1eaff);
+        if (selected)
+            draw_rounded_rect(138.0f, y + 8.0f, 3.0f, 24.0f, 1.5f,
+                              0x875be8ff);
+
+        set_ui_font_size(9, 14);
+        draw_text(158.0f, y + 12.0f,
+                  selected ? 0x875be8ff : 0x514b69ff,
                   ps3scale_locale_language_name(i));
+        if (selected) {
+            draw_circle_outline(694.0f, y + 20.0f, 7.0f, 0x875be8ff);
+            draw_circle_outline(694.0f, y + 20.0f, 3.0f, 0x875be8ff);
+        }
     }
-    draw_text(34, 478, 0x9aa6adff, "UP/DOWN: SELECT  |  CROSS: CONTINUE");
+
+    set_ui_font_size(7, 11);
+    draw_text(128.0f, 424.0f, 0x77718fff,
+              "UP / DOWN: SELECT   |   CROSS: CONTINUE");
     set_ui_font_size(14, 22);
 }
 
@@ -3418,64 +3447,104 @@ static void draw_splash(void)
 {
     unsigned alpha = 255u;
     int frame = g_splash_frames;
-    float progress = (float)(frame % 180) / 180.0f;
+    float progress = frame >= 180 ? 1.0f : (float)frame / 180.0f;
+    char progress_text[12];
 
-    if (frame < 24) alpha = (unsigned)(frame * 255 / 24);
-    if (alpha > 255u) alpha = 255u;
+    if (frame < 30)
+        alpha = (unsigned)(frame * 255 / 30);
+    if (alpha > 255u)
+        alpha = 255u;
 
-    draw_ps_symbol(407.0f, 22.0f,
-                   color_with_alpha(0x20263aff, alpha));
-    set_ui_font_size(34, 50);
-    draw_text(246.0f, 82.0f,
-              color_with_alpha(0x20263aff, alpha), "PS3");
-    draw_text(366.0f, 82.0f,
+    /* Pearl glass hero panel over the animated staircase scene. */
+    draw_rounded_rect(104.0f, 54.0f, 646.0f, 410.0f, 18.0f,
+                      color_with_alpha(0x8b73c8ff, 26u * alpha / 255u));
+    draw_rounded_rect(98.0f, 48.0f, 646.0f, 410.0f, 18.0f,
+                      color_with_alpha(0xfaf8ffff, 232u * alpha / 255u));
+    draw_rounded_outline(98.0f, 48.0f, 646.0f, 410.0f, 18.0f,
+                         color_with_alpha(0xd9d1eaff, alpha));
+
+    set_ui_font_size(7, 11);
+    draw_text(128.0f, 70.0f,
+              color_with_alpha(0x77718fff, alpha),
+              "PS3 SCALE / CONSOLE MANAGEMENT");
+    draw_text(654.0f, 70.0f,
+              color_with_alpha(0x875be8ff, alpha), "ALPHA 0.22");
+
+    draw_ps_symbol(405.0f, 91.0f,
+                   color_with_alpha(0x29243fff, alpha));
+    set_ui_font_size(32, 48);
+    draw_text(298.0f, 132.0f,
+              color_with_alpha(0x29243fff, alpha), "PS3");
+    draw_text(399.0f, 132.0f,
               color_with_alpha(0x875be8ff, alpha), "SCALE");
-    set_ui_font_size(12, 18);
-    draw_text(234.0f, 146.0f,
+
+    set_ui_font_size(10, 15);
+    draw_text(267.0f, 190.0f,
               color_with_alpha(0x514b69ff, alpha),
               "PS3 & PS2 Enhancement Management");
 
-    set_ui_font_size(11, 17);
-    draw_text(352.0f, 204.0f,
-              color_with_alpha(0x514b69ff, alpha), "Special Thanks");
-    draw_solid_rect(250.0f, 213.0f, 88.0f, 2.0f,
-                    color_with_alpha(0xb9a7e8ff, alpha));
-    draw_solid_rect(516.0f, 213.0f, 88.0f, 2.0f,
-                    color_with_alpha(0xb9a7e8ff, alpha));
+    draw_solid_rect(164.0f, 224.0f, 520.0f, 1.5f,
+                    color_with_alpha(0xd9d1eaff, alpha));
+    set_ui_font_size(9, 14);
+    draw_text(360.0f, 240.0f,
+              color_with_alpha(0x514b69ff, alpha), "SPECIAL THANKS");
 
-    /* Artemis remains a simple vector mark; Apollo uses the user's new logo. */
-    draw_circle_outline(312.0f, 278.0f, 25.0f,
+    /* Artemis and Apollo remain separate partner cards and keep their marks. */
+    draw_rounded_rect(210.0f, 270.0f, 196.0f, 92.0f, 12.0f,
+                      color_with_alpha(0xf3efffff, alpha));
+    draw_rounded_outline(210.0f, 270.0f, 196.0f, 92.0f, 12.0f,
+                         color_with_alpha(0xd9d1eaff, alpha));
+    draw_circle_outline(308.0f, 300.0f, 19.0f,
                         color_with_alpha(0x875be8ff, alpha));
-    draw_icon_line(292.0f, 298.0f, 312.0f, 244.0f,
+    draw_icon_line(293.0f, 317.0f, 308.0f, 282.0f,
                    color_with_alpha(0x875be8ff, alpha));
-    draw_icon_line(312.0f, 244.0f, 332.0f, 298.0f,
+    draw_icon_line(308.0f, 282.0f, 323.0f, 317.0f,
                    color_with_alpha(0x875be8ff, alpha));
-    draw_icon_line(300.0f, 282.0f, 324.0f, 282.0f,
+    draw_icon_line(298.0f, 305.0f, 318.0f, 305.0f,
                    color_with_alpha(0x875be8ff, alpha));
-    set_ui_font_size(10, 15);
-    draw_text(268.0f, 322.0f,
-              color_with_alpha(0x20263aff, alpha), "A R T E M I S");
+    set_ui_font_size(8, 12);
+    draw_text(274.0f, 332.0f,
+              color_with_alpha(0x29243fff, alpha), "ARTEMIS");
 
-    draw_icon_line(426.0f, 248.0f, 426.0f, 342.0f,
-                   color_with_alpha(0xb9a7e8ff, alpha));
+    draw_rounded_rect(448.0f, 270.0f, 196.0f, 92.0f, 12.0f,
+                      color_with_alpha(0xf3efffff, alpha));
+    draw_rounded_outline(448.0f, 270.0f, 196.0f, 92.0f, 12.0f,
+                         color_with_alpha(0xd9d1eaff, alpha));
     if (g_apollo_texture) {
-        ya2d_drawTextureEx(g_apollo_texture, 470.0f, 242.0f,
-                           0.0f, 88.0f, 88.0f);
-        draw_solid_rect(470.0f, 242.0f, 88.0f, 88.0f,
-                        color_with_alpha(0xfaf8ffff, 255u - alpha));
+        ya2d_drawTextureEx(g_apollo_texture, 466.0f, 284.0f,
+                           0.0f, 64.0f, 64.0f);
+        draw_solid_rect(466.0f, 284.0f, 64.0f, 64.0f,
+                        color_with_alpha(0xf3efffff, 255u - alpha));
+    } else {
+        draw_circle_outline(498.0f, 316.0f, 22.0f,
+                            color_with_alpha(0xb995ffff, alpha));
+        draw_icon_line(484.0f, 316.0f, 512.0f, 316.0f,
+                       color_with_alpha(0xb995ffff, alpha));
     }
-    set_ui_font_size(10, 15);
-    draw_text(566.0f, 286.0f,
-              color_with_alpha(0x20263aff, alpha), "APOLLO SAVE");
+    set_ui_font_size(7, 11);
+    draw_text(538.0f, 306.0f,
+              color_with_alpha(0x29243fff, alpha), "APOLLO SAVE");
 
-    draw_solid_rect(202.0f, 390.0f, 450.0f, 12.0f, 0xe2dcf3ff);
-    draw_outline_rect(202.0f, 390.0f, 450.0f, 12.0f, 0xd4c9edff);
-    draw_solid_rect(205.0f, 393.0f, 444.0f * progress, 6.0f,
-                    color_with_alpha(0x875be8ff, alpha));
-    set_ui_font_size(10, 15);
-    draw_text(342.0f, 421.0f,
-              color_with_alpha(0x514b69ff, alpha),
-              "Initializing PS3 SCALE ...");
+    set_ui_font_size(7, 11);
+    draw_text(210.0f, 382.0f,
+              color_with_alpha(0x514b69ff, alpha), "LOADING PS3 SCALE");
+    snprintf(progress_text, sizeof(progress_text), "%u%%",
+             (unsigned)(progress * 100.0f));
+    draw_text(616.0f, 382.0f,
+              color_with_alpha(0x875be8ff, alpha), progress_text);
+
+    draw_rounded_rect(210.0f, 402.0f, 434.0f, 11.0f, 5.5f,
+                      color_with_alpha(0xe2dcf3ff, alpha));
+    draw_rounded_outline(210.0f, 402.0f, 434.0f, 11.0f, 5.5f,
+                         color_with_alpha(0xd4c9edff, alpha));
+    if (progress > 0.0f)
+        draw_rounded_rect(213.0f, 405.0f, 428.0f * progress, 5.0f, 2.5f,
+                          color_with_alpha(0x875be8ff, alpha));
+
+    set_ui_font_size(7, 11);
+    draw_text(312.0f, 432.0f,
+              color_with_alpha(0x77718fff, alpha),
+              "PRESS CROSS OR START TO SKIP");
     set_ui_font_size(14, 22);
 }
 
@@ -3490,26 +3559,35 @@ static void draw_boot(void)
     };
     const int progress[] = {12, 28, 58, 88, 100};
     float width = (560.0f * (float)progress[g_boot_stage]) / 100.0f;
+    float moving = 136.0f + (float)((g_frame_counter * 5u) % 500u);
+    u32 status_color = g_app_files_ok ? 0x2c9f8eff : 0xc58a4dff;
 
-    draw_solid_rect(95.0f, 123.0f, 670.0f, 260.0f, 0x8d7ca32a);
-    draw_solid_rect(92.0f, 118.0f, 670.0f, 260.0f, 0xfaf8ffff);
-    draw_outline_rect(92.0f, 118.0f, 670.0f, 260.0f, 0xd9d1eaff);
-    set_ui_font_size(26, 39);
-    draw_text(132.0f, 150.0f, 0xffffffff, "PS3");
-    draw_text(225.0f, 150.0f, 0xcaff39ff, "SCALE");
-    set_ui_font_size(11, 17);
-    draw_text(132.0f, 206.0f, 0x514b69ff,
+    draw_rounded_rect(92.0f, 118.0f, 670.0f, 260.0f, 16.0f, 0xfaf8ffff);
+    draw_rounded_outline(92.0f, 118.0f, 670.0f, 260.0f, 16.0f, 0xd9d1eaff);
+
+    draw_ps_symbol(132.0f, 148.0f, 0x29243fff);
+    set_ui_font_size(25, 37);
+    draw_text(184.0f, 142.0f, 0x29243fff, "PS3");
+    draw_text(258.0f, 142.0f, 0x875be8ff, "SCALE");
+    set_ui_font_size(8, 12);
+    draw_text(132.0f, 204.0f, 0x514b69ff,
               "Starting your game library");
-    draw_solid_rect(132.0f, 270.0f, 590.0f, 16.0f, 0xe2dcf3ff);
-    draw_solid_rect(136.0f, 274.0f, width, 8.0f, 0x875be8ff);
-    if (g_boot_stage == 2) {
-        float moving = 136.0f + (float)((g_frame_counter * 5u) % 500u);
-        draw_solid_rect(moving, 274.0f, 62.0f, 8.0f, 0xc5aaffff);
-    }
-    set_ui_font_size(9, 14);
+
+    draw_rounded_rect(132.0f, 270.0f, 590.0f, 16.0f, 8.0f, 0xe2dcf3ff);
+    draw_rounded_outline(132.0f, 270.0f, 590.0f, 16.0f, 8.0f, 0xd4c9edff);
+    draw_rounded_rect(136.0f, 274.0f, width, 8.0f, 4.0f, 0x875be8ff);
+    if (g_boot_stage == 2)
+        draw_rounded_rect(moving, 274.0f, 62.0f, 8.0f, 4.0f, 0xb995ffff);
+
+    set_ui_font_size(8, 12);
     draw_text(132.0f, 316.0f, 0x514b69ff, stage_text[g_boot_stage]);
-    draw_text(132.0f, 346.0f,
-              g_app_files_ok ? 0x9ee56aff : 0xffcc66ff,
+
+    draw_rounded_rect(132.0f, 344.0f, 280.0f, 24.0f, 8.0f,
+                      g_app_files_ok ? 0xe4f5ecff : 0xfff2e2ff);
+    draw_rounded_outline(132.0f, 344.0f, 280.0f, 24.0f, 8.0f,
+                         status_color);
+    set_ui_font_size(7, 11);
+    draw_text(146.0f, 350.0f, status_color,
               g_app_files_ok ? "APP FILE CHECK: OK" :
                                "APP FILE CHECK: VERIFY INSTALL");
     set_ui_font_size(14, 22);
@@ -4896,8 +4974,39 @@ static void draw_profile_toast(void)
     set_ui_font_size(14, 22);
 }
 
+static void draw_screen_transition(void)
+{
+    unsigned int frame;
+    unsigned int alpha;
+    float sweep_x;
+
+    if (g_transition_frames >= PS3SCALE_TRANSITION_FRAMES)
+        return;
+
+    frame = g_transition_frames;
+    alpha = ((PS3SCALE_TRANSITION_FRAMES - frame) * 80u) /
+            PS3SCALE_TRANSITION_FRAMES;
+    sweep_x = 854.0f * (float)frame /
+              (float)(PS3SCALE_TRANSITION_FRAMES - 1u);
+
+    /* A brief pearl veil and lavender sweep soften every screen change. */
+    draw_solid_rect(0.0f, 0.0f, 854.0f, 512.0f,
+                    color_with_alpha(0xfaf8ffff, alpha));
+    draw_solid_rect(sweep_x - 10.0f, 0.0f, 20.0f, 512.0f,
+                    color_with_alpha(0xb995ffff, 28u));
+    draw_solid_rect(sweep_x, 0.0f, 2.0f, 512.0f,
+                    color_with_alpha(0x875be8ff, 132u));
+
+    g_transition_frames++;
+}
+
 static void draw_ui(void)
 {
+    if (g_screen != g_transition_screen) {
+        g_transition_screen = g_screen;
+        g_transition_frames = 0;
+    }
+
     tiny3d_Clear(0xfffafbff, TINY3D_CLEAR_ALL);
 
     /* Transparent glyphs, glass cards and PNG covers need RSX alpha state. */
@@ -4941,6 +5050,7 @@ static void draw_ui(void)
     }
     if (g_screen == SCREEN_DETAILS)
         draw_profile_toast();
+    draw_screen_transition();
     tiny3d_Flip();
 }
 
