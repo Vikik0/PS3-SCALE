@@ -3781,7 +3781,7 @@ static void draw_soft_chip(float x, float y, float w, const char *label,
                       selected ? 0x9568edff : 0xd9d1eaff);
     set_ui_font_size(7, 11);
     draw_text_centered(x + 4.0f, y + 7.0f, w - 8.0f,
-                       selected ? 0xcaff39ff : 0xffffffff, label);
+                       selected ? 0x875be8ff : 0x514b69ff, label);
 }
 
 static void draw_page_header(const char *title, const char *subtitle)
@@ -3803,7 +3803,7 @@ static void draw_soft_button(float x, float y, float w, float h,
     draw_soft_card(x, y, w, h, selected);
     set_ui_font_size(8, 12);
     draw_text_centered(x + 5.0f, y + (h - 12.0f) * 0.5f, w - 10.0f,
-                       selected ? 0xcaff39ff : 0xffffffff, label);
+                       selected ? 0x875be8ff : 0x29243fff, label);
 }
 
 static void draw_home_animated_card(float x, float y, float w, float h,
