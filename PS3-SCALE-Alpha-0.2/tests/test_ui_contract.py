@@ -695,14 +695,13 @@ community_start = section("static void start_community_file_download(",
 for network_start in (catalog_start, support_start, ps2_start, community_start):
     assert "g_network_task_running" in network_start
     assert "g_network_task_running = 1;" in network_start
-for network_worker in (catalog_worker if "catalog_worker" in globals() else
-                       section("static void catalog_sync_worker(void *arg)",
-                               "static void start_catalog_sync_worker(int force)"),
-                       section("static void support_submit_worker(void *arg)",
-                               "static void start_support_send(void)"),
-                       ps2_worker,
-                       section("static void community_download_worker(void *arg)",
-                               "static void start_community_file_download(")):
+catalog_worker = section("static void catalog_sync_worker(void *arg)",
+                            "static void start_catalog_sync_worker(int force)")
+support_worker = section("static void support_submit_worker(void *arg)",
+                         "static void start_support_send(void)")
+community_worker = section("static void community_download_worker(void *arg)",
+                           "static void start_community_file_download(")
+for network_worker in (catalog_worker, support_worker, ps2_worker, community_worker):
     assert "g_network_task_running = 0;" in network_worker
 assert "static volatile int g_network_task_running = 0;" in src
 
