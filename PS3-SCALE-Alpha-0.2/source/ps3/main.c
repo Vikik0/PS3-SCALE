@@ -281,11 +281,6 @@ static void service_community_download(void);
 static void start_community_file_download(const ps3scale_community_file_t *entry);
 static const ps3scale_ps2_config_entry_t *ps2_config_for_game(const ps3scale_game_t *game);
 static const char *ps2_config_preferred_type(void);
-static void service_ps2_config_download(void);
-static void start_ps2_config_download(void);
-static void service_community_download(void);
-static void start_community_file_download(const ps3scale_community_file_t *entry);
-static const ps3scale_ps2_config_entry_t *ps2_config_for_game(const ps3scale_game_t *game);
 
 static void app_sysutil_callback(u64 status, u64 param, void *userdata)
 {
