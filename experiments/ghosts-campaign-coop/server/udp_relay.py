@@ -8,7 +8,7 @@ from .protocol import decode_client_packet, encode_server_packet, MAX_DATAGRAM
 
 
 class UdpRelay(threading.Thread):
-    """Minimal two-peer UDP relay. It does not implement game-state simulation."""
+    """Authenticated two-peer UDP relay; game-state payload remains opaque."""
 
     def __init__(self, manager, host: str = "0.0.0.0", port: int = 28991):
         super().__init__(name="ghosts-udp-relay", daemon=True)
@@ -17,7 +17,7 @@ class UdpRelay(threading.Thread):
         self.port = port
         self._stop_event = threading.Event()
         self._socket = None
-        self._rate: dict[str, tuple[float, int]] = {}
+        self._rate: dict[bytes, tuple[float, int]] = {}
 
     def stop(self):
         self._stop_event.set()
@@ -39,31 +39,38 @@ class UdpRelay(threading.Thread):
                 continue
             except OSError:
                 break
-            decoded = decode_client_packet(packet)
+            if len(packet) < 20:
+                continue
+            relay_id = packet[4:20]
+            credentials = self.manager.relay_credentials(relay_id)
+            if not credentials:
+                continue
+            token, relay_key = credentials
+            decoded = decode_client_packet(packet, relay_key)
             if not decoded:
                 continue
-            token, sequence, payload = decoded
-            if not self._allow_rate(token):
+            _, sequence, payload = decoded
+            if not self._allow_rate(relay_id):
                 continue
-            result = self.manager.resolve_udp(token, address)
+            result = self.manager.resolve_udp(token, address, sequence)
             if not result:
                 continue
-            peer_address, sender_slot = result
+            peer_address, sender_slot, peer_key = result
             if not peer_address:
                 continue
             try:
-                sock.sendto(encode_server_packet(sender_slot, sequence, payload), peer_address)
-            except OSError:
+                sock.sendto(encode_server_packet(sender_slot, sequence, payload, peer_key), peer_address)
+            except (OSError, ValueError):
                 continue
 
-    def _allow_rate(self, token: str) -> bool:
+    def _allow_rate(self, relay_id: bytes) -> bool:
         """Simple per-session cap: 120 packets per rolling second."""
         now = time.monotonic()
-        start, count = self._rate.get(token, (now, 0))
+        start, count = self._rate.get(relay_id, (now, 0))
         if now - start >= 1.0:
-            self._rate[token] = (now, 1)
+            self._rate[relay_id] = (now, 1)
             return True
         if count >= 120:
             return False
-        self._rate[token] = (start, count + 1)
+        self._rate[relay_id] = (start, count + 1)
         return True
