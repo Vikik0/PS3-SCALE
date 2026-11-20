@@ -2512,6 +2512,7 @@ static void profile_arm_worker(void *arg)
 
     g_profile_arm_done = 1;
     g_profile_arm_running = 0;
+    g_network_task_running = 0;
 }
 
 static void service_profile_arm(void)
@@ -2567,7 +2568,8 @@ static void confirm_profile_install(void)
         g_profile_confirm_pending = 0;
         return;
     }
-    if (g_catalog_sync_running || g_catalog_sync_done ||
+    if (g_network_task_running ||
+        g_catalog_sync_running || g_catalog_sync_done ||
         g_game_launch_running || g_game_launch_done ||
         g_profile_arm_running || g_profile_arm_done) {
         set_details_message("WAIT FOR ONLINE DATABASE OR GAME ACTION TO FINISH.");
@@ -2593,6 +2595,7 @@ static void confirm_profile_install(void)
     g_profile_arm_result = -1;
     g_profile_arm_done = 0;
     g_profile_arm_running = 1;
+    g_network_task_running = 1;
     g_profile_confirm_pending = 0;
     set_details_message("CHECKING WEBMAN AND ARMING PROFILE.");
 
@@ -2604,6 +2607,7 @@ static void confirm_profile_install(void)
     } else {
         g_profile_arm_running = 0;
         g_profile_arm_done = 0;
+        g_network_task_running = 0;
         set_details_message("COULD NOT START PROFILE WORKER. NO PATCH WAS ARMED.");
     }
 }
@@ -2674,6 +2678,7 @@ static void game_launch_worker(void *arg)
 
     g_game_launch_done = 1;
     g_game_launch_running = 0;
+    g_network_task_running = 0;
 }
 
 static void service_game_launch(void)
@@ -2717,7 +2722,8 @@ static void start_selected_game(void)
         set_details_message("TITLE ID NOT AVAILABLE. RESCAN THE GAME.");
         return;
     }
-    if (g_game_launch_running || g_game_launch_done ||
+    if (g_network_task_running ||
+        g_game_launch_running || g_game_launch_done ||
         g_profile_arm_running || g_profile_arm_done ||
         g_ps2_config_download_running || g_ps2_config_download_done) {
         set_details_message("WAIT FOR THE CURRENT GAME OR CONFIG TASK TO FINISH.");
@@ -2755,6 +2761,7 @@ static void start_selected_game(void)
     g_game_launch_result = -1;
     g_game_launch_done = 0;
     g_game_launch_running = 1;
+    g_network_task_running = 1;
 
     if (is_ps2_iso)
         set_details_message("MOUNTING PS2 ISO VIA WEBMAN. WAIT FOR THE RESPONSE.");
@@ -2773,6 +2780,7 @@ static void start_selected_game(void)
     } else {
         g_game_launch_running = 0;
         g_game_launch_done = 0;
+        g_network_task_running = 0;
         set_details_message("COULD NOT START GAME LAUNCH WORKER. APP IS READY.");
     }
 }
