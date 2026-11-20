@@ -182,6 +182,7 @@ module.exports = async function handler(req, res) {
       if (!record) return reply(res, 404, { error: "Room not found." });
       const room = record.room;
       room.players = (room.players || []).filter((p) => Date.now() - p.lastSeen <= PLAYER_TTL_MS);
+      if (room.players.length < MAX_PLAYERS) room.status = "waiting";
       if (room.status !== "waiting" || room.players.length >= MAX_PLAYERS) return reply(res, 409, { error: "Room is full or already playing." });
       const playerId = crypto.randomUUID();
       const now = Date.now();
@@ -238,6 +239,7 @@ module.exports = async function handler(req, res) {
     if (action === "leave") {
       room.players = room.players.filter((p) => p.id !== player.id);
       room.signals = (room.signals || []).filter((s) => s.from !== player.id && s.to !== player.id);
+      room.status = "waiting";
       if (room.players.length === 0) await del(pathFor(code), { access: ACCESS });
       else {
         room.updatedAt = now;
