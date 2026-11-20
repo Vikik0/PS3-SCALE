@@ -527,7 +527,7 @@ assert "support_submit_worker" in src
 assert "service_support_send();" in main
 assert "LOCAL SAVE OK; ONLINE OFF." in src
 assert "PS3SCALE_SUPPORT_OUTBOX_PATH" in src
-support_form = section("static void draw_support_form(void)", "static int support_json_escape")
+support_form = section("static void draw_app_icon_preview(float x, float y)", "static int support_json_escape")
 assert "Submit Report" in support_form
 assert "Save locally; send online if the service is configured" in support_form
 
@@ -654,11 +654,11 @@ assert "PS3SCALE_APP_VERSION" in section("static void draw_splash(void)",
                                          "static void draw_boot(void)")
 support_json = section("static int build_support_json(void)",
                        "static void support_submit_worker(void *arg)")
-assert r'\\"app_version\\":\\"%s\\"' in support_json
+assert r'\"app_version\":\"%s\"' in support_json
 assert "PS3SCALE_APP_VERSION" in support_json
 support_save = section("static int save_support_report(void)",
                        "static void draw_support_form(void)")
-assert 'fprintf(fp, "APP VERSION: %s\\\\n", PS3SCALE_APP_VERSION);' in support_save
+assert 'fprintf(fp, "APP VERSION: %s\\n", PS3SCALE_APP_VERSION);' in support_save
 about_ui = section("static void draw_about(void)",
                    "static void draw_profile_toast(void)")
 assert "version_line" in about_ui
