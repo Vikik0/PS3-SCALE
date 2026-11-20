@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install host compiler
         run: |
@@ -43,14 +43,14 @@ jobs:
         run: python3 scripts/preview_staircase_materials.py
 
       - name: Upload staircase visual QA previews
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: PS3-SCALE-Staircase-Material-Motion-Preview
           if-no-files-found: error
           path: PS3-SCALE-Alpha-0.2/build-host/staircase-preview/*.png
 
       - name: Upload Arabic bitmap preview
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: PS3-SCALE-Alpha-0.2-arabic-font-preview
           if-no-files-found: error
@@ -63,7 +63,7 @@ jobs:
       image: ghcr.io/02900/ps3-toolchain-tiny3d:latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Show toolchain
         run: |
@@ -134,7 +134,7 @@ jobs:
           sha256sum ps3scale.elf ps3scale.self ps3scale.pkg ps3scale.gnpdrm.pkg
 
       - name: Upload XMB artwork previews
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: PS3-SCALE-XMB-Pearl-Design-Preview
           if-no-files-found: error
@@ -144,7 +144,7 @@ jobs:
             PS3-SCALE-Alpha-0.2/pkgfiles/PIC1.PNG
 
       - name: Upload PS3 build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: PS3-SCALE-Alpha-0.2-build-with-embedded-theme
           if-no-files-found: error
