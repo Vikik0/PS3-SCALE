@@ -17,6 +17,7 @@ MUSIC1_SIZE = 3_129_868
 MUSIC1_SHA256 = "8b567be77af069f8c0010d54f6046b4ae339bf4599d2667939aa45d1d746cf23"
 TARGET_NAME = "USRDIR/theme.mp3"
 LOGO_NAME = "USRDIR/apollo-save.png"
+CA_BUNDLE_NAME = "USRDIR/cacert.pem"
 LOGO_SIZE = 3_742
 LOGO_SHA256 = "53c15a5a1f62d5a81ee511e6942cac15efad31a6500ea74fad118d03b7349fb2"
 XMB_ASSETS = {
@@ -67,6 +68,7 @@ def main() -> int:
 
     found = False
     logo_found = False
+    ca_bundle_found = False
     music1_found = False
     xmb_found = set()
     for index in range(item_count):
@@ -99,6 +101,14 @@ def main() -> int:
             print(f"PASS: {MUSIC1_NAME} is embedded in {package_path.name}")
             print(f"PASS: {len(music1):,} bytes; SHA-256 {music1_digest}")
             music1_found = True
+        elif name == CA_BUNDLE_NAME:
+            ca_bundle = payload[file_offset:file_offset + file_size]
+            if (len(ca_bundle) < 100_000 or
+                    ca_bundle.count(b"-----BEGIN CERTIFICATE-----") < 50 or
+                    b"ISRG Root X1" not in ca_bundle):
+                raise SystemExit("ERROR: bundled CA certificates are incomplete or stale")
+            print(f"PASS: {CA_BUNDLE_NAME} is embedded ({len(ca_bundle):,} bytes)")
+            ca_bundle_found = True
         elif name == LOGO_NAME:
             logo = payload[file_offset:file_offset + file_size]
             logo_digest = hashlib.sha256(logo).hexdigest()
@@ -126,6 +136,8 @@ def main() -> int:
         raise SystemExit(f"ERROR: {TARGET_NAME} is missing from the PKG")
     if not logo_found:
         raise SystemExit(f"ERROR: {LOGO_NAME} is missing from the PKG")
+    if not ca_bundle_found:
+        raise SystemExit(f"ERROR: {CA_BUNDLE_NAME} is missing from the PKG")
     if require_music1 and not music1_found:
         raise SystemExit(f"ERROR: {MUSIC1_NAME} is required but missing from the PKG")
     if not music1_found:
