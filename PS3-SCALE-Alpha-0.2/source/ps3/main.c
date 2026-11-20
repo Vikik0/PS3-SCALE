@@ -3809,7 +3809,7 @@ static void draw_page_header(const char *title, const char *subtitle)
 {
     draw_ps_symbol(22.0f, 11.0f, 0x29243fff);
     set_ui_font_size(15, 23);
-    draw_text(68.0f, 16.0f, 0xffffffff, "PS3 SCALE");
+    draw_text(68.0f, 16.0f, 0x29243fff, "PS3 SCALE");
     set_ui_font_size(10, 15);
     draw_text(218.0f, 22.0f, 0x875be8ff, title);
     set_ui_font_size(7, 11);
@@ -3925,7 +3925,7 @@ static void draw_home(void)
 
     draw_ps_symbol(25.0f, 17.0f, 0x29243fff);
     set_ui_font_size(25, 37);
-    draw_text(70.0f, 18.0f, 0xffffffff, "PS3");
+    draw_text(70.0f, 18.0f, 0x29243fff, "PS3");
     draw_text(148.0f, 18.0f, 0x875be8ff, "SCALE");
     set_ui_font_size(8, 12);
     draw_text(72.0f, 61.0f, 0x514b69ff,
@@ -4403,7 +4403,7 @@ static void draw_details(void)
     draw_page_header("Game Details", "Review compatibility and available enhancements");
     if (!game) {
         draw_soft_card(24.0f, 92.0f, 806.0f, 340.0f, 0);
-        draw_text(52.0f, 128.0f, 0xffffffff, "No game selected.");
+        draw_text(52.0f, 128.0f, 0x29243fff, "No game selected.");
         draw_text(52.0f, 474.0f, 0x77718fff, "CIRCLE: BACK");
         set_ui_font_size(14, 22);
         return;
@@ -4434,7 +4434,7 @@ static void draw_details(void)
                            "NO MATCHED FILE - PLAY UNMODIFIED");
     set_ui_font_size(11, 17);
     snprintf(line, sizeof(line), "%.26s", game->title);
-    draw_text(204.0f, 110.0f, 0xffffffff, line);
+    draw_text(204.0f, 110.0f, 0x29243fff, line);
     set_ui_font_size(7, 11);
     snprintf(line, sizeof(line), "Platform: %s",
              game_is_ps3(game) ? "PlayStation 3" : "PlayStation 2");
@@ -4683,7 +4683,7 @@ static void draw_tools(void)
     draw_page_header("Companion Tools", "Optional tools detected on the console");
     draw_soft_card(24.0f, 96.0f, 806.0f, 320.0f, 0);
     set_ui_font_size(10, 15);
-    draw_text(48.0f, 120.0f, 0xffffffff, "APOLLO SAVE TOOL");
+    draw_text(48.0f, 120.0f, 0x29243fff, "APOLLO SAVE TOOL");
     snprintf(line, sizeof(line), "STATUS: %s",
              g_apollo_installed ? "INSTALLED" : "NOT DETECTED");
     draw_text(642.0f, 120.0f,
@@ -4694,7 +4694,7 @@ static void draw_tools(void)
     draw_solid_rect(48.0f, 176.0f, 748.0f, 1.0f, 0xd9d1eaff);
 
     set_ui_font_size(10, 15);
-    draw_text(48.0f, 196.0f, 0xffffffff, "ARTEMIS PS3");
+    draw_text(48.0f, 196.0f, 0x29243fff, "ARTEMIS PS3");
     snprintf(line, sizeof(line), "STATUS: %s",
              g_artemis_installed ? "INSTALLED" : "NOT DETECTED");
     draw_text(642.0f, 196.0f,
@@ -4705,7 +4705,7 @@ static void draw_tools(void)
     draw_solid_rect(48.0f, 252.0f, 748.0f, 1.0f, 0xd9d1eaff);
 
     set_ui_font_size(10, 15);
-    draw_text(48.0f, 272.0f, 0xffffffff, "webMAN MOD");
+    draw_text(48.0f, 272.0f, 0x29243fff, "webMAN MOD");
     snprintf(line, sizeof(line), "STATUS: %s",
              g_webman_installed ? "PLUGIN FOUND" : "NOT DETECTED");
     draw_text(642.0f, 272.0f,
