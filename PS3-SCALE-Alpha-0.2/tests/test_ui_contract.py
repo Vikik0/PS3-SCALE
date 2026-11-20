@@ -619,7 +619,9 @@ transition_ui = section("static void draw_screen_transition(void)",
                         "static void draw_ui(void)")
 for token in ("PS3SCALE_TRANSITION_FRAMES", "sweep_x",
               "color_with_alpha(0xfaf8ffff, alpha)",
-              "g_transition_frames++"):
+              "g_transition_frames++",
+              "if (!g_animation_enabled)",
+              "g_transition_frames = PS3SCALE_TRANSITION_FRAMES;"):
     assert token in transition_ui
 assert "if (g_screen != g_transition_screen)" in draw_ui_impl
 assert "g_transition_screen = g_screen;" in draw_ui_impl
