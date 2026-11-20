@@ -1,0 +1,35 @@
+name: Ghosts Co-op lobby deployment
+
+on:
+  push:
+    branches:
+      - feature/ghosts-campaign-coop-prototype-0.2
+    paths:
+      - "experiments/ghosts-campaign-coop/worker/**"
+      - ".github/workflows/ghosts-lobby-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: experiments/ghosts-campaign-coop/worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: experiments/ghosts-campaign-coop/worker/package.json
+      - name: Install Worker tooling
+        run: npm install --no-audit --no-fund
+      - name: Deploy free-tier matchmaking Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy
