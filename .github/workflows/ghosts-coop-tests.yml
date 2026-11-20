@@ -13,15 +13,14 @@ permissions:
   contents: read
 
 jobs:
-  prototype-tests:
+  compatibility-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extract prototype source
-        run: |
-          mkdir -p /tmp/ghosts-coop
-          tar -xzf experiments/ghosts-campaign-coop/ghosts-campaign-coop-prototype-0.2.tar.gz -C /tmp/ghosts-coop
-      - name: Run unit tests
-        run: |
-          cd /tmp/ghosts-coop/ghosts-campaign-coop
-          python3 -m unittest discover -s tests -v
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run compatibility registry tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: python -m unittest discover -s tests -v
