@@ -230,6 +230,32 @@ int ghc_encode_client_packet(
     return 0;
 }
 
+
+int ghc_decode_client_packet(
+    const uint8_t peer_relay_key[GHC_RELAY_KEY_SIZE],
+    const uint8_t *packet,
+    size_t packet_length,
+    GhcClientPacket *decoded
+) {
+    static const uint8_t magic[4] = {'G', 'H', 'C', '2'};
+    uint8_t digest[32];
+    size_t signed_length;
+
+    if (!peer_relay_key || !packet || !decoded) return -1;
+    if (packet_length < GHC_CLIENT_OVERHEAD || packet_length > GHC_MAX_DATAGRAM) return -1;
+    if (!gh_bytes_equal(packet, magic, sizeof(magic))) return -1;
+
+    signed_length = packet_length - GHC_MAC_SIZE;
+    gh_hmac_sha256(peer_relay_key, GHC_RELAY_KEY_SIZE, packet, signed_length, digest);
+    if (!gh_constant_time_equal(digest, packet + signed_length, GHC_MAC_SIZE)) return -1;
+
+    gh_copy(decoded->relay_id, packet + 4, GHC_RELAY_ID_SIZE);
+    decoded->sequence = gh_read_u32_be(packet + 20);
+    decoded->payload = packet + GHC_CLIENT_HEADER_SIZE;
+    decoded->payload_length = packet_length - GHC_CLIENT_OVERHEAD;
+    return 0;
+}
+
 int ghc_decode_server_packet(
     const uint8_t relay_key[GHC_RELAY_KEY_SIZE],
     const uint8_t *packet,
