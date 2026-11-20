@@ -773,4 +773,18 @@ assert "g_support_title[0] ? 0x29243fff : 0x77718fff" in support_form_ui
 assert "g_support_details[0] ? 0x29243fff : 0x77718fff" in support_form_ui
 assert "0xcaff39ff" not in support_form_ui
 assert "0xffffffff" not in support_form_ui
+# Dark ink remains readable on the light pearl panels.
+home_ui = section("static void draw_home(void)",
+                  "static void draw_online_database(void)")
+details_ui = section("static void draw_details(void)",
+                     "static void draw_settings(void)")
+tools_ui = section("static void draw_tools(void)",
+                   "static void draw_help(void)")
+keyboard_ui = section("static void draw_keyboard(void)",
+                      "/* Light-weight rounded panels:")
+assert 'draw_text(70.0f, 18.0f, 0x29243fff, "PS3")' in home_ui
+assert "0xffffffff" not in details_ui
+assert "0xffffffff" not in tools_ui
+assert "0xffffffff" not in keyboard_ui
+assert 'draw_text(48.0f, 120.0f, 0x29243fff, "APOLLO SAVE TOOL")' in tools_ui
 print("PS3 SCALE UI contract tests: PASS")
