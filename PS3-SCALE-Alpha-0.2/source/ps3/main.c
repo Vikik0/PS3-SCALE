@@ -1684,6 +1684,21 @@ static u32 scene_blend(u32 a, u32 b, float t)
     return ((u32)r << 24) | ((u32)g << 16) | ((u32)blue << 8) | 0xffu;
 }
 
+static u32 ui_blend_color(u32 a, u32 b, float t)
+{
+    int alpha_a = (int)(a & 255u);
+    int alpha_b = (int)(b & 255u);
+    int alpha;
+
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    alpha = alpha_a + (int)((float)(alpha_b - alpha_a) * t);
+
+    /* scene_blend intentionally forces opaque scene colors; UI cards must
+       interpolate their alpha too so translucent shadows stay translucent. */
+    return (scene_blend(a, b, t) & 0xffffff00u) | (u32)alpha;
+}
+
 static void draw_scene_background(void)
 {
     const float tau = 6.28318530718f;
@@ -3786,11 +3801,11 @@ static void draw_home_animated_card(float x, float y, float w, float h,
 
     draw_rounded_rect(card_x + 3.0f, card_y + 6.0f,
                       card_w, card_h, 9.0f,
-                      scene_blend(0x5e718f35, 0x665b8f50, focus));
+                      ui_blend_color(0x5e718f35, 0x665b8f50, focus));
     draw_rounded_rect(card_x, card_y, card_w, card_h, 9.0f,
-                      scene_blend(0xfaf8ffe8, 0xf4efffe8, focus));
+                      ui_blend_color(0xfaf8ffe8, 0xf4efffe8, focus));
     draw_rounded_outline(card_x, card_y, card_w, card_h, 9.0f,
-                         scene_blend(0xd9d1eaff, 0x9568edff, focus));
+                         ui_blend_color(0xd9d1eaff, 0x9568edff, focus));
     draw_solid_rect(card_x + 10.0f, card_y + 5.0f,
                     card_w - 20.0f, 1.5f, 0xfefcffb8);
 
@@ -3900,7 +3915,7 @@ static void draw_home(void)
         set_ui_font_size(8, 12);
         draw_text_centered(card_x + 5.0f, card_y + 77.0f,
                            card_w - 10.0f,
-                           scene_blend(0x29243fff, 0x875be8ff, focus),
+                           ui_blend_color(0x29243fff, 0x875be8ff, focus),
                            items[i]);
         set_ui_font_size(6, 9);
         draw_text_centered(card_x + 6.0f, card_y + 103.0f,
