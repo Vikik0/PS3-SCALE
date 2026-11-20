@@ -5,6 +5,11 @@ on:
     branches: [crash-bash-enhanced]
     paths:
       - "Crash-Bash-Enhanced/**"
+      - "api/**"
+      - "tests/**"
+      - "index.html"
+      - "package.json"
+      - "vercel.json"
       - ".github/workflows/crash-bash-build.yml"
   pull_request:
     branches: [crash-bash-enhanced]
@@ -34,10 +39,10 @@ jobs:
         with:
           node-version: 22
       - name: Install web dependencies
-        working-directory: Crash-Bash-Enhanced/web
+        working-directory: .
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: Run web tests
-        working-directory: Crash-Bash-Enhanced/web
+        working-directory: .
         run: npm test
 
   ps3-build:
