@@ -570,4 +570,49 @@ sfo = (project_root / "sfo.xml").read_text(encoding="utf-8")
 assert '<value name="APP_VER" type="string">00.22</value>' in sfo
 assert '<value name="VERSION" type="string">00.22</value>' in sfo
 
+# Stage 6: cohesive splash, first-run language, boot and global transitions.
+assert "#define PS3SCALE_TRANSITION_FRAMES 16u" in src
+assert "g_transition_screen = SCREEN_SPLASH" in src
+assert "g_transition_frames = PS3SCALE_TRANSITION_FRAMES" in src
+
+language_ui = section("static void draw_language_selection(void)",
+                      "static void draw_splash(void)")
+for token in ("CHOOSE LANGUAGE", "اختر اللغة", "Elige el idioma",
+              "ps3scale_locale_language_name(i)",
+              "draw_rounded_rect(128.0f, y, 598.0f, 40.0f"):
+    assert token in language_ui
+
+splash_ui = section("static void draw_splash(void)", "static void draw_boot(void)")
+for token in ("PS3 SCALE / CONSOLE MANAGEMENT", "ALPHA 0.22",
+              "PS3 & PS2 Enhancement Management", "SPECIAL THANKS",
+              "ARTEMIS", "APOLLO SAVE", "LOADING PS3 SCALE",
+              "PRESS CROSS OR START TO SKIP", "draw_ps_symbol",
+              "g_apollo_texture", "progress_text"):
+    assert token in splash_ui
+assert "draw_rounded_rect(98.0f, 48.0f, 646.0f, 410.0f" in splash_ui
+assert "draw_rounded_rect(210.0f, 402.0f, 434.0f, 11.0f" in splash_ui
+assert "frame >= 180 ? 1.0f" in splash_ui
+
+boot_ui = section("static void draw_boot(void)", "static void draw_keyboard(void)")
+for token in ("Starting your game library", "SCANNING LOCAL GAME LIBRARY",
+              "APP FILE CHECK: OK", "APP FILE CHECK: VERIFY INSTALL",
+              "draw_rounded_rect(92.0f, 118.0f, 670.0f, 260.0f",
+              "g_boot_stage == 2"):
+    assert token in boot_ui
+
+transition_ui = section("static void draw_screen_transition(void)",
+                        "static void draw_ui(void)")
+for token in ("PS3SCALE_TRANSITION_FRAMES", "sweep_x",
+              "color_with_alpha(0xfaf8ffff, alpha)",
+              "g_transition_frames++"):
+    assert token in transition_ui
+assert "if (g_screen != g_transition_screen)" in draw_ui_impl
+assert "g_transition_screen = g_screen;" in draw_ui_impl
+assert "g_transition_frames = 0;" in draw_ui_impl
+assert "draw_screen_transition();" in draw_ui_impl
+assert draw_ui_impl.index("draw_screen_transition();") < draw_ui_impl.index("tiny3d_Flip();")
+assert "(cross && !old_cross) || (start && !old_start)" in main
+assert "++g_splash_frames >= 180" in main
+assert "g_screen = g_splash_next_screen;" in main
+
 print("PS3 SCALE UI contract tests: PASS")
