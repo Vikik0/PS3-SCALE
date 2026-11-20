@@ -683,4 +683,27 @@ assert "malloc((size_t)file_size)" in ps2_worker
 assert "free(data);" in ps2_worker
 assert "file_size <= 0" in ps2_worker
 
+# All libcurl/network-module work is serialized across background workers.
+catalog_start = section("static void start_catalog_sync_worker(int force)",
+                        "static void service_catalog_sync(void)")
+support_start = section("static void start_support_send(void)",
+                        "static void service_support_send(void)")
+ps2_start = section("static void start_ps2_config_download(void)",
+                    "static int community_extension_is")
+community_start = section("static void start_community_file_download(",
+                          "static void service_community_download(void)")
+for network_start in (catalog_start, support_start, ps2_start, community_start):
+    assert "g_network_task_running" in network_start
+    assert "g_network_task_running = 1;" in network_start
+for network_worker in (catalog_worker if "catalog_worker" in globals() else
+                       section("static void catalog_sync_worker(void *arg)",
+                               "static void start_catalog_sync_worker(int force)"),
+                       section("static void support_submit_worker(void *arg)",
+                               "static void start_support_send(void)"),
+                       ps2_worker,
+                       section("static void community_download_worker(void *arg)",
+                               "static void start_community_file_download(")):
+    assert "g_network_task_running = 0;" in network_worker
+assert "static volatile int g_network_task_running = 0;" in src
+
 print("PS3 SCALE UI contract tests: PASS")
