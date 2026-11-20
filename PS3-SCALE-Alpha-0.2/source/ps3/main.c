@@ -155,8 +155,8 @@ static volatile int g_audio_thread_running = 0;
 static volatile int g_music_enabled = 1;
 static volatile int g_music_volume = 180;
 static int g_music_playing = 0;
-static int g_music_mode = 0; /* 0=alternate both, 1=Music 1 only, 2=Music 2 only. */
-static int g_music_fade_ms = 1000;
+static volatile int g_music_mode = 0; /* 0=alternate both, 1=Music 1 only, 2=Music 2 only. */
+static volatile int g_music_fade_ms = 1000;
 static int g_music_next_track = 1;
 static int g_music_start_track = 1;
 static volatile int g_music_current_track = 0;
