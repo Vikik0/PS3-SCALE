@@ -1,0 +1,64 @@
+name: Crash Bash Enhanced PS3 Build
+
+on:
+  push:
+    branches: [crash-bash-enhanced]
+    paths:
+      - "Crash-Bash-Enhanced/**"
+      - ".github/workflows/crash-bash-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  host-tests:
+    name: Host protocol tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run protocol tests
+        run: sh Crash-Bash-Enhanced/scripts/test_host.sh
+
+  ps3-build:
+    name: Build PS3 ELF, SELF and PKG
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/02900/ps3-toolchain-tiny3d:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify PS3 toolchain
+        run: |
+          set -eu
+          test -n "$PSL1GHT"
+          command -v ppu-gcc
+          command -v make
+          command -v make_self
+          command -v make_self_npdrm
+          command -v package_finalize
+      - name: Build homebrew package
+        working-directory: Crash-Bash-Enhanced
+        run: |
+          set -eu
+          make clean
+          make pkg
+          test -s crashbash.elf
+          test -s crashbash.self
+          test -s crashbash.pkg
+          test -s crashbash.gnpdrm.pkg
+          PKG_MAGIC="$(od -An -tx1 -N4 crashbash.gnpdrm.pkg | tr -d ' \\n')"
+          test "$PKG_MAGIC" = "7f504b47"
+          echo "Build outputs:"
+          ls -lah crashbash.elf crashbash.self crashbash.pkg crashbash.gnpdrm.pkg
+          echo "SHA-256:"
+          sha256sum crashbash.elf crashbash.self crashbash.pkg crashbash.gnpdrm.pkg
+      - name: Upload PS3 build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Crash-Bash-Enhanced-PS3-PKG
+          if-no-files-found: error
+          path: |
+            Crash-Bash-Enhanced/crashbash.elf
+            Crash-Bash-Enhanced/crashbash.self
+            Crash-Bash-Enhanced/crashbash.pkg
+            Crash-Bash-Enhanced/crashbash.gnpdrm.pkg
