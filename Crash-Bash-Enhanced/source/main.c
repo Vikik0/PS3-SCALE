@@ -44,7 +44,7 @@ static void text(float x, float y, int size, u32 color, const char *value)
     SetCurrentFont(0);
     SetFontColor(color, 0x00000000);
     SetFontSize(size, size + 8);
-    DrawString(x, y, value ? value : "");
+    { char safe_text[256]; snprintf(safe_text, sizeof(safe_text), "%s", value ? value : ""); DrawString(x, y, safe_text); }
 }
 static void draw_home(void)
 {
