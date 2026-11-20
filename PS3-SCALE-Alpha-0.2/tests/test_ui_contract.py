@@ -663,4 +663,18 @@ about_ui = section("static void draw_about(void)",
                    "static void draw_profile_toast(void)")
 assert "version_line" in about_ui
 assert "ps3scale_hardware_family_name(g_hardware_info.family)" in about_ui
+# Download workers are joined: never create a detached thread and then join it.
+ps2_worker = section("static void ps2_config_download_worker(void *arg)",
+                     "static void start_ps2_config_download(void)")
+ps2_start = section("static void start_ps2_config_download(void)",
+                    "static int community_extension_is")
+community_start = section("static void start_community_file_download(",
+                          "static void service_community_download(void)")
+assert "THREAD_JOINABLE" in ps2_start
+assert "THREAD_JOINABLE" in community_start
+assert "unsigned char data[" not in ps2_worker
+assert "malloc((size_t)file_size)" in ps2_worker
+assert "free(data);" in ps2_worker
+assert "file_size <= 0" in ps2_worker
+
 print("PS3 SCALE UI contract tests: PASS")
