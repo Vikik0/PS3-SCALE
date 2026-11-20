@@ -131,6 +131,7 @@ static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 #define PS3SCALE_SUPPORT_OUTBOX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox.txt"
 /* Replace with the URL of the separate PS3 SCALE Supabase project after deployment. */
 #define PS3SCALE_SUPPORT_URL "https://YOUR_PROJECT.supabase.co/functions/v1/ps3scale-support"
+#define PS3SCALE_APP_VERSION "ALPHA 0.22"
 #define PS3SCALE_PS2_CONFIG_INDEX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/ps2_config_index.tsv"
 #define PS3SCALE_PS2_CLASSICS_CONFIG_DIR "/dev_hdd0/game/PS2CONFIG/USRDIR/CONFIG/ENC"
 #define PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT (PS3SCALE_PS2_CONFIG_MAX_BYTES * 2u)
@@ -3449,7 +3450,7 @@ static void draw_splash(void)
               color_with_alpha(0x77718fff, alpha),
               "PS3 SCALE / CONSOLE MANAGEMENT");
     draw_text(654.0f, 70.0f,
-              color_with_alpha(0x875be8ff, alpha), "ALPHA 0.22");
+              color_with_alpha(0x875be8ff, alpha), PS3SCALE_APP_VERSION);
 
     draw_ps_symbol(405.0f, 91.0f,
                    color_with_alpha(0x29243fff, alpha));
@@ -4810,9 +4811,9 @@ static int build_support_json(void)
     length = snprintf(g_support_json, sizeof(g_support_json),
         "{\"kind\":\"%s\",\"title\":\"%s\",\"details\":\"%s\","
         "\"model\":\"%s\",\"firmware\":\"%s\",\"platform\":\"%s\","
-        "\"app_version\":\"ALPHA 0.22\"}",
+        "\"app_version\":\"%s\"}",
         g_support_is_feedback ? "feedback" : "issue",
-        title, details, model, firmware, platform);
+        title, details, model, firmware, platform, PS3SCALE_APP_VERSION);
     return (length < 0 || (size_t)length >= sizeof(g_support_json)) ? -1 : 0;
 }
 
@@ -4920,7 +4921,7 @@ static int save_support_report(void)
     } else {
         fprintf(fp, "MODEL: UNKNOWN\nFIRMWARE: UNKNOWN\n");
     }
-    fprintf(fp, "APP VERSION: ALPHA 0.21\n");
+    fprintf(fp, "APP VERSION: %s\n", PS3SCALE_APP_VERSION);
     if (fclose(fp) != 0) {
         snprintf(g_support_status, sizeof(g_support_status),
                  "REPORT SAVE FAILED.");
@@ -4963,6 +4964,20 @@ static void draw_app_icon_preview(float x, float y)
 
 static void draw_about(void)
 {
+    char version_line[128];
+
+    if (g_hardware_info_valid) {
+        snprintf(version_line, sizeof(version_line),
+                 "%s | FW %s | PS3 %s | %s",
+                 PS3SCALE_APP_VERSION, g_hardware_info.firmware_version,
+                 ps3scale_hardware_family_name(g_hardware_info.family),
+                 ps3scale_console_type_name(g_hardware_info.console_type));
+    } else {
+        snprintf(version_line, sizeof(version_line),
+                 "%s | HARDWARE INFORMATION UNAVAILABLE",
+                 PS3SCALE_APP_VERSION);
+    }
+
     draw_page_header("About", "Credits, hardware and safety information");
     draw_soft_card(20.0f, 88.0f, 586.0f, 356.0f, 0);
     draw_soft_card(620.0f, 88.0f, 214.0f, 356.0f, 0);
@@ -5012,8 +5027,7 @@ static void draw_about(void)
                   "The application can still browse local information.");
     }
     set_ui_font_size(6, 9);
-    draw_text(42.0f, 420.0f, 0x77718fff,
-              "ALPHA 0.21  |  CFW 4.92  |  PS3 FAT / SLIM / SUPER SLIM");
+    draw_text(42.0f, 420.0f, 0x77718fff, version_line);
 
     set_ui_font_size(7, 11);
     draw_text(644.0f, 106.0f, 0x29243fff, "XMB APP ICON");
