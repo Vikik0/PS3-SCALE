@@ -95,13 +95,21 @@ assert.equal(hostPublish.body.peer_candidate, null);
 
 const guestPublish = await call("/v1/rooms/" + code + "/candidate", "POST", guestCandidate, guest.body.token);
 assert.equal(guestPublish.status, 200);
-assert.deepEqual(guestPublish.body.peer_candidate, hostCandidate);
+assert.equal(guestPublish.body.peer_candidate.public_address, hostCandidate.public_address);
+assert.equal(guestPublish.body.peer_candidate.public_port, hostCandidate.public_port);
+assert.equal(guestPublish.body.peer_candidate.local_address, hostCandidate.local_address);
+assert.equal(guestPublish.body.peer_candidate.nat_type, hostCandidate.nat_type);
+assert.ok(guestPublish.body.peer_candidate.updated_at);
 assert.equal(guestPublish.body.peer.relay_id, host.body.relay.relay_id);
 assert.equal(guestPublish.body.peer.relay_key, host.body.relay.relay_key);
 
 const peer = await call("/v1/rooms/" + code + "/peer", "GET", undefined, host.body.token);
 assert.equal(peer.status, 200);
-assert.deepEqual(peer.body.peer_candidate, guestCandidate);
+assert.equal(peer.body.peer_candidate.public_address, guestCandidate.public_address);
+assert.equal(peer.body.peer_candidate.public_port, guestCandidate.public_port);
+assert.equal(peer.body.peer_candidate.local_address, guestCandidate.local_address);
+assert.equal(peer.body.peer_candidate.nat_type, guestCandidate.nat_type);
+assert.ok(peer.body.peer_candidate.updated_at);
 assert.equal(peer.body.peer.relay_id, guest.body.relay.relay_id);
 assert.equal(peer.body.peer.relay_key, guest.body.relay.relay_key);
 
