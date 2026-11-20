@@ -124,5 +124,7 @@ jobs:
           cache-dependency-path: experiments/ghosts-campaign-coop/worker/package.json
       - name: Install Cloudflare Worker tooling
         run: npm install --no-audit --no-fund
+      - name: Run Durable Object lobby integration tests
+        run: npm test
       - name: Bundle Worker without deploying
         run: npx wrangler deploy --dry-run --outdir "$RUNNER_TEMP/ghosts-worker-dist"
