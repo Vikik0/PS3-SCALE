@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/rooms.js": {
+      "maxDuration": 10
+    },
+    "api/health.js": {
+      "maxDuration": 5
+    }
+  }
+}
