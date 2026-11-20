@@ -151,6 +151,12 @@ home_animation_update = section("static void update_home_card_animations(void)",
 assert "scale = 1.0f + focus * 0.035f;" in home_animation
 assert "draw_rounded_outline" in home_animation
 assert "ring_alpha" in home_animation
+assert "ui_blend_color(0x5e718f35, 0x665b8f50, focus)" in home_animation
+assert "ui_blend_color(0xfaf8ffe8, 0xf4efffe8, focus)" in home_animation
+assert "scene_blend(" not in home_animation
+ui_color_blend = section("static u32 ui_blend_color(", "static void draw_scene_background(void)")
+assert "scene_blend(a, b, t) & 0xffffff00u" in ui_color_blend
+assert "alpha_a" in ui_color_blend and "alpha_b" in ui_color_blend
 assert "g_home_card_focus[i] += difference * 0.24f;" in home_animation_update
 assert "if (!g_animation_enabled)" in home_animation_update
 assert "update_home_card_animations();" in main
