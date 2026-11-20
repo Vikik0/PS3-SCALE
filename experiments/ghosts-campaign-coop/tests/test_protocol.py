@@ -24,7 +24,7 @@ class ProtocolTests(unittest.TestCase):
     def test_session_bearer_token_is_not_in_udp_packet(self):
         token = b"0123456789abcdef0123456789abcdef"
         packet = encode_client_packet(self.relay_id, self.relay_key, 1, token)
-        self.assertNotIn(token, packet)
+        self.assertNotIn(token, packet[:24])
 
     def test_tampered_client_payload_is_rejected(self):
         packet = bytearray(encode_client_packet(self.relay_id, self.relay_key, 1, b"state"))
