@@ -11,7 +11,7 @@ PRX_LD := $(PS3DK)/ppu/lib/lv2-prx.ld
 PRX_SPECS := $(PS3DK)/ppu/lib/lv2-prx.specs
 
 CFLAGS := -O2 -Wall -Wextra -Werror -std=gnu11 -mcpu=cell -mhard-float \
-          -ffunction-sections -fdata-sections -fno-stack-protector -fno-builtin
+          -ffunction-sections -fdata-sections -fno-stack-protector
 
 .PHONY: all clean check
 
@@ -23,10 +23,13 @@ $(BUILD):
 $(BUILD)/module.o: module.c | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/ghosts_coop.elf: $(BUILD)/module.o $(CRT) $(PRX_LD) $(PRX_SPECS)
-	$(PPU_CC) -nostdlib -nostartfiles -specs=$(PRX_SPECS) \
+$(BUILD)/ghc_protocol.o: ../ghc_protocol.c ../ghc_protocol.h | $(BUILD)
+	$(PPU_CC) $(CFLAGS) -c ../ghc_protocol.c -o $@
+
+$(BUILD)/ghosts_coop.elf: $(BUILD)/module.o $(BUILD)/ghc_protocol.o $(CRT) $(PRX_LD) $(PRX_SPECS)
+	$(PPU_CC) -nostartfiles -specs=$(PRX_SPECS) \
 		-Wl,-q -Wl,--no-warn-rwx-segments -Wl,-T,$(PRX_LD) \
-		$< $(CRT) -o $@
+		$(BUILD)/module.o $(BUILD)/ghc_protocol.o $(CRT) -o $@
 
 $(BUILD)/ghosts_coop.prx: $(BUILD)/ghosts_coop.elf
 	$(PRX_GEN) build $< -o $@ --name ghosts_coop --version 0.1
