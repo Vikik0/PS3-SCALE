@@ -95,11 +95,11 @@ class ApiHandler(BaseHTTPRequestHandler):
                     data = self._body()
                     if not isinstance(data.get("ready"), bool):
                         raise CoopError("INVALID_READY", "ready must be true or false.", 400)
-                    return self._json(200, self.manager.set_ready(token, data["ready"]))
+                    return self._json(200, self.manager.set_ready(token, data["ready"], expected_room_code=code))
                 if action == "start" and method == "POST":
-                    return self._json(200, self.manager.start_room(token))
+                    return self._json(200, self.manager.start_room(token, expected_room_code=code))
                 if action == "leave" and method == "POST":
-                    return self._json(200, self.manager.leave_room(token))
+                    return self._json(200, self.manager.leave_room(token, expected_room_code=code))
 
             match = re.fullmatch(r"/v1/rooms/([A-Z0-9]{6})", path)
             if match and method == "GET":
