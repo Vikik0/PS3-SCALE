@@ -9,6 +9,15 @@ export PORTLIBS
 TOOLCHAIN="$PS3DEV/ppu/bin"
 PREFIX="$TOOLCHAIN/powerpc64-ps3-elf-"
 WORK="${RUNNER_TEMP:-/tmp}/ps3scale-https-deps"
+PROJECT_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+CA_BUNDLE_RUNTIME_PATH="/dev_hdd0/game/PS3SCALE1/USRDIR/cacert.pem"
+
+# curl's configure probe checks the runtime path even though the bundle is
+# packaged later by Makefile. Stage the exact bundled CA file at that path
+# inside the build container so the probe and the shipped runtime agree.
+mkdir -p "$(dirname -- "$CA_BUNDLE_RUNTIME_PATH")"
+cp "$PROJECT_ROOT/pkgfiles/USRDIR/cacert.pem" "$CA_BUNDLE_RUNTIME_PATH"
+test -s "$CA_BUNDLE_RUNTIME_PATH"
 
 mkdir -p "$PORTLIBS/include" "$PORTLIBS/lib" "$WORK"
 export PATH="$TOOLCHAIN:$PATH"
