@@ -1,0 +1,27 @@
+name: Ghosts Co-op prototype tests
+
+on:
+  push:
+    branches:
+      - feature/ghosts-campaign-coop-prototype-0.2
+    paths:
+      - "experiments/ghosts-campaign-coop/**"
+      - ".github/workflows/ghosts-coop-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prototype-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract prototype source
+        run: |
+          mkdir -p /tmp/ghosts-coop
+          tar -xzf experiments/ghosts-campaign-coop/ghosts-campaign-coop-prototype-0.2.tar.gz -C /tmp/ghosts-coop
+      - name: Run unit tests
+        run: |
+          cd /tmp/ghosts-coop/ghosts-campaign-coop
+          python3 -m unittest discover -s tests -v
