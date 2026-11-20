@@ -175,7 +175,7 @@ module.exports = async function handler(req, res) {
       if (!/^[A-Z2-9]{6}$/.test(code)) return reply(res, 400, { error: "Enter a valid six-character room code." });
       const room = await readRoom(code);
       if (!room) return reply(res, 404, { error: "Room not found." });
-      if (room.isPrivate && !body.inviteCode) return reply(res, 403, { error: "This room requires an invitation." });
+      room.players = (room.players || []).filter((p) => Date.now() - p.lastSeen <= PLAYER_TTL_MS);
       if (room.status !== "waiting" || room.players.length >= MAX_PLAYERS) return reply(res, 409, { error: "Room is full or already playing." });
       const playerId = crypto.randomUUID();
       const now = Date.now();
@@ -201,6 +201,8 @@ module.exports = async function handler(req, res) {
     if (action === "heartbeat") {
       player.lastSeen = now;
       if (typeof body.ready === "boolean") player.ready = body.ready;
+      const activePlayers = room.players.filter((p) => now - p.lastSeen <= PLAYER_TTL_MS);
+      room.status = activePlayers.length === 2 && activePlayers.every((p) => p.ready) ? "ready" : "waiting";
       room.updatedAt = now;
       await saveRoom(code, room);
       return reply(res, 200, { ok: true, players: room.players.map(({ id, name, ready }) => ({ id, name, ready })) });
