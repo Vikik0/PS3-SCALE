@@ -6,6 +6,11 @@ on:
     paths:
       - "Crash-Bash-Enhanced/**"
       - ".github/workflows/crash-bash-build.yml"
+  pull_request:
+    branches: [crash-bash-enhanced]
+    paths:
+      - "Crash-Bash-Enhanced/**"
+      - ".github/workflows/crash-bash-build.yml"
   workflow_dispatch:
 
 permissions:
@@ -19,6 +24,21 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run protocol tests
         run: sh Crash-Bash-Enhanced/scripts/test_host.sh
+
+  web-tests:
+    name: Web lobby security tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install web dependencies
+        working-directory: Crash-Bash-Enhanced/web
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Run web tests
+        working-directory: Crash-Bash-Enhanced/web
+        run: npm test
 
   ps3-build:
     name: Build PS3 ELF, SELF and PKG
