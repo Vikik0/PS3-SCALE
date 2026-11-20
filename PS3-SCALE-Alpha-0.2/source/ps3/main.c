@@ -1806,7 +1806,7 @@ static void draw_home_ambient(void)
     ps3scale_scene_face_t faces[PS3SCALE_STAIR_FACE_MAX];
     const float tau = 6.28318530718f;
     const float center_x = 7.2f;
-    const float center_y = 0.0f;
+    float center_y;
     const float center_z = 34.0f;
     const float inner_radius = 2.0f;
     const float outer_radius = 14.0f;
@@ -1817,18 +1817,15 @@ static void draw_home_ambient(void)
         g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES;
     float phase = (float)frame_in_loop /
                   (float)PS3SCALE_STAIR_LOOP_FRAMES * tau;
-    /* Each cycle advances exactly one spiral revolution. Relocating the
-       repeating 32-step window is equivalent to the camera moving forward
-       forever through an endless helix: no easing, reverse or hard reset. */
+    /* Advance continuously through one full spiral revolution. The camera
+       and the local geometry origin share the same vertical offset, so the
+       view returns to its exact starting pose at the loop boundary. */
     float camera_steps = phase / tau * 18.0f;
-    int camera_step_whole = (int)camera_steps;
-    float camera_y = (camera_steps - (float)camera_step_whole) *
-                     rise_per_tread;
+    float camera_y = camera_steps * rise_per_tread;
     size_t face_count = 0, i;
     int j;
 
-    /* Straight, continuously advancing camera; geometry repeats by one
-       tread whenever camera_step_whole increases. */
+    center_y = camera_y;
     scene_set_camera(0.0f, camera_y, 0.0f,
                      center_x, camera_y, center_z);
 
@@ -1837,7 +1834,7 @@ static void draw_home_ambient(void)
 
     /* White/silver treads stream past the camera with no visible end. */
     for (i = 0; i < PS3SCALE_STAIR_STEPS; i++) {
-        float angle = ((float)i + (float)camera_step_whole) * angle_step;
+        float angle = ((float)i + camera_steps) * angle_step;
         float next_angle = angle + angle_step * 0.92f;
         float y = ((float)i - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
                   rise_per_tread;
@@ -1914,8 +1911,8 @@ static void draw_home_ambient(void)
     for (j = 0; j < PS3SCALE_STAIR_STEPS * 6; j++) {
         float t = (float)j / 6.0f;
         float next_t = (float)(j + 1) / 6.0f;
-        float angle = (t + (float)camera_step_whole) * angle_step;
-        float next_angle = (next_t + (float)camera_step_whole) * angle_step;
+        float angle = (t + camera_steps) * angle_step;
+        float next_angle = (next_t + camera_steps) * angle_step;
         float y = (t - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
                   0.72f;
         float next_y = (next_t - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
@@ -1939,7 +1936,7 @@ static void draw_home_ambient(void)
 
     /* Fine balusters and tread-edge glints complete the staircase silhouette. */
     for (i = 0; i < PS3SCALE_STAIR_STEPS; i += 3) {
-        float angle = ((float)i + (float)camera_step_whole) * angle_step;
+        float angle = ((float)i + camera_steps) * angle_step;
         float y = ((float)i - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
                   0.72f;
         ps3scale_scene_point_t base, rail, edge_a, edge_b;
