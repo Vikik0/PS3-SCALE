@@ -168,8 +168,9 @@ scene_background = section("static void draw_scene_background(void)",
                            "static void scene_emit_line_segment")
 assert "if (!g_animation_enabled)" in scene_background
 assert "phase = 0.0f;" in scene_background
-assert "progress = !g_animation_enabled ? 1.0f" in splash_ui
-assert "if (!g_animation_enabled)" in splash_ui
+splash_static = section("static void draw_splash(void)", "static void draw_boot(void)")
+assert "progress = !g_animation_enabled ? 1.0f" in splash_static
+assert "if (!g_animation_enabled)" in splash_static
 assert "CFW 4.92" not in home
 assert "PS3 SLIM (CECH-25xx)" not in home
 assert "SCREEN_HELP" in src and "SCREEN_SUPPORT_FORM" in src
