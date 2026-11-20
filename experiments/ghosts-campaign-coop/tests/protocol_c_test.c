@@ -21,6 +21,7 @@ int main(void) {
         0x5a, 0x12, 0x17, 0x63, 0xd5, 0xdd, 0x9a, 0x72
     };
     GhcServerPacket decoded;
+    uint8_t tampered_server_packet[sizeof(server_packet)];
     size_t i;
 
     for (i = 0; i < sizeof(relay_id); ++i) relay_id[i] = (uint8_t)i;
@@ -44,9 +45,10 @@ int main(void) {
     assert(decoded.payload_length == 4);
     assert(memcmp(decoded.payload, "peer", 4) == 0);
 
-    output[output_length - 1] ^= 0x01;
+    memcpy(tampered_server_packet, server_packet, sizeof(server_packet));
+    tampered_server_packet[sizeof(tampered_server_packet) - 1] ^= 0x01;
     assert(ghc_decode_server_packet(
-        relay_key, output, output_length, &decoded
+        relay_key, tampered_server_packet, sizeof(tampered_server_packet), &decoded
     ) != 0);
 
     return 0;
