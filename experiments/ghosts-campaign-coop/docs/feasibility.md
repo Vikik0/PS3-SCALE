@@ -23,6 +23,10 @@ The regional title IDs are registered for future build selection, but no region 
 - CEX and DEX use different executable/plugin variants in the Ghosts modding ecosystem; DEX-only EBOOTs must not be used on CEX.
 - Extinction is the game's existing co-op mode. Campaign is not documented as a two-player mode.
 
+## Candidate technical lead discovered
+
+A public TU 1.16 multiplayer offset collection lists candidate routines for entity allocation, model spawning/linking and player script commands, including G_Spawn, G_CallSpawnEntity, SP_Script_Model, PlayerCMD_Spawn and PlayerCMD_ClonePlayer. This is a useful lead for an offline actor-spawn experiment, but it does not prove that the same functions work in Campaign or that they create a controllable second player. See candidate-spawn-primitives.md for the safe test sequence and limitations.
+
 ## What is not established
 
 No public source located in this initial research demonstrates:
