@@ -11,8 +11,8 @@ const {
 
 const ACCESS = "private";
 const PREFIX = "cb-rooms/";
-const ROOM_TTL_MS = 15 * 60 * 1000;
-const PLAYER_TTL_MS = 75 * 1000;
+const ROOM_TTL_MS = 30 * 60 * 1000;
+const PLAYER_TTL_MS = 10 * 60 * 1000;
 const MAX_PLAYERS = 2;
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
