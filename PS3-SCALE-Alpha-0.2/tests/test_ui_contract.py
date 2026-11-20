@@ -144,6 +144,21 @@ for token in ("Scan Games", "Online DB", "Settings", "Help", "About",
 assert "static const char *items[5]" in home
 assert "for (i = 0; i < 5; i++)" in home
 assert "g_home_selected = (g_home_selected + 1) % 5;" in main
+home_animation = section("static void draw_home_animated_card(",
+                           "static void draw_home(void)")
+home_animation_update = section("static void update_home_card_animations(void)",
+                                "static void draw_home(void)")
+assert "scale = 1.0f + focus * 0.035f;" in home_animation
+assert "draw_rounded_outline" in home_animation
+assert "ring_alpha" in home_animation
+assert "g_home_card_focus[i] += difference * 0.24f;" in home_animation_update
+assert "if (!g_animation_enabled)" in home_animation_update
+assert "update_home_card_animations();" in main
+assert "FW %s" in home and "PS3 %s" in home
+assert "g_hardware_info_valid" in home
+assert "ps3scale_hardware_family_name(g_hardware_info.family)" in home
+assert "CFW 4.92" not in home
+assert "PS3 SLIM (CECH-25xx)" not in home
 assert "SCREEN_HELP" in src and "SCREEN_SUPPORT_FORM" in src
 help_ui = section("static void draw_help(void)", "static void draw_about(void)")
 assert "Report an Issue" in help_ui and "Send Feedback" in help_ui
@@ -614,5 +629,21 @@ assert draw_ui_impl.index("draw_screen_transition();") < draw_ui_impl.index("tin
 assert "(cross && !old_cross) || (start && !old_start)" in main
 assert "++g_splash_frames >= 180" in main
 assert "g_screen = g_splash_next_screen;" in main
+
+# Warning cleanup and Node 24 action runtime contracts.
+assert "static void format_hex" not in src
+online_catalog_source = (source_path.parent / "online_catalog.c").read_text(encoding="utf-8")
+assert online_catalog_source.index("#include <sys/time.h>") < online_catalog_source.index("#include <curl/curl.h>")
+
+repo_root = source_path.parents[3]
+build_workflow = (repo_root / ".github/workflows/build-ps3.yml").read_text(encoding="utf-8")
+index_workflow = (repo_root / ".github/workflows/update-community-index.yml").read_text(encoding="utf-8")
+assert "actions/checkout@v7" in build_workflow
+assert "actions/upload-artifact@v7" in build_workflow
+assert "actions/checkout@v7" in index_workflow
+assert "actions/setup-python@v7" in index_workflow
+assert "actions/checkout@v4" not in build_workflow + index_workflow
+assert "actions/upload-artifact@v4" not in build_workflow
+assert "actions/setup-python@v5" not in index_workflow
 
 print("PS3 SCALE UI contract tests: PASS")
