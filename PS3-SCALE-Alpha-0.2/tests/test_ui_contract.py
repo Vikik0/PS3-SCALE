@@ -108,7 +108,7 @@ assert "settings_version=2" in src
 assert "cycle_music_fade_ms" in src
 assert "g_settings_selected == 8" in main
 assert "MUSIC 1: BIOS - ZORROVIAN (USB IMPORT)" in settings
-assert "draw_ps_symbol(407.0f, 22.0f" in src
+assert "draw_ps_symbol(405.0f, 91.0f" in src
 assert "MUSIC 1: BIOS - ZORROVIAN (USB IMPORT)" in settings
 assert "MUSIC 2: GTA V (BUILT IN)" in settings
 assert "START GAME" in src
