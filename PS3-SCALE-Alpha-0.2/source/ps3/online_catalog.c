@@ -1,5 +1,6 @@
 #include "ps3scale/online.h"
 
+#include <sys/time.h>
 #include <curl/curl.h>
 #include <net/net.h>
 #include <net/netctl.h>
