@@ -3619,47 +3619,68 @@ static void draw_boot(void)
 static void draw_keyboard(void)
 {
     int i;
-    set_ui_font_size(12, 18);
-    draw_text(34, 22, 0xcaff39ff, "PS3 SCALE");
-    draw_text(34, 56, 0xffffffff,
-              g_keyboard_support_mode ?
-              (g_support_selected == 0 ? "REPORT TITLE" : "REPORT DETAILS") :
-              "SEARCH GAMES");
-    draw_text(34, 88, 0x9aa6adff,
-              g_keyboard_support_mode ? "ENTER TEXT FOR YOUR SUPPORT REPORT" :
-                                        "TYPE TO FILTER THE LIBRARY");
-    draw_solid_rect(40.0f, 112.0f, 768.0f, 34.0f, 0x0d1722ff);
-    draw_outline_rect(40.0f, 112.0f, 768.0f, 34.0f, 0x42647aff);
-    draw_text(54, 120, 0xcaff39ff, g_search[0] ? g_search : " ");
+    const char *title = g_keyboard_support_mode ?
+        (g_support_selected == 0 ? "REPORT TITLE" : "REPORT DETAILS") :
+        g_keyboard_online_mode ? "SEARCH ONLINE DATABASE" : "SEARCH GAMES";
+    const char *subtitle = g_keyboard_support_mode ?
+        "Enter text for your support report" :
+        "Type to filter the selected game list";
+
+    draw_ps_symbol(22.0f, 11.0f, 0x29243fff);
+    set_ui_font_size(15, 23);
+    draw_text(68.0f, 16.0f, 0x29243fff, "PS3 SCALE");
+    set_ui_font_size(10, 15);
+    draw_text(218.0f, 22.0f, 0x875be8ff, title);
+    set_ui_font_size(7, 11);
+    draw_text(26.0f, 49.0f, 0x77718fff, subtitle);
+
+    draw_rounded_rect(40.0f, 112.0f, 768.0f, 34.0f, 8.0f, 0xfaf8ffff);
+    draw_rounded_outline(40.0f, 112.0f, 768.0f, 34.0f,
+                         8.0f, 0xbba5f0ff);
+    draw_text(54.0f, 120.0f, 0x29243fff, g_search[0] ? g_search : " ");
+
     for (i = 0; i < 40; i++) {
         int row = i / 10;
         int col = i % 10;
         float x = 48.0f + (float)col * 76.0f;
         float y = 160.0f + (float)row * 46.0f;
         int selected = (i == g_keyboard_selected);
-        draw_solid_rect(x, y, 68.0f, 38.0f,
-                        selected ? 0x1c594dff : 0x111e2bff);
-        draw_outline_rect(x, y, 68.0f, 38.0f,
-                          selected ? 0x8bd450ff : 0x344f63ff);
-        draw_text(x + 23.0f, y + 9.0f, selected ? 0xcaff39ff : 0xdce3e8ff,
+
+        draw_rounded_rect(x, y, 68.0f, 38.0f, 7.0f,
+                          selected ? 0xeee7ffff : 0xfaf8ffff);
+        draw_rounded_outline(x, y, 68.0f, 38.0f, 7.0f,
+                             selected ? 0x9568edff : 0xd9d1eaff);
+        if (selected)
+            draw_rounded_rect(x + 6.0f, y + 5.0f, 3.0f, 28.0f,
+                              1.5f, 0x875be8ff);
+        set_ui_font_size(8, 12);
+        draw_text(x + 23.0f, y + 9.0f,
+                  selected ? 0x875be8ff : 0x29243fff,
                   ps3scale_locale_keyboard_key(g_language, i));
     }
+
     {
-        static const char *actions[5] = {"SPACE","BACKSPACE","CLEAR","APPLY","CANCEL"};
+        static const char *actions[5] = {
+            "SPACE", "BACKSPACE", "CLEAR", "APPLY", "CANCEL"
+        };
         for (i = 0; i < 5; i++) {
             float x = 36.0f + (float)i * 156.0f;
             int selected = (g_keyboard_selected == 40 + i);
-            draw_solid_rect(x, 360.0f, 144.0f, 42.0f,
-                            selected ? 0x1c594dff : 0x111e2bff);
-            draw_outline_rect(x, 360.0f, 144.0f, 42.0f,
-                              selected ? 0x8bd450ff : 0x344f63ff);
-            draw_text(x + 14.0f, 372.0f,
-                      selected ? 0xcaff39ff : 0xdce3e8ff, actions[i]);
+
+            draw_rounded_rect(x, 360.0f, 144.0f, 42.0f, 8.0f,
+                              selected ? 0xeee7ffff : 0xfaf8ffff);
+            draw_rounded_outline(x, 360.0f, 144.0f, 42.0f, 8.0f,
+                                 selected ? 0x9568edff : 0xd9d1eaff);
+            set_ui_font_size(7, 11);
+            draw_text(x + 14.0f, 374.0f,
+                      selected ? 0x875be8ff : 0x514b69ff, actions[i]);
         }
     }
-    draw_text(34, 440, 0x9aa6adff,
+
+    set_ui_font_size(7, 11);
+    draw_text(34.0f, 440.0f, 0x77718fff,
               "ARROWS MOVE  |  CROSS SELECT  |  CIRCLE CANCEL");
-    draw_text(34, 478, 0x6f7b83ff,
+    draw_text(34.0f, 478.0f, 0x875be8ff,
               "CUSTOM KEYBOARD  |  NO PS3 SYSTEM KEYBOARD REQUIRED");
     set_ui_font_size(14, 22);
 }
@@ -4777,14 +4798,17 @@ static void draw_support_form(void)
         int selected = (i == g_support_selected);
         draw_soft_card(42.0f, y, 768.0f, 68.0f, selected);
         set_ui_font_size(8, 12);
-        draw_text(60.0f, y + 9.0f, 0xcaff39ff, labels[i]);
+        draw_text(60.0f, y + 9.0f,
+                  selected ? 0x875be8ff : 0x514b69ff, labels[i]);
         set_ui_font_size(7, 11);
         if (i == 0)
-            draw_text(60.0f, y + 38.0f, 0xffffffff,
+            draw_text(60.0f, y + 38.0f,
+                      g_support_title[0] ? 0x29243fff : 0x77718fff,
                       g_support_title[0] ? g_support_title :
                                            "Press CROSS to enter a title");
         else if (i == 1)
-            draw_text(60.0f, y + 38.0f, 0xffffffff,
+            draw_text(60.0f, y + 38.0f,
+                      g_support_details[0] ? 0x29243fff : 0x77718fff,
                       g_support_details[0] ? g_support_details :
                                              "Press CROSS to describe the issue");
         else
