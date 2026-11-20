@@ -602,6 +602,15 @@ sfo = (project_root / "sfo.xml").read_text(encoding="utf-8")
 assert '<value name="APP_VER" type="string">00.22</value>' in sfo
 assert '<value name="VERSION" type="string">00.22</value>' in sfo
 
+# Startup failure and package-integrity regression checks.
+startup = section("int main(int argc, char *argv[])", "while (!g_exit_requested)")
+assert "if (!g_font_texture) {" in startup
+assert "ya2d_freeTexture(g_apollo_texture);" in startup
+assert "ya2d_deinit();" in startup
+assert 'file_exists_readonly("/dev_hdd0/game/PS3SCALE1/USRDIR/EBOOT.BIN") &&' in startup
+assert 'file_exists_readonly("/dev_hdd0/game/PS3SCALE1/PARAM.SFO");' in startup
+assert 'file_exists_readonly("/dev_hdd0/game/PS3SCALE1/USRDIR/EBOOT.BIN") ||' not in startup
+
 # Stage 6: cohesive splash, first-run language, boot and global transitions.
 assert "#define PS3SCALE_TRANSITION_FRAMES 16u" in src
 assert "g_transition_screen = SCREEN_SPLASH" in src
