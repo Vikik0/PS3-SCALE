@@ -732,7 +732,7 @@ assert "static volatile int g_music_fade_ms" in src
 
 # The spiral staircase camera must move continuously and close its loop.
 staircase = section("static void draw_home_ambient(void)",
-                    "static void set_settings_message(void)")
+                    "static void set_settings_message(const char *message)")
 assert "float camera_steps = phase / tau * 18.0f;" in staircase
 assert "float camera_y = camera_steps * rise_per_tread;" in staircase
 assert "center_y = camera_y;" in staircase
