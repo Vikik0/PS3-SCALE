@@ -2908,7 +2908,7 @@ static const ps3scale_ps2_config_entry_t *ps2_config_for_game(
 
 static void ps2_config_download_worker(void *arg)
 {
-    unsigned char data[PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT];
+    unsigned char *data = NULL;
     FILE *fp = NULL;
     long file_size = 0;
     int result = -1;
@@ -2925,23 +2925,31 @@ static void ps2_config_download_worker(void *arg)
         } else {
             if (fseek(fp, 0, SEEK_END) == 0)
                 file_size = ftell(fp);
-            if (file_size < 0 ||
-                (size_t)file_size > sizeof(data) ||
-                fseek(fp, 0, SEEK_SET) != 0 ||
-                fread(data, 1, (size_t)file_size, fp) != (size_t)file_size) {
+            if (file_size <= 0 ||
+                (size_t)file_size > PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT ||
+                fseek(fp, 0, SEEK_SET) != 0) {
                 result = -3;
-            } else if (ps3scale_ps2_config_validate_external(
-                           data, (size_t)file_size,
-                           g_ps2_config_download_type) != 0) {
-                result = -4;
-            } else if (stat(g_ps2_config_download_path, &st) == 0) {
-                result = -2;
-            } else if (rename(g_ps2_config_download_temp_path,
-                              g_ps2_config_download_path) == 0) {
-                result = 0;
             } else {
-                result = -5;
+                data = (unsigned char *)malloc((size_t)file_size);
+                if (!data ||
+                    fread(data, 1, (size_t)file_size, fp) != (size_t)file_size ||
+                    ferror(fp)) {
+                    result = -3;
+                } else if (ps3scale_ps2_config_validate_external(
+                               data, (size_t)file_size,
+                               g_ps2_config_download_type) != 0) {
+                    result = -4;
+                } else if (stat(g_ps2_config_download_path, &st) == 0) {
+                    result = -2;
+                } else if (rename(g_ps2_config_download_temp_path,
+                                  g_ps2_config_download_path) == 0) {
+                    result = 0;
+                } else {
+                    result = -5;
+                }
             }
+            free(data);
+            data = NULL;
             fclose(fp);
             fp = NULL;
         }
@@ -3026,7 +3034,7 @@ static void start_ps2_config_download(void)
 
     if (sysThreadCreate(&g_ps2_config_download_thread,
                         ps2_config_download_worker, NULL,
-                        1001, 64 * 1024, 0,
+                        1001, 64 * 1024, THREAD_JOINABLE,
                         "ps3scale_ps2cfg") != 0) {
         g_ps2_config_download_running = 0;
         set_details_message("COULD NOT START PS2 CONFIG DOWNLOAD WORKER.");
@@ -3260,7 +3268,7 @@ static void start_community_file_download(const ps3scale_community_file_t *entry
     g_community_download_running = 1;
     if (sysThreadCreate(&g_community_download_thread,
                         community_download_worker, NULL,
-                        1001, 64 * 1024, 0,
+                        1001, 64 * 1024, THREAD_JOINABLE,
                         "ps3scale_community") != 0) {
         g_community_download_running = 0;
         snprintf(g_online_message, sizeof(g_online_message),
