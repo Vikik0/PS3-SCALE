@@ -225,9 +225,6 @@ module.exports = async function handler(req, res) {
     if (action === "poll") {
       const since = Number.isInteger(body.since) && body.since >= 0 ? body.since : 0;
       const signals = (room.signals || []).filter((s) => s.to === player.id && s.id > since);
-      player.lastSeen = now;
-      room.updatedAt = now;
-      await saveRoom(code, room);
       return reply(res, 200, { signals, cursor: signals.length ? signals[signals.length - 1].id : since });
     }
 
