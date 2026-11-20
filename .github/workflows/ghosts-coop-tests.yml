@@ -7,13 +7,17 @@ on:
     paths:
       - "experiments/ghosts-campaign-coop/**"
       - ".github/workflows/ghosts-coop-tests.yml"
+  pull_request:
+    paths:
+      - "experiments/ghosts-campaign-coop/**"
+      - ".github/workflows/ghosts-coop-tests.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  compatibility-tests:
+  server-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,6 +25,17 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Run compatibility registry tests
+      - name: Compile Python modules
+        working-directory: experiments/ghosts-campaign-coop
+        run: python -m compileall -q server tests
+      - name: Run server and network tests
         working-directory: experiments/ghosts-campaign-coop
         run: python -m unittest discover -s tests -v
+
+  protocol-header:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile PS3 protocol header contract
+        working-directory: experiments/ghosts-campaign-coop
+        run: cc -std=c11 -Wall -Wextra -Werror -fsyntax-only tests/protocol_header_smoke.c
