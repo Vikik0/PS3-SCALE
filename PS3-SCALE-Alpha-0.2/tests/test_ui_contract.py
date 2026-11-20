@@ -723,4 +723,8 @@ for network_worker in (catalog_worker, support_worker, profile_worker,
     assert "g_network_task_running = 0;" in network_worker
 assert "static volatile int g_network_task_running = 0;" in src
 
+# Audio callback and UI share these two live settings while music is playing.
+assert "static volatile int g_music_mode" in src
+assert "static volatile int g_music_fade_ms" in src
+
 print("PS3 SCALE UI contract tests: PASS")
