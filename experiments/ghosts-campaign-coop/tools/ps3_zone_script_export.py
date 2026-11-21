@@ -13,7 +13,9 @@ import argparse
 import hashlib
 import json
 import re
+import struct
 import sys
+import zlib
 from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -41,6 +43,9 @@ class ScriptAsset:
     kind: str
     sha256: str
     output_name: str
+    gsc_compressed_len: int | None
+    gsc_stack_len: int | None
+    gsc_bytecode_len: int | None
 
 
 def _read_name(data: bytes, start: int) -> tuple[str, int] | None:
@@ -92,6 +97,39 @@ def _parse_header(data: bytes, offset: int) -> tuple[str, int, int, str, int] | 
     return None
 
 
+def _parse_gsc_binary_header(body: bytes) -> tuple[int, int, int] | None:
+    """Validate the GSC Tool IW .gscbin wrapper (PS3 length fields are LE u32).
+
+    Layout: b'GSC\\0' + compressedLen + stackLen + bytecodeLen + stack buffer + bytecode.
+    A zero compressedLen means the stack buffer is stored uncompressed.
+    """
+    if len(body) < 16 or body[:4] != b"GSC\x00":
+        return None
+
+    compressed_len, stack_len, bytecode_len = struct.unpack_from("<III", body, 4)
+    if any(value > MAX_DECOMPRESSED_LEN for value in (compressed_len, stack_len, bytecode_len)):
+        return None
+
+    stored_stack_len = compressed_len if compressed_len else stack_len
+    if 16 + stored_stack_len + bytecode_len != len(body):
+        return None
+
+    stack_data = body[16:16 + stored_stack_len]
+    if compressed_len:
+        decoder = zlib.decompressobj()
+        try:
+            stack = decoder.decompress(stack_data, stack_len + 1)
+        except zlib.error:
+            return None
+        if (len(stack) != stack_len or not decoder.eof
+                or decoder.unused_data or decoder.unconsumed_tail):
+            return None
+    elif len(stack_data) != stack_len:
+        return None
+
+    return compressed_len, stack_len, bytecode_len
+
+
 def scan_zone(data: bytes) -> list[tuple[ScriptAsset, bytes]]:
     if len(data) < 0x40:
         raise ZoneScanError("zone is too small to contain an IW6 XFile header")
@@ -111,9 +149,10 @@ def scan_zone(data: bytes) -> list[tuple[ScriptAsset, bytes]]:
         shape, comp_len, dec_len, name, body_start = parsed
         body = data[body_start:body_start + dec_len]
         suffix = Path(name).suffix.lower()
-        is_gsc_magic = body.startswith(b"GSC\x00")
-        if suffix in SCRIPT_EXTENSIONS or is_gsc_magic:
-            if is_gsc_magic:
+        gsc_header = _parse_gsc_binary_header(body)
+        is_compiled_gsc = gsc_header is not None
+        if suffix in SCRIPT_EXTENSIONS or is_compiled_gsc:
+            if is_compiled_gsc:
                 kind = "compiled_gsc"
                 if suffix in {".gscbin", ".cscbin"}:
                     output_name = name
@@ -134,6 +173,9 @@ def scan_zone(data: bytes) -> list[tuple[ScriptAsset, bytes]]:
                 kind=kind,
                 sha256=hashlib.sha256(body).hexdigest(),
                 output_name=output_name,
+                gsc_compressed_len=gsc_header[0] if gsc_header else None,
+                gsc_stack_len=gsc_header[1] if gsc_header else None,
+                gsc_bytecode_len=gsc_header[2] if gsc_header else None,
             )
             found.append((asset, body))
 
