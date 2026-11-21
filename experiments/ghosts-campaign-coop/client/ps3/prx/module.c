@@ -51,6 +51,12 @@ uint32_t ghc_local_input_poll_total(void) { return g_local_input_poll_count; }
 uint32_t ghc_local_input_connected_mask(void) { return g_local_input.connected_mask; }
 uint32_t ghc_local_input_read_error_mask(void) { return g_local_input.read_error_mask; }
 
+uint32_t ghc_local_input_player_connected(uint32_t player_slot)
+{
+    if (player_slot < 1u || player_slot > GHC_LOCAL_INPUT_PLAYER_COUNT) return 0u;
+    return g_local_input.players[player_slot - 1u].connected;
+}
+
 uint32_t ghc_local_input_player_buttons(uint32_t player_slot)
 {
     if (player_slot < 1u || player_slot > GHC_LOCAL_INPUT_PLAYER_COUNT) return 0u;
@@ -71,4 +77,16 @@ uint32_t ghc_local_input_player_right_stick(uint32_t player_slot)
     if (player_slot < 1u || player_slot > GHC_LOCAL_INPUT_PLAYER_COUNT) return 0u;
     player = &g_local_input.players[player_slot - 1u];
     return ((uint32_t)player->right_x << 8) | (uint32_t)player->right_y;
+}
+
+uint32_t ghc_local_input_player_l2_pressure(uint32_t player_slot)
+{
+    if (player_slot < 1u || player_slot > GHC_LOCAL_INPUT_PLAYER_COUNT) return 0u;
+    return g_local_input.players[player_slot - 1u].l2_pressure;
+}
+
+uint32_t ghc_local_input_player_r2_pressure(uint32_t player_slot)
+{
+    if (player_slot < 1u || player_slot > GHC_LOCAL_INPUT_PLAYER_COUNT) return 0u;
+    return g_local_input.players[player_slot - 1u].r2_pressure;
 }

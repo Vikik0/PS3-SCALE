@@ -141,6 +141,7 @@ jobs:
           source "$RUNNER_TEMP/PS3DK-src/scripts/env.sh"
           cargo build --release --manifest-path "$PS3_TOOLCHAIN_ROOT/tools/nidgen/Cargo.toml"
           nidgen="$PS3_TOOLCHAIN_ROOT/tools/target/release/nidgen"
+          "$nidgen" verify "$GITHUB_WORKSPACE/experiments/ghosts-campaign-coop/client/ps3/prx/exports.yml"
           for name in libsysmodule_stub libnet_stub libssl_stub libhttp_stub libhttp_util_stub libio_stub; do
             input="$PS3_TOOLCHAIN_ROOT/tools/nidgen/nids/extracted/$name.yaml"
             out="$RUNNER_TEMP/ps3-stubs/$name"
