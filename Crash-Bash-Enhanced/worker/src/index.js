@@ -297,7 +297,35 @@ export class CrashBashLobby {
     }
   }
 
-  webSocketClose() {}
+  async webSocketClose(socket) {
+    let attachment;
+    try {
+      attachment = socket.deserializeAttachment();
+    } catch {
+      return;
+    }
+    if (!attachment?.sessionId) return;
+
+    if (typeof this.ctx.getWebSockets === "function") {
+      for (const other of this.ctx.getWebSockets()) {
+        if (other === socket) continue;
+        try {
+          if (other.deserializeAttachment()?.sessionId === attachment.sessionId) return;
+        } catch {
+          // Ignore sockets already closing.
+        }
+      }
+    }
+
+    const state = await this.load();
+    const session = Object.values(state.sessions).find(item =>
+      item.sessionId === attachment.sessionId
+    );
+    if (!session || !session.roomCode) return;
+    this.removePlayer(state, session);
+    await this.save(state);
+  }
+
   webSocketError() {}
 
   removePlayer(state, session) {
@@ -508,18 +536,6 @@ export class CrashBashLobby {
             !room.players.some(player => player.sessionId === session.sessionId)) {
           throw fail(403, "NOT_IN_ROOM", "Join this room before opening its game transport.");
         }
-        if (typeof this.ctx.getWebSockets === "function") {
-          for (const existing of this.ctx.getWebSockets()) {
-            try {
-              if (existing.deserializeAttachment()?.sessionId === session.sessionId) {
-                existing.close(1008, "REPLACED");
-              }
-            } catch {
-              // Ignore stale sockets while replacing a previous connection.
-            }
-          }
-        }
-
         const pair = new WebSocketPair();
         const client = pair[0];
         const server = pair[1];
@@ -532,6 +548,18 @@ export class CrashBashLobby {
         });
         this.ctx.acceptWebSocket(server);
         server.send(JSON.stringify({ type: "room_update", room: roomView(room) }));
+        if (typeof this.ctx.getWebSockets === "function") {
+          for (const existing of this.ctx.getWebSockets()) {
+            if (existing === server) continue;
+            try {
+              if (existing.deserializeAttachment()?.sessionId === session.sessionId) {
+                existing.close(1008, "REPLACED");
+              }
+            } catch {
+              // Ignore stale sockets while replacing a previous connection.
+            }
+          }
+        }
         return new Response(null, {
           status: 101,
           webSocket: client,
@@ -592,6 +620,14 @@ export class CrashBashLobby {
       if (!room) throw fail(404, "ROOM_NOT_FOUND", "Room code was not found.");
 
       if (action === "join" && method === "POST") {
+        if (session.roomCode === code) {
+          const existingPlayer = room.players.find(player => player.sessionId === session.sessionId);
+          if (existingPlayer) {
+            await this.save(state);
+            return response(200, roomView(room));
+          }
+          session.roomCode = null;
+        }
         if (session.roomCode) throw fail(409, "ALREADY_IN_ROOM", "Leave your current room first.");
         if (room.status !== "waiting") throw fail(409, "ROOM_ALREADY_STARTED", "This match has already started.");
         if (room.players.length >= room.maxPlayers) throw fail(409, "ROOM_FULL", "This room is full.");
