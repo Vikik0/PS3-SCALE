@@ -3237,7 +3237,7 @@ static int is_ps3scale_temp_enhancement_name(const char *name)
         return 0;
     length = strlen(name);
     if (length < 14 || strncmp(name, "PS3SCALE_", 9) != 0 ||
-        strcmp(name + length - 4, ".ncl") != 0)
+        !community_extension_is(name + length - 4, ".ncl"))
         return 0;
     for (i = 0; i < length; i++) {
         unsigned char ch = (unsigned char)name[i];
@@ -3472,6 +3472,19 @@ static void start_community_file_download(
         snprintf(g_online_message, sizeof(g_online_message),
                  "DOWNLOAD REJECTED: EMPTY PATCH FILE NAME.");
         return;
+    }
+    {
+        size_t base_name_length = strlen(safe_base);
+        if (base_name_length >= 4 &&
+            community_extension_is(safe_base + base_name_length - 4, ".ncl")) {
+            memcpy(safe_base + base_name_length - 4, ".ncl", 5);
+        } else if (base_name_length + 4 < sizeof(safe_base)) {
+            memcpy(safe_base + base_name_length, ".ncl", 5);
+        } else {
+            snprintf(g_online_message, sizeof(g_online_message),
+                     "DOWNLOAD REJECTED: PATCH FILE NAME IS TOO LONG.");
+            return;
+        }
     }
 
     n = 0;
