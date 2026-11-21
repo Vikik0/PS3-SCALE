@@ -35,6 +35,24 @@ class GscCampaignAuditTests(unittest.TestCase):
         self.assertIn("down_revive", categories)
         self.assertIn("campaign_flow", categories)
 
+    def test_finds_native_connect_identity_and_player_ui_hooks(self):
+        source = (
+            'level waittill( "connected", player );\n'
+            'self.clientid = self.pers["clientid"];\n'
+            'self SetClientOmnvar( "ui_laststand_end_milliseconds", 0 );\n'
+            'if ( isPlayingSolo() ) return wait_for_self_revive();\n'
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "extinction.gsc"
+            path.write_text(source, encoding="utf-8")
+            findings = scan_file(path)
+        categories = {(item.line, item.category) for item in findings}
+        self.assertIn((1, "player_lifecycle"), categories)
+        self.assertIn((2, "player_lifecycle"), categories)
+        self.assertIn((3, "client_presentation"), categories)
+        self.assertIn((4, "solo_coop_branch"), categories)
+        self.assertIn((4, "down_revive"), categories)
+
     def test_audit_directory_ignores_binary_and_unrelated_files(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
