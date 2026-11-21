@@ -17,6 +17,7 @@
 - The build automatically packages Music 1 if `audio-source/music1.mp3` or ordered `audio-source/music1.mp3.part-*` inputs are added.
 
 ## Playlist behavior
+- The Settings UI names the two playlist entries **Music 1** and **Music 2** (the track sources remain Zorrovian BIOS and GTA V).
 - Auto alternates the first track on each app launch: one launch begins with Music 1 then Music 2; the next begins with Music 2 then Music 1.
 - Music 1 only and Music 2 only are selectable in Settings.
 - A one-second fade-in is applied at the start of each track and a one-second fade-out at the end. Both are calculated from mpg123's decoded sample position and track length. Track boundaries are kept on separate audio blocks so the last samples of one song are never mixed with the first samples of the next.

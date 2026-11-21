@@ -1,5 +1,6 @@
 #include "ps3scale/online.h"
 
+#include <sys/time.h>
 #include <curl/curl.h>
 #include <net/net.h>
 #include <net/netctl.h>
@@ -19,6 +20,8 @@ typedef struct download_context {
     FILE *file;
     size_t bytes_written;
     size_t max_bytes;
+    volatile size_t *downloaded_bytes;
+    volatile size_t *total_bytes;
 } download_context_t;
 
 static size_t write_download_data(void *contents, size_t size,
@@ -37,7 +40,35 @@ static size_t write_download_data(void *contents, size_t size,
     if (fwrite(contents, 1, bytes, context->file) != bytes)
         return 0;
     context->bytes_written += bytes;
+    if (context->downloaded_bytes)
+        *context->downloaded_bytes = context->bytes_written;
     return bytes;
+}
+
+static int report_download_progress(void *user_data,
+                                    double download_total,
+                                    double download_now,
+                                    double upload_total,
+                                    double upload_now)
+{
+    download_context_t *context = (download_context_t *)user_data;
+    (void)upload_total;
+    (void)upload_now;
+
+    if (!context)
+        return 0;
+    if (context->total_bytes) {
+        *context->total_bytes =
+            download_total > 0.0 && download_total < 2147483647.0 ?
+            (size_t)download_total : 0;
+    }
+    if (context->downloaded_bytes && download_now >= 0.0 &&
+        download_now < 2147483647.0) {
+        size_t current = (size_t)download_now;
+        if (current > context->bytes_written)
+            *context->downloaded_bytes = current;
+    }
+    return 0;
 }
 
 static int network_modules_ready(void)
@@ -80,10 +111,12 @@ static void network_modules_shutdown(void)
     sysModuleUnload(SYSMODULE_NET);
 }
 
-int ps3scale_online_download_limited(
+int ps3scale_online_download_limited_progress(
     const char *url,
     const char *destination,
-    size_t max_bytes)
+    size_t max_bytes,
+    volatile size_t *downloaded_bytes,
+    volatile size_t *total_bytes)
 {
     CURL *curl = NULL;
     CURLcode curl_result;
@@ -115,6 +148,10 @@ int ps3scale_online_download_limited(
     memset(&download, 0, sizeof(download));
     download.file = file;
     download.max_bytes = max_bytes;
+    download.downloaded_bytes = downloaded_bytes;
+    download.total_bytes = total_bytes;
+    if (downloaded_bytes) *downloaded_bytes = 0;
+    if (total_bytes) *total_bytes = 0;
 
     curl = curl_easy_init();
     if (!curl)
@@ -124,6 +161,13 @@ int ps3scale_online_download_limited(
     curl_easy_setopt(curl, CURLOPT_USERAGENT, PS3SCALE_USER_AGENT);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_download_data);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &download);
+    /* Keep the legacy no-progress path lean for downloads that do not
+       display counters (game data, config files and support payloads). */
+    if (downloaded_bytes || total_bytes) {
+        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+        curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, report_download_progress);
+        curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &download);
+    }
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 12L);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
     curl_easy_setopt(curl, CURLOPT_MAXFILESIZE, (long)max_bytes);
@@ -167,10 +211,29 @@ cleanup:
     return result;
 }
 
+int ps3scale_online_download_limited(
+    const char *url,
+    const char *destination,
+    size_t max_bytes)
+{
+    return ps3scale_online_download_limited_progress(
+        url, destination, max_bytes, NULL, NULL);
+}
+
+int ps3scale_online_download_progress(
+    const char *url,
+    const char *destination,
+    volatile size_t *downloaded_bytes,
+    volatile size_t *total_bytes)
+{
+    return ps3scale_online_download_limited_progress(
+        url, destination, (size_t)PS3SCALE_DOWNLOAD_LIMIT,
+        downloaded_bytes, total_bytes);
+}
+
 int ps3scale_online_download(const char *url, const char *destination)
 {
-    return ps3scale_online_download_limited(
-        url, destination, (size_t)PS3SCALE_DOWNLOAD_LIMIT);
+    return ps3scale_online_download_progress(url, destination, NULL, NULL);
 }
 
 static size_t discard_post_response(void *contents, size_t size,

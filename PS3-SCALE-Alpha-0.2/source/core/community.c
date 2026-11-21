@@ -512,54 +512,20 @@ static int file_contains_title_id(
     return 0;
 }
 
-static int file_has_region(
-    const ps3scale_community_file_t *file,
-    int wanted_region)
-{
-    size_t i, length;
-    if (!file || wanted_region == 0)
-        return 0;
-    if (title_region(file->title_id) == wanted_region)
-        return 1;
-
-    length = strlen(file->path);
-    for (i = 0; i + 9 <= length; i++) {
-        char candidate[10];
-        size_t j;
-        if (i > 0 && isalnum((unsigned char)file->path[i - 1]))
-            continue;
-        if (i + 9 < length &&
-            isalnum((unsigned char)file->path[i + 9]))
-            continue;
-        for (j = 0; j < 9; j++)
-            candidate[j] = (char)toupper((unsigned char)file->path[i + j]);
-        candidate[9] = '\0';
-        if (valid_title_id(candidate) &&
-            title_region(candidate) == wanted_region)
-            return 1;
-    }
-    return 0;
-}
 
 int ps3scale_community_file_matches_exact_game(
     const ps3scale_community_file_t *file,
     const ps3scale_game_t *game)
 {
-    int game_region;
-
-    if (!file || !game || !is_ps3_game(game->kind) ||
-        !file->app_ver[0] || !game->app_ver[0] ||
+    if (!file || !game || !game->title_id[0] ||
+        !game->app_ver[0] || !file->app_ver[0] ||
         strcmp(file->app_ver, game->app_ver) != 0)
         return 0;
 
-    if (file_contains_title_id(file, game->title_id))
-        return 1;
-
-    if (!titles_match(game->title, file->title))
-        return 0;
-
-    game_region = title_region(game->title_id);
-    return file_has_region(file, game_region);
+    /* Exact installation must contain the actual Title ID somewhere in the
+       indexed identity/path metadata. Same title + same region is only a
+       discovery hint and must never authorize an install. */
+    return file_contains_title_id(file, game->title_id);
 }
 
 const char *ps3scale_community_category_label(const char *category)
