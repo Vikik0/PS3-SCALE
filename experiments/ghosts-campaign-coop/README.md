@@ -83,7 +83,7 @@ The first target is CEX 4.93 + TU 1.16. The project must select builds by exact 
 
 ## Verification
 
-CI validates the standalone codecs, controller-input decoder, local-player readiness gate, read-only ELF/OPD, Ghosts FastFile/GSC parser and GSC audit tests, RPCS3 preflight tests, host-only Ghosts runtime contract simulator, and PRX build including `sys_io` imports. The host simulator composes the portable modules against a deterministic fake engine boundary and currently runs 10,025 checks plus deliberate test-only fault mutants. This is MODELLED contract coverage, not proof that the real game runtime can spawn or render a second Campaign player. The researched test pyramid and real-device gates are in docs/testing-strategy.md; the Phase 1 success gate is defined in docs/local-coop-first.md.
+CI validates the standalone codecs, controller-input decoder, local-player readiness gate, read-only ELF/OPD, Ghosts FastFile/GSC parser and GSC audit tests, RPCS3 preflight tests, host-only Ghosts runtime contract simulator, and PRX build including `sys_io` imports. The host simulator composes the portable modules against a deterministic fake engine boundary and currently runs 10,025 checks plus deliberate test-only fault mutants. The Python suite currently runs 73 tests, including synthetic RPCS3 preflight cases. This is MODELLED contract coverage, not proof that the real game runtime can spawn or render a second Campaign player. The researched test pyramid and real-device gates are in docs/testing-strategy.md; the Phase 1 success gate is defined in docs/local-coop-first.md.
 
 ## Important
 
