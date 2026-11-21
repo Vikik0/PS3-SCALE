@@ -17,7 +17,7 @@ CFLAGS := -O2 -Wall -Wextra -Werror -std=gnu11 -mcpu=cell -mhard-float \
           -ffunction-sections -fno-stack-protector -fno-builtin \
           -D_POSIX_C_SOURCE=200112L -DBASH_VERSION='"1.4.0"' -I$(CURDIR)/compat -I$(PS3DK)/ppu/include
 NET_LIBS := -L$(PS3DK)/ppu/lib -Wl,--start-group -lio_stub -lnet_stub \
-            -lnetctl_stub -llv2_stub -lsysmodule_stub -lrt -lfs_stub -lc_stub -lc -lsysbase \
+            -lnetctl_stub -llv2_stub -lsysmodule_stub -lsysutil_stub -lrt -lfs_stub -lc_stub -lc -lsysbase \
             -Wl,--end-group -lgcc
 
 .PHONY: all clean check
@@ -35,11 +35,14 @@ $(PRX_LD): $(PRX_LD_SOURCE) | $(BUILD)
 $(BUILD)/module.o: module.c input_hook.h net_adapter.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/input_hook.o: input_hook.c input_hook.h net_adapter.h | $(BUILD)
+$(BUILD)/input_hook.o: input_hook.c input_hook.h net_adapter.h relay_ui.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD)/net_adapter.o: net_adapter.c net_adapter.h input_hook.h relay_client.h compat/SDL3/SDL.h compat/ifaddrs.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -Wno-error -I../upstream/crash_bash_decomp/port/platform -c $< -o $@
+
+$(BUILD)/relay_ui.o: relay_ui.c relay_ui.h input_hook.h net_adapter.h | $(BUILD)
+	$(PPU_CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD)/netdb_compat.o: netdb_compat.c compat/netdb.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
@@ -53,7 +56,7 @@ $(BUILD)/ws_client.o: ws_client.c ws_client.h | $(BUILD)
 $(BUILD)/relay_client.o: relay_client.c relay_client.h ws_client.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/crash_bash_input.elf: $(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(BUILD)/ws_client.o $(BUILD)/relay_client.o $(CRT_I) $(CRT) $(CRT_INIT) $(PRX_LD) $(PRX_SPECS)
+$(BUILD)/crash_bash_input.elf: $(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/relay_ui.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(BUILD)/ws_client.o $(BUILD)/relay_client.o $(CRT_I) $(CRT) $(CRT_INIT) $(PRX_LD) $(PRX_SPECS)
 	$(PPU_CC) -nostdlib -nostartfiles -specs=$(PRX_SPECS) \
 		-Wl,-q -Wl,--gc-sections -Wl,--no-warn-rwx-segments -Wl,-T,$(PRX_LD) \
 		$(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(BUILD)/ws_client.o $(BUILD)/relay_client.o $(CRT_I) $(CRT) $(CRT_INIT) $(NET_LIBS) -o $@
