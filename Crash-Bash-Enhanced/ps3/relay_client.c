@@ -344,6 +344,36 @@ int cb_relay_host(CbRelayClient *client, const char *host, unsigned short port,
     return connect_relay_ticket(client, host, port, room_code, ticket, timeout_ms);
 }
 
+int cb_relay_start_match(CbRelayClient *client, int timeout_ms)
+{
+    uint8_t packet[CB_RELAY_MAX_PACKET];
+    size_t packet_length = 0;
+    char control[512];
+    uint64_t deadline;
+    int result;
+
+    if (!client || !client->connected) return -1;
+    if (cb_ws_send_text(&client->websocket, "START", 5u) != 0) return -1;
+    if (timeout_ms <= 0) timeout_ms = 5000;
+    deadline = monotonic_ms() + (uint64_t)timeout_ms;
+
+    while (monotonic_ms() < deadline) {
+        uint64_t remaining = deadline - monotonic_ms();
+        int wait_ms = remaining > 1000u ? 1000 : (int)remaining;
+        control[0] = '\0';
+        result = cb_relay_receive_packet(client, packet, sizeof(packet),
+                                         &packet_length, NULL, control,
+                                         sizeof(control), wait_ms);
+        if (result == 2) {
+            if (strcmp(control, "STARTED") == 0) return 0;
+            if (strncmp(control, "ERROR:", 6u) == 0) return -1;
+        } else if (result < 0) {
+            return -1;
+        }
+    }
+    return -1;
+}
+
 int cb_relay_send_batch(CbRelayClient *client, const CbRelayPacket *packets, size_t count)
 {
     uint8_t *message;
