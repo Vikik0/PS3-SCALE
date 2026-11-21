@@ -14,7 +14,7 @@ CFLAGS := -O2 -Wall -Wextra -Werror -std=gnu11 -mcpu=cell -mhard-float \
           -ffunction-sections -fdata-sections -fno-stack-protector -fno-builtin \
           -D_POSIX_C_SOURCE=200112L -DBASH_VERSION='"1.4.0"' -I$(CURDIR)/compat -I$(PS3DK)/ppu/include
 NET_LIBS := -L$(PS3DK)/ppu/lib -Wl,--start-group -lio_stub -lnet_stub \
-            -lnetctl_stub -llv2_stub -lsysmodule_stub -lrt -lfs_stub -lc_stub \
+            -lnetctl_stub -llv2_stub -lsysmodule_stub -lrt -lfs_stub -lc_stub -lc \
             -Wl,--end-group -lgcc
 
 .PHONY: all clean check
