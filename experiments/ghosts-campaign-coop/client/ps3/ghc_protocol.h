@@ -33,6 +33,12 @@ typedef struct {
     size_t payload_length;
 } GhcServerPacket;
 
+typedef struct {
+    uint32_t highest_sequence;
+    uint64_t bitmap;
+    uint8_t initialized;
+} GhcReplayWindow;
+
 // Encode a client-to-relay packet. Returns 0 on success and -1 on invalid input.
 int ghc_encode_client_packet(
     const uint8_t relay_id[GHC_RELAY_ID_SIZE],
@@ -61,3 +67,8 @@ int ghc_decode_server_packet(
     size_t packet_length,
     GhcServerPacket *decoded
 );
+
+
+// Reject duplicate and stale packets with a wrap-safe 64-packet replay window.
+void ghc_replay_window_reset(GhcReplayWindow *window);
+int ghc_replay_window_accept(GhcReplayWindow *window, uint32_t sequence);
