@@ -514,6 +514,61 @@ export class CrashBashLobby {
         });
       }
 
+      if (method === "POST" && path === "/v1/rooms/host-guest") {
+        if (Object.keys(state.sessions).length >= MAX_SESSIONS) {
+          throw fail(503, "FREE_TIER_SESSION_LIMIT", "The free service has reached its guest-session limit. Try again later.");
+        }
+        if (Object.keys(state.rooms).length >= MAX_ROOMS) {
+          throw fail(503, "FREE_TIER_ROOM_LIMIT", "The free service supports up to four open rooms. Try again later.");
+        }
+
+        const body = await readBody(request);
+        const name = cleanName(body.display_name || "PS3 Host");
+        const code = this.newCode(state);
+        const token = randomHex(32);
+        const sessionId = randomHex(16);
+        const sessionHash = await sha256(token);
+        const expiresAt = Date.now() + PS3_SESSION_TTL_MS;
+        const session = { sessionId, name, expiresAt, roomCode: code, platform: "ps3" };
+        state.sessions[sessionHash] = session;
+
+        const room = {
+          code,
+          hostSessionId: sessionId,
+          status: "waiting",
+          mode: "party",
+          maxPlayers: 4,
+          isPrivate: true,
+          createdAt: Date.now(),
+          startedAt: null,
+          hostEndpoint: null,
+          players: [{ sessionId, name, slot: 1, ready: true, candidate: null }]
+        };
+        state.rooms[code] = room;
+
+        const ticket = randomHex(32);
+        const ticketHash = await sha256(ticket);
+        const ticketExpiresAt = Date.now() + TRANSPORT_TICKET_TTL_MS;
+        state.transportTickets[ticketHash] = {
+          sessionHash,
+          roomCode: code,
+          expiresAt: ticketExpiresAt
+        };
+        await this.save(state);
+        this.broadcastRoomUpdate(room);
+        return response(201, {
+          room_code: code,
+          session_id: sessionId,
+          host_session_id: sessionId,
+          display_name: name,
+          ticket,
+          ticket_expires_at: new Date(ticketExpiresAt).toISOString(),
+          expires_at: new Date(expiresAt).toISOString(),
+          psn_required: false,
+          room: roomView(room)
+        });
+      }
+
       const guestJoinRoute = path.match(/^\/v1\/rooms\/([A-Z0-9]{6})\/join-guest$/);
       if (method === "POST" && guestJoinRoute) {
         if (Object.keys(state.sessions).length >= MAX_SESSIONS) {
