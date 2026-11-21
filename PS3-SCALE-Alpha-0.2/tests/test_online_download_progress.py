@@ -21,5 +21,6 @@ assert "*context->total_bytes =" in source
 assert "download_total > 0.0" in source
 assert "download_total < 2147483647.0" in source
 assert "ps3scale_online_download_limited_progress(" in source
+assert "ps3scale_online_download_limited_progress(" in (root / "source/ps3/main.c").read_text(encoding="utf-8")
 assert "return ps3scale_online_download_progress(url, destination, NULL, NULL);" in source
 print("Online download progress contract: PASS")
