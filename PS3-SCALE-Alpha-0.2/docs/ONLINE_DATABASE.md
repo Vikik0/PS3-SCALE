@@ -28,7 +28,7 @@ The Cross install action is deliberately narrow:
 2. The matching PS3 game must already be scanned from an HDD path under `/dev_hdd0/`.
 3. The installed game's Title ID and APP_VER must exactly match the community entry.
 4. Artemis PS3 must be installed. PS3 SCALE detects the upstream `ARTPS3001` package ID and the Artemis R5 `ARTZ00001` package ID, then selects that installation's USERLIST directory.
-5. The source repository, branch and path must pass path validation. The downloaded file is limited to 2 MiB, must be plain text, and ELF/PKG/binary content is rejected.
+5. The source repository, branch and path must pass path validation. The downloaded file is limited to 2 MiB, must be plain text, and ELF/PKG/binary content is rejected. Its actual byte size must also match the size recorded in the refreshed index; a changed upstream file is rejected until the index is refreshed.
 6. Existing destination files are never overwritten.
 
 Accepted files are saved to the detected Artemis installation:
