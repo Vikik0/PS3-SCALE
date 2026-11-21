@@ -23,7 +23,7 @@ PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
         re.IGNORECASE,
     )),
     ("player_lifecycle", re.compile(
-        r"level\s*\.\s*players|player[_ ]?connect|player[_ ]?disconnect|clientid|local[_ ]?client|spawnplayer|spawn_player|waittill\s*\(\s*['""]connected['""]|waittill\s*\(\s*['""]disconnect['""]|getEntityNumber|removePlayerOnDisconnect",
+        r"level\s*\.\s*players|player[_ ]?connect|player[_ ]?disconnect|clientid|local[_ ]?client|spawnplayer|spawn_player|waittill\s*\(\s*\"connected\"|waittill\s*\(\s*\"disconnect\"|getEntityNumber|removePlayerOnDisconnect",
         re.IGNORECASE,
     )),
     ("engine_player_api", re.compile(
