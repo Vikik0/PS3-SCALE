@@ -1036,6 +1036,7 @@ int cb_net_relay_start(void)
         strcmp(relay_client.session_id, relay_client.host_session_id) != 0) return -1;
     if (cb_relay_start_match(&relay_client, 5000) != 0) return -1;
     relay_sync_roster();
+    relay_last_flush_ms = relay_now_ms();
     ps3_net_options.delay = 12;
     net_configure(&ps3_net_options);
     net_lobby_start();
@@ -1088,6 +1089,7 @@ void cb_net_leave(void)
     memset(relay_host_id, 0, sizeof(relay_host_id));
     relay_rx_valid = 0;
     relay_rx_length = 0;
+    relay_last_flush_ms = 0;
     net_active = 0;
     have_previous_step = 0;
     last_frame_step_ns = 0;
