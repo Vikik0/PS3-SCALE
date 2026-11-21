@@ -28,7 +28,7 @@ Do not spend Phase 1 effort deploying online services or implementing NAT traver
 - GSC Tool supports IW6 scripts on PS3 for compile/decompile work. This does not itself solve signed FastFile repackaging.
 - Public TU 1.16 spawn offsets are multiplayer-context leads only. They are not approved Campaign addresses.
 
-See docs/local-coop-first.md for the implementation plan and research constraints.
+See docs/local-coop-first.md for the implementation plan and research constraints. The cross-project IW-engine prior-art audit is in docs/coop-anything-prior-art.md.
 
 ## Current implementation status
 

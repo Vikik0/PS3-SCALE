@@ -10,6 +10,10 @@
 - Hesh and all other story NPCs remain untouched.
 - Both players share mission objectives, combat encounters and checkpoints.
 
+## Prior art: Co-op Anything / Modern Warfare 2 Enhanced
+
+The research in [docs/coop-anything-prior-art.md](coop-anything-prior-art.md) reviews the Co-op Anything playbook and the MW2 Enhanced IW-engine reference. It supports our decision to reuse Ghosts' native local-player machinery first, while treating MW2/PS4/XB3 code and offsets as non-transferable research only.
+
 ## Phase 1 architecture: one console, two local players
 
 ### 1. Reuse the engine's local-player system first
