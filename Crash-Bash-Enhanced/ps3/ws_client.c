@@ -1,6 +1,5 @@
 #include "ws_client.h"
 
-#include <errno.h>
 #include <netdb.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -196,7 +195,6 @@ static int send_all(int fd, const void *data, size_t length)
 
     while (sent < length) {
         ssize_t count = send(fd, bytes + sent, length - sent, 0);
-        if (count < 0 && errno == EINTR) continue;
         if (count <= 0) return -1;
         sent += (size_t)count;
     }
