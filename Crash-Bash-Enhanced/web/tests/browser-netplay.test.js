@@ -166,10 +166,11 @@ test("sends CBN1 input and releases the synchronized four-pad record to the brow
   const input = transport.sent.findLast(item => item.payload[4] === 8);
   assert.ok(input, "browser should send a CBN1 INPUT packet");
   assert.equal(input.recipientId, HOST);
-  assert.equal(input.payload[26], 1);
-  assert.equal(input.payload[27], 3);
-  assert.equal(input.payload[28], 0);
-  assert.equal(input.payload[29], 0x40);
+  assert.equal(input.payload[26], 4); // three neutral delay frames plus the current local input
+  const localRecordOffset = 27 + 3 * 7;
+  assert.equal(input.payload[localRecordOffset], 3);
+  assert.equal(input.payload[localRecordOffset + 1], 0);
+  assert.equal(input.payload[localRecordOffset + 2], 0x40);
 
   const authoritative = new Uint8Array(28);
   authoritative[0] = 3;
