@@ -11,7 +11,8 @@ PRX_LD := $(PS3DK)/ppu/lib/lv2-prx.ld
 PRX_SPECS := $(PS3DK)/ppu/lib/lv2-prx.specs
 
 CFLAGS := -O2 -Wall -Wextra -Werror -std=gnu11 -mcpu=cell -mhard-float \
-          -ffunction-sections -fdata-sections -fno-stack-protector -fno-builtin
+          -ffunction-sections -fdata-sections -fno-stack-protector -fno-builtin \
+          -I$(PS3DEV)/ppu/include -I$(PS3DK)/include -I$(PS3DK_SRC)/sdk/include
 
 .PHONY: all clean check
 
