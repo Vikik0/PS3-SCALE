@@ -79,6 +79,7 @@ static int g_config_preview = 0;
 static int g_exit_requested = 0;
 static int g_home_selected = 0;
 static float g_home_card_focus[5] = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+static float g_scan_card_focus[PS3SCALE_SCAN_GRID_COUNT] = {1.0f};
 static int g_help_selected = 0;
 static int g_support_selected = 0;
 static int g_support_is_feedback = 0;
@@ -3938,6 +3939,65 @@ static void update_home_card_animations(void)
     }
 }
 
+static void update_scan_card_animations(void)
+{
+    size_t count = library_count(g_library);
+    size_t start = ((size_t)(g_selected < 0 ? 0 : g_selected) /
+                    PS3SCALE_SCAN_GRID_COUNT) * PS3SCALE_SCAN_GRID_COUNT;
+    size_t i;
+
+    for (i = 0; i < PS3SCALE_SCAN_GRID_COUNT; i++) {
+        float target = (g_screen == SCREEN_SCAN &&
+                        start + i < count &&
+                        (int)(start + i) == g_selected) ? 1.0f : 0.0f;
+        float difference = target - g_scan_card_focus[i];
+
+        if (!g_animation_enabled) {
+            g_scan_card_focus[i] = target;
+        } else {
+            g_scan_card_focus[i] += difference * 0.28f;
+            if (fabsf(difference) < 0.006f)
+                g_scan_card_focus[i] = target;
+        }
+    }
+}
+
+static void draw_library_animated_card(float x, float y, float w, float h,
+                                       float focus)
+{
+    float pulse;
+    unsigned int halo_alpha;
+
+    if (focus < 0.0f) focus = 0.0f;
+    if (focus > 1.0f) focus = 1.0f;
+
+    draw_rounded_rect(x + 3.0f, y + 6.0f, w, h, 9.0f,
+                      ui_blend_color(0x5e718f35, 0x665b8f50, focus));
+    draw_rounded_rect(x, y, w, h, 9.0f,
+                      ui_blend_color(0xfaf8ffe8, 0xf4efffe8, focus));
+    draw_rounded_outline(x, y, w, h, 9.0f,
+                         ui_blend_color(0xd9d1eaff, 0x9568edff, focus));
+    draw_solid_rect(x + 10.0f, y + 5.0f, w - 20.0f, 1.5f,
+                    0xfefcffb8);
+
+    if (focus > 0.01f) {
+        halo_alpha = (unsigned int)(focus * 72.0f);
+        draw_rounded_outline(x - 2.0f, y - 2.0f, w + 4.0f, h + 4.0f,
+                             11.0f,
+                             color_with_alpha(0xb99affff, halo_alpha));
+        draw_rounded_rect(x + 12.0f, y + h - 5.0f, w - 24.0f, 2.5f,
+                          1.25f,
+                          color_with_alpha(0x875be8ff,
+                                           (unsigned int)(focus * 255.0f)));
+        pulse = g_animation_enabled ?
+                0.5f + 0.5f * sinf((float)g_frame_counter * 0.12f) : 0.5f;
+        draw_circle_outline(x + w * 0.5f, y + h - 17.0f,
+                            3.0f + pulse * 1.5f,
+                            color_with_alpha(0x9568edff,
+                                             (unsigned int)(focus * 72.0f)));
+    }
+}
+
 static void draw_home(void)
 {
     static const char *items[5] = {
@@ -4356,49 +4416,61 @@ static void draw_scan(void)
 
     for (i = 0; i < PS3SCALE_SCAN_GRID_COUNT && start + i < count; i++) {
         const ps3scale_game_t *game = library_game_at(start + i);
-        int selected = ((int)(start + i) == g_selected);
+        float focus = g_scan_card_focus[i];
+        float scale = 1.0f + focus * 0.035f;
+        float card_w = 150.0f * scale;
+        float card_h = 148.0f * scale;
         float x = 184.0f + (float)(i % 4) * 160.0f;
         float y = 132.0f + (float)(i / 4) * 154.0f;
+        float card_x = x - (card_w - 150.0f) * 0.5f;
+        float card_y = y - (card_h - 148.0f) * 0.5f - focus * 4.0f;
+        float cover_x = card_x + 7.0f * scale;
+        float cover_y = card_y + 7.0f * scale;
+        float cover_w = 136.0f * scale;
+        float cover_h = 96.0f * scale;
         u32 tile_color = (i % 3 == 0) ? 0xe9e1f8ff :
                          (i % 3 == 1) ? 0xe4e9f5ff : 0xf0e6f3ff;
         if (!game) continue;
-        draw_soft_card(x, y, 150.0f, 148.0f, selected);
-        /* A slight recessed border keeps cover art separated from glass.
-           Textures remain cached by the existing scanner/cover loader. */
-        draw_rounded_rect(x + 5.0f, y + 5.0f, 140.0f, 100.0f,
-                          7.0f, selected ? 0xc4a6f3ff : 0xe6e0efff);
+
+        draw_library_animated_card(card_x, card_y, card_w, card_h, focus);
+        /* Scale cover art with its card so selection never clips the artwork. */
+        draw_rounded_rect(card_x + 5.0f * scale, card_y + 5.0f * scale,
+                          140.0f * scale, 100.0f * scale, 7.0f * scale,
+                          ui_blend_color(0xe6e0efff, 0xc4a6f3ff, focus));
         if (g_scan_cover_textures[i]) {
-            ya2d_drawTextureEx(g_scan_cover_textures[i],
-                               x + 7.0f, y + 7.0f, 0.0f, 136.0f, 96.0f);
+            ya2d_drawTextureEx(g_scan_cover_textures[i], cover_x, cover_y,
+                               0.0f, cover_w, cover_h);
         } else {
             char initial[2];
-            draw_solid_rect(x + 7.0f, y + 7.0f, 136.0f, 96.0f, tile_color);
-            draw_solid_rect(x + 7.0f, y + 7.0f, 136.0f, 4.0f, 0xb69affff);
+            draw_solid_rect(cover_x, cover_y, cover_w, cover_h, tile_color);
+            draw_solid_rect(cover_x, cover_y, cover_w, 4.0f * scale,
+                            0xb69affff);
             initial[0] = game->title[0] ?
                 (char)toupper((unsigned char)game->title[0]) : '?';
             initial[1] = '\0';
             set_ui_font_size(28, 42);
-            draw_text_centered(x + 10.0f, y + 31.0f, 130.0f,
+            draw_text_centered(cover_x + 3.0f * scale,
+                               cover_y + 31.0f * scale,
+                               cover_w - 6.0f * scale,
                                0x875be8ff, initial);
         }
-        /* Overlay platform tag on the cover itself, not on the title line. */
-        draw_rounded_rect(x + 107.0f, y + 82.0f, 30.0f, 17.0f, 5.0f,
+
+        /* Platform badge stays anchored to the cover's lower-right corner. */
+        draw_rounded_rect(card_x + 107.0f * scale,
+                          card_y + 82.0f * scale,
+                          30.0f * scale, 17.0f * scale, 5.0f * scale,
                           0x5f299de8);
         set_ui_font_size(7, 11);
-        draw_text(x + 109.0f, y + 84.0f, 0xfdfaffff,
-                  game_is_ps3(game) ? "PS3" : "PS2");
+        draw_text(card_x + 109.0f * scale, card_y + 84.0f * scale,
+                  0xfdfaffff, game_is_ps3(game) ? "PS3" : "PS2");
         set_ui_font_size(7, 11);
         snprintf(line, sizeof(line), "%.17s", game->title);
-        draw_text(x + 9.0f, y + 110.0f, 0x29243fff, line);
+        draw_text(card_x + 9.0f * scale, card_y + 110.0f * scale,
+                  0x29243fff, line);
         set_ui_font_size(6, 9);
-        draw_text(x + 9.0f, y + 130.0f, 0x77718fff,
+        draw_text(card_x + 9.0f * scale, card_y + 130.0f * scale,
+                  0x77718fff,
                   game_is_ps3(game) ? "PlayStation 3" : "PlayStation 2");
-        if (selected) {
-            draw_rounded_outline(x + 2.0f, y + 2.0f, 146.0f,
-                                 144.0f, 10.0f, 0x9568edff);
-            draw_solid_rect(x + 16.0f, y + 143.0f, 118.0f, 2.0f,
-                            0x875be8ff);
-        }
     }
 
     if (count == 0) {
@@ -6058,6 +6130,7 @@ int main(int argc, char *argv[])
         old_right = right;
 
         update_home_card_animations();
+        update_scan_card_animations();
         if (g_screen == SCREEN_SCAN || g_screen == SCREEN_DETAILS)
             update_selected_cover();
         draw_ui();
