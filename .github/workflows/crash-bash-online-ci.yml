@@ -38,7 +38,7 @@ jobs:
       - name: Build production web lobby
         run: npm run build
       - name: Verify browser player files are included in the production bundle
-        run: test -s dist/play.html && test -s dist/play.js
+        run: test -s dist/play.html && test -s dist/play.js && test -s dist/pad-bridge.js
 
   lobby-worker:
     runs-on: ubuntu-latest
