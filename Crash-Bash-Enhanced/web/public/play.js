@@ -7,6 +7,7 @@ const gameWrap = document.querySelector("#game-wrap");
 
 let loaderScript = null;
 let emulatorStarted = false;
+let emulatorLoading = false;
 let activeBlobUrls = [];
 let loadTimeout = null;
 
@@ -136,6 +137,7 @@ function startEmulator(primary, bios, externalFiles, blobUrls) {
   releaseLocalObjectUrls();
   activeBlobUrls = blobUrls;
   emulatorStarted = false;
+  emulatorLoading = true;
   gameWrap.hidden = false;
   document.querySelector("#game").replaceChildren();
 
@@ -154,8 +156,8 @@ function startEmulator(primary, bios, externalFiles, blobUrls) {
   window.EJS_onGameStart = () => {
     if (loadTimeout) clearTimeout(loadTimeout);
     loadTimeout = null;
-    startButton.disabled = false;
     emulatorStarted = true;
+    emulatorLoading = false;
     setStatus("Local game started. Browser-to-PS3 input synchronization is the next integration stage.");
     const began = Date.now();
     const expose = () => {
@@ -175,7 +177,8 @@ function startEmulator(primary, bios, externalFiles, blobUrls) {
     // EmulatorJS 4.2.x emits lifecycle events on the emulator instance.
     window.EJS_emulator?.on("exit", () => {
       emulatorStarted = false;
-      startButton.disabled = false;
+      emulatorLoading = false;
+      startButton.disabled = !selectedGame(Array.from(gameInput.files || []));
       releaseLocalObjectUrls();
       window.CBASH_EMULATOR_READY = false;
       setStatus("Emulator closed. Your disc image and BIOS remain on this device.");
@@ -186,14 +189,16 @@ function startEmulator(primary, bios, externalFiles, blobUrls) {
   loaderScript.src = DATA_PATH + "loader.js";
   loaderScript.async = true;
   loaderScript.onerror = () => {
-    startButton.disabled = false;
+    emulatorLoading = false;
+    startButton.disabled = !selectedGame(Array.from(gameInput.files || []));
     releaseLocalObjectUrls();
     setStatus("Could not load the EmulatorJS runtime CDN. Check the internet connection and try again.", true);
   };
   document.body.appendChild(loaderScript);
   loadTimeout = setTimeout(() => {
     if (emulatorStarted) return;
-    startButton.disabled = false;
+    emulatorLoading = false;
+    startButton.disabled = !selectedGame(Array.from(gameInput.files || []));
     if (loaderScript) loaderScript.remove();
     releaseLocalObjectUrls();
     setStatus("The PlayStation runtime did not finish loading. Check the selected disc files and try again.", true);
@@ -203,7 +208,7 @@ function startEmulator(primary, bios, externalFiles, blobUrls) {
 gameInput.addEventListener("change", () => {
   const files = Array.from(gameInput.files || []);
   const primary = selectedGame(files);
-  startButton.disabled = !primary;
+  startButton.disabled = !primary || emulatorLoading || emulatorStarted;
   if (!primary) {
     setStatus("Choose a CUE, BIN, CHD, PBP, ISO, IMG, or CCD file.", true);
     return;
@@ -232,7 +237,8 @@ startButton.addEventListener("click", async () => {
     startEmulator(primary, bios, external, blobUrls);
   } catch (error) {
     releaseLocalObjectUrls();
-    startButton.disabled = false;
+    emulatorLoading = false;
+    startButton.disabled = !selectedGame(Array.from(gameInput.files || []));
     setStatus(error.message || "Could not prepare the selected disc files.", true);
   }
 });
