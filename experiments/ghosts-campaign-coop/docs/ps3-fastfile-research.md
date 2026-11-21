@@ -1,6 +1,19 @@
 # Ghosts PS3 FastFile and GSC extraction research
 
-**Scope:** Call of Duty: Ghosts / IW6, PS3 retail FastFiles only. This is a read-only research and extraction path for a user-owned game copy. It does not patch the game, rebuild a FastFile, bypass signature verification, or include retail assets.
+ **Scope:** Call of Duty: Ghosts / IW6, PS3 retail FastFiles only. This is a read-only research and extraction path for a user-owned game copy. It does not patch the game, rebuild a FastFile, bypass signature verification, or include retail assets.
+
+## User file audit — BLUS31270 (2026-11-21)
+
+The user's uploaded `PARAM(1).SFO` was parsed and confirms `TITLE_ID=BLUS31270`, `TITLE=Call of Duty Ghosts`, `APP_VER=01.00`, `VERSION=01.00`, `PS3_SYSTEM_VER=04.4600`, `CATEGORY=DG`. This is base-disc metadata, not proof of TU 1.16.
+
+The accompanying screenshot shows the ISO path `PS3_GAME/USRDIR` and entries including `ui_mp.ff`, `ui_install.ff`, `ui.ff`, language folders and `soundfile*.pak`. It is a partial listing, so it does not prove that EBOOT or other FFs are absent.
+
+**Path correction:** do not require a literal `USRDIR/zone` folder. PS3 Ghosts FastFiles are commonly in the `PS3_GAME/USRDIR` root, with localized assets under language folders. “Zone” also means the decompressed internal content of an FF. Inventory all `.ff` files recursively from USRDIR and preserve their original names. The base zone appears in recent PS3 research as `ghosts_ps3_common.ff`; older/alternate inventories may call the corresponding file `common.ff`. Determine the exact filename from this user's dump before choosing it for analysis.
+
+The matching BLUS31270 TU 1.16 package is listed on Sony's CDN as `UP0002-BLUS31270_00-CALLDUTYGHOSTTU1-A0116-V0100-PE.pkg` (558,341,392 bytes): https://b0.ww.np.dl.playstation.net/tppkg/np/BLUS31270/BLUS31270_T16/35760cb2130fa142/UP0002-BLUS31270_00-CALLDUTYGHOSTTU1-A0116-V0100-PE.pkg. It is an update package, not the base game. Keep disc EBOOT and TU EBOOT separate and never substitute a different region's package.
+
+A public BLUS31270 disc-repair index also records an IRD for the original disc and a small repair archive listing original PARAM.SFO/EBOOT.BIN; this is a verification lead, not a reason to replace the user's own dump. Prefer the user's own disc EBOOT and use the IRD only for disc-integrity checking. [BLUS31270 disc-repair index](https://archive.midnightchannel.net/SonyPS/PS3/Disc%20Repair/US/%5BBLUS31270%5D%20Call%20of%20Duty%20Ghosts/).
+
 
 ## Findings that change the previous plan
 
