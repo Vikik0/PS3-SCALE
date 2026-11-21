@@ -2,6 +2,9 @@ const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
 const ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const MAX_NAME_LENGTH = 16;
+const MAX_SESSIONS = 16;
+const MAX_ROOMS = 4;
+const MAX_ACTIVE_MATCHES = 1;
 
 const RELAY_PROTOCOL = "cbash-v1";
 const RELAY_AUTH_PREFIX = "cbash-auth.";
