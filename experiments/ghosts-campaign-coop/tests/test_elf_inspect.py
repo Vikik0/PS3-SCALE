@@ -24,6 +24,23 @@ def make_ppc64_elf(*, machine=21, data_encoding=2, segment_flags=5):
     return bytes(data)
 
 
+def make_ppc64_elf_with_bss():
+    ident = bytearray(b"\x7fELF" + bytes([2, 2, 1, 0, 0]) + bytes(7))
+    header = struct.pack(
+        ">16sHHIQQQIHHHHHH", bytes(ident), 2, 21, 1,
+        0x1000, 64, 0, 0, 64, 56, 1, 64, 0, 0,
+    )
+    program_header = struct.pack(
+        ">IIQQQQQQ", 1, 6, 0x100, 0x1000,
+        0x1000, 0x80, 0x100, 0x1000,
+    )
+    data = bytearray(0x180)
+    data[:64] = header
+    data[64:120] = program_header
+    data[0x100:0x180] = bytes(range(0x80))
+    return bytes(data)
+
+
 def make_ppc64_elf_with_opd():
     """ELF with executable code plus a data segment holding two OPD entries."""
     ident = bytearray(b"\x7fELF" + bytes([2, 2, 1, 0, 0]) + bytes(7))
@@ -86,6 +103,14 @@ class PpuElfTests(unittest.TestCase):
         with self.assertRaisesRegex(ElfFormatError, "program-header table"):
             PpuElf(bytes(data))
 
+    def test_maps_zero_fill_bss_without_inventing_file_bytes(self):
+        elf = PpuElf(make_ppc64_elf_with_bss())
+        mapping = elf.map_memory_address(0x1090)
+        self.assertIsNotNone(mapping)
+        self.assertFalse(mapping.file_backed)
+        self.assertIsNone(mapping.file_offset)
+        self.assertIsNone(elf.map_virtual_address(0x1090))
+
     def test_reads_ps3_opd_entry_and_module_toc(self):
         elf = PpuElf(make_ppc64_elf_with_opd())
         info = elf.opd_info()
@@ -104,7 +129,8 @@ class PpuElfTests(unittest.TestCase):
         self.assertEqual(report["operator_asserted_profile"]["title_id"], "BLUS31270")
         self.assertEqual(report["operator_asserted_profile"]["title_update"], "1.16")
         self.assertIn("warning", report["operator_asserted_profile"])
-        self.assertEqual(len(report["candidate_offsets"]), 13)
+        self.assertEqual(len(report["candidate_offsets"]), 16)
+        self.assertEqual(len(report["reported_structure_hints"]), 2)
 
     def test_rejects_unregistered_title_id(self):
         with tempfile.TemporaryDirectory() as tmp:
