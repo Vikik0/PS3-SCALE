@@ -152,7 +152,7 @@ static void test_snapshot_roundtrip(void) {
 
     // A downed player cannot have positive health in a wire snapshot.
     packet[5] = GHC_MISSION_FAIL_NONE;
-    packet[11] = 1u;
+    packet[14] = 1u;
     {
         GhcMissionView preserved = after;
         assert(ghc_mission_decode_snapshot(packet, packet_length, &after) != 0);
