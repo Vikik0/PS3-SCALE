@@ -611,6 +611,24 @@ assert 'file_exists_readonly("/dev_hdd0/game/PS3SCALE1/USRDIR/EBOOT.BIN") &&' in
 assert 'file_exists_readonly("/dev_hdd0/game/PS3SCALE1/PARAM.SFO");' in startup
 assert 'file_exists_readonly("/dev_hdd0/game/PS3SCALE1/USRDIR/EBOOT.BIN") ||' not in startup
 
+# Library cover cards animate focus without changing game-selection semantics.
+assert "static float g_scan_card_focus[PS3SCALE_SCAN_GRID_COUNT] = {1.0f};" in src
+scan_animation = section("static void update_scan_card_animations(void)",
+                         "static void draw_home(void)")
+assert "g_screen == SCREEN_SCAN" in scan_animation
+assert "g_scan_card_focus[i] += difference * 0.28f;" in scan_animation
+assert "if (!g_animation_enabled)" in scan_animation
+library_card = section("static void draw_library_animated_card(",
+                       "static void draw_home(void)")
+assert "ui_blend_color(0xfaf8ffe8, 0xf4efffe8, focus)" in library_card
+assert "ui_blend_color(0xd9d1eaff, 0x9568edff, focus)" in library_card
+assert "pulse = g_animation_enabled ?" in library_card
+scan_ui = section("static void draw_scan(void)", "static void draw_details(void)")
+assert "float scale = 1.0f + focus * 0.035f;" in scan_ui
+assert "ya2d_drawTextureEx(g_scan_cover_textures[i], cover_x, cover_y," in scan_ui
+assert "draw_library_animated_card(card_x, card_y, card_w, card_h, focus);" in scan_ui
+assert "update_scan_card_animations();" in main
+
 # Stage 6: cohesive splash, first-run language, boot and global transitions.
 assert "#define PS3SCALE_TRANSITION_FRAMES 16u" in src
 assert "g_transition_screen = SCREEN_SPLASH" in src
