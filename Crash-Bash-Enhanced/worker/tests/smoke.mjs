@@ -302,7 +302,9 @@ assert.equal(relayB.closed.code, 1008);
 const afterDisconnectState = await lobby.load();
 assert.equal(afterDisconnectState.rooms[code].players.length, 3);
 assert.equal(afterDisconnectState.rooms[code].hostSessionId, players[2].session_id);
-assert.equal(afterDisconnectState.sessions[await sha256(players[1].token)].roomCode, null);
+const disconnectedSession = Object.values(afterDisconnectState.sessions)
+  .find(session => session.sessionId === players[1].session_id);
+assert.equal(disconnectedSession.roomCode, null);
 
 const extraGuest = await call("/v1/sessions", "POST", { mode: "guest", display_name: "Capacity Test" });
 assert.equal(extraGuest.status, 201);
