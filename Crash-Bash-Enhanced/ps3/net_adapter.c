@@ -298,8 +298,8 @@ int getifaddrs(struct ifaddrs **ifap)
     memset(&netmask, 0, sizeof(netmask));
     memset(&broadcast, 0, sizeof(broadcast));
 
-    if (cellNetCtlGetInfo(CELL_NET_CTL_INFO_IP_ADDRESS, &ip_info) != CELL_OK ||
-        cellNetCtlGetInfo(CELL_NET_CTL_INFO_NETMASK, &mask_info) != CELL_OK) {
+    if (cellNetCtlGetInfo(CELL_NET_CTL_INFO_IP_ADDRESS, &ip_info) != 0 ||
+        cellNetCtlGetInfo(CELL_NET_CTL_INFO_NETMASK, &mask_info) != 0) {
         return -1;
     }
 
@@ -519,7 +519,7 @@ void portmap_open(int port, int first, int pretend)
     /* A second destination distinguishes endpoint-independent NAT from
      * symmetric/CGNAT mappings. If the mapped port changes, direct P2P is
      * unlikely to work without a relay. */
-    if (stun_binding((int)Sock, "stun.cloudflare.com", 3478,
+    if (stun_binding((int)Sock, "stun1.l.google.com", 19302,
                      second_ip, sizeof(second_ip), &second_port) == 0 &&
         (first_port != second_port || strcmp(first_ip, second_ip) != 0)) {
         portmap_status = PORTMAP_SHARED;
