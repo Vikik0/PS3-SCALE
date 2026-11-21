@@ -30,10 +30,21 @@ int main(void)
     }
 
     if (!client.connected || strcmp(client.room_code, "ABC123") != 0 ||
-        strcmp(client.session_id, "00112233445566778899aabbccddeeff") != 0) {
+        strcmp(client.session_id, "00112233445566778899aabbccddeeff") != 0 ||
+        strcmp(client.host_session_id, "ffeeddccbbaa99887766554433221100") != 0) {
         fprintf(stderr, "PS3 relay session metadata mismatch\n");
         cb_relay_leave(&client);
         return 2;
+    }
+    {
+        char host_address[32];
+        unsigned short host_port = 0;
+        if (cb_relay_host_address(&client, host_address, sizeof(host_address), &host_port) != 0 ||
+            strncmp(host_address, "10.", 3) != 0 || host_port < 20000 || host_port > 59999) {
+            fprintf(stderr, "PS3 relay host virtual address failed\n");
+            cb_relay_leave(&client);
+            return 3;
+        }
     }
 
     if (cb_relay_send_packet(&client, sent, sizeof(sent)) != 0) {
