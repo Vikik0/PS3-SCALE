@@ -269,6 +269,7 @@ async function runAction(action) {
 let relaySocket = null;
 let relayHeartbeatTimer = null;
 let relayReconnectTimer = null;
+let relayReconnectAttempts = 0;
 
 function closeRelay() {
   const socket = relaySocket;
@@ -277,6 +278,7 @@ function closeRelay() {
   if (relayReconnectTimer) clearTimeout(relayReconnectTimer);
   relayHeartbeatTimer = null;
   relayReconnectTimer = null;
+  relayReconnectAttempts = 0;
   if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
     socket.close(1000, "Leaving room");
   }
@@ -310,6 +312,7 @@ function syncRelayConnection() {
   socket.addEventListener("open", () => {
     if (relaySocket !== socket) return;
     state.relayStatus = "connected";
+    relayReconnectAttempts = 0;
     relayHeartbeatTimer = setInterval(() => {
       if (relaySocket === socket && socket.readyState === WebSocket.OPEN) socket.send("PING");
     }, 20000);
@@ -347,11 +350,16 @@ function syncRelayConnection() {
     relayHeartbeatTimer = null;
     state.relayStatus = "disconnected";
     render();
-    if (state.room && event.code !== 1008) {
+    if (state.room && event.code !== 1008 && relayReconnectAttempts < 3) {
+      const delay = 3000 * (2 ** relayReconnectAttempts);
+      relayReconnectAttempts += 1;
       relayReconnectTimer = setTimeout(() => {
         relayReconnectTimer = null;
         syncRelayConnection();
-      }, 3000);
+      }, delay);
+    } else if (state.room) {
+      state.relayStatus = "error";
+      render();
     }
   });
 
