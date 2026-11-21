@@ -117,3 +117,58 @@ export function createLocalPadCapture(gameManager, isNetplayActive = () => false
   gameManager[CAPTURE_KEY] = capture;
   return capture;
 }
+const LIBRETRO_TO_PS1_BUTTONS = new Map(PS1_TO_LIBRETRO_BUTTONS.map(([index, bit]) => [index, bit]));
+
+function axisToPad(value) {
+  const clamped = Math.max(-32767, Math.min(32767, Number(value) || 0));
+  return clamped < 0
+    ? Math.max(0, Math.min(255, Math.round(128 + clamped * 128 / 32767)))
+    : Math.max(0, Math.min(255, Math.round(128 + clamped * 127 / 32767)));
+}
+
+/** Capture the browser's default player-1 controls as a seven-byte PS1 pad record. */
+export function createLocalPadCapture() {
+  let buttons = 0;
+  const sticks = [128, 128, 128, 128]; // rightX, rightY, leftX, leftY
+
+  return {
+    handle(player, index, value) {
+      if (player !== 0) return false;
+      const bit = LIBRETRO_TO_PS1_BUTTONS.get(index);
+      if (bit !== undefined) {
+        buttons = value ? (buttons | bit) : (buttons & ~bit);
+        return true;
+      }
+      if (index >= 16 && index <= 19) {
+        const stickIndex = ({ 16: 2, 17: 3, 18: 0, 19: 1 })[index];
+        sticks[stickIndex] = axisToPad(value);
+        return true;
+      }
+      return false;
+    },
+    snapshot() {
+      return new Uint8Array([
+        0x03,
+        buttons & 0xff,
+        (buttons >>> 8) & 0xff,
+        sticks[0], sticks[1], sticks[2], sticks[3]
+      ]);
+    },
+    reset() {
+      buttons = 0;
+      sticks.fill(128);
+    }
+  };
+}
+
+export function decodePadRecord(record, offset = 0) {
+  if (!(record instanceof Uint8Array) || offset < 0 || offset + 7 > record.byteLength) {
+    throw new RangeError("A complete seven-byte PS1 pad record is required.");
+  }
+  const flags = record[offset];
+  const buttons = record[offset + 1] | (record[offset + 2] << 8);
+  const sticks = (flags & 0x02)
+    ? Array.from(record.subarray(offset + 3, offset + 7))
+    : [128, 128, 128, 128];
+  return { connected: (flags & 0x01) !== 0, buttons, sticks, flags };
+}
