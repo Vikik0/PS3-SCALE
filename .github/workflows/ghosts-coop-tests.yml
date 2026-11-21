@@ -54,6 +54,11 @@ jobs:
         run: |
           cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/mission_rules.c tests/mission_rules_test.c -o /tmp/mission-rules-test
           /tmp/mission-rules-test
+      - name: Build and run lobby JSON contract tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/ghc_lobby_json.c tests/lobby_json_test.c -o /tmp/ghc-lobby-json-test
+          /tmp/ghc-lobby-json-test
 
   ps3-prx-bootstrap:
     runs-on: ubuntu-latest
