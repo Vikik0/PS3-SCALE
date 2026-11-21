@@ -164,6 +164,27 @@ assert "if (!g_animation_enabled)" in home_animation_update
 assert "update_home_card_animations();" in main
 assert "FW %s" in home and "PS3 %s" in home
 assert "g_hardware_info_valid" in home
+
+# Footer hints must remain inside the TV-safe area; the old y=480/496
+# positions were cropped on the user's PS3 Slim display.
+assert "#define PS3SCALE_UI_FOOTER_PRIMARY_Y 452.0f" in src
+assert "#define PS3SCALE_UI_FOOTER_SECONDARY_Y 468.0f" in src
+assert "#define PS3SCALE_UI_FOOTER_SINGLE_Y 460.0f" in src
+assert "draw_soft_card(30.0f, 392.0f, 322.0f, 42.0f, 0);" in home
+assert "draw_text(31.0f, PS3SCALE_UI_FOOTER_PRIMARY_Y" in home
+assert "draw_text(31.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y" in home
+
+online_footer = section("static void draw_online_database(void)",
+                        "static void draw_library_filter_item(")
+assert "draw_rounded_rect(20.0f, 426.0f, 814.0f, 22.0f" in online_footer
+assert "draw_text(24.0f, PS3SCALE_UI_FOOTER_PRIMARY_Y" in online_footer
+assert "draw_text(24.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y" in online_footer
+
+scan_footer = section("static void draw_scan(void)", "static void draw_details(void)")
+assert "draw_text(188.0f, 440.0f" in scan_footer
+assert "WARNING: LIBRARY LIMIT REACHED (256 TITLES)" in scan_footer
+assert "draw_text(24.0f, PS3SCALE_UI_FOOTER_PRIMARY_Y" in scan_footer
+assert "draw_text(24.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y" in scan_footer
 assert "ps3scale_hardware_family_name(g_hardware_info.family)" in home
 assert "pulse = g_animation_enabled ?" in home_animation
 scene_background = section("static void draw_scene_background(void)",
