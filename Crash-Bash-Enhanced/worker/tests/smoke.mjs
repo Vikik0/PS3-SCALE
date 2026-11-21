@@ -214,10 +214,11 @@ assert.equal(publicList.status, 200);
 assert.equal(publicList.body.rooms.length, 1);
 assert.equal(publicList.body.rooms[0].room_code, publicCreated.body.room_code);
 assert.equal(publicList.body.rooms[0].host_name, "Player 6");
+assert.equal(publicList.body.rooms[0].host_platform, "browser");
 assert.equal(publicList.body.rooms[0].player_count, 1);
 assert.deepEqual(
   Object.keys(publicList.body.rooms[0]).sort(),
-  ["created_at", "host_name", "max_players", "mode", "player_count", "room_code"].sort()
+  ["created_at", "host_name", "host_platform", "max_players", "mode", "player_count", "room_code"].sort()
 );
 const publicJoin = await call(
   "/v1/rooms/" + publicCreated.body.room_code + "/join",
