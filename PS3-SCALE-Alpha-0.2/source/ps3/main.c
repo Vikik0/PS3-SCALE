@@ -153,7 +153,7 @@ static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 #define PS3SCALE_SUPPORT_OUTBOX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox.txt"
 /* Replace with the URL of the separate PS3 SCALE Supabase project after deployment. */
 #define PS3SCALE_SUPPORT_URL "https://YOUR_PROJECT.supabase.co/functions/v1/ps3scale-support"
-#define PS3SCALE_APP_VERSION "ALPHA 0.26"
+#define PS3SCALE_APP_VERSION "ALPHA 0.27"
 #define PS3SCALE_PS2_CONFIG_INDEX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/ps2_config_index.tsv"
 #define PS3SCALE_PS2_CLASSICS_CONFIG_DIR "/dev_hdd0/game/PS2CONFIG/USRDIR/CONFIG/ENC"
 #define PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT (PS3SCALE_PS2_CONFIG_MAX_BYTES * 2u)
@@ -3862,11 +3862,11 @@ static void start_selected_companion_tool(void)
         tool_name = "ARTEMIS PS3";
     }
 
-    if (!g_webman_installed) {
-        snprintf(g_tools_message, sizeof(g_tools_message),
-                 "WEBMAN MOD PLUGIN FILE WAS NOT DETECTED.");
-        return;
-    }
+    /*
+     * The plugin path check is only a hint. Some CFW setups load webMAN from
+     * a non-standard path; the bounded local HTTP request below is the
+     * authoritative test. Do not block launch solely on a missing file hint.
+     */
     if (g_network_task_running || g_tool_launch_running ||
         g_tool_launch_done || g_tool_launch_thread_started) {
         snprintf(g_tools_message, sizeof(g_tools_message),
@@ -3886,8 +3886,13 @@ static void start_selected_companion_tool(void)
                          "PS3 SCALE Tool Launch");
     if (rc == 0) {
         g_tool_launch_thread_started = 1;
-        snprintf(g_tools_message, sizeof(g_tools_message),
-                 "OPENING %s THROUGH WEBMAN MOD...", tool_name);
+        if (g_webman_installed) {
+            snprintf(g_tools_message, sizeof(g_tools_message),
+                     "OPENING %s THROUGH WEBMAN MOD...", tool_name);
+        } else {
+            snprintf(g_tools_message, sizeof(g_tools_message),
+                     "WEBMAN FILE HINT MISSING; TRYING LOCAL SERVICE...");
+        }
     } else {
         g_tool_launch_running = 0;
         g_network_task_running = 0;
@@ -5610,7 +5615,7 @@ static void draw_tools(void)
     draw_rounded_rect(40.0f, 288.0f, 774.0f, 66.0f, 9.0f, 0xf8f6ffb0);
     set_ui_font_size(9, 13);
     draw_text(48.0f, 300.0f, 0x29243fff, "webMAN MOD");
-    snprintf(line, sizeof(line), "PLUGIN FILE: %s",
+    snprintf(line, sizeof(line), "FILE HINT: %s",
              g_webman_installed ? "FOUND" : "NOT DETECTED");
     draw_text(642.0f, 300.0f,
               g_webman_installed ? 0x2c9f8eff : 0xffcc66ff, line);
@@ -7017,6 +7022,16 @@ int main(int argc, char *argv[])
         draw_ui();
     }
 
+    /*
+     * A launch request can still be in flight if the user exits while the
+     * Companion Tools worker is waiting on the local webMAN socket. Join it
+     * before tearing down the application and its shared state.
+     */
+    if (g_tool_launch_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_tool_launch_thread, &thread_result);
+        g_tool_launch_thread_started = 0;
+    }
     if (g_boot_scan_thread_started) {
         u64 thread_result = 0;
         (void)sysThreadJoin(g_boot_scan_thread, &thread_result);

@@ -19,7 +19,9 @@ The Companion Tools screen can request a direct launch of an installed Apollo Sa
 - Artemis R5: ARTZ00001.
 - PS3 SCALE validates the nine-character uppercase alphanumeric Title ID and builds the documented /play.ps3?<TITLE_ID> route.
 - The bounded local HTTP request runs on a worker thread. A successful HTTP response means webMAN accepted the request; it is not proof that the target application finished starting.
+- The two common plugin paths shown in Companion Tools are hints only. A missing file hint does not block the local HTTP request, allowing non-standard plugin locations. The actual connection / HTTP result is authoritative.
 - If webMAN is not active or rejects the request, PS3 SCALE reports the failure and remains available.
+- The companion launch worker is joined during application shutdown before shared state is released.
 - This is a launcher integration only. Apollo continues to perform save backup/restore/resigning inside Apollo, and Artemis continues to select and execute NCL files inside Artemis.
 
 Confirm the three installed app IDs on the target CFW setup before treating the launch flow as hardware-verified.

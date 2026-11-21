@@ -1,4 +1,4 @@
-# PS3 SCALE UI flow — Alpha 0.26
+# PS3 SCALE UI flow — Alpha 0.27
 
 ## First launch and language
 
@@ -28,7 +28,7 @@ Five primary controller-focusable cards in one horizontal row:
 
 The Home page no longer displays a separate FEATURES heading. The About page uses the full information card and no longer repeats the XMB icon as an extra image.
 
-**Companion Tools** remains available from the Home screen with SELECT. UP/DOWN selects Apollo Save Tool or Artemis PS3; CROSS asks webMAN MOD to launch the selected installed app using its validated Title ID; TRIANGLE refreshes detection; CIRCLE returns Home. Apollo uses NP0APOLLO; Artemis selects ARTPS3001 or ARTZ00001 based on the installed build. The launch request runs on a worker thread and does not freeze controller input. A webMAN HTTP 2xx response confirms request acceptance only; physical-console testing must confirm that each app actually opens. Save management remains inside Apollo and NCL execution remains inside Artemis; PS3 SCALE does not claim to reimplement either tool's engine.
+**Companion Tools** remains available from the Home screen with SELECT. UP/DOWN selects Apollo Save Tool or Artemis PS3; CROSS asks webMAN MOD to launch the selected installed app using its validated Title ID; TRIANGLE refreshes detection; CIRCLE returns Home. Apollo uses NP0APOLLO; Artemis selects ARTPS3001 or ARTZ00001 based on the installed build. The launch request runs on a worker thread and does not freeze controller input. The two common plugin paths are treated only as file hints: if neither is found, CROSS still tries the local webMAN HTTP service so non-standard plugin installs are not falsely blocked. The worker is joined during shutdown. A webMAN HTTP 2xx response confirms request acceptance only; physical-console testing must confirm that each app actually opens. Save management remains inside Apollo and NCL execution remains inside Artemis; PS3 SCALE does not claim to reimplement either tool's engine.
 
 ## Shared visual environment
 

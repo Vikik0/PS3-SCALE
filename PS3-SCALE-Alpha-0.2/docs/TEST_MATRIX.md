@@ -48,9 +48,11 @@ No real screenshot pairs are currently bundled in the repository; this part requ
 2. Test a normal launch with PS3MAPI disabled; the game should still start unmodified.
 3. Arm a one-write profile, then make PS3MAPI unavailable before Start Game. PS3 SCALE should remove its own pending script and still start the game unmodified.
 4. Disable/unload webMAN and confirm the app reports the local HTTP/network error without freezing.
-5. Test one harmless, reversible, single-write profile with a known expected byte at the exact address.
-6. Confirm a stale or edited PS3 SCALE script is blocked, while a foreign webMAN script is never overwritten or deleted.
-7. Confirm that closing the game clears the process-memory change.
+5. Keep webMAN active but move its plugin file outside the two common detection paths; Companion Tools should still attempt the local service instead of blocking the launch action.
+6. Exit PS3 SCALE while a companion launch request is waiting; confirm shutdown completes cleanly after the bounded request finishes.
+7. Test one harmless, reversible, single-write profile with a known expected byte at the exact address.
+8. Confirm a stale or edited PS3 SCALE script is blocked, while a foreign webMAN script is never overwritten or deleted.
+9. Confirm that closing the game clears the process-memory change.
 
 ## Other hardware targets after the Slim test
 

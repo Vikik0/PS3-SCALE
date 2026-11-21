@@ -1,12 +1,20 @@
-# Build status — PS3 SCALE Alpha 0.26
+# Build status — PS3 SCALE Alpha 0.27
 
 ## Current development head
 
 - Branch: `design/splash-transitions-ui-v6`
 - Pull request: Draft PR #16, targeting `design/settings-support-ui-v5`
-- Application version shown in the UI: `ALPHA 0.26`
-- Package metadata: `APP_VER=00.26`, `VERSION=00.26`
+- Application version shown in the UI: `ALPHA 0.27`
+- Package metadata: `APP_VER=00.27`, `VERSION=00.27`
 - Package title ID: `PS3SCALE1`
+
+## Alpha 0.27 — Companion launch reliability
+
+- Removed the hard block that prevented Apollo / Artemis launch when the webMAN plugin file was not found at the two common paths. Those paths are now treated as hints only; the bounded local HTTP request is the authoritative runtime check.
+- The Companion Tools UI now labels the path check as `FILE HINT`, and tells the user when it is trying the local service despite a missing hint.
+- Added shutdown joining for the companion launch worker so the app cannot tear down shared state while a local webMAN request is still running.
+- Added static regression checks for the fallback path and shutdown join.
+- Alpha 0.27 CI and physical-console launcher checks are pending.
 
 ## Alpha 0.26 — Companion Tools launch integration
 

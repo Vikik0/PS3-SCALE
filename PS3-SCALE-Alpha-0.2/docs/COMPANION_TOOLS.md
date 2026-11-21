@@ -31,16 +31,16 @@ PS3 SCALE does not execute an NCL file or apply it automatically. The user opens
 
 Official project: https://github.com/aldostools/webMAN-MOD
 
-webMAN MOD provides game mounting, a web/FTP interface, temperature information and optional PS3MAPI services. PS3 SCALE uses the local webMAN HTTP endpoint to start games and to arm one-launch memory profiles.
+webMAN MOD provides game mounting, a web/FTP interface, temperature information and optional PS3MAPI services. PS3 SCALE uses the local webMAN HTTP endpoint to start games, launch Apollo / Artemis and arm one-launch memory profiles.
 
 Known detection hints:
 
 - `/dev_hdd0/plugins/webftp_server.sprx`
 - A line containing `webftp_server.sprx` in `/dev_hdd0/boot_plugins.txt`
 
-A different install path or plugin filename can result in NOT DETECTED even if webMAN is installed. The Companion Tools page is a best-effort local file check; it does not install or update a plugin.
+A different install path or plugin filename can result in NOT DETECTED even if webMAN is installed. The Companion Tools page labels this as a file hint, not proof that the service is offline. The launch action still tries the bounded local HTTP endpoint when the hint is missing; the live connection result determines whether the request can proceed. The app does not install or update webMAN.
 
-Normal game launch does not require PS3MAPI. If a one-launch profile was armed but PS3MAPI is unavailable at launch, PS3 SCALE removes its own profile script and attempts to start the game unmodified. If webMAN's local HTTP service itself is unavailable, the app reports the connection failure and remains responsive.
+Companion app launch uses the same local HTTP service. A missing plugin-file hint does not block the request; a failed connection is reported by the transport. Normal game launch does not require PS3MAPI. If a one-launch profile was armed but PS3MAPI is unavailable at launch, PS3 SCALE removes its own profile script and attempts to start the game unmodified. If webMAN's local HTTP service itself is unavailable, the app reports the connection failure and remains responsive.
 
 ## Why these are separate
 

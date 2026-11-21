@@ -748,8 +748,8 @@ assert '"/dev_usb000/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3"' in src
 assert "rename(temp_path, PS3SCALE_MUSIC1_PATH)" in src
 assert "MUSIC 1 IMPORTED FROM USB" in settings
 sfo = (project_root / "sfo.xml").read_text(encoding="utf-8")
-assert '<value name="APP_VER" type="string">00.26</value>' in sfo
-assert '<value name="VERSION" type="string">00.26</value>' in sfo
+assert '<value name="APP_VER" type="string">00.27</value>' in sfo
+assert '<value name="VERSION" type="string">00.27</value>' in sfo
 
 # Startup failure and package-integrity regression checks.
 startup = section("int main(int argc, char *argv[])", "while (!g_exit_requested)")
@@ -858,7 +858,7 @@ assert "actions/upload-artifact@v4" not in build_workflow
 assert "actions/setup-python@v5" not in index_workflow
 
 # Keep the visible app, support payload and local report on one version.
-assert '#define PS3SCALE_APP_VERSION "ALPHA 0.26"' in src
+assert '#define PS3SCALE_APP_VERSION "ALPHA 0.27"' in src
 assert '#define SETTINGS_COUNT 10' in src
 assert 'fprintf(fp, "settings_version=3\\n");' in src
 assert 'enhancement_persistent=%d' in src
@@ -1017,6 +1017,14 @@ assert "triangle && !old_triangle" in tools_input
 assert "service_companion_tool_launch();" in main
 assert "companion_tool_launch_worker" in src
 assert "sysThreadCreate(&g_tool_launch_thread" in src
+tool_launch = src.split("static void start_selected_companion_tool", 1)[1].split(
+    "static void draw_rounded_rect", 1)[0]
+assert "if (!g_webman_installed)" not in tool_launch
+assert "WEBMAN FILE HINT MISSING; TRYING LOCAL SERVICE..." in tool_launch
+shutdown = main.split("while (!g_exit_requested)", 1)[1]
+assert "if (g_tool_launch_thread_started)" in shutdown
+assert "sysThreadJoin(g_tool_launch_thread" in shutdown
+assert "FILE HINT:" in tools_ui
 keyboard_ui = section("static void draw_keyboard(void)",
                       "/* Light-weight rounded panels:")
 assert 'draw_text(70.0f, 18.0f, 0x29243fff, "PS3")' in home_ui
