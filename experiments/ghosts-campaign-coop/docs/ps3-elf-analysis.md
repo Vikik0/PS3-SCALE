@@ -48,6 +48,7 @@ A mapped address is not proof that the candidate is the named function, that its
 2. Read \`elf.opd.section_address\` and \`elf.opd.section_size\` from the JSON report.
 3. Run \`tools/ghidra/SeedGhostsOpdFunctions.java\` with those two values as script arguments, for example \`0x00FF93B8 0x0004D7E0\` only if those are the values reported by this exact ELF.
 4. Let Ghidra auto-analysis complete, then save the project locally. The script only seeds function starts from OPD descriptors; it does not patch or export the binary.
+5. Run `tools/ghidra/FindGhostsSplitScreenBuiltins.java`. It searches loaded memory blocks for the IW6 split-screen/player builtin names and prints recorded cross-references and containing functions. A missing string or xref is inconclusive; names may be stripped, hashed or stored outside the loaded ELF.
 
 The PS3 PPU function-descriptor layout and OPD-based function discovery are described in the public [ps3recomp PPU loader](https://github.com/sp00nznet/ps3recomp/blob/master/tools/ppu_loader.py) and [PS3 PPC reverse-engineering workflow](https://github.com/Mercenaries-Fan-Build/notes-on-the-released-game/blob/main/docs/ps3_ppc_re_workflow.md). Those are methodology references, not Ghosts offsets or proof of Ghosts runtime behavior.
 
