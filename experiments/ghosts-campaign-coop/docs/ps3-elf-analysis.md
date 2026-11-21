@@ -31,7 +31,7 @@ A SELF report showing ELF64 big-endian PowerPC64 is only a container/architectur
 - Keep the executable local. Do not commit it, upload it to GitHub, or put game bytes in an issue or pull request.
 - Record the exact Title ID and Title Update. The current target is CEX 4.93 + TU 1.16. The CLI metadata is operator-supplied and is not inferred from the ELF.
 
-A decrypted executable can be produced through a user-controlled PS3/RPCS3 analysis workflow. The public PS3 RE references below describe decrypted-ELF analysis; choose the method appropriate to the user's own setup. No game dump or decryption key is included here.
+A decrypted executable can be produced through a user-controlled local analysis workflow. RPCS3 is one optional route, not a requirement for playing the mod on a PS3. If the user does not want RPCS3, skip that route and continue with static FastFile/GSC analysis; do not ask them to install it. The public PS3 RE references below describe decrypted-ELF analysis; choose a method appropriate to the user's own setup. No game dump or decryption key is included here.
 
 ## Run the read-only inspector
 
@@ -113,6 +113,6 @@ Each TU file is SELF v2, key revision 28, ELF64 big-endian PowerPC64, with eight
 
 ### Decrypted ELF acquisition
 
-RPCS3's debug option can save a decrypted PPU executable as exec.elf in its cache under ppu_progs/<TITLE_ID>-<hash>-<filename>/. The RPCS3 source implements this dump path and logs the saved path. For this project, retain the exact build identity and use the dump associated with the loaded TU 1.16 default.self; a dump from the disc 1.00 file is not interchangeable. The corresponding default_mp.self dump is the comparison target for an existing local split-screen path.
+One optional route is RPCS3's debug option, which can save a decrypted PPU executable as exec.elf in its cache under ppu_progs/<TITLE_ID>-<hash>-<filename>/. The RPCS3 source implements this dump path and logs the saved path. This route is not mandatory and the user has chosen not to install RPCS3 at this stage. If a decrypted ELF becomes available through another user-controlled route, retain its exact build identity and ensure it belongs to the installed TU 1.16 default.self; a dump from the disc 1.00 file is not interchangeable. The corresponding default_mp.self dump is the comparison target for an existing local split-screen path.
 
-This is the next engineering gate. Until the decrypted TU ELF is available, continue only with metadata, FastFile, GSC, simulator and toolchain work; do not invent executable offsets or build an installable game hook.
+This remains a future engineering gate, not a user action required now. Until the decrypted TU ELF is available, continue only with metadata, FastFile, GSC, simulator and toolchain work; do not invent executable offsets or build an installable game hook.
