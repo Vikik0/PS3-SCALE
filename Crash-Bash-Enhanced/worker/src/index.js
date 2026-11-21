@@ -213,6 +213,20 @@ export class CrashBashLobby {
       return;
     }
 
+    const now = Date.now();
+    if (!Number.isFinite(attachment.rateWindowStartedAt) ||
+        now - attachment.rateWindowStartedAt >= 1000 ||
+        now < attachment.rateWindowStartedAt) {
+      attachment.rateWindowStartedAt = now;
+      attachment.rateCount = 0;
+    }
+    if (attachment.rateCount >= RELAY_MAX_MESSAGES_PER_SECOND) {
+      socket.close(1008, "RATE_LIMITED");
+      return;
+    }
+    attachment.rateCount += 1;
+    socket.serializeAttachment(attachment);
+
     if (typeof message === "string") {
       if (message === "PING") {
         socket.send("PONG");
@@ -236,20 +250,6 @@ export class CrashBashLobby {
       socket.close(1009, "PACKET_SIZE_INVALID");
       return;
     }
-
-    const now = Date.now();
-    if (!Number.isFinite(attachment.rateWindowStartedAt) ||
-        now - attachment.rateWindowStartedAt >= 1000 ||
-        now < attachment.rateWindowStartedAt) {
-      attachment.rateWindowStartedAt = now;
-      attachment.rateCount = 0;
-    }
-    if (attachment.rateCount >= RELAY_MAX_MESSAGES_PER_SECOND) {
-      socket.close(1008, "RATE_LIMITED");
-      return;
-    }
-    attachment.rateCount += 1;
-    socket.serializeAttachment(attachment);
 
     const envelope = makeRelayEnvelope(attachment.sessionId, payload);
     if (typeof this.ctx.getWebSockets !== "function") return;
