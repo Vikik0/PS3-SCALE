@@ -33,7 +33,7 @@ function reasonText(reason) {
 }
 
 export class BrowserLockstepClient {
-  constructor({ transport, hostSessionId, capture, applyPadState, advanceFrames, onStatus = () => {}, onMatchStart = () => {}, onStop = () => {}, nonce = randomNonce }) {
+  constructor({ transport, hostSessionId, capture, applyPadState, advanceFrames, onStatus = () => {}, onMatchStart = () => {}, onStop = () => {}, nonce = randomNonce, now = () => Date.now(), joinTimeoutMs = 30000, hostTimeoutMs = 6000 }) {
     if (!transport) throw new TypeError("A room relay transport is required.");
     if (!/^[0-9a-f]{32}$/i.test(String(hostSessionId || ""))) throw new TypeError("A valid PS3 host session ID is required.");
     if (!capture || typeof capture.snapshot !== "function") throw new TypeError("A browser pad capture is required.");
@@ -48,6 +48,12 @@ export class BrowserLockstepClient {
     this.onMatchStart = onMatchStart;
     this.onStop = onStop;
     this.nonceFactory = nonce;
+    this.now = now;
+    this.joinTimeoutMs = joinTimeoutMs;
+    this.hostTimeoutMs = hostTimeoutMs;
+    this.joinDeadline = 0;
+    this.lastHostPacketAt = 0;
+    this.hostWatchTimer = null;
     this.phase = "idle";
     this.nonce = 0;
     this.session = 0;
@@ -90,9 +96,15 @@ export class BrowserLockstepClient {
       await this.transport.connect();
       this.phase = "joining";
       this.nonce = this.nonceFactory() >>> 0;
+      this.joinDeadline = this.now() + this.joinTimeoutMs;
       this.sendJoin();
       this.joinTimer = setInterval(() => {
-        if (this.phase === "joining") this.sendJoin();
+        if (this.phase !== "joining") return;
+        if (this.now() >= this.joinDeadline) {
+          this.fail("Timed out waiting for the PS3 host to accept the browser player.");
+          return;
+        }
+        this.sendJoin();
       }, 250);
       this.status("Connected to the room relay. Waiting for the PS3 host handshake…");
       return this;
@@ -115,7 +127,13 @@ export class BrowserLockstepClient {
     }
     try {
       const control = JSON.parse(message);
-      if (control.type === "room_update" && control.room?.status === "running" && this.phase === "lobby") {
+      if (control.type !== "room_update" || !control.room) return;
+      if (this.phase === "playing" &&
+          (control.room.status !== "running" || control.room.host_session_id !== this.hostSessionId)) {
+        this.fail("The PS3 host left or reset the room. The browser match has been paused.");
+        return;
+      }
+      if (control.room.status === "running" && this.phase === "lobby") {
         this.status("The PS3 host started the room. Waiting for the CBN1 game-start handshake…");
       }
     } catch { /* STARTED and other plain control messages are informational only. */ }
@@ -156,6 +174,7 @@ export class BrowserLockstepClient {
     if (welcome.machine < 1 || welcome.machine > 3) throw new Error("The host assigned an invalid machine number.");
     this.session = welcome.session;
     this.me = welcome.machine;
+    this.lastHostPacketAt = this.now();
     this.phase = "lobby";
     if (this.joinTimer) clearInterval(this.joinTimer);
     this.joinTimer = null;
@@ -170,6 +189,7 @@ export class BrowserLockstepClient {
       throw new Error("The PS3 host sent an inconsistent lobby roster.");
     }
     if (ping.pads[this.me] !== 1) throw new Error("The browser room is configured for one controller per browser player.");
+    this.lastHostPacketAt = this.now();
     this.send(encodePong(this.session, this.me, ping.sent), "cbn1-pong");
   }
 
@@ -177,6 +197,7 @@ export class BrowserLockstepClient {
     if (!this.session || this.phase !== "lobby" && this.phase !== "starting") return;
     const save = decodeSave(packet);
     if (save.session !== this.session) return;
+    this.lastHostPacketAt = this.now();
     if (save.slot < 0 || save.slot > 3) throw new Error("The host sent an invalid save-slot number.");
     if (save.data.byteLength !== 0) {
       this.send(encodeBye(this.session, this.me, CBN1_BYE_REASONS.DATA, 0), "cbn1-bye");
@@ -185,7 +206,8 @@ export class BrowserLockstepClient {
     }
     this.readyMask |= 1 << save.slot;
     this.send(encodeReady(this.session, this.me, this.readyMask), "cbn1-ready");
-    this.status(`PS3 save slot ${save.slot + 1}/4 checked. ${this.readyMask & READY_SAVES ? "" : ""}Waiting for the host to prepare the match…`);
+    const readyCount = [0, 1, 2, 3].filter(slot => (this.readyMask & (1 << slot)) !== 0).length;
+    this.status(`PS3 save slot ${save.slot + 1}/4 checked. ${readyCount}/4 slots acknowledged.`);
   }
 
   handleStart(packet) {
@@ -211,6 +233,7 @@ export class BrowserLockstepClient {
     if (!mine || mine.pads !== 1) throw new Error("Each browser participant must use exactly one controller.");
     this.delay = start.delay;
     this.assignments = start.assignments;
+    this.lastHostPacketAt = this.now();
     this.readyMask |= READY_START;
     this.inputHistory = Array.from({ length: this.delay }, neutralPad);
     this.inputBase = 0;
@@ -224,6 +247,11 @@ export class BrowserLockstepClient {
     this.send(encodeReady(this.session, this.me, this.readyMask | READY_ALL), "cbn1-ready");
     this.sendInputs();
     this.onMatchStart({ me: this.me, delay: this.delay, assignments: this.assignments });
+    this.hostWatchTimer = setInterval(() => {
+      if (this.phase === "playing" && this.now() - this.lastHostPacketAt > this.hostTimeoutMs) {
+        this.fail("The PS3 host stopped sending game records. The browser match has been paused.");
+      }
+    }, 1000);
     this.status(`Game handshake complete. Input delay: ${this.delay} steps. Waiting for the first synchronized frame…`);
   }
 
@@ -231,6 +259,7 @@ export class BrowserLockstepClient {
     if (!this.session || this.phase !== "playing") return;
     const record = decodeRecord(packet);
     if (record.session !== this.session) return;
+    this.lastHostPacketAt = this.now();
     if (record.acked > this.hostAcked && record.acked <= this.meHave) {
       this.hostAcked = record.acked;
       this.pruneAcknowledgedInputs();
@@ -323,7 +352,9 @@ export class BrowserLockstepClient {
 
   clearTimers() {
     if (this.joinTimer) clearInterval(this.joinTimer);
+    if (this.hostWatchTimer) clearInterval(this.hostWatchTimer);
     this.joinTimer = null;
+    this.hostWatchTimer = null;
   }
 
   cleanup(closeTransport) {
