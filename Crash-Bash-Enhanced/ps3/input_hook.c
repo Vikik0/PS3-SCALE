@@ -166,6 +166,7 @@ static int32_t cb_cell_pad_get_data_extra(uint32_t port_no, uint32_t *device_typ
     int slot;
 
     if (port_no == 0) {
+        cb_net_ui_poll();
         (void)cb_net_lobby_poll();
     }
 
