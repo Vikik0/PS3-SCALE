@@ -38,3 +38,11 @@ The adapter reads ports 0 and 1 only and does not call `cellPadInit`/`cellPadEnd
 - PS3 game modding overview: https://consolemods.org/wiki/PS3:Modding_PS3_Games
 
 Research notes do not establish that any offset is valid for Campaign or that a candidate hook is safe. The exact executable identity and runtime behavior must be verified before use.
+
+## PS3 PPU ELF / OPD analysis methodology
+
+- PS3 PPU loader and OPD/TOC parser reference: https://github.com/sp00nznet/ps3recomp/blob/master/tools/ppu_loader.py
+- PS3 PPC reverse-engineering workflow and Ghidra OPD seeding example: https://github.com/Mercenaries-Fan-Build/notes-on-the-released-game/blob/main/docs/ps3_ppc_re_workflow.md
+- PS3 ELF/PRX Ghidra tooling reference: https://github.com/Clienthax/Ps3GhidraScripts
+
+These sources describe generic PS3 PPU analysis methods. They do not provide Ghosts-specific addresses, and their example OPD ranges must never be copied into this project.
