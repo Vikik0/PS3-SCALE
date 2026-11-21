@@ -3392,10 +3392,18 @@ static void start_community_file_download(
     if (!game || !game_is_ps3(game) ||
         strncmp(game->path, "/dev_hdd0/", 10) != 0 ||
         !game->title_id[0] || !game->app_ver[0] ||
+        strlen(game->title_id) != 9 ||
         !ps3scale_community_file_matches_exact_game(entry, game)) {
         snprintf(g_online_message, sizeof(g_online_message),
                  "INSTALL THE EXACT HDD GAME VERSION AND RESCAN FIRST.");
         return;
+    }
+    for (i = 0; i < 9; i++) {
+        if (!isalnum((unsigned char)game->title_id[i])) {
+            snprintf(g_online_message, sizeof(g_online_message),
+                     "GAME TITLE ID IS INVALID. RESCAN THE INSTALLED GAME.");
+            return;
+        }
     }
     if (stat(game->path, &st) != 0) {
         snprintf(g_online_message, sizeof(g_online_message),
@@ -6081,6 +6089,7 @@ int main(int argc, char *argv[])
     ps3scale_game_list_init(&g_games);
     load_app_settings();
     cleanup_temporary_enhancements();
+    (void)mkdir(PS3SCALE_PREVIEW_DIR, 0777);
     load_favorites();
     if (g_music_mode == 0) {
         g_music_start_track = g_music_next_track;
