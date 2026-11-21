@@ -35,7 +35,7 @@ References:
 
 ## Browser-port constraints
 
-The upstream desktop renderer uses SDL_GPU. SDL's own development FAQ currently says SDL_GPU does not support the web platform, so a browser build needs a WebGL 2 renderer (or another browser-supported rendering path); simply compiling the existing desktop target to WebAssembly is not sufficient. Emscripten provides a WebSocket API, but browser networking does not expose raw UDP sockets.
+The browser runtime now uses EmulatorJS with its PlayStation (PCSX-ReARMed) core instead of compiling the upstream SDL_GPU desktop renderer to WebAssembly. This avoids writing a separate WebGL 2 renderer. The local browser player loads the user's disc image and optional BIOS as browser File objects, without uploading either to the Worker. It exposes `CBASH_APPLY_PAD_STATE(slot, buttons, sticks)` and `CBASH_GET_EMULATOR_FRAME()` for the network adapter. The remaining browser work is a WebSocket-backed adapter for the same CBN1 lockstep protocol; browser networking does not expose raw UDP sockets.
 
 References:
 - SDL3 development FAQ: https://wiki.libsdl.org/SDL3/FAQDevelopment
@@ -54,11 +54,11 @@ References:
 - An installable PS3 homebrew PKG wrapper for the input PRX and VSH loader; CI validates its PKG header and content ID. Hardware installation and runtime behavior are not yet verified.
 
 ### Still required before cross-platform play
-1. Add the WebGL 2 browser renderer and an Emscripten build of the game runtime.
+1. Build a browser CBN1 transport adapter that uses the Worker WSS relay and feeds each synchronized pad record into the EmulatorJS input hook.
 2. Add browser-side disc-image selection and local-only loading; no disc image is uploaded to the server.
 3. Validate the PS3 lockstep-to-CBU1/CBR1 shim under packet loss, high RTT, disconnects, and reconnects; tune the fixed relay input delay from measured results.
 4. Configure Cloudflare deployment credentials; the deployment workflow now builds the Vite lobby, deploys the static assets and Worker together, and checks the public /health endpoint. The PS3 client now uses certificate-verified HTTPS/WSS; local TLS integration tests cover its handshake and relay protocol.
 5. Install the generated PKG on physical PS3 hardware and verify the VSH loader, process injection, and in-game host/join menu (SELECT + L3 + R3).
 6. Test matching builds, input delay, disconnect/rejoin, and deterministic frame fingerprints on a real PS3 and a real browser.
 
-**Status:** the PS3 adapter routes upstream lockstep datagrams through the relay in code, and its client now uses TLS 1.2/WSS with certificate verification. The installable PS3 PKG now builds in CI and its package header/content ID are validated. The browser game runtime, Cloudflare deployment credentials, and physical hardware/browser match tests are still missing. This branch is not yet cross-platform playable.
+**Status:** the PS3 adapter routes upstream lockstep datagrams through the relay in code, and its client now uses TLS 1.2/WSS with certificate verification. The installable PS3 PKG now builds in CI and its package header/content ID are validated. The local EmulatorJS browser runtime is present, but its CBN1 input adapter is not connected yet. Cloudflare deployment credentials and physical hardware/browser match tests are also still missing. This branch is not yet cross-platform playable.
