@@ -103,3 +103,13 @@ References: [GSC Tool README](https://github.com/xensik/gsc-tool/blob/dev/README
 ### Compiled GSC validation
 
 The script exporter now validates the GSC Tool IW binary wrapper before treating a body as compiled script: GSC NUL magic, three little-endian 32-bit lengths, exact stored-buffer/bytecode size, and zlib expansion of the stack buffer when compressed. A magic-only false positive is no longer exported as a compiled script. The public GSC Tool README and asset serializer are the format references.
+
+### Windows batch decompilation
+
+After exporting compiled GSC assets, use the helper to decompile every .gscbin/.cscbin with GSC Tool's IW6 PS3 backend:
+
+~~~powershell
+powershell -ExecutionPolicy Bypass -File tools\decompile_iw6_ps3_scripts.ps1 -GscToolPath "C:\Tools\gsc-tool.exe" -InputDirectory "C:\Ghosts\analysis\scripts" -OutputDirectory "C:\Ghosts\analysis\decompiled"
+~~~
+
+The helper copies the binary tree into the output directory before decompiling, so the original exported assets remain unchanged.
