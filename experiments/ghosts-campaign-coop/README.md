@@ -44,7 +44,7 @@ See docs/local-coop-first.md for the implementation plan and research constraint
 - Diagnostic PRX polling/getter functions for raw and per-frame input, pending a verified Campaign frame adapter.
 - Reverse-engineering notes rule out treating `PlayerCMD_ClonePlayer` as a full second-player spawn path.
 - Read-only PS3 PPU ELF inspector: validates ELF64 big-endian EM_PPC64, hashes the input, maps reported TU 1.16 candidate addresses, and extracts the PPU OPD/TOC when present.
-- Ghidra OPD function-seeding helper and a local-player state comparison matrix for the next static/runtime analysis stage.
+- Ghidra OPD function-seeding and split-screen builtin cross-reference helpers, plus a local-player state comparison matrix for the next static/runtime analysis stage.
 
 ### Phase 1 Campaign integration — not implemented
 
