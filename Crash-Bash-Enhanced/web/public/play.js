@@ -100,13 +100,7 @@ async function prepareRoomConnection() {
   if (host?.platform !== "ps3") throw new Error("This room is not marked as a PS3-hosted room. Start a room from the PS3 in-game menu.");
   if (room.status !== "waiting") throw new Error("This match has already started. Join before the PS3 host starts the game.");
   if (room.player_count > room.max_players) throw new Error("The room player count is invalid.");
-  if (!own.ready) {
-    room = await api(`/v1/rooms/${ROOM_CODE}/ready`, session.token, { method: "POST", body: { ready: true } });
-    own = room.players?.find(player => player.player_id === session.session_id);
-    host = room.players?.find(player => player.player_id === hostId);
-    if (!own?.ready || !host?.ready) throw new Error("The room did not confirm both players as ready.");
-  }
-  return { session, room };
+  return { session, room, needsReady: !own.ready };
 }
 
 async function buildExternalFiles(primary, files, biosFile = null) {
@@ -230,8 +224,9 @@ async function connectToRoom() {
   connectButton.disabled = true;
   setNetworkStatus("Checking the room and guest session…");
   let pendingSession = null;
+  let readyMarked = false;
   try {
-    const { session, room } = await prepareRoomConnection();
+    const { session, room, needsReady } = await prepareRoomConnection();
     pendingSession = session;
     const transport = new CrashBashRelayTransport({
       apiOrigin: API_ORIGIN, roomCode: ROOM_CODE, token: session.token
@@ -260,12 +255,22 @@ async function connectToRoom() {
     });
     lockstepClient = client;
     await client.connect();
+    if (needsReady) {
+      const readyRoom = await api(`/v1/rooms/${ROOM_CODE}/ready`, session.token, { method: "POST", body: { ready: true } });
+      const readyPlayer = readyRoom.players?.find(player => player.player_id === session.session_id);
+      if (!readyPlayer?.ready) throw new Error("The room did not confirm the browser player as ready.");
+      readyMarked = true;
+    }
     pendingSession = null;
     leaveButton.hidden = false;
     setNetworkStatus(`Connected to room ${ROOM_CODE}. Waiting for the PS3 host to start the match…`);
   } catch (error) {
-    lockstepClient = null;
-    if (pendingSession?.token) {
+    if (lockstepClient) {
+      const failedClient = lockstepClient;
+      lockstepClient = null;
+      if (!["failed", "stopped", "closed"].includes(failedClient.phase)) failedClient.stop();
+    }
+    if (pendingSession?.token && readyMarked) {
       try {
         await api(`/v1/rooms/${ROOM_CODE}/ready`, pendingSession.token, { method: "POST", body: { ready: false } });
       } catch {}
