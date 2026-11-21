@@ -229,8 +229,10 @@ async function connectToRoom() {
   if (lockstepClient) return;
   connectButton.disabled = true;
   setNetworkStatus("Checking the room and guest session…");
+  let pendingSession = null;
   try {
     const { session, room } = await prepareRoomConnection();
+    pendingSession = session;
     const transport = new CrashBashRelayTransport({
       apiOrigin: API_ORIGIN, roomCode: ROOM_CODE, token: session.token
     });
@@ -258,10 +260,16 @@ async function connectToRoom() {
     });
     lockstepClient = client;
     await client.connect();
+    pendingSession = null;
     leaveButton.hidden = false;
     setNetworkStatus(`Connected to room ${ROOM_CODE}. Waiting for the PS3 host to start the match…`);
   } catch (error) {
     lockstepClient = null;
+    if (pendingSession?.token) {
+      try {
+        await api(`/v1/rooms/${ROOM_CODE}/ready`, pendingSession.token, { method: "POST", body: { ready: false } });
+      } catch {}
+    }
     connectButton.disabled = !emulatorStarted || !ROOM_CODE;
     setNetworkStatus(error.message || "Could not connect to the PS3 room.", true);
   }
