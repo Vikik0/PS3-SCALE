@@ -41,7 +41,10 @@ $(BUILD)/netdb_compat.o: netdb_compat.c compat/netdb.h | $(BUILD)
 $(BUILD)/thread_compat.o: thread_compat.c | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/crash_bash_input.elf: $(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(CRT_I) $(CRT) $(CRT_INIT) $(PRX_LD) $(PRX_SPECS)
+$(BUILD)/ws_client.o: ws_client.c ws_client.h | $(BUILD)
+	$(PPU_CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/crash_bash_input.elf: $(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(BUILD)/ws_client.o $(CRT_I) $(CRT) $(CRT_INIT) $(PRX_LD) $(PRX_SPECS)
 	$(PPU_CC) -nostdlib -nostartfiles -specs=$(PRX_SPECS) \
 		-Wl,-q -Wl,--gc-sections -Wl,--no-warn-rwx-segments -Wl,-T,$(PRX_LD) \
 		$(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(CRT_I) $(CRT) $(CRT_INIT) $(NET_LIBS) -o $@
