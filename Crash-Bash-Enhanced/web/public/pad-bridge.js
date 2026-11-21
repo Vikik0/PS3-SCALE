@@ -12,7 +12,9 @@ const PS1_TO_LIBRETRO_BUTTONS = Object.freeze([
   [10, 0x0400], // L1
   [11, 0x0800], // R1
   [12, 0x0100], // L2
-  [13, 0x0200]  // R2
+  [13, 0x0200], // R2
+  [14, 0x0002], // L3
+  [15, 0x0004]  // R3
 ]);
 
 function axisToLibretro(value) {
@@ -51,4 +53,67 @@ export function applyPadStateToEmulator(gameManager, slot, buttons, sticks) {
     simulate(slot, index, value);
   }
   return true;
+}
+
+const LIBRETRO_TO_PS1_BUTTONS = new Map(PS1_TO_LIBRETRO_BUTTONS.map(([index, bit]) => [index, bit]));
+const CAPTURE_KEY = Symbol.for("crash-bash-online.local-pad-capture");
+
+function axisFromLibretro(value) {
+  const clamped = Math.max(-32767, Math.min(32767, Number(value) || 0));
+  return clamped < 0
+    ? Math.round(128 + clamped * 128 / 32767)
+    : Math.round(128 + clamped * 127 / 32767);
+}
+
+/**
+ * Capture the browser's local keyboard/gamepad inputs as the same 7-byte
+ * PS1 pad record used by CBN1. While netplay is active, local input is
+ * withheld from port 1 and only applied after the host's frame record arrives.
+ */
+export function createLocalPadCapture(gameManager, isNetplayActive = () => false) {
+  if (!gameManager || typeof gameManager.simulateInput !== "function") {
+    throw new TypeError("A ready EmulatorJS GameManager is required.");
+  }
+  if (gameManager[CAPTURE_KEY]) return gameManager[CAPTURE_KEY];
+
+  const state = {
+    flags: 0x03, // PAD_THERE | PAD_STICKS
+    buttons: 0,
+    sticks: [128, 128, 128, 128] // rightX, rightY, leftX, leftY
+  };
+  const original = gameManager.simulateInput.bind(gameManager);
+
+  const capture = {
+    update(index, value) {
+      if (LIBRETRO_TO_PS1_BUTTONS.has(index)) {
+        const bit = LIBRETRO_TO_PS1_BUTTONS.get(index);
+        state.buttons = value ? (state.buttons | bit) : (state.buttons & ~bit);
+      } else if (index >= 16 && index <= 19) {
+        const stickIndex = ({ 16: 2, 17: 3, 18: 0, 19: 1 })[index];
+        state.sticks[stickIndex] = axisFromLibretro(value);
+      }
+    },
+    getRecord() {
+      return new Uint8Array([
+        state.flags,
+        state.buttons & 0xff,
+        (state.buttons >>> 8) & 0xff,
+        ...state.sticks
+      ]);
+    },
+    reset() {
+      state.buttons = 0;
+      state.sticks = [128, 128, 128, 128];
+    }
+  };
+
+  gameManager.simulateInput = (player, index, value) => {
+    if (player === 0 && index >= 0 && index <= 19) {
+      capture.update(index, value);
+      if (isNetplayActive()) return;
+    }
+    return original(player, index, value);
+  };
+  gameManager[CAPTURE_KEY] = capture;
+  return capture;
 }
