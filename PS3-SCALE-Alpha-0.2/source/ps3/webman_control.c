@@ -3,6 +3,8 @@
 
 #include <arpa/inet.h>
 #include <net/net.h>
+#include <net/netctl.h>
+#include <sysmodule/sysmodule.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -19,7 +21,7 @@
 #define WEBMAN_HTTP_PATH_MAX 1536
 #define WEBMAN_HTTP_REQUEST_MAX 2048
 #define WEBMAN_CONNECT_TIMEOUT_SEC 3
-#define WEBMAN_IO_TIMEOUT_SEC 2
+#define WEBMAN_IO_TIMEOUT_SEC 4
 
 static int connect_with_timeout(int sock, const struct sockaddr *address,
                                 socklen_t address_length)
@@ -81,6 +83,36 @@ static int http_status_is_success(const char *response)
     return status >= 200 && status < 400;
 }
 
+static int network_modules_ready(void)
+{
+    if (sysModuleLoad(SYSMODULE_NET) < 0)
+        return -1;
+    if (sysModuleLoad(SYSMODULE_NETCTL) < 0) {
+        (void)sysModuleUnload(SYSMODULE_NET);
+        return -1;
+    }
+    if (netInitialize() != 0) {
+        (void)sysModuleUnload(SYSMODULE_NETCTL);
+        (void)sysModuleUnload(SYSMODULE_NET);
+        return -1;
+    }
+    if (netCtlInit() != 0) {
+        netDeinitialize();
+        (void)sysModuleUnload(SYSMODULE_NETCTL);
+        (void)sysModuleUnload(SYSMODULE_NET);
+        return -1;
+    }
+    return 0;
+}
+
+static void network_modules_shutdown(void)
+{
+    netCtlTerm();
+    netDeinitialize();
+    (void)sysModuleUnload(SYSMODULE_NETCTL);
+    (void)sysModuleUnload(SYSMODULE_NET);
+}
+
 /* Do not rely only on SO_RCVTIMEO: some PS3 socket builds ignore it. */
 static int wait_for_readable(int sock)
 {
@@ -118,7 +150,7 @@ static int webman_http_get(const char *path, char *response,
     if (response && response_size > 0)
         response[0] = '\0';
 
-    if (netInitialize() != 0)
+    if (network_modules_ready() != 0)
         return -1;
 
     sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -188,7 +220,7 @@ cleanup:
         (void)shutdown(sock, SHUT_RDWR);
         close(sock);
     }
-    netDeinitialize();
+    network_modules_shutdown();
     return result;
 }
 
@@ -206,7 +238,9 @@ int ps3scale_webman_ps3mapi_available(void)
                         response, sizeof(response)) != 0)
         return -1;
 
-    if (!strstr(response, "version") && !strstr(response, "response"))
+    if (!strstr(response, "version") && !strstr(response, "VERSION") &&
+        !strstr(response, "response") && !strstr(response, "Response") &&
+        !strstr(response, "PS3MAPI"))
         return -1;
     return 0;
 }
