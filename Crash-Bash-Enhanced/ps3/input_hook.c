@@ -1,4 +1,5 @@
 #include "input_hook.h"
+#include "relay_ui.h"
 #include "net_adapter.h"
 
 #include <stddef.h>
