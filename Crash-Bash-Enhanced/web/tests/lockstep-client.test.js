@@ -101,13 +101,19 @@ function setupClient() {
 }
 
 test("captures EmulatorJS player-one controls as the seven-byte PS1 pad layout", () => {
-  const capture = createLocalPadCapture();
-  assert.equal(capture.handle(0, 0, 1), true);
-  assert.equal(capture.handle(0, 16, 32767), true);
-  assert.equal(capture.handle(0, 18, -32767), true);
-  assert.equal(capture.handle(1, 0, 1), false);
+  const forwarded = [];
+  const gameManager = {
+    simulateInput: (...args) => forwarded.push(args),
+    functions: { simulateInput() {} }
+  };
+  const capture = createLocalPadCapture(gameManager, () => true);
+  gameManager.simulateInput(0, 0, 1);
+  gameManager.simulateInput(0, 16, 32767);
+  gameManager.simulateInput(0, 18, -32767);
+  gameManager.simulateInput(1, 0, 1);
   const pad = capture.snapshot();
   assert.deepEqual(Array.from(pad), [0x03, 0, 0x40, 0, 128, 255, 128]);
+  assert.equal(forwarded.length, 1, "non-local controller input is not captured");
   assert.deepEqual(decodePadRecord(pad), { connected: true, buttons: 0x4000, sticks: [0, 128, 255, 128], flags: 0x03 });
 });
 
