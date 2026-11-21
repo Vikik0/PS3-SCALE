@@ -75,7 +75,7 @@ The first target is CEX 4.93 + TU 1.16. The project must select builds by exact 
 
 ## Verification
 
-CI validates the standalone codecs, controller-input decoder, and PRX build including `sys_io` imports. These tests do not prove that the game runtime can use a second player in Campaign. The Phase 1 success gate is defined in docs/local-coop-first.md.
+CI validates the standalone codecs, controller-input decoder, read-only ELF/OPD inspector tests, and PRX build including `sys_io` imports. These tests do not prove that the game runtime can use a second player in Campaign. The Phase 1 success gate is defined in docs/local-coop-first.md.
 
 ## Important
 
