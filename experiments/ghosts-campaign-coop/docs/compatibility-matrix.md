@@ -27,6 +27,23 @@ This is a development target, not a verified playable build.
 
 The list is a known-title-ID registry, not a promise that one binary supports every region. Each title ID must be checked against its own game files, update package, executable layout and memory map.
 
+## Verified TU 1.16 update-package metadata
+
+The public PS3 update catalogue lists these region-matched 1.16 package records. The package must match the installed game's Title ID; do not install a different region's update.
+
+| Game Title ID | TU 1.16 update package filename | Listed size |
+|---|---|---:|
+| BLUS31270 | UP0002-BLUS31270_00-CALLDUTYGHOSTTU1-A0116-V0100-PE.pkg | 558,341,392 bytes |
+| NPUB31301 | UP0002-NPUB31301_00-CALLOFDUTYGHOSTS-A0116-V0100-PE.pkg | 558,342,064 bytes |
+| BLES01945 | EP0002-BLES01945_00-CALLDUTYGHOSTTU1-A0116-V0100-PE.pkg | 569,047,776 bytes |
+| BLES01948 | EP0002-BLES01948_00-CALLDUTYGHOSTTU1-A0116-V0100-PE.pkg | 537,032,384 bytes |
+| NPEB01832 | EP0002-NPEB01832_00-CALLDUTYGHOSTSDL-A0116-V0100-PE.pkg | 569,048,448 bytes |
+| NPEB01835 | EP0002-NPEB01835_00-CALLDUTYGHOSTSDL-A0116-V0100-PE.pkg | 537,033,056 bytes |
+
+Source catalogue: https://ps3.aldostools.org/updates.html
+
+These records identify update packages only; they are not the full retail game. The full game must be a legitimately obtained copy, and its Title ID must match the update. Do not download or install anything until the final build's required profile is confirmed.
+
 ## Firmware policy
 
 | Firmware family | Status | Policy |
