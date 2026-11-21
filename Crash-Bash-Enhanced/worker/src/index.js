@@ -321,10 +321,8 @@ export class CrashBashLobby {
       return;
     }
 
-    if (!attachment.matchStarted) {
-      socket.close(1008, "MATCH_NOT_STARTED");
-      return;
-    }
+    // Lockstep lobby packets (join/ping/roster) must flow before START.
+    // Authenticated room membership and per-session rate limits protect this pre-start phase.
 
     const payload = messageBytes(message);
     if (!payload) {
