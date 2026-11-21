@@ -50,7 +50,7 @@ $(BUILD)/relay_client.o: relay_client.c relay_client.h ws_client.h | $(BUILD)
 $(BUILD)/crash_bash_input.elf: $(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(BUILD)/ws_client.o $(BUILD)/relay_client.o $(CRT_I) $(CRT) $(CRT_INIT) $(PRX_LD) $(PRX_SPECS)
 	$(PPU_CC) -nostdlib -nostartfiles -specs=$(PRX_SPECS) \
 		-Wl,-q -Wl,--gc-sections -Wl,--no-warn-rwx-segments -Wl,-T,$(PRX_LD) \
-		$(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(CRT_I) $(CRT) $(CRT_INIT) $(NET_LIBS) -o $@
+		$(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(BUILD)/ws_client.o $(BUILD)/relay_client.o $(CRT_I) $(CRT) $(CRT_INIT) $(NET_LIBS) -o $@
 
 $(BUILD)/crash_bash_input.prx: $(BUILD)/crash_bash_input.elf
 	$(PRX_GEN) build $< -o $@ --name crash_bash_input --version 0.2
