@@ -117,7 +117,8 @@ jobs:
       - name: Install XMB artwork renderer
         run: |
           set -eu
-          python3 -m pip install --no-cache-dir Pillow
+          apt-get update
+          apt-get install -y python3-pil
 
       - name: Build and validate PS3 packages
         working-directory: PS3-SCALE-Alpha-0.2
