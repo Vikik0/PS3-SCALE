@@ -80,16 +80,15 @@ static int relay_hex_to_bytes(const char *hex, uint8_t output[16])
 static void relay_session_address(const uint8_t session_id[16],
                                   struct sockaddr_in *address)
 {
-    unsigned int a = 1u + (session_id[0] % 250u);
-    unsigned int b = 1u + (session_id[1] % 250u);
-    unsigned int c = 1u + (session_id[2] % 250u);
-    unsigned int port = 20000u +
-        ((((unsigned int)session_id[3] << 8) | session_id[4]) % 40000u);
+    uint32_t address_network = 0;
+    unsigned short port_host = 0;
 
     memset(address, 0, sizeof(*address));
     address->sin_family = AF_INET;
-    address->sin_addr.s_addr = htonl((10u << 24) | (a << 16) | (b << 8) | c);
-    address->sin_port = htons((unsigned short)port);
+    if (cb_relay_session_address(session_id, &address_network, &port_host) == 0) {
+        address->sin_addr.s_addr = address_network;
+        address->sin_port = htons(port_host);
+    }
 }
 
 static void relay_peer_add(const uint8_t session_id[16])
@@ -111,6 +110,41 @@ static void relay_peer_add(const uint8_t session_id[16])
     memcpy(relay_peers[slot].session_id, session_id, 16u);
     relay_peers[slot].address = address;
     relay_peers[slot].used = 1;
+}
+
+static void relay_sync_roster(void)
+{
+    size_t i;
+
+    memset(relay_peers, 0, sizeof(relay_peers));
+    for (i = 0; i < CB_RELAY_MAX_PEERS; ++i) {
+        const CbRelayPeer *peer = &relay_client.peers[i];
+        struct sockaddr_in address;
+        if (!peer->valid) continue;
+        relay_session_address(peer->session_id, &address);
+        memcpy(relay_peers[i].session_id, peer->session_id, 16u);
+        relay_peers[i].address = address;
+        relay_peers[i].used = 1;
+    }
+}
+
+static uint64_t relay_now_ms(void)
+{
+    return sys_time_get_system_time() / 1000u;
+}
+
+#define RELAY_FLUSH_INTERVAL_MS 220u
+
+static int relay_flush_due(int force)
+{
+    uint64_t now;
+    if (!relay_client.connected || relay_batch.count == 0) return 0;
+    now = relay_now_ms();
+    if (!force && now >= relay_last_flush_ms &&
+        now - relay_last_flush_ms < RELAY_FLUSH_INTERVAL_MS) return 0;
+    if (cb_relay_batch_flush(&relay_client, &relay_batch) != 0) return -1;
+    relay_last_flush_ms = now;
+    return 0;
 }
 
 static int relay_peer_find(const struct sockaddr *destination,
@@ -145,6 +179,7 @@ static int relay_receive_queue(int timeout_ms)
                                          sizeof(relay_rx_packet), &relay_rx_length,
                                          relay_rx_sender, NULL, 0, timeout_ms);
         if (result == 2) {
+            relay_sync_roster();
             timeout_ms = 0;
             controls++;
         }
@@ -175,6 +210,10 @@ static ssize_t cb_relay_sendto_shim(int fd, const void *buffer, size_t length,
     }
     if (cb_relay_queue_packet(&relay_batch, recipient, buffer, length) != 0) {
         errno = EMSGSIZE;
+        return -1;
+    }
+    if (relay_flush_due(0) != 0) {
+        errno = ENETDOWN;
         return -1;
     }
     return (ssize_t)length;
@@ -233,6 +272,7 @@ static int cb_relay_select_shim(int nfds, fd_set *read_set, fd_set *write_set,
         }
     }
     if (ready_fd < 0) return 0;
+    if (relay_flush_due(0) != 0) return -1;
     if (timeout) {
         timeout_ms = (int)(timeout->tv_sec * 1000L + timeout->tv_usec / 1000L);
     }
@@ -292,7 +332,6 @@ static volatile int net_active;
 static volatile int lobby_started;
 static volatile int have_previous_step;
 static uint64_t last_frame_step_ns;
-static uint64_t last_relay_batch_tick_ns;
 static int finish_code;
 static NetOptions ps3_net_options;
 
@@ -854,10 +893,7 @@ void portmap_close(void)
 
 static int relay_batch_tick_once(void)
 {
-    uint64_t now = SDL_GetTicksNS();
-    if (last_relay_batch_tick_ns && now - last_relay_batch_tick_ns < 30000000ULL) return 0;
-    last_relay_batch_tick_ns = now;
-    return cb_relay_batch_tick(&relay_client, &relay_batch, 6u);
+    return relay_flush_due(0);
 }
 
 static void configure_options(void)
@@ -918,7 +954,7 @@ int cb_net_relay_host(const char *worker_host, unsigned short worker_port)
     cb_net_leave();
     (void)cb_net_init();
     configure_options();
-    ps3_net_options.delay = 8;
+    ps3_net_options.delay = 12;
     ps3_net_options.local = 1;
     net_configure(&ps3_net_options);
 
@@ -932,11 +968,12 @@ int cb_net_relay_host(const char *worker_host, unsigned short worker_port)
     memset(relay_peers, 0, sizeof(relay_peers));
     relay_rx_valid = 0;
     relay_peer_add(relay_host_id);
+    relay_sync_roster();
+    relay_last_flush_ms = relay_now_ms();
     net_active = 0;
     lobby_started = 0;
     have_previous_step = 0;
     last_frame_step_ns = 0;
-    last_relay_batch_tick_ns = 0;
 
     result = net_lobby_host(NULL);
     if (!result) {
@@ -981,6 +1018,8 @@ int cb_net_relay_join_code(const char *worker_host, unsigned short worker_port,
     memset(relay_peers, 0, sizeof(relay_peers));
     relay_rx_valid = 0;
     relay_peer_add(relay_host_id);
+    relay_sync_roster();
+    relay_last_flush_ms = relay_now_ms();
     net_active = 0;
     lobby_started = 0;
     have_previous_step = 0;
@@ -1001,7 +1040,8 @@ int cb_net_relay_start(void)
     if (!relay_client.connected || !lobby_started ||
         strcmp(relay_client.session_id, relay_client.host_session_id) != 0) return -1;
     if (cb_relay_start_match(&relay_client, 5000) != 0) return -1;
-    ps3_net_options.delay = 8;
+    relay_sync_roster();
+    ps3_net_options.delay = 12;
     net_configure(&ps3_net_options);
     net_lobby_start();
     return 0;
@@ -1044,6 +1084,9 @@ void cb_net_leave(void)
     net_lobby_leave();
     net_end();
     net_lobby_reset();
+    if (relay_client.connected && relay_batch.count > 0) {
+        (void)relay_flush_due(1);
+    }
     cb_relay_leave(&relay_client);
     memset(&relay_batch, 0, sizeof(relay_batch));
     memset(relay_peers, 0, sizeof(relay_peers));
