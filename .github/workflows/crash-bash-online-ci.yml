@@ -46,11 +46,17 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: Crash-Bash-Enhanced/worker/package.json
+      - name: Install web dependencies for the Worker asset bundle
+        working-directory: Crash-Bash-Enhanced/web
+        run: npm install --no-audit --no-fund
+      - name: Build static lobby assets for Cloudflare Workers
+        working-directory: Crash-Bash-Enhanced/web
+        run: npm run build
       - name: Install Worker dependencies
         run: npm install --no-audit --no-fund
       - name: Run matchmaking integration tests
         run: npm test
-      - name: Validate Cloudflare Worker bundle without deployment
+      - name: Validate Worker and static asset bundle without deployment
         run: npx wrangler deploy --dry-run --outdir "$RUNNER_TEMP/crash-bash-worker-dist"
 
   websocket-client-host-test:
