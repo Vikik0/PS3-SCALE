@@ -187,3 +187,12 @@ export function decodeRelayEnvelope(bytes) {
   const senderId = Array.from(data.subarray(4, 20), value => value.toString(16).padStart(2, "0")).join("");
   return { senderId, payload: data.slice(22) };
 }
+export const CBN1_BYE_REASONS = Object.freeze({
+  LEFT: 1, DIFFERS: 2, FULL: 3, VERSION: 4, DATA: 5, BEHIND: 6
+});
+
+export function decodeBye(packet) {
+  const { type, body } = decodeCBN1(packet);
+  if (type !== TYPE.BYE || body.byteLength !== 10) throw new Error("Invalid CBN1 BYE packet.");
+  return { session: readU32(body, 0), me: body[4], reason: body[5], step: readI32(body, 6) };
+}
