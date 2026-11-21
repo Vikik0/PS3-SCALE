@@ -189,3 +189,11 @@ test("pauses the browser match when the PS3 host leaves the room", async () => {
   assert.equal(client.phase, "failed");
   assert.equal(transport.closed, true);
 });
+test("sends CBN1 BYE when leaving before the host starts the match", async () => {
+  const { transport, client } = setupClient();
+  await client.connect();
+  transport.fromHost(welcome());
+  client.stop();
+  assert.equal(decodeCBN1(transport.sent.at(-1).payload).type, CBN1_TYPES.BYE);
+  assert.equal(transport.closed, true);
+});
