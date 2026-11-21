@@ -1,34 +1,30 @@
 # Crash Bash Enhanced — PS3 / Online foundation
 
-This branch contains the native PS3 homebrew shell plus the first cloud lobby service.
+This branch contains the native PS3 homebrew shell and the first cloud-lobby integration.
 
 ## Current scope
 
 - Native PSL1GHT / Tiny3D PS3 application.
 - XMB-installable PKG build workflow.
 - Local guest identity; no PSN initialization or PSN login.
-- Controller navigation and offline input test arena.
-- Web lobby UI for two-player public/private rooms.
+- Controller navigation and an offline input-test arena.
+- Web lobby for two-player public/private rooms.
 - Guest tokens signed by a server-only HMAC secret.
-- Private Vercel Blob storage for room presence and WebRTC-style signaling payload exchange.
-- Host protocol tests and web security tests.
+- Private Vercel Blob storage for temporary room presence and signaling records.
+- Native PS3 HTTPS client using libcurl + PolarSSL: health check, public room list, create/join, ready heartbeat, room refresh and leave.
+- Host protocol and JSON parser tests, plus web lobby security tests.
 
 ## Honest implementation status
 
-This is **not yet the complete Crash Bash game**. It does not contain the original game engine, original mini-games, levels, or copyrighted assets.
+This is **not yet the complete Crash Bash game**. The repository does not contain the original game engine, original mini-games, levels, or copyrighted game assets.
 
-The web lobby is a separate cloud prototype. It can create and join rooms once deployed with a private Vercel Blob store and the required environment secret. The native PS3 client is not yet connected to the cloud API. Real-time gameplay transport, NAT traversal, and a relay fallback are not yet implemented. Do not treat a lobby connection as proof that a match can already be played.
+The Vercel lobby API is deployed. Its health endpoint confirms that private storage and guest-token signing are configured, and the public-room endpoint responds. The PS3 menu now has code to connect to that API over HTTPS and perform the lobby actions above.
 
-## Free-only hosting decision
+The current lobby is limited to two players. Real-time gameplay transport is not implemented: the service does not yet carry per-frame game inputs. NAT traversal, relay fallback, and integration with the original Crash Bash engine remain outstanding. A successful room connection must not be described as a playable online match.
 
-The connected Supabase organization is on a Pro plan and a new project was quoted at USD 10/month. This project therefore does **not** create or use a new Supabase project.
+## Hosting and cost
 
-The intended no-new-cost hosting path is:
-- GitHub Actions for builds and automated tests, within the free allowance.
-- Vercel Hobby for the personal web lobby and API.
-- Vercel Blob private storage for small, temporary room/signaling records, within included free quotas.
-
-Vercel Hobby and Blob have usage limits. The service must stop accepting new rooms or return a clear quota error when the free allowance is exhausted; it must never silently upgrade or incur paid usage.
+This stage uses the existing Vercel project and its existing private Blob store. No new Supabase project or separate paid hosting service was created during this stage. The account plan and current usage quotas have not been independently verified; check them before public release. The project must not silently upgrade or create paid resources.
 
 ## PSN independence
 
@@ -36,35 +32,39 @@ The PS3 client does not initialize NP / PSN services. Player identities are gene
 
 ## Build
 
-GitHub Actions uses:
-- `ghcr.io/02900/ps3-toolchain-tiny3d:latest`
-- `make pkg`
+GitHub Actions uses ghcr.io/02900/ps3-toolchain-tiny3d:latest, which includes PSL1GHT, Tiny3D, libcurl and PolarSSL. The build:
+
+1. Downloads the Mozilla CA bundle from curl.se into pkgfiles/USRDIR/cacert.pem.
+2. Compiles the native PS3 application.
+3. Builds the SELF and PKG outputs.
+4. Checks the PKG header and uploads build artifacts.
+
+TLS peer and host verification remain enabled; the client does not disable certificate validation.
 
 Expected artifacts:
-- `crashbash.elf`
-- `crashbash.self`
-- `crashbash.pkg`
-- `crashbash.gnpdrm.pkg`
+- crashbash.elf
+- crashbash.self
+- crashbash.pkg
+- crashbash.gnpdrm.pkg
 
-The workflow checks the PKG header and uploads artifacts. A successful CI build is not a substitute for testing on RPCS3 and a physical PS3.
+A successful CI build is not a substitute for testing on RPCS3 and a physical PS3.
 
 ## Web lobby
 
-The Vercel project root is `Crash-Bash-Enhanced/web`.
+The Vercel project deploys from the repository root. The root index.html and api/ files mirror the web app/API source for deployment.
 
-Required Vercel environment variable:
-- `CB_TOKEN_SECRET`: random secret of at least 40 characters.
-
-The private Blob store should be connected to the Vercel project so that `BLOB_READ_WRITE_TOKEN` is injected automatically.
+Required server-side environment:
+- CB_TOKEN_SECRET: random secret used to sign guest tokens.
+- BLOB_READ_WRITE_TOKEN: injected by the connected private Vercel Blob store.
 
 Endpoints:
-- `GET /api/health`
-- `GET /api/rooms`
-- `GET /api/rooms?code=ABC234` (requires a guest bearer token)
-- `POST /api/rooms` with actions `create`, `join`, `heartbeat`, `poll`, `signal`, and `leave`.
+- GET /api/health
+- GET /api/rooms
+- GET /api/rooms?code=ABC234 (requires a guest bearer token)
+- POST /api/rooms with actions create, join, heartbeat, poll, signal, and leave.
 
-Room storage is temporary and designed for matchmaking/signaling only, not per-frame gameplay traffic. The current two-player room limit is intentional.
+Room storage is temporary and designed for matchmaking/presence only, not per-frame gameplay traffic.
 
 ## Original game content
 
-No game dump, BIOS, or copyrighted game assets are included. Use legally obtained assets or continue with a clean-room implementation of original game logic.
+No game dump, BIOS, or copyrighted game assets are included. Use legally obtained game assets or continue with a clean-room implementation of original game logic.

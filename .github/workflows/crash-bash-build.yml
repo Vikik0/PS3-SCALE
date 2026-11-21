@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   host-tests:
-    name: Host protocol tests
+    name: Host protocol and JSON tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,6 +61,10 @@ jobs:
           command -v make_self
           command -v make_self_npdrm
           command -v package_finalize
+          command -v curl
+          test -f "$PS3DEV/portlibs/ppu/include/curl/curl.h"
+          test -f "$PS3DEV/portlibs/ppu/lib/libcurl.a"
+          test -f "$PS3DEV/portlibs/ppu/lib/libpolarssl.a"
       - name: Build homebrew package
         working-directory: Crash-Bash-Enhanced
         run: |
@@ -71,6 +75,7 @@ jobs:
           test -s crashbash.self
           test -s crashbash.pkg
           test -s crashbash.gnpdrm.pkg
+          test -s pkgfiles/USRDIR/cacert.pem
           PKG_MAGIC="$(od -An -tx1 -N4 crashbash.gnpdrm.pkg | tr -d ' \\n')"
           test "$PKG_MAGIC" = "7f504b47"
           echo "Build outputs:"

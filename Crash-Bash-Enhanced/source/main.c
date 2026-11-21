@@ -9,12 +9,14 @@
 #include <sysutil/sysutil.h>
 #include <net/net.h>
 #include "font8x12.h"
+#include "online_menu.h"
 
 #define MENU_COUNT 5
 static volatile int g_exit_requested = 0;
 static u32 *g_font_texture = NULL;
 static int g_selected = 0;
 static int g_network_state = 0;
+static int g_online_state = 0;
 static int g_screen = 0;
 static int g_demo_x = 410, g_demo_y = 270;
 static char g_guest_name[32] = "Guest-00000000";
@@ -73,7 +75,12 @@ static void draw_home(void)
         text(472, 310, 16, 0xff9a80ff, "NETWORK INIT FAILED");
     else
         text(472, 310, 16, 0xb9c7ceff, "NOT TESTED");
-    text(472, 352, 15, 0x9bb4c2ff, "CLOUD SERVICE: NOT LINKED");
+    if (g_online_state == 1)
+        text(472, 352, 15, 0x7ce0a8ff, "CLOUD LOBBY LINK OK");
+    else if (g_online_state < 0)
+        text(472, 352, 15, 0xff9a80ff, "CLOUD LOBBY OFFLINE");
+    else
+        text(472, 352, 15, 0x9bb4c2ff, "CLOUD NOT TESTED");
     rect(58, 438, 680, 32, 0x0b1720ff);
     text(72, 444, 13, 0x9bb4c2ff, g_status);
     text(60, 474, 12, 0x6d8794ff, "CROSS: SELECT     UP/DOWN: MOVE     CIRCLE: BACK");
@@ -102,11 +109,16 @@ static void make_guest_name(void)
 }
 static void check_network(void)
 {
-    int rc = netInitialize();
+    int rc;
+    if (g_network_state == 1) {
+        snprintf(g_status, sizeof(g_status), "Network stack is already initialized.");
+        return;
+    }
+    rc = netInitialize();
     if (rc == 0) {
         g_network_state = 1;
         snprintf(g_status, sizeof(g_status),
-                 "Network stack initialized; cloud matchmaking is not configured.");
+                 "Network stack initialized; open ONLINE ROOMS to check the cloud lobby.");
     } else {
         g_network_state = -1;
         snprintf(g_status, sizeof(g_status), "Network initialization failed: 0x%08X",
@@ -122,8 +134,8 @@ static void activate_selection(void)
         break;
     case 1: check_network(); break;
     case 2:
-        snprintf(g_status, sizeof(g_status),
-                 "Cloud rooms are not linked yet; this build will not fake an online session.");
+        cb_online_menu(g_guest_name, &g_network_state, &g_online_state,
+                       &g_exit_requested, g_status, sizeof(g_status));
         break;
     case 3: g_screen = 1; break;
     default: g_exit_requested = 1; break;
