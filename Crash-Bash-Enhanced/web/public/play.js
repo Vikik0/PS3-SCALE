@@ -171,12 +171,15 @@ function startEmulator(primary, bios, externalFiles, blobUrls) {
     };
     expose();
   };
-  window.EJS_onExit = () => {
-    emulatorStarted = false;
-    startButton.disabled = false;
-    releaseLocalObjectUrls();
-    window.CBASH_EMULATOR_READY = false;
-    setStatus("Emulator closed. Your disc image and BIOS remain on this device.");
+  window.EJS_ready = () => {
+    // EmulatorJS 4.2.x emits lifecycle events on the emulator instance.
+    window.EJS_emulator?.on("exit", () => {
+      emulatorStarted = false;
+      startButton.disabled = false;
+      releaseLocalObjectUrls();
+      window.CBASH_EMULATOR_READY = false;
+      setStatus("Emulator closed. Your disc image and BIOS remain on this device.");
+    });
   };
 
   loaderScript = document.createElement("script");
