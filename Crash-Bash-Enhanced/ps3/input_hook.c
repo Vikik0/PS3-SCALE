@@ -133,6 +133,7 @@ static int32_t cb_cell_pad_get_data(uint32_t port_no, CellPadData *data)
     int slot;
 
     if (port_no == 0) {
+        cb_net_ui_poll();
         (void)cb_net_lobby_poll();
     }
 
