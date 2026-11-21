@@ -25,6 +25,10 @@ Online networking is not the current blocker because it is deferred until the lo
 5. Public TU 1.16 offset lists contain entity/player script routines, but the list is multiplayer-context research and does not prove Campaign compatibility.
 6. Ghosts modding guides describe SPRX/modified-EBOOT/RTM workflows and warn that CEX/DEX executable variants must not be mixed.
 
+## Additional IW6 script-level evidence
+
+A public IW6 Multiplayer/Extinction script dump contains mode-level `isSplitScreen()`, per-player `isSplitscreenPlayer()` and primary-player `isSplitscreenPlayerPrimary()` checks. It also contains the Extinction down/revive path. This is useful evidence that the IW6 script layer models split-screen identity, but the dump's exact platform/TU provenance is not established and it contains no Campaign script tree. See `docs/iw6-native-splitscreen-reference.md`.
+
 ## Preferred technical strategy
 
 Reuse the game's existing two-local-player initialization path from an offline mode. Compare the working local two-player mode with Campaign to identify which local-player structures, input routing, viewports, player entities and HUD state are absent in Campaign.
