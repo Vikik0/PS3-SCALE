@@ -57,7 +57,7 @@ References:
 1. Add the WebGL 2 browser renderer and an Emscripten build of the game runtime.
 2. Add browser-side disc-image selection and local-only loading; no disc image is uploaded to the server.
 3. Validate the PS3 lockstep-to-CBU1/CBR1 shim under packet loss, high RTT, disconnects, and reconnects; tune the fixed relay input delay from measured results.
-4. Configure Cloudflare deployment credentials, deploy the Worker, and publish the lobby. The PS3 client now uses certificate-verified HTTPS/WSS; local TLS integration tests cover its handshake and relay protocol.
+4. Configure Cloudflare deployment credentials; the deployment workflow now builds the Vite lobby, deploys the static assets and Worker together, and checks the public /health endpoint. The PS3 client now uses certificate-verified HTTPS/WSS; local TLS integration tests cover its handshake and relay protocol.
 5. Install the generated PKG on physical PS3 hardware and verify the VSH loader, process injection, and in-game host/join menu (SELECT + L3 + R3).
 6. Test matching builds, input delay, disconnect/rejoin, and deterministic frame fingerprints on a real PS3 and a real browser.
 
