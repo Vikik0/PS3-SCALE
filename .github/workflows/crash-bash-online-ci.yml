@@ -144,7 +144,7 @@ jobs:
           nidgen="$src/tools/target/release/nidgen"
           test -x "$nidgen"
           mkdir -p "$RUNNER_TEMP/crashbash-ps3-stubs"
-          for stub in io net netctl lv2 sysmodule fs libc; do
+          for stub in io net netctl lv2 sysmodule fs c; do
             out="$RUNNER_TEMP/crashbash-ps3-stubs/$stub"
             mkdir -p "$out"
             "$nidgen" archive \
@@ -163,7 +163,7 @@ jobs:
             fi
           done
           test -f "$PS3DK/ppu/include/cell/pad.h"
-          for stub in io net netctl lv2 sysmodule fs libc; do
+          for stub in io net netctl lv2 sysmodule fs c; do
             test -f "$PS3DK/ppu/lib/lib${stub}_stub.a"
           done
       - name: Build Crash Bash PS3 input bridge
