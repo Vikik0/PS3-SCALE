@@ -110,7 +110,7 @@ function roomCard() {
         <button class="button button-primary" data-action="ready" ${room.status !== "waiting" ? "disabled" : ""}>${me?.ready ? "CANCEL READY" : "I'M READY"}</button>
         ${isHost ? `<button class="button button-start" data-action="start" ${!allReady || room.status !== "waiting" ? "disabled" : ""}>START MATCH <span>→</span></button>` : ""}
       </div>
-      <p class="room-footnote">${state.relayStatus === "connected" ? `ROOM RELAY CONNECTED · ${state.relayPackets} PACKETS RECEIVED` : state.relayStatus === "connecting" ? "CONNECTING TO ROOM RELAY..." : state.relayStatus === "error" ? "ROOM RELAY CONNECTION FAILED" : room.status === "running" ? "MATCH STARTED · WAITING FOR RELAY CONNECTION" : "Room relay opens after the host starts the match."}</p>
+      <p class="room-footnote">${state.relayStatus === "connected" ? "ROOM RELAY CONNECTED · " + state.relayPackets + " PACKETS RECEIVED" : state.relayStatus === "connecting" ? "CONNECTING TO ROOM RELAY..." : state.relayStatus === "error" ? "ROOM RELAY CONNECTION FAILED" : room.status === "running" ? "MATCH STARTED · WAITING FOR RELAY CONNECTION" : "Room relay opens after the host starts the match."}</p>
     </div>`;
 }
 
