@@ -16,7 +16,3 @@ s32 sysThreadCreate(sys_ppu_thread_t *threadid, void (*entry)(void *),
                              priority, stacksize, flags, threadname);
 }
 
-/* The PRX CRT does not use the process crt1.c constructor that sets this
- * newlib/libgcc readiness flag. The PS3 process heap is already initialized
- * before an injected PRX runs. */
-int __ps3dk_heap_ready = 1;
