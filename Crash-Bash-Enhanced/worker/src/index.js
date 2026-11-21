@@ -13,7 +13,7 @@ const RELAY_AUTH_PREFIX = "cbash-auth.";
 const RELAY_TICKET_PREFIX = "cbash-ticket.";
 const RELAY_MAGIC = new Uint8Array([0x43, 0x42, 0x52, 0x31]); // CBR1
 const RELAY_MAX_PAYLOAD = 1200;
-const RELAY_MAX_MESSAGE = 24576;
+const RELAY_MAX_MESSAGE = 28672;
 const RELAY_MAX_BATCH_PACKETS = 32;
 const RELAY_MAX_MESSAGES_PER_SECOND = 5;
 
