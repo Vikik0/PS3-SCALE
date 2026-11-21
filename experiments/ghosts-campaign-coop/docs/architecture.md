@@ -44,11 +44,15 @@ Use the game's own local-player viewport/input paths wherever possible. Verify:
 - HUD elements and prompts are associated with the correct local player;
 - scripted camera sequences do not steal or merge both players' input.
 
-### 4. Campaign systems
+### 4. Player readiness gate
+
+Before the Campaign adapter enables Player 2 controls, `ghc_local_player_gate_validate()` must confirm two native split-screen player identities, primary/secondary order, controller-port mapping, unique local-client/client/entity IDs, Logan/guest-soldier roles, and distinct `gclient`/`gentity`/player-state addresses. It is a fail-closed validation layer, not a spawn routine. See `docs/local-player-gate.md`.
+
+### 5. Campaign systems
 
 Campaign code may assume one player for triggers, objective ownership, cinematics, camera transitions, checkpoints, AI targeting, vehicles, scripted sequences, health and mission state. Each assumption must be tested and adapted only where required.
 
-### 5. Downed/revive
+### 6. Downed/revive
 
 The existing C state machine is a standalone rules component. In local mode one console is authoritative:
 1. One player becomes downed; the other remains active.
