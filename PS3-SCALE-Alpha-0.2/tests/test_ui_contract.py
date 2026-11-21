@@ -333,9 +333,16 @@ assert "PS3SCALE_SCAN_GRID_COUNT" in library_ui
 assert "MATCHED PROFILE - REVIEW FIRST" in library_ui
 assert "MATCHED PS2 CONFIG - REVIEW FIRST" in library_ui
 assert "NO MATCHED FILE - PLAY UNMODIFIED" in library_ui
-assert "CONCEPT PREVIEW" in library_ui
+assert "REAL GAME COMPARISON" in library_ui
+assert "NO MATCHED SCREENSHOTS" in library_ui
 assert "This is NOT an HD texture replacement." in library_ui
-assert "Illustration only; not real game footage." in library_ui
+assert "No matched before/after images are available." in library_ui
+assert "ya2d_drawTextureEx(g_preview_before_texture" in library_ui
+assert "ya2d_drawTextureEx(g_preview_after_texture" in library_ui
+assert "update_selected_preview" in src
+assert "PS3SCALE_PREVIEW_DIR" in src
+assert "CONCEPT PREVIEW" not in src
+assert "Illustration only; not real game footage." not in src
 assert "Higher Resolution (profile-dependent)" not in library_ui
 assert "Improved Texture Sharpness" not in library_ui
 assert "Smoother Performance (game-specific)" not in library_ui
@@ -377,12 +384,16 @@ assert 'draw_soft_chip(28.0f, 136.0f, 132.0f, "General", active_group == 0)' in 
 assert 'draw_soft_chip(28.0f, 184.0f, 132.0f, "Display", active_group == 1)' in settings_ui
 assert 'draw_soft_chip(28.0f, 232.0f, 132.0f, "Audio", active_group == 2)' in settings_ui
 assert 'draw_soft_chip(28.0f, 280.0f, 132.0f, "System", active_group == 3)' in settings_ui
-assert "draw_rounded_rect(198.0f, y - 5.0f, 620.0f, 28.0f" in settings_ui
-assert "draw_rounded_outline(198.0f, y - 5.0f, 620.0f, 28.0f" in settings_ui
+assert "draw_rounded_rect(198.0f, y - 3.0f, 620.0f, 25.0f" in settings_ui
+assert "draw_rounded_outline(198.0f, y - 3.0f, 620.0f, 25.0f" in settings_ui
+assert "Enhancement Storage" in settings_ui
+assert "TEMPORARY" in settings_ui and "PERMANENT" in settings_ui
+assert "Music 1" in settings_ui and "Music 2" in settings_ui
+assert "MUSIC 1 ONLY" in settings_ui and "MUSIC 2 ONLY" in settings_ui
 assert "draw_rounded_rect(748.0f, y, 54.0f, 18.0f, 9.0f" in settings_ui
 assert "g_music_volume" in settings_ui and "g_animation_enabled" in settings_ui
 assert "g_music_track1_missing" in settings_ui
-help_ui = section("static void draw_help(void)", "static void draw_app_icon_preview(float x, float y)")
+help_ui = section("static void draw_help(void)", "static void draw_about(void)")
 for token in ("Scan Games", "Select a Game", "Review Match",
               "Save Data Safely", "Start Game", "support@ps3scale.app",
               "Report an Issue", "Send Feedback",
@@ -395,12 +406,11 @@ for token in ("READ-ONLY SCANNING", "VERSION-MATCHED DATA",
               "NO AUTO-APPLY", "Hardware Information",
               "CONSOLE DETECTED", "NOT AVAILABLE",
               "No universal upscaler or guaranteed 60 FPS is claimed.",
-              "draw_app_icon_preview(645.0f, 136.0f)"):
+              "draw_soft_card(20.0f, 88.0f, 814.0f, 356.0f, 0)"):
     assert token in about_ui
-icon_ui = section("static void draw_app_icon_preview(float x, float y)",
-                  "static void draw_about(void)")
-assert "draw_rounded_rect(x, y, 164.0f, 190.0f, 18.0f" in icon_ui
-assert "PS3" in icon_ui and "SCALE" in icon_ui
+assert "draw_app_icon_preview" not in about_ui
+assert "XMB APP ICON" not in about_ui
+assert "draw_app_icon_preview" not in src
 toast_ui = section("static void draw_profile_toast(void)", "static void draw_ui(void)")
 assert "draw_rounded_rect(568.0f, 16.0f, 264.0f, 48.0f, 10.0f" in toast_ui
 assert "ONE-LAUNCH PROFILE ARMED" in toast_ui
@@ -431,19 +441,31 @@ assert "ps3scale_community_index_load" in src
 assert "ps3scale_community_file_matches_game" in src
 assert "ONLINE GAME DATABASE" in src
 assert "APPLY: REFERENCE ONLY - NOT INSTALLED" not in src
-assert "X: DOWNLOAD TO COMMUNITY_DOWNLOADS" in src
-assert "DATA ONLY - NEVER EXECUTED OR AUTO-APPLIED" in src
+assert "X: INSTALL NCL" in src
+assert "CROSS: INSTALL TO ARTEMIS USERLIST" in src
+assert "MODE: TEMPORARY" in src and "MODE: PERMANENT" in src
+assert "COMMUNITY_DOWNLOADS" not in src
+assert "ARTPS3001/USRDIR/USERLIST" in src
+assert "PS3SCALE_ARTEMIS_USERLIST_DIR" in src
+assert "PS3SCALE_TEMP_ENHANCEMENT_LIST_PATH" in src
+assert "cleanup_temporary_enhancements" in src
+assert "record_temporary_enhancement" in src
+assert "g_community_download_persistent" in src
+assert "g_enhancement_persistent" in src
 assert "community_download_worker" in src
 assert "start_community_file_download" in src
 assert "PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT" in src
-assert "community_downloads" in src
 assert "community_component_is_safe" in src
 assert "community_extension_is" in src
 assert "memchr(header, 0, got)" in src
-assert "CROSS OPEN/DOWNLOAD" in src
+assert "ONLY VERIFIED NCL GRAPHICS PATCHES CAN BE INSTALLED." in src
+assert "CROSS INSTALL/DETAILS" in src
 assert "SQUARE FILTER" in src
-assert "TRIANGLE SEARCH" in src
+assert "TRIANGLE REFRESH" in src
+assert "SELECT SEARCH" in src
 assert "L1/R1 PREV/NEXT" in src
+assert "g_online_first_opened" in src
+assert "g_online_filter_mode = ONLINE_FILTER_GRAPHICS_ANY" in src
 assert "GRAPHICS + EXACT" in src
 assert "online_filter_exact_only" in src
 assert "ps3scale_community_file_matches_exact_game" in src
@@ -485,24 +507,27 @@ assert "i = page_start;" in online_ui
 assert "visible_count < page_size;" in online_ui
 assert "RESULTS %u  |  PAGE %u/%u" in online_ui
 assert "SEARCH RESULT: NO LOCAL GAME MATCH" in online_ui
-assert "MATCH: ID OR TITLE/REGION + VERSION" in online_ui
+assert "MATCH: EXACT TITLE ID / APP VERSION" in online_ui
 assert "RESULTS 0  |  NO MATCHES" in online_ui
 assert 'kind = "VER OK";' in online_ui
 assert "MATCH: REVIEW TITLE ID / VERSION" in online_ui
 assert "PROFILE CACHE: LOADED" in online_ui
 assert "GITHUB INDEX: LOADED" in online_ui
 assert "g_catalog_sync_running" in online_ui
-assert "DATA ONLY - NEVER EXECUTED OR AUTO-APPLIED" in online_ui
-assert "NO DOWNLOAD: ONLY NCL/TXT UP TO 2 MB" in online_ui
+assert "MODE: TEMPORARY" in online_ui
+assert "MODE: PERMANENT" in online_ui
+assert "CROSS: INSTALL TO ARTEMIS USERLIST" in online_ui
+assert "TRIANGLE: REFRESH ONLINE DATABASE" in online_ui
+assert "NCL GRAPHICS PATCH" in online_ui
 assert "PS2 compatibility is game-specific." in online_ui
 assert "Not an HD texture or 1080p upgrade." in online_ui
-assert "START: SYNC ONLINE METADATA" in online_ui
 assert "draw_rounded_rect(row_x, row_y, row_w, row_h" in online_ui
 assert "draw_soft_chip(414.0f, 190.0f" in online_ui
 assert "LEFT/RIGHT PAGE" in online_ui
-assert "CROSS OPEN/DOWNLOAD" in online_ui
-assert 'selected ? "X: GAME DETAILS" : "X: DOWNLOAD DATA"' in online_ui
-assert "SELECT: SAVE TO COMMUNITY_DOWNLOADS" in online_ui
+assert "CROSS INSTALL/DETAILS" in online_ui
+assert "X: INSTALL NCL" in online_ui
+assert "exact_local_game" in online_ui
+assert "g_artemis_installed" in online_ui
 
 def online_page_state(total, selected, page_size=8):
     if total == 0:
@@ -543,10 +568,12 @@ assert "PS3SCALE_ONLINE_PAGE_SIZE" in online_input
 assert "(left && !old_left)" in online_input
 assert "(right && !old_right)" in online_input
 assert "next_selection >= matches" in online_input
-assert "if (select && !old_select && matches)" in online_input
-assert "start_community_file_download(community)" in online_input
-assert "open_selected_online_match();" in online_input
+assert "if (select && !old_select)" in online_input
+assert "start_community_file_download(community, match)" in online_input
+assert "start_catalog_sync_worker(1)" in online_input
+assert "if (triangle && !old_triangle)" in online_input
 assert "open_online_search_keyboard" in online_input
+assert "open_selected_online_match();" in online_input
 assert "ONLINE_FILTER_MODE_COUNT" in online_input
 assert "feature/online-graphics-database" in src
 
@@ -637,8 +664,8 @@ assert "daylight" in src and "night" in src
 assert "tiny3d_AlphaTest(1, 0x10, TINY3D_ALPHA_FUNC_GEQUAL);" in draw_ui_impl
 assert "TINY3D_CLEAR_ZBUFFER" not in draw_ui_impl
 assert "draw_home_ambient();" in draw_ui_impl
-assert "draw_app_icon_preview" in src
-assert "XMB APP ICON" in src
+assert "draw_app_icon_preview" not in src
+assert "XMB APP ICON" not in src
 assert "scene_camera_space_point" in src
 assert "PS3SCALE_STAIR_STEPS 32" in src
 assert "g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES" in src
@@ -648,6 +675,11 @@ assert '"PS3 / PS2 Library"' in home and '"Game Profiles"' in home
 assert "draw_ps_symbol" in home
 project_root = source_path.parents[2]
 makefile = (project_root / "Makefile").read_text(encoding="utf-8")
+xmb_assets = (project_root / "scripts/generate_xmb_assets.py").read_text(encoding="utf-8")
+assert "approved pearl-white staircase source" in xmb_assets
+assert 'icon.save(PKG/"ICON0.PNG")' in xmb_assets
+assert 'PKG / "PIC1.PNG"' in xmb_assets
+assert 'PKG / "PIC0.PNG"' in xmb_assets
 assert "scripts/generate_xmb_assets.py" in makefile
 assert "PIC1.PNG" in makefile and "ICON0.PNG" in makefile and "PIC0.PNG" in makefile
 xmb_generator = (project_root / "scripts/generate_xmb_assets.py").read_text(encoding="utf-8")
@@ -781,6 +813,14 @@ assert "actions/setup-python@v5" not in index_workflow
 
 # Keep the visible app, support payload and local report on one version.
 assert '#define PS3SCALE_APP_VERSION "ALPHA 0.23"' in src
+assert '#define SETTINGS_COUNT 10' in src
+assert 'fprintf(fp, "settings_version=3\\n");' in src
+assert 'enhancement_persistent=%d' in src
+assert 'g_settings_selected == 9' in src
+assert 'g_online_first_opened = 0' in src
+assert 'if (!g_online_first_opened)' in main
+assert 'start_catalog_sync_worker(1)' in main
+assert 'FEATURES' not in home
 assert "ALPHA 0.21" not in src
 assert "CFW 4.92" not in src
 assert "PS3SCALE_APP_VERSION" in section("static void draw_splash(void)",
@@ -793,7 +833,23 @@ assert 'fprintf(fp, "APP VERSION: %s\\n", PS3SCALE_APP_VERSION);' in src
 about_ui = section("static void draw_about(void)",
                    "static void draw_profile_toast(void)")
 assert "version_line" in about_ui
+assert "draw_app_icon_preview" not in about_ui
 assert "ps3scale_hardware_family_name(g_hardware_info.family)" in about_ui
+webman_control = (project_root / "source/ps3/webman_control.c").read_text(encoding="utf-8")
+webman_header = (project_root / "include/ps3scale/webman.h").read_text(encoding="utf-8")
+for token in ("sysModuleLoad(SYSMODULE_NET)", "sysModuleLoad(SYSMODULE_NETCTL)",
+              "netInitialize()", "netCtlInit()", "netCtlTerm()",
+              "netDeinitialize()", "PS3SCALE_WEBMAN_ERROR_CONNECT",
+              "PS3SCALE_WEBMAN_ERROR_HTTP_STATUS", "127.0.0.1"):
+    assert token in webman_control, f"Missing webMAN transport behavior: {token}"
+for token in ("PS3SCALE_WEBMAN_ERROR_NETWORK_INIT",
+              "PS3SCALE_WEBMAN_ERROR_CONNECT",
+              "PS3SCALE_WEBMAN_ERROR_HTTP_STATUS"):
+    assert token in webman_header
+assert "PS3MAPI NOT ACTIVE. GAME STARTED WITHOUT PROFILE." in src
+assert "WEBMAN MOD NOT RESPONDING ON LOCAL HTTP PORT 80." in src
+assert "ps3scale_profile_script_remove(g_game_launch_target.title_id)" in game_worker
+
 # Download workers are joined: never create a detached thread and then join it.
 ps2_worker = section("static void ps2_config_download_worker(void *arg)",
                      "static void start_ps2_config_download(void)")
