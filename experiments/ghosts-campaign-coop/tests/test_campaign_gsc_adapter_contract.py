@@ -14,12 +14,16 @@ class CampaignGscAdapterContractTests(unittest.TestCase):
         self.assertIn("issplitscreen()", source)
         self.assertIn("issplitscreenplayer()", source)
         self.assertIn("issplitscreenplayerprimary()", source)
+        self.assertIn("var_1 issplitscreenplayerprimary()", source)
+        self.assertIn("for ( var_0 = 0; var_0 < level.playerpiggyback.size; var_0++ )", source)
+        self.assertNotIn("level.playerpiggyback[0]", source)
+        self.assertNotIn("level.playerpiggyback[1]", source)
         self.assertIn('level notify( "ghc_campaign_players_ready" )', source)
 
     def test_registry_fails_closed_when_native_player_pair_is_missing(self):
         source = ADAPTER.read_text(encoding="utf-8")
         self.assertIn("level.ghc_campaign_coop_ready = 0", source)
-        self.assertIn("level.ghc_campaign_player_count < 2", source)
+        self.assertIn("level.ghc_campaign_player_count != 2", source)
         self.assertIn("return 0", source)
 
     def test_registry_does_not_attempt_to_spawn_or_clone_a_player(self):
