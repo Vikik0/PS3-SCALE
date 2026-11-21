@@ -170,8 +170,8 @@ def generate(font):
     ).convert("RGBA")
     overlay = Image.new("RGBA", pic0.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
-    draw.rounded_rectangle(
-        (143, 13, 299, 163), radius=7,
+    draw.rectangle(
+        (143, 13, 299, 163),
         fill=(251, 249, 255, 232),
         outline=(176, 150, 224, 255), width=2
     )
@@ -188,8 +188,7 @@ def generate(font):
     font_small = load_display_font(8, bold=True)
 
     def centered_text(label, y, selected_font, color):
-        box = draw.textbbox((0, 0), label, font=selected_font)
-        width = box[2] - box[0]
+        width, _height = draw.textsize(label, font=selected_font)
         x = 221 - width // 2
         draw.text((x, y), label, font=selected_font, fill=color)
 
