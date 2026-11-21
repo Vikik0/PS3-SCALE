@@ -189,6 +189,19 @@ for (let i = 0; i < 6; i++) {
 assert.equal(rateSocket.closed.code, 1008);
 assert.equal(rateSocket.closed.reason, "RATE_LIMITED");
 
+const pingRateSocket = new FakeSocket({
+  roomCode: code,
+  sessionId: players[3].session_id,
+  matchStarted: true,
+  rateWindowStartedAt: 0,
+  rateCount: 0
+});
+for (let i = 0; i < 6; i++) {
+  lobby.webSocketMessage(pingRateSocket, "PING");
+}
+assert.equal(pingRateSocket.closed.code, 1008);
+assert.equal(pingRateSocket.closed.reason, "RATE_LIMITED");
+
 const invalidEndpoint = await call(
   "/v1/rooms/" + code + "/endpoint",
   "POST",
