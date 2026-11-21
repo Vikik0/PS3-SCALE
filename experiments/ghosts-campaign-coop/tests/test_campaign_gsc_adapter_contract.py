@@ -10,6 +10,7 @@ class CampaignGscAdapterContractTests(unittest.TestCase):
     def test_registry_requires_two_native_split_screen_players(self):
         source = ADAPTER.read_text(encoding="utf-8")
         self.assertIn("level.playerpiggyback", source)
+        self.assertIn('level waittill( "level.players initialized" )', source)
         self.assertIn("issplitscreen()", source)
         self.assertIn("issplitscreenplayer()", source)
         self.assertIn("issplitscreenplayerprimary()", source)
