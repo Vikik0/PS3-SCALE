@@ -18,6 +18,7 @@ Crash Bash Enhanced is a community project to add a modern online layer around t
 - Host transfer if the host leaves.
 - Authenticated host UDP endpoint publishing and peer discovery.
 - Prototype room WebSocket relay with authenticated sender envelopes, 1200-byte payload limit, and per-client rate limiting.
+- Push-based room updates over WebSocket; no rapid lobby polling.
 - Responsive web lobby.
 - CI tests for the Worker and web build.
 
@@ -52,7 +53,7 @@ npm run dev
 
 ## Free hosting target
 
-The target is Cloudflare Workers Free with SQLite-backed Durable Objects. Free usage is capped: the prototype currently limits each relay client to five incoming binary messages per second. The exact free-tier budget and the resulting four-player ceiling are documented in docs/CROSSPLAY-ARCHITECTURE.md. No home PC or PSN account is required.
+The target is Cloudflare Workers Free with SQLite-backed Durable Objects. Free usage is capped: the prototype currently limits each relay client to five incoming WebSocket messages per second, including keepalive pings. The exact free-tier budget and the resulting four-player ceiling are documented in docs/CROSSPLAY-ARCHITECTURE.md. No home PC or PSN account is required.
 
 ## Automated checks
 
