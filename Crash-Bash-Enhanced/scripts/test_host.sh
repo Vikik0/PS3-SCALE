@@ -19,4 +19,5 @@ cc -std=c11 -Wall -Wextra -Werror -I"$ROOT/include" "$ROOT/source/archive.c" "$R
 cc -std=c11 -Wall -Wextra -Werror -I"$ROOT/include" "$ROOT/source/netcode.c" "$ROOT/tests/test_netcode.c" -o "$tmp_netcode"
 "$tmp_netcode"
 
-echo "Host protocol, JSON, archive and netcode tests passed."
+python3 "$ROOT/tests/test_extract_disc.py"
+echo "Host protocol, JSON, archive, netcode and disc-extractor tests passed."

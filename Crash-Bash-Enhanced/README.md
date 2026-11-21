@@ -13,7 +13,7 @@ This branch contains the native PS3 homebrew shell and the first cloud-lobby int
 - Private Vercel Blob storage for temporary room presence and signaling records.
 - Native PS3 HTTPS client using libcurl + PolarSSL: health check, public room list, create/join, ready heartbeat, room refresh and leave.
 - PS3 room controls: browse public rooms, create public/private rooms, and join a six-character invite code from the controller.
-- Host protocol and JSON parser tests, PS1 DAT sector-reader tests, deterministic input-packet codec tests, plus web lobby security tests.
+- Host protocol and JSON parser tests, PS1 DAT sector-reader tests, deterministic input-packet codec tests, BIN/CUE and PS-X EXE extraction tests, plus web lobby security tests.
 
 ## Honest implementation status
 
@@ -68,9 +68,9 @@ Room storage is temporary and designed for matchmaking/presence only, not per-fr
 
 ## Engine-port groundwork
 
-A first isolated engine-port component now reads a legally obtained `CRASHBSH.DAT` as 2048-byte sectors and indexed files. It validates buffer sizes, checks seek failures, and zero-pads short final sectors to match the reference PC archive reader. This is a tested file-I/O primitive only; the original engine, renderer, audio and gameplay are not yet integrated into the PS3 executable.
+A disc extraction tool now reads a retail PS1 BIN/CUE (Mode 2/2352), locates `CRASHBSH/CRASHBSH.DAT` and `SCUS_945.70` in ISO9660, reads the 992-entry DAT index from the PS-X EXE at virtual address `0x8004E110`, splits the archive into indexed files plus filler, and verifies a byte-identical reconstruction. It writes user-owned game data only to the chosen local output folder; no copyrighted game data is committed. The native PS3 archive reader remains an isolated file-I/O primitive, and the original engine, renderer, audio and gameplay are not yet integrated into the PS3 executable.
 
-Run `make host-test` to execute the archive tests alongside the existing protocol and JSON tests.
+Run `make host-test` to execute the archive, protocol, JSON, netcode and disc-extractor tests. To extract a retail BIN/CUE locally, run `python3 tools/extract_disc.py --bin "Crash Bash (USA).bin" --cue "Crash Bash (USA).cue" --out ./assets` from this directory.
 
 ## Online gameplay transport groundwork
 
