@@ -276,7 +276,7 @@ export class CrashBashLobby {
         return response(201, roomView(room));
       }
 
-      const route = path.match(/^\/v1\/rooms\/([A-Z0-9]{6})(?:\/(join|ready|start|leave|peer))?$/);
+      const route = path.match(/^\/v1\/rooms\/([A-Z0-9]{6})(?:\/(join|ready|start|leave|peer|endpoint))?$/);
       if (!route) throw fail(404, "NOT_FOUND", "API route was not found.");
       const code = route[1];
       const action = route[2] || "get";
