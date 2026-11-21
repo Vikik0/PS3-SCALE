@@ -283,6 +283,9 @@ assert.equal(ps3Join.status, 201);
 assert.equal(ps3Join.body.psn_required, false);
 assert.equal(typeof ps3Join.body.ticket, "string");
 assert.equal(ps3Join.body.ticket.length, 64);
+assert.equal(ps3Join.body.room.players.find(player =>
+  player.player_id === ps3Join.body.session_id
+).ready, true);
 const ticketRequest = new Request("https://crash-bash.test/v1/rooms/" + code + "/transport", {
   headers: { "Sec-WebSocket-Protocol": "cbash-v1, cbash-ticket." + ps3Join.body.ticket }
 });
