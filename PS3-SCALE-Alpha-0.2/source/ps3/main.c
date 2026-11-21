@@ -153,7 +153,7 @@ static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 #define PS3SCALE_SUPPORT_OUTBOX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox.txt"
 /* Replace with the URL of the separate PS3 SCALE Supabase project after deployment. */
 #define PS3SCALE_SUPPORT_URL "https://YOUR_PROJECT.supabase.co/functions/v1/ps3scale-support"
-#define PS3SCALE_APP_VERSION "ALPHA 0.25"
+#define PS3SCALE_APP_VERSION "ALPHA 0.26"
 #define PS3SCALE_PS2_CONFIG_INDEX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/ps2_config_index.tsv"
 #define PS3SCALE_PS2_CLASSICS_CONFIG_DIR "/dev_hdd0/game/PS2CONFIG/USRDIR/CONFIG/ENC"
 #define PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT (PS3SCALE_PS2_CONFIG_MAX_BYTES * 2u)
@@ -196,7 +196,14 @@ static int g_details_script_state = 0;
 static int g_apollo_installed = 0;
 static int g_artemis_installed = 0;
 static int g_webman_installed = 0;
-static char g_tools_message[96] = "CROSS: REFRESH TOOL STATUS.";
+static int g_tools_selected = 0;
+static char g_tools_message[128] = "SELECT A TOOL TO OPEN.";
+static sys_ppu_thread_t g_tool_launch_thread;
+static int g_tool_launch_thread_started = 0;
+static volatile int g_tool_launch_running = 0;
+static volatile int g_tool_launch_done = 0;
+static volatile int g_tool_launch_result = -1;
+static char g_tool_launch_title_id[10] = "";
 #define SETTINGS_COUNT 10
 #define PS3SCALE_SETTINGS_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/settings.cfg"
 enum {
@@ -3775,7 +3782,118 @@ static void refresh_companion_tool_status(void)
         file_contains_text_readonly("/dev_hdd0/boot_plugins.txt",
                                     "webftp_server.sprx");
     snprintf(g_tools_message, sizeof(g_tools_message),
-             "STATUS UPDATED. OPEN INSTALLED TOOLS FROM XMB.");
+             "STATUS UPDATED. SELECT APOLLO OR ARTEMIS.");
+}
+
+static void companion_tool_launch_worker(void *arg)
+{
+    (void)arg;
+    g_tool_launch_result = ps3scale_webman_start_app(g_tool_launch_title_id);
+    g_tool_launch_done = 1;
+    g_tool_launch_running = 0;
+    g_network_task_running = 0;
+}
+
+static void service_companion_tool_launch(void)
+{
+    if (!g_tool_launch_done)
+        return;
+
+    if (g_tool_launch_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_tool_launch_thread, &thread_result);
+        g_tool_launch_thread_started = 0;
+    }
+    g_tool_launch_done = 0;
+    g_tool_launch_running = 0;
+
+    if (g_tool_launch_result == 0) {
+        snprintf(g_tools_message, sizeof(g_tools_message),
+                 "WEBMAN ACCEPTED THE APP LAUNCH. RETURNING TO XMB.");
+        g_exit_requested = 1;
+    } else if (g_tool_launch_result == PS3SCALE_WEBMAN_ERROR_NETWORK_INIT) {
+        snprintf(g_tools_message, sizeof(g_tools_message),
+                 "PS3 NETWORK MODULES FAILED TO INITIALIZE.");
+    } else if (g_tool_launch_result == PS3SCALE_WEBMAN_ERROR_SOCKET) {
+        snprintf(g_tools_message, sizeof(g_tools_message),
+                 "LOCAL WEBMAN SOCKET COULD NOT BE OPENED.");
+    } else if (g_tool_launch_result == PS3SCALE_WEBMAN_ERROR_CONNECT) {
+        snprintf(g_tools_message, sizeof(g_tools_message),
+                 "WEBMAN MOD NOT RESPONDING ON LOCAL HTTP PORT 80.");
+    } else if (g_tool_launch_result == PS3SCALE_WEBMAN_ERROR_SEND) {
+        snprintf(g_tools_message, sizeof(g_tools_message),
+                 "WEBMAN APP LAUNCH REQUEST COULD NOT BE SENT.");
+    } else if (g_tool_launch_result == PS3SCALE_WEBMAN_ERROR_RESPONSE) {
+        snprintf(g_tools_message, sizeof(g_tools_message),
+                 "WEBMAN DID NOT RETURN AN HTTP RESPONSE.");
+    } else if (g_tool_launch_result == PS3SCALE_WEBMAN_ERROR_HTTP_STATUS) {
+        snprintf(g_tools_message, sizeof(g_tools_message),
+                 "WEBMAN REJECTED THE COMPANION APP TITLE ID.");
+    } else {
+        snprintf(g_tools_message, sizeof(g_tools_message),
+                 "INVALID COMPANION APP TITLE ID.");
+    }
+}
+
+static void start_selected_companion_tool(void)
+{
+    const char *title_id = NULL;
+    const char *tool_name = NULL;
+    int rc;
+
+    if (g_tools_selected == 0) {
+        if (!g_apollo_installed) {
+            snprintf(g_tools_message, sizeof(g_tools_message),
+                     "APOLLO SAVE TOOL IS NOT INSTALLED.");
+            return;
+        }
+        title_id = "NP0APOLLO";
+        tool_name = "APOLLO SAVE TOOL";
+    } else {
+        if (file_exists_readonly(PS3SCALE_ARTEMIS_EBOOT_PATH)) {
+            title_id = "ARTPS3001";
+        } else if (file_exists_readonly(PS3SCALE_ARTEMIS_R5_EBOOT_PATH)) {
+            title_id = "ARTZ00001";
+        } else {
+            snprintf(g_tools_message, sizeof(g_tools_message),
+                     "ARTEMIS PS3 IS NOT INSTALLED.");
+            return;
+        }
+        tool_name = "ARTEMIS PS3";
+    }
+
+    if (!g_webman_installed) {
+        snprintf(g_tools_message, sizeof(g_tools_message),
+                 "WEBMAN MOD PLUGIN FILE WAS NOT DETECTED.");
+        return;
+    }
+    if (g_network_task_running || g_tool_launch_running ||
+        g_tool_launch_done || g_tool_launch_thread_started) {
+        snprintf(g_tools_message, sizeof(g_tools_message),
+                 "WAIT FOR THE CURRENT NETWORK TASK TO FINISH.");
+        return;
+    }
+
+    snprintf(g_tool_launch_title_id, sizeof(g_tool_launch_title_id),
+             "%s", title_id);
+    g_tool_launch_result = -1;
+    g_tool_launch_done = 0;
+    g_tool_launch_running = 1;
+    g_network_task_running = 1;
+    rc = sysThreadCreate(&g_tool_launch_thread,
+                         companion_tool_launch_worker, NULL,
+                         1500, 0x8000, THREAD_JOINABLE,
+                         "PS3 SCALE Tool Launch");
+    if (rc == 0) {
+        g_tool_launch_thread_started = 1;
+        snprintf(g_tools_message, sizeof(g_tools_message),
+                 "OPENING %s THROUGH WEBMAN MOD...", tool_name);
+    } else {
+        g_tool_launch_running = 0;
+        g_network_task_running = 0;
+        snprintf(g_tools_message, sizeof(g_tools_message),
+                 "COULD NOT START THE COMPANION TOOL WORKER.");
+    }
 }
 
 static void draw_rounded_rect(float x, float y, float w, float h,
@@ -5454,8 +5572,16 @@ static void draw_settings(void)
 static void draw_tools(void)
 {
     char line[128];
-    draw_page_header("Companion Tools", "Optional tools detected on the console");
+    int selected_apollo = (g_tools_selected == 0);
+
+    draw_page_header("Companion Tools", "Open installed tools directly from PS3 SCALE");
     draw_soft_card(24.0f, 96.0f, 806.0f, 320.0f, 0);
+
+    draw_rounded_rect(40.0f, 108.0f, 774.0f, 78.0f, 9.0f,
+                      selected_apollo ? 0xeee8ffff : 0xf8f6ffb0);
+    if (selected_apollo)
+        draw_rounded_outline(40.0f, 108.0f, 774.0f, 78.0f, 9.0f,
+                             0xbba5f0ff);
     set_ui_font_size(10, 15);
     draw_text(48.0f, 120.0f, 0x29243fff, "APOLLO SAVE TOOL");
     snprintf(line, sizeof(line), "STATUS: %s",
@@ -5464,32 +5590,41 @@ static void draw_tools(void)
               g_apollo_installed ? 0x2c9f8eff : 0xffcc66ff, line);
     set_ui_font_size(7, 11);
     draw_text(48.0f, 148.0f, 0x77718fff,
-              "Save backup, restore, resign, trophy and license tools.");
-    draw_solid_rect(48.0f, 176.0f, 748.0f, 1.0f, 0xd9d1eaff);
+              "Open Apollo for save backup, restore, resign and license tools.");
 
+    draw_rounded_rect(40.0f, 198.0f, 774.0f, 78.0f, 9.0f,
+                      selected_apollo ? 0xf8f6ffb0 : 0xeee8ffff);
+    if (!selected_apollo)
+        draw_rounded_outline(40.0f, 198.0f, 774.0f, 78.0f, 9.0f,
+                             0xbba5f0ff);
     set_ui_font_size(10, 15);
-    draw_text(48.0f, 196.0f, 0x29243fff, "ARTEMIS PS3");
+    draw_text(48.0f, 210.0f, 0x29243fff, "ARTEMIS PS3");
     snprintf(line, sizeof(line), "STATUS: %s",
              g_artemis_installed ? "INSTALLED" : "NOT DETECTED");
-    draw_text(642.0f, 196.0f,
+    draw_text(642.0f, 210.0f,
               g_artemis_installed ? 0x2c9f8eff : 0xffcc66ff, line);
     set_ui_font_size(7, 11);
-    draw_text(48.0f, 224.0f, 0x77718fff,
-              "Title-specific cheat database and its own runtime plugin.");
-    draw_solid_rect(48.0f, 252.0f, 748.0f, 1.0f, 0xd9d1eaff);
+    draw_text(48.0f, 238.0f, 0x77718fff,
+              "Open Artemis to select and run a downloaded game NCL code.");
 
-    set_ui_font_size(10, 15);
-    draw_text(48.0f, 272.0f, 0x29243fff, "webMAN MOD");
-    snprintf(line, sizeof(line), "STATUS: %s",
-             g_webman_installed ? "PLUGIN FOUND" : "NOT DETECTED");
-    draw_text(642.0f, 272.0f,
+    draw_rounded_rect(40.0f, 288.0f, 774.0f, 66.0f, 9.0f, 0xf8f6ffb0);
+    set_ui_font_size(9, 13);
+    draw_text(48.0f, 300.0f, 0x29243fff, "webMAN MOD");
+    snprintf(line, sizeof(line), "PLUGIN FILE: %s",
+             g_webman_installed ? "FOUND" : "NOT DETECTED");
+    draw_text(642.0f, 300.0f,
               g_webman_installed ? 0x2c9f8eff : 0xffcc66ff, line);
     set_ui_font_size(7, 11);
-    draw_text(48.0f, 300.0f, 0x77718fff,
-              "Game mounting, FTP, temperature and optional PS3MAPI.");
-    draw_text(48.0f, 362.0f, 0x77718fff,
-              "CROSS: REFRESH TOOL STATUS");
-    draw_text(24.0f, PS3SCALE_UI_FOOTER_SINGLE_Y, 0x77718fff, "CIRCLE: BACK");
+    draw_text(48.0f, 324.0f, 0x77718fff,
+              "Local launch bridge; it must be active to open companion apps.");
+
+    draw_text(48.0f, 382.0f,
+              g_tool_launch_running ? 0x875be8ff : 0x77718fff,
+              g_tools_message);
+    draw_text(24.0f, PS3SCALE_UI_FOOTER_PRIMARY_Y, 0x77718fff,
+              "UP / DOWN: SELECT   |   CROSS: OPEN   |   TRIANGLE: REFRESH");
+    draw_text(24.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y, 0x875be8ff,
+              "CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
 
@@ -6255,6 +6390,7 @@ int main(int argc, char *argv[])
         service_catalog_sync();
         service_support_send();
         service_game_launch();
+        service_companion_tool_launch();
         service_profile_arm();
         service_ps2_config_download();
         service_community_download();
@@ -6317,6 +6453,7 @@ int main(int argc, char *argv[])
                 g_home_selected = (g_home_selected + 1) % 5;
             if (select && !old_select) {
                 g_screen = SCREEN_TOOLS;
+                g_tools_selected = 0;
                 refresh_companion_tool_status();
             }
             if (cross && !old_cross) {
@@ -6836,7 +6973,13 @@ int main(int argc, char *argv[])
             if (circle && !old_circle)
                 g_screen = SCREEN_HOME;
         } else if (g_screen == SCREEN_TOOLS) {
+            if (up && !old_up)
+                g_tools_selected = (g_tools_selected + 1) % 2;
+            if (down && !old_down)
+                g_tools_selected = (g_tools_selected + 1) % 2;
             if (cross && !old_cross)
+                start_selected_companion_tool();
+            if (triangle && !old_triangle)
                 refresh_companion_tool_status();
             if (circle && !old_circle)
                 g_screen = SCREEN_HOME;

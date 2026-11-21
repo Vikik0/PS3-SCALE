@@ -12,4 +12,8 @@
 int ps3scale_webman_build_start_path(const ps3scale_game_t *game,
                                      char *output, size_t output_size);
 
+/* Build a safe /play.ps3?<TITLE_ID> route for an installed companion app. */
+int ps3scale_webman_build_app_start_path(const char *title_id,
+                                         char *output, size_t output_size);
+
 #endif

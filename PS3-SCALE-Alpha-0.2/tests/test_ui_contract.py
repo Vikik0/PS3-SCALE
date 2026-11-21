@@ -655,6 +655,12 @@ webman_command_src = webman_command_source.read_text(encoding="utf-8")
 assert '"/play.ps3?%s"' in webman_command_src
 assert '"/play.ps3%s"' in webman_command_src
 assert "encode_game_path" in webman_command_src
+assert "ps3scale_webman_build_app_start_path" in webman_command_src
+assert "strlen(value) != 9" in webman_command_src
+assert "NP0APOLLO" in src
+assert "ARTPS3001" in src
+assert "ARTZ00001" in src
+assert "ps3scale_webman_start_app" in src
 
 print("PS3 SCALE UI contract tests: PASS")
 
@@ -742,8 +748,8 @@ assert '"/dev_usb000/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3"' in src
 assert "rename(temp_path, PS3SCALE_MUSIC1_PATH)" in src
 assert "MUSIC 1 IMPORTED FROM USB" in settings
 sfo = (project_root / "sfo.xml").read_text(encoding="utf-8")
-assert '<value name="APP_VER" type="string">00.25</value>' in sfo
-assert '<value name="VERSION" type="string">00.25</value>' in sfo
+assert '<value name="APP_VER" type="string">00.26</value>' in sfo
+assert '<value name="VERSION" type="string">00.26</value>' in sfo
 
 # Startup failure and package-integrity regression checks.
 startup = section("int main(int argc, char *argv[])", "while (!g_exit_requested)")
@@ -852,7 +858,7 @@ assert "actions/upload-artifact@v4" not in build_workflow
 assert "actions/setup-python@v5" not in index_workflow
 
 # Keep the visible app, support payload and local report on one version.
-assert '#define PS3SCALE_APP_VERSION "ALPHA 0.25"' in src
+assert '#define PS3SCALE_APP_VERSION "ALPHA 0.26"' in src
 assert '#define SETTINGS_COUNT 10' in src
 assert 'fprintf(fp, "settings_version=3\\n");' in src
 assert 'enhancement_persistent=%d' in src
@@ -1003,6 +1009,14 @@ assert "PS2 CONFIG: %u%%" in details_ui
 assert "draw_rounded_rect(544.0f, 376.0f, 272.0f, 4.0f" in details_ui
 tools_ui = section("static void draw_tools(void)",
                    "static void draw_help(void)")
+tools_input = section("} else if (g_screen == SCREEN_TOOLS) {",
+                      "} else if (circle && !old_circle) {")
+assert "g_tools_selected = (g_tools_selected + 1) % 2;" in tools_input
+assert "start_selected_companion_tool();" in tools_input
+assert "triangle && !old_triangle" in tools_input
+assert "service_companion_tool_launch();" in main
+assert "companion_tool_launch_worker" in src
+assert "sysThreadCreate(&g_tool_launch_thread" in src
 keyboard_ui = section("static void draw_keyboard(void)",
                       "/* Light-weight rounded panels:")
 assert 'draw_text(70.0f, 18.0f, 0x29243fff, "PS3")' in home_ui
@@ -1010,6 +1024,9 @@ assert "0xffffffff" not in details_ui
 assert "0xffffffff" not in tools_ui
 assert "0xffffffff" not in keyboard_ui
 assert 'draw_text(48.0f, 120.0f, 0x29243fff, "APOLLO SAVE TOOL")' in tools_ui
+assert "CROSS: OPEN" in tools_ui
+assert "TRIANGLE: REFRESH" in tools_ui
+assert "SELECT APOLLO OR ARTEMIS" in src
 # Animated background geometry is batched to protect PS3 frame pacing.
 background_ui = section("static void draw_scene_background(void)",
                         "/* Add one camera-visible segment")

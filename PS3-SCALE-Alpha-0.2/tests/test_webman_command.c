@@ -65,6 +65,24 @@ int main(void)
     assert(ps3scale_webman_build_start_path(&game, output,
                                              sizeof(output)) != 0);
 
+    assert(ps3scale_webman_build_app_start_path("NP0APOLLO", output,
+                                                  sizeof(output)) == 0);
+    assert(strcmp(output, "/play.ps3?NP0APOLLO") == 0);
+    assert(ps3scale_webman_build_app_start_path("ARTPS3001", output,
+                                                  sizeof(output)) == 0);
+    assert(strcmp(output, "/play.ps3?ARTPS3001") == 0);
+    assert(ps3scale_webman_build_app_start_path("ARTZ00001", output,
+                                                  sizeof(output)) == 0);
+    assert(strcmp(output, "/play.ps3?ARTZ00001") == 0);
+    assert(ps3scale_webman_build_app_start_path("np0apollo", output,
+                                                  sizeof(output)) != 0);
+    assert(ps3scale_webman_build_app_start_path("NP0APOLLO/evil", output,
+                                                  sizeof(output)) != 0);
+    assert(ps3scale_webman_build_app_start_path("SHORT", output,
+                                                  sizeof(output)) != 0);
+    assert(ps3scale_webman_build_app_start_path("NP0APOLLO", output, 8) != 0);
+    assert(output[0] == '\0');
+
     game.kind = PS3SCALE_GAME_PS3_HDD;
     assert(ps3scale_webman_build_start_path(&game, output, 4) != 0);
     assert(output[0] == '\0');

@@ -28,4 +28,7 @@ int ps3scale_webman_ps3mapi_available(void);
  */
 int ps3scale_webman_start_game(const ps3scale_game_t *game);
 
+/* Ask webMAN MOD to launch an installed application by its validated Title ID. */
+int ps3scale_webman_start_app(const char *title_id);
+
 #endif

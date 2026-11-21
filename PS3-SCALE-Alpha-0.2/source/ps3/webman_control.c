@@ -191,7 +191,7 @@ static int webman_http_get(const char *path, char *response,
 
     ret = snprintf(request, sizeof(request),
         "GET %s HTTP/1.0\r\nHost: 127.0.0.1\r\n"
-        "User-Agent: PS3SCALE/0.23\r\nConnection: close\r\n\r\n",
+        "User-Agent: PS3SCALE/0.26\r\nConnection: close\r\n\r\n",
         path);
     if (ret < 0 || (size_t)ret >= sizeof(request)) {
         result = PS3SCALE_WEBMAN_ERROR_INVALID_REQUEST;
@@ -287,6 +287,19 @@ int ps3scale_webman_start_game(const ps3scale_game_t *game)
 
     if (ps3scale_webman_build_start_path(game, request_path,
                                          sizeof(request_path)) != 0)
+        return PS3SCALE_WEBMAN_ERROR_INVALID_REQUEST;
+
+    return webman_http_get(request_path, response, sizeof(response), 0);
+}
+
+
+int ps3scale_webman_start_app(const char *title_id)
+{
+    char request_path[64];
+    char response[1024];
+
+    if (ps3scale_webman_build_app_start_path(title_id, request_path,
+                                             sizeof(request_path)) != 0)
         return PS3SCALE_WEBMAN_ERROR_INVALID_REQUEST;
 
     return webman_http_get(request_path, response, sizeof(response), 0);
