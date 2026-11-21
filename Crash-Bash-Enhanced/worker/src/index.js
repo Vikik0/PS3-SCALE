@@ -229,6 +229,13 @@ export class CrashBashLobby {
       const session = await this.authenticate(request, state);
       if (!session) throw fail(401, "AUTH_REQUIRED", "Create a Guest Mode session first.");
 
+      if (method === "GET" && path === "/v1/rooms/current") {
+        const current = this.roomForSession(state, session);
+        if (!current) return response(200, { room: null });
+        await this.save(state);
+        return response(200, { room: roomView(current.room) });
+      }
+
       if (method === "POST" && path === "/v1/rooms") {
         if (session.roomCode) throw fail(409, "ALREADY_IN_ROOM", "Leave your current room first.");
         const body = await readBody(request);
