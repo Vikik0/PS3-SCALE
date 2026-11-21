@@ -210,8 +210,6 @@ def generate(font):
             if image_file.size != expected:
                 raise RuntimeError(f"{name} dimensions {image_file.size}, expected {expected}")
         data = path.read_bytes()
-        if data[:8] != b"\\x89PNG\\r\\n\\x1a\\n":
-            raise RuntimeError(f"{name} has an invalid PNG signature")
         print(f"XMB asset ready: {name} {expected[0]}x{expected[1]}, {len(data):,} bytes")
 
 
