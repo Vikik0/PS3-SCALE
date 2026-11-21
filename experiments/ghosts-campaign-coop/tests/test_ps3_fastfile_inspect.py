@@ -56,9 +56,16 @@ class Ps3FastFileInspectTests(unittest.TestCase):
 
     def test_trailing_bytes_are_reported_and_not_included(self):
         zone = b"A" * ZONE_BLOCK_SIZE
-        report, expanded = inspect_bytes(make_fastfile(zone, trailing=b"TAIL"))
+        report, expanded = inspect_bytes(make_fastfile(zone, trailing=b"T" * 128))
         self.assertFalse(report.complete)
-        self.assertEqual(report.trailing_bytes, 4)
+        self.assertEqual(report.trailing_bytes, 128)
+        self.assertEqual(expanded, zone)
+
+    def test_small_retail_trailing_slack_is_reported_and_tolerated(self):
+        zone = b"F" * ZONE_BLOCK_SIZE
+        report, expanded = inspect_bytes(make_fastfile(zone, trailing=b"X" * 18))
+        self.assertTrue(report.complete)
+        self.assertEqual(report.trailing_bytes, 18)
         self.assertEqual(expanded, zone)
 
     def test_wrong_outer_magic_is_rejected(self):
