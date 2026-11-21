@@ -32,7 +32,7 @@ test("applies all digital and analog controls to the selected emulator port", ()
     }
   };
   assert.equal(applyPadStateToEmulator(gameManager, 2, 0x4000, [128, 128, 128, 128]), true);
-  assert.equal(calls.length, 18);
+  assert.equal(calls.length, 20);
   assert.deepEqual(calls[0], [2, 0, 1]);
   assert.deepEqual(calls.at(-4), [2, 16, 0]);
   assert.deepEqual(calls.at(-1), [2, 19, 0]);
