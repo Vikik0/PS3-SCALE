@@ -4458,25 +4458,30 @@ static void draw_online_database(void)
     }
 
     set_ui_font_size(7, 11);
-    if (selected_profile && selected) {
+    if (selected_profile) {
         draw_soft_chip(414.0f, 190.0f, 182.0f,
-                       "MATCHED PS3 PROFILE", 1);
-        snprintf(line, sizeof(line), "GAME: %.54s", selected->title);
+                       selected ? "MATCHED PS3 PROFILE" : "PROFILE IN DATABASE", 1);
+        snprintf(line, sizeof(line), "GAME: %.54s",
+                 selected ? selected->title : selected_profile->title);
         draw_text(414.0f, 227.0f, 0x29243fff, line);
-        snprintf(line, sizeof(line), "TITLE ID: %.18s", selected->title_id);
+        snprintf(line, sizeof(line), "TITLE ID: %.18s", selected_profile->title_id);
         draw_text(414.0f, 253.0f, 0x514b69ff, line);
         snprintf(line, sizeof(line), "VERSION: %.18s", selected_profile->app_ver);
         draw_text(414.0f, 277.0f, 0x514b69ff, line);
-        draw_text(414.0f, 303.0f, 0x26794bff,
-                  "MATCH: EXACT LOCAL GAME / PROFILE");
+        draw_text(414.0f, 303.0f,
+                  selected ? 0x26794bff : 0xb27b35ff,
+                  selected ? "MATCH: EXACT LOCAL GAME / PROFILE" :
+                             "MATCH: EXACT LOCAL VERSION REQUIRED");
         snprintf(line, sizeof(line), "EFFECT: %.42s", selected_profile->effect);
         draw_text(414.0f, 328.0f, 0x514b69ff, line);
         draw_text(414.0f, 359.0f, 0xb27b35ff,
-                  "APPLY: REVIEW + CONFIRM IN DETAILS");
+                  selected ? "APPLY: CROSS IN DETAILS TO APPLY + PLAY" :
+                             "APPLY: INSTALL / MOUNT EXACT VERSION");
         draw_text(414.0f, 390.0f, 0x875be8ff,
-                  "CROSS: OPEN GAME DETAILS");
+                  selected ? "CROSS: OPEN GAME DETAILS" :
+                             "EXACT LOCAL GAME MATCH NOT FOUND");
         draw_text(414.0f, 406.0f, 0x77718fff,
-                  "No automatic game-file replacement.");
+                  "One-launch memory patch; game files stay unchanged.");
     } else if (selected_ps2_config) {
         draw_soft_chip(414.0f, 190.0f, 182.0f,
                        "PS2 COMPATIBILITY", 1);
