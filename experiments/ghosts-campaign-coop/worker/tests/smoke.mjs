@@ -30,9 +30,85 @@ async function call(path, method = "GET", payload = undefined, token = undefined
   return { status: response.status, body: await response.json() };
 }
 
+
+class FakeSocket {
+  constructor() {
+    this.readyState = 1;
+    this.bufferedAmount = 0;
+    this.listeners = new Map();
+    this.sent = [];
+    this.closeCode = null;
+    this.closeReason = null;
+  }
+  accept() {}
+  addEventListener(type, handler) {
+    const list = this.listeners.get(type) || [];
+    list.push(handler);
+    this.listeners.set(type, list);
+  }
+  send(data) {
+    this.sent.push(data instanceof Uint8Array ? new Uint8Array(data) : new Uint8Array(data));
+  }
+  close(code = 1000, reason = "") {
+    if (this.readyState !== 1) return;
+    this.readyState = 3;
+    this.closeCode = code;
+    this.closeReason = reason;
+    for (const handler of this.listeners.get("close") || []) handler({});
+  }
+  async emitMessage(data) {
+    for (const handler of this.listeners.get("message") || []) await handler({ data });
+  }
+}
+
+class FakeWebSocketPair {
+  static pairs = [];
+  constructor() {
+    this[0] = new FakeSocket();
+    this[1] = new FakeSocket();
+    FakeWebSocketPair.pairs.push(this);
+  }
+}
+
+function testHexToBytes(value) {
+  return new Uint8Array(value.match(/.{2}/g).map(part => Number.parseInt(part, 16)));
+}
+
+async function testHmac16(keyHex, data) {
+  const key = await crypto.subtle.importKey("raw", testHexToBytes(keyHex), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", key, data)).slice(0, 16);
+}
+
+async function makeClientFrame(relayIdHex, relayKeyHex, sequence, payloadText) {
+  const payload = new TextEncoder().encode(payloadText);
+  const frame = new Uint8Array(24 + payload.length + 16);
+  frame.set(new TextEncoder().encode("GHC2"), 0);
+  frame.set(testHexToBytes(relayIdHex), 4);
+  frame[20] = (sequence >>> 24) & 255;
+  frame[21] = (sequence >>> 16) & 255;
+  frame[22] = (sequence >>> 8) & 255;
+  frame[23] = sequence & 255;
+  frame.set(payload, 24);
+  frame.set(await testHmac16(relayKeyHex, frame.subarray(0, frame.length - 16)), frame.length - 16);
+  return frame;
+}
+
+async function readServerFrame(frame, relayKeyHex) {
+  assert.equal(new TextDecoder().decode(frame.subarray(0, 4)), "GHC2");
+  const expectedMac = await testHmac16(relayKeyHex, frame.subarray(0, frame.length - 16));
+  assert.deepEqual(frame.subarray(frame.length - 16), expectedMac);
+  const sequence = (((frame[5] << 24) >>> 0) | (frame[6] << 16) | (frame[7] << 8) | frame[8]) >>> 0;
+  return {
+    slot: frame[4],
+    sequence,
+    payload: new TextDecoder().decode(frame.subarray(9, frame.length - 16))
+  };
+}
+
 const health = await call("/health");
 assert.equal(health.status, 200);
-assert.equal(health.body.transport, "peer-to-peer-udp");
+assert.equal(health.body.transport, "peer-to-peer-udp-with-websocket-fallback");
+assert.equal(health.body.relay_fallback, true);
 
 const compatibility = await call("/v1/compatibility");
 assert.equal(compatibility.status, 200);
@@ -93,6 +169,9 @@ const hostPublish = await call("/v1/rooms/" + code + "/candidate", "POST", hostC
 assert.equal(hostPublish.status, 200);
 assert.equal(hostPublish.body.peer_candidate, null);
 
+assert.equal(hostPublish.body.relay_fallback, true);
+assert.equal(hostPublish.body.relay_websocket_path, "/v1/rooms/" + code + "/relay");
+
 const guestPublish = await call("/v1/rooms/" + code + "/candidate", "POST", guestCandidate, guest.body.token);
 assert.equal(guestPublish.status, 200);
 assert.equal(guestPublish.body.peer_candidate.public_address, hostCandidate.public_address);
@@ -112,6 +191,67 @@ assert.equal(peer.body.peer_candidate.nat_type, guestCandidate.nat_type);
 assert.ok(peer.body.peer_candidate.updated_at);
 assert.equal(peer.body.peer.relay_id, guest.body.relay.relay_id);
 assert.equal(peer.body.peer.relay_key, guest.body.relay.relay_key);
+
+
+const originalResponse = globalThis.Response;
+const originalWebSocketPair = globalThis.WebSocketPair;
+globalThis.Response = class {
+  constructor(body, init = {}) {
+    this.body = body;
+    this.status = init.status || 200;
+    this.webSocket = init.webSocket || null;
+    this.headers = new Headers(init.headers || {});
+  }
+};
+globalThis.WebSocketPair = FakeWebSocketPair;
+try {
+  const hostUpgrade = await lobby.fetch({
+    url: "https://worker.test/v1/rooms/" + code + "/relay",
+    method: "GET",
+    headers: new Headers({ Upgrade: "websocket", Authorization: "Bearer " + host.body.token })
+  });
+  assert.equal(hostUpgrade.status, 101);
+  const hostPair = FakeWebSocketPair.pairs[0];
+
+  const guestUpgrade = await lobby.fetch({
+    url: "https://worker.test/v1/rooms/" + code + "/relay",
+    method: "GET",
+    headers: new Headers({ Upgrade: "websocket", Authorization: "Bearer " + guest.body.token })
+  });
+  assert.equal(guestUpgrade.status, 101);
+  const guestPair = FakeWebSocketPair.pairs[1];
+
+  const hostFrame = await makeClientFrame(host.body.relay.relay_id, host.body.relay.relay_key, 1, "host-state");
+  await hostPair[1].emitMessage(hostFrame.buffer);
+  assert.equal(guestPair[1].sent.length, 1);
+  assert.deepEqual(await readServerFrame(guestPair[1].sent[0], guest.body.relay.relay_key), {
+    slot: 1,
+    sequence: 1,
+    payload: "host-state"
+  });
+
+  await hostPair[1].emitMessage(hostFrame.buffer);
+  assert.equal(guestPair[1].sent.length, 1, "duplicate GHC2 sequence must be dropped");
+
+  const guestFrame = await makeClientFrame(guest.body.relay.relay_id, guest.body.relay.relay_key, 1, "guest-state");
+  await guestPair[1].emitMessage(guestFrame.buffer);
+  assert.equal(hostPair[1].sent.length, 1);
+  assert.deepEqual(await readServerFrame(hostPair[1].sent[0], host.body.relay.relay_key), {
+    slot: 2,
+    sequence: 1,
+    payload: "guest-state"
+  });
+
+  const forgedFrame = await makeClientFrame(host.body.relay.relay_id, "00".repeat(32), 2, "forged");
+  await hostPair[1].emitMessage(forgedFrame.buffer);
+  assert.equal(hostPair[1].closeCode, 1008, "invalid HMAC must close the sender connection");
+  assert.equal(guestPair[1].closeCode, 1012, "peer must be notified when the sender disconnects");
+  assert.equal(lobby.relaySockets.size, 0);
+} finally {
+  globalThis.Response = originalResponse;
+  if (originalWebSocketPair === undefined) delete globalThis.WebSocketPair;
+  else globalThis.WebSocketPair = originalWebSocketPair;
+}
 
 const left = await call("/v1/rooms/" + code + "/leave", "POST", {}, guest.body.token);
 assert.equal(left.status, 200);

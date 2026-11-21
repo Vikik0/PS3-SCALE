@@ -76,6 +76,104 @@ function roomError(status, code, message) {
   return { status, code, message };
 }
 
+
+const GHC_MAGIC_BYTES = new Uint8Array([71, 72, 67, 50]);
+const GHC_CLIENT_HEADER_BYTES = 24;
+const GHC_SERVER_HEADER_BYTES = 9;
+const GHC_MAC_BYTES = 16;
+const GHC_MAX_FRAME_BYTES = 1200;
+const GHC_REPLAY_MASK = (1n << 64n) - 1n;
+
+function ghcHexToBytes(value, length) {
+  if (typeof value !== "string" || !new RegExp("^[0-9a-f]{" + (length * 2) + "}$", "i").test(value)) return null;
+  const output = new Uint8Array(length);
+  for (let i = 0; i < length; i++) output[i] = Number.parseInt(value.slice(i * 2, i * 2 + 2), 16);
+  return output;
+}
+
+function ghcEqualBytes(left, right) {
+  if (!left || !right || left.length !== right.length) return false;
+  let difference = 0;
+  for (let i = 0; i < left.length; i++) difference |= left[i] ^ right[i];
+  return difference === 0;
+}
+
+function ghcReadU32(bytes, offset) {
+  return (((bytes[offset] << 24) >>> 0) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3]) >>> 0;
+}
+
+function ghcWriteU32(bytes, offset, value) {
+  bytes[offset] = (value >>> 24) & 255;
+  bytes[offset + 1] = (value >>> 16) & 255;
+  bytes[offset + 2] = (value >>> 8) & 255;
+  bytes[offset + 3] = value & 255;
+}
+
+async function ghcHmac16(keyBytes, signedBytes) {
+  const key = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const signature = new Uint8Array(await crypto.subtle.sign("HMAC", key, signedBytes));
+  return signature.slice(0, GHC_MAC_BYTES);
+}
+
+async function ghcDecodeClientFrame(packet, expectedRelayIdHex, relayKeyHex) {
+  if (!(packet instanceof Uint8Array) || packet.length < 40 || packet.length > GHC_MAX_FRAME_BYTES) return null;
+  if (!ghcEqualBytes(packet.subarray(0, 4), GHC_MAGIC_BYTES)) return null;
+  const expectedRelayId = ghcHexToBytes(expectedRelayIdHex, 16);
+  const relayKey = ghcHexToBytes(relayKeyHex, 32);
+  if (!expectedRelayId || !relayKey || !ghcEqualBytes(packet.subarray(4, 20), expectedRelayId)) return null;
+  const signed = packet.subarray(0, packet.length - GHC_MAC_BYTES);
+  const suppliedMac = packet.subarray(packet.length - GHC_MAC_BYTES);
+  const expectedMac = await ghcHmac16(relayKey, signed);
+  if (!ghcEqualBytes(suppliedMac, expectedMac)) return null;
+  return {
+    sequence: ghcReadU32(packet, 20),
+    payload: packet.slice(GHC_CLIENT_HEADER_BYTES, packet.length - GHC_MAC_BYTES)
+  };
+}
+
+async function ghcEncodeServerFrame(senderSlot, sequence, payload, recipientKeyHex) {
+  const recipientKey = ghcHexToBytes(recipientKeyHex, 32);
+  if (!recipientKey || (senderSlot !== 1 && senderSlot !== 2)) throw new Error("Invalid GHC2 relay frame parameters");
+  const output = new Uint8Array(GHC_SERVER_HEADER_BYTES + payload.length + GHC_MAC_BYTES);
+  output.set(GHC_MAGIC_BYTES, 0);
+  output[4] = senderSlot;
+  ghcWriteU32(output, 5, sequence);
+  output.set(payload, GHC_SERVER_HEADER_BYTES);
+  const mac = await ghcHmac16(recipientKey, output.subarray(0, output.length - GHC_MAC_BYTES));
+  output.set(mac, output.length - GHC_MAC_BYTES);
+  return output;
+}
+
+function ghcAcceptSequence(window, sequence) {
+  sequence >>>= 0;
+  if (!window.initialized) {
+    window.initialized = true;
+    window.highest = sequence;
+    window.bitmap = 1n;
+    return true;
+  }
+  const forward = (sequence - window.highest) >>> 0;
+  if (forward === 0) return false;
+  if (forward < 0x80000000) {
+    window.bitmap = forward >= 64 ? 1n : ((window.bitmap << BigInt(forward)) | 1n) & GHC_REPLAY_MASK;
+    window.highest = sequence;
+    return true;
+  }
+  const behind = (window.highest - sequence) >>> 0;
+  if (behind >= 64) return false;
+  const bit = 1n << BigInt(behind);
+  if ((window.bitmap & bit) !== 0n) return false;
+  window.bitmap |= bit;
+  return true;
+}
+
+async function ghcToBytes(data) {
+  if (data instanceof ArrayBuffer) return new Uint8Array(data);
+  if (ArrayBuffer.isView(data)) return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+  if (data && typeof data.arrayBuffer === "function") return new Uint8Array(await data.arrayBuffer());
+  return null;
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
@@ -88,6 +186,9 @@ export class LobbyDurableObject {
   constructor(ctx, env) {
     this.ctx = ctx;
     this.env = env;
+    this.relaySockets = new Map();
+    this.relayRates = new Map();
+    this.replayWindows = new Map();
   }
 
   async loadState() {
@@ -156,6 +257,84 @@ export class LobbyDurableObject {
     }
   }
 
+
+  allowRelayRate(sessionId) {
+    const now = Date.now();
+    const current = this.relayRates.get(sessionId) || { startedAt: now, count: 0 };
+    if (now - current.startedAt >= 1000) {
+      this.relayRates.set(sessionId, { startedAt: now, count: 1 });
+      return true;
+    }
+    if (current.count >= 120) return false;
+    current.count += 1;
+    this.relayRates.set(sessionId, current);
+    return true;
+  }
+
+  closeRelayConnection(connection, code = 1000, reason = "Relay connection closed") {
+    if (this.relaySockets.get(connection.sessionId) !== connection) return;
+    this.relaySockets.delete(connection.sessionId);
+    this.replayWindows.delete(connection.sessionId);
+    this.relayRates.delete(connection.sessionId);
+    try {
+      if (connection.socket.readyState === 1) connection.socket.close(code, reason);
+    } catch {}
+    const peerConnection = [...this.relaySockets.values()].find(item => item.roomCode === connection.roomCode);
+    if (peerConnection) {
+      this.relaySockets.delete(peerConnection.sessionId);
+      this.replayWindows.delete(peerConnection.sessionId);
+      this.relayRates.delete(peerConnection.sessionId);
+      try {
+        if (peerConnection.socket.readyState === 1) peerConnection.socket.close(1012, "Peer disconnected");
+      } catch {}
+    }
+  }
+
+  async handleRelayMessage(connection, data) {
+    const packet = await ghcToBytes(data);
+    if (!packet) {
+      this.closeRelayConnection(connection, 1003, "Binary GHC2 packets are required");
+      return;
+    }
+    if (packet.length > GHC_MAX_FRAME_BYTES) {
+      this.closeRelayConnection(connection, 1009, "GHC2 packet exceeds 1200 bytes");
+      return;
+    }
+
+    const state = await this.loadState();
+    const session = Object.values(state.sessions).find(item => item.sessionId === connection.sessionId);
+    const room = state.rooms[connection.roomCode];
+    if (!session || session.expiresAt <= Date.now() || session.roomCode !== connection.roomCode || !room || room.status !== "running") {
+      this.closeRelayConnection(connection, 1008, "Session or room is no longer active");
+      return;
+    }
+    const player = this.findRoomPlayer(room, session);
+    const peer = room.players.find(item => item.sessionId !== session.sessionId);
+    if (!player || !peer) {
+      this.closeRelayConnection(connection, 1008, "Room membership is invalid");
+      return;
+    }
+
+    const decoded = await ghcDecodeClientFrame(packet, session.relayId, session.relayKey);
+    if (!decoded) {
+      this.closeRelayConnection(connection, 1008, "Invalid GHC2 authentication");
+      return;
+    }
+    let replayWindow = this.replayWindows.get(session.sessionId);
+    if (!replayWindow) {
+      replayWindow = { initialized: false, highest: 0, bitmap: 0n };
+      this.replayWindows.set(session.sessionId, replayWindow);
+    }
+    if (!ghcAcceptSequence(replayWindow, decoded.sequence)) return;
+    if (!this.allowRelayRate(session.sessionId)) return;
+
+    const peerConnection = this.relaySockets.get(peer.sessionId);
+    if (!peerConnection || peerConnection.socket.readyState !== 1) return;
+    if (Number(peerConnection.socket.bufferedAmount || 0) > 65536) return;
+    const forwarded = await ghcEncodeServerFrame(player.slot, decoded.sequence, decoded.payload, peer.relayKey);
+    peerConnection.socket.send(forwarded);
+  }
+
   findRoomPlayer(room, session) {
     return room.players.find(player => player.sessionId === session.sessionId) || null;
   }
@@ -175,8 +354,8 @@ export class LobbyDurableObject {
           ok: true,
           service: "ghosts-coop-signalling",
           mode: "guest",
-          transport: "peer-to-peer-udp",
-          relay_fallback: false,
+          transport: "peer-to-peer-udp-with-websocket-fallback",
+          relay_fallback: true,
           max_players: 2
         });
       }
@@ -243,6 +422,48 @@ export class LobbyDurableObject {
         session.roomCode = code;
         await this.saveState(state);
         return json(201, snapshot(room));
+      }
+
+      const relayRoute = path.match(/^\/v1\/rooms\/([A-Z0-9]{6})\/relay$/);
+      if (relayRoute && method === "GET") {
+        if ((request.headers.get("Upgrade") || "").toLowerCase() !== "websocket") {
+          throw roomError(426, "WEBSOCKET_UPGRADE_REQUIRED", "Connect to this endpoint using a secure WebSocket upgrade.");
+        }
+        if (typeof WebSocketPair === "undefined") {
+          throw roomError(501, "WEBSOCKET_UNAVAILABLE", "WebSocket relay is unavailable in this runtime.");
+        }
+        const code = relayRoute[1];
+        const room = state.rooms[code];
+        if (!room || session.roomCode !== code) {
+          throw roomError(404, "ROOM_NOT_FOUND", "Room was not found for this session.");
+        }
+        if (room.status !== "running" || room.players.length !== 2) {
+          throw roomError(409, "ROOM_NOT_RUNNING", "Both players must be ready and the room must be running.");
+        }
+        const player = this.findRoomPlayer(room, session);
+        const peer = room.players.find(item => item.sessionId !== session.sessionId);
+        if (!player || !peer) throw roomError(403, "NOT_IN_ROOM", "A valid two-player room membership is required.");
+
+        const pair = new WebSocketPair();
+        const clientSocket = pair[0];
+        const serverSocket = pair[1];
+        const previous = this.relaySockets.get(session.sessionId);
+        if (previous) this.closeRelayConnection(previous, 1012, "Connection replaced");
+        serverSocket.accept();
+        serverSocket.binaryType = "arraybuffer";
+        const connection = {
+          sessionId: session.sessionId,
+          roomCode: code,
+          slot: player.slot,
+          socket: serverSocket
+        };
+        this.relaySockets.set(session.sessionId, connection);
+        serverSocket.addEventListener("message", event => this.handleRelayMessage(connection, event.data).catch(() => {
+          this.closeRelayConnection(connection, 1011, "Relay processing failed");
+        }));
+        serverSocket.addEventListener("close", () => this.closeRelayConnection(connection));
+        serverSocket.addEventListener("error", () => this.closeRelayConnection(connection, 1011, "WebSocket error"));
+        return new Response(null, { status: 101, webSocket: clientSocket });
       }
 
       const route = path.match(/^\/v1\/rooms\/([A-Z0-9]{6})(?:\/(join|ready|start|leave|candidate|peer))?$/);
@@ -347,7 +568,8 @@ export class LobbyDurableObject {
           peer: { session_id: peer.sessionId, slot: peer.slot, relay_id: peer.relayId, relay_key: peer.relayKey },
           room_status: room.status,
           transport: "peer-to-peer-udp",
-          relay_fallback: false
+          relay_fallback: true,
+          relay_websocket_path: "/v1/rooms/" + code + "/relay"
         });
       }
 
@@ -361,7 +583,9 @@ export class LobbyDurableObject {
           room_status: room.status,
           peer_ready: peer.ready,
           peer_candidate: peer.candidate,
-          peer: { session_id: peer.sessionId, slot: peer.slot, relay_id: peer.relayId, relay_key: peer.relayKey }
+          peer: { session_id: peer.sessionId, slot: peer.slot, relay_id: peer.relayId, relay_key: peer.relayKey },
+          relay_fallback: true,
+          relay_websocket_path: "/v1/rooms/" + code + "/relay"
         });
       }
 

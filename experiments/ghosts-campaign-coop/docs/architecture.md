@@ -12,7 +12,8 @@
 
 1. **PS3 client plugin (not implemented):** game-specific hooks plus HTTP session/lobby calls and UDP relay client.
 2. **Lobby API (implemented prototype):** guest session creation, six-character room codes, join/leave, ready state, two-player cap and host start.
-3. **UDP relay (implemented prototype):** forwards opaque packets only between the two members of a running room. It does not simulate or validate game state.
+3. **UDP relay (implemented reference prototype):** forwards authenticated opaque packets only between the two members of a running room. The Python reference relay is locally integration-tested; it is not the Cloudflare deployment.
+4. **Cloudflare WebSocket relay fallback (implemented in Worker source):** an authenticated WSS route forwards binary GHC2 frames between the two room members when direct UDP cannot connect. It checks HMAC, replay window, frame size and per-session rate. Deployment and PS3 client integration are still pending.
 4. **Compatibility registry (implemented):** maps known title IDs and reports the first target profile (CEX 4.93 + TU 1.16). It intentionally does not report a profile as supported until hardware validation.
 5. **Campaign downed/revive rules (implemented as a standalone C state machine):** one player can be downed while the mission continues; the living partner can revive them; both downed or bleedout expiry fails the mission. A versioned 24-byte snapshot is ready to travel inside GHC2 payloads. The game-specific hooks are not implemented yet.
 6. **Game replication layer (not implemented):** movement, animation, weapon, damage, AI, checkpoint and mission-event replication.
@@ -24,15 +25,17 @@ Initially Player 1/Logan's console is the mission authority. Player 2 sends inpu
 
 ## Network envelope
 
-Client -> relay UDP packet:
+The authenticated GHC2 envelope is shared by the direct UDP path and the WebSocket relay fallback:
 
-`GHC1 | 32 ASCII hex session token | uint16 sequence (big-endian) | opaque payload`
+Client -> relay:
+`GHC2 | 16-byte relay ID | uint32 sequence (big-endian) | payload | 16-byte HMAC-SHA256 tag`
 
-Relay -> peer packet:
+Relay -> peer:
+`GHC2 | uint8 sender slot | uint32 sequence (big-endian) | payload | 16-byte HMAC-SHA256 tag`
 
-`GHC1 | uint8 sender slot | uint16 sequence (big-endian) | opaque payload`
+The bearer session token is used only in HTTPS/WSS Authorization headers. The relay key is issued by the HTTPS guest-session endpoint. The relay validates the HMAC, rejects duplicate/stale sequence numbers with a wrap-safe 64-packet window, caps frames at 1200 bytes and rate-limits each session. The gameplay payload remains opaque until game-state fields are reverse-engineered and validated.
 
-Server caps datagrams at 1200 bytes and rate-limits each session. The client payload format is intentionally unspecified until game-state fields are reverse-engineered and validated.
+If direct UDP hole-punching fails, both PS3 clients can use the WSS relay path `/v1/rooms/{code}/relay`. The Worker forwards binary GHC2 frames only; the PS3 WSS client is not implemented yet.
 
 ## Prototype limitations
 

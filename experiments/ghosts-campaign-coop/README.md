@@ -16,7 +16,8 @@ This is an isolated research experiment for a two-player cooperative mode in the
 - Guest lobby/session prototype: implemented and host-tested.
 - Host-authoritative downed/revive rules: implemented in portable C, unit-tested, and linked into the PS3 PRX bootstrap. One downed player does not restart the mission; the living partner can revive them. Both downed or bleedout expiry fails the mission.
 - Six-character room codes, two-player cap and ready/start flow: implemented and tested.
-- UDP peer relay: implemented; local two-client UDP integration test passes.
+- UDP peer relay reference server: implemented; local two-client UDP integration test passes.
+- Cloudflare Durable Object WebSocket relay fallback: implemented and covered by Worker smoke tests; deployment and PS3 client integration remain pending.
 - Regional title-ID registry: implemented as metadata; profiles are untested.
 - Candidate TU 1.16 spawn primitives documented for offline research only.
 - Campaign-specific damage/downed hooks, crawl/sidearm animations, revive interaction, checkpoint restart hook, second actor spawn and live game-state replication: not implemented.
