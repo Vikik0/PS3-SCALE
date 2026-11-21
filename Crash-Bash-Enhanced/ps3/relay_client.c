@@ -283,11 +283,60 @@ int cb_relay_join(CbRelayClient *client, const char *host, unsigned short port,
     return 0;
 }
 
+int cb_relay_send_batch(CbRelayClient *client, const CbRelayPacket *packets, size_t count)
+{
+    uint8_t *message;
+    size_t total = 5u;
+    size_t offset = 5u;
+    size_t i;
+    int result;
+
+    if (!client || !client->connected || !packets ||
+        count == 0 || count > CB_RELAY_MAX_BATCH_PACKETS) return -1;
+
+    for (i = 0; i < count; ++i) {
+        if (!packets[i].payload || packets[i].length == 0 ||
+            packets[i].length > CB_RELAY_MAX_PACKET ||
+            total > CB_RELAY_MAX_MESSAGE - 18u - packets[i].length) return -1;
+        total += 18u + packets[i].length;
+    }
+
+    message = (uint8_t *)malloc(total);
+    if (!message) return -1;
+    message[0] = 0x43u;
+    message[1] = 0x42u;
+    message[2] = 0x55u;
+    message[3] = 0x31u; /* CBU1 */
+    message[4] = (uint8_t)count;
+
+    for (i = 0; i < count; ++i) {
+        memcpy(message + offset, packets[i].recipient_id, 16u);
+        offset += 16u;
+        message[offset++] = (uint8_t)(packets[i].length >> 8);
+        message[offset++] = (uint8_t)packets[i].length;
+        memcpy(message + offset, packets[i].payload, packets[i].length);
+        offset += packets[i].length;
+    }
+
+    result = cb_ws_send_binary(&client->websocket, message, total);
+    free(message);
+    return result;
+}
+
+int cb_relay_send_to(CbRelayClient *client, const uint8_t recipient_id[16],
+                     const void *packet, size_t length)
+{
+    CbRelayPacket entry;
+    memset(&entry, 0, sizeof(entry));
+    if (recipient_id) memcpy(entry.recipient_id, recipient_id, 16u);
+    entry.payload = packet;
+    entry.length = length;
+    return cb_relay_send_batch(client, &entry, 1u);
+}
+
 int cb_relay_send_packet(CbRelayClient *client, const void *packet, size_t length)
 {
-    if (!client || !client->connected || !packet ||
-        length == 0 || length > CB_RELAY_MAX_PACKET) return -1;
-    return cb_ws_send_binary(&client->websocket, packet, length);
+    return cb_relay_send_to(client, NULL, packet, length);
 }
 
 int cb_relay_receive_packet(CbRelayClient *client, void *packet, size_t capacity,
