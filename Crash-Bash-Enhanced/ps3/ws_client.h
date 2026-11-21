@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define CB_WS_MAX_FRAME 24576
+#define CB_WS_MAX_FRAME 28672
 #define CB_WS_OPCODE_TEXT 1
 #define CB_WS_OPCODE_BINARY 2
 
