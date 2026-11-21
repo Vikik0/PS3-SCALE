@@ -2666,6 +2666,7 @@ static void profile_arm_worker(void *arg)
 static void service_profile_arm(void)
 {
     int result;
+    int launch_after_arm;
 
     if (!g_profile_arm_done)
         return;
@@ -2677,13 +2678,30 @@ static void service_profile_arm(void)
     }
 
     result = g_profile_arm_result;
+    launch_after_arm = g_launch_after_profile_arm;
+    g_launch_after_profile_arm = 0;
     g_profile_arm_done = 0;
     g_profile_arm_running = 0;
     g_details_cache_valid = 0;
 
     if (result == 0 || result == 1) {
-        set_details_message("ONE-LAUNCH PROFILE ARMED. START THIS GAME.");
-    } else if (result == -100) {
+        if (launch_after_arm && g_screen == SCREEN_DETAILS) {
+            set_details_message("EXACT PROFILE ARMED. STARTING GAME.");
+            start_selected_game();
+        } else {
+            set_details_message("ONE-LAUNCH PROFILE ARMED. PRESS CROSS TO START GAME.");
+        }
+        return;
+    }
+
+    if (launch_after_arm && g_screen == SCREEN_DETAILS) {
+        g_skip_auto_apply_once = 1;
+        set_details_message("PROFILE NOT APPLIED. STARTING GAME UNMODIFIED.");
+        start_selected_game();
+        return;
+    }
+
+    if (result == -100) {
         set_details_message("WEBMAN MOD NOT RESPONDING. PROFILE NOT ARMED.");
     } else if (result == -101) {
         set_details_message("PS3MAPI NOT ACTIVE. PROFILE NOT ARMED.");
@@ -2740,6 +2758,7 @@ static void confirm_profile_install(void)
             return;
         }
     }
+    g_launch_after_profile_arm = 0;
     g_profile_arm_target = *profile;
     g_profile_arm_result = -1;
     g_profile_arm_done = 0;
