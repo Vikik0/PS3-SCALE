@@ -140,6 +140,11 @@ jobs:
           PY
           PS3DEV="$PS3DEV" PS3DK="$PS3DK" PS3_TOOLCHAIN_ROOT="$src" \
             bash "$src/scripts/build-runtime-lv2.sh"
+          "$PS3DEV/ppu/bin/powerpc64-ps3-elf-gcc" -O2 -mcpu=cell \
+            -ffunction-sections -fdata-sections \
+            -I"$PS3DK/ppu/include" \
+            -c "$src/runtime/lv2/crt/crt1.c" \
+            -o "$PS3DK/ppu/lib/lv2-prx-crt1.o"
           CARGO_TARGET_DIR="$src/tools/target" cargo build --release --manifest-path "$src/tools/nidgen/Cargo.toml"
           nidgen="$src/tools/target/release/nidgen"
           test -x "$nidgen"
