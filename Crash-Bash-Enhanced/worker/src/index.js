@@ -44,6 +44,10 @@ function cleanName(value) {
 }
 
 async function readBody(request) {
+  const declaredLength = Number(request.headers.get("Content-Length") || 0);
+  if (declaredLength > 8192) {
+    throw fail(413, "BODY_TOO_LARGE", "Request body limit is 8 KiB.");
+  }
   const raw = await request.text();
   if (new TextEncoder().encode(raw).byteLength > 8192) {
     throw fail(413, "BODY_TOO_LARGE", "Request body limit is 8 KiB.");
