@@ -52,6 +52,10 @@ The public TU 1.16 function list includes `PlayerCMD_IsSplitScreenPlayer` and `P
 
 A public TU 1.16 offsets thread lists G_Spawn, G_CallSpawnEntity, PlayerCMD_Spawn and PlayerCMD_ClonePlayer. These addresses are Multiplayer-context leads only. No candidate is approved for Campaign until verified against the exact executable and calling convention.
 
+## Local-player readiness gate added
+
+A pure C gate now defines the evidence required before the runtime adapter can enable the second player: native split-screen mode and player flags, primary/secondary order, controller ports 0/1, distinct local-client/client/entity IDs, Logan/guest-soldier roles, and unique `gclient`, `gentity` and player-state addresses. It fails closed on missing or contradictory observations. The gate is compiled into the PRX and has host tests. It is not called yet because the Campaign frame hook and verified engine observations do not exist. See `docs/local-player-gate.md`.
+
 ## Controller input groundwork completed
 
 A host-testable decoder and PS3 `sys_io` adapter have been added for controller ports 0 and 1. The adapter reads `cellPadGetInfo2` and `cellPadGetData`, keeps each port in a separate player snapshot, and maps digital buttons, analog sticks and trigger pressure. It does not initialize or shut down the pad subsystem and does not replace the game's own input path.
