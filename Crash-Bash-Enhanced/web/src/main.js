@@ -108,7 +108,7 @@ function roomCard() {
         <button class="button button-primary" data-action="ready" ${room.status !== "waiting" ? "disabled" : ""}>${me?.ready ? "CANCEL READY" : "I'M READY"}</button>
         ${isHost ? `<button class="button button-start" data-action="start" ${!allReady || room.status !== "waiting" ? "disabled" : ""}>START MATCH <span>→</span></button>` : ""}
       </div>
-      <p class="room-footnote">${room.host_endpoint_ready ? "Host UDP endpoint published. Direct game transport is the next integration step." : "Waiting for the host's UDP endpoint. PS3 transport integration is in progress."}</p>
+      <p class="room-footnote">Room relay prototype is available for transport testing. PS3 and browser gameplay clients are still being connected.</p>
     </div>`;
 }
 
@@ -185,7 +185,7 @@ function render() {
           <div class="steps-grid">
             <article class="step-card"><span class="step-number">01</span><div class="step-icon">◉</div><h3>CREATE OR JOIN</h3><p>Start a guest session and create a private room, or enter your friend's six-character code.</p></article>
             <article class="step-card"><span class="step-number">02</span><div class="step-icon">♧</div><h3>GET YOUR CREW READY</h3><p>Wait for up to three friends to join. Everyone marks ready before the host starts.</p></article>
-            <article class="step-card"><span class="step-number">03</span><div class="step-icon">✦</div><h3>LET THE PARTY BEGIN</h3><p>Matchmaking is the first milestone. Direct game-input synchronization is being developed separately.</p></article>
+            <article class="step-card"><span class="step-number">03</span><div class="step-icon">✦</div><h3>LET THE PARTY BEGIN</h3><p>The room relay prototype is in place. Browser and PS3 gameplay synchronization is still under development.</p></article>
           </div>
         </section>
 
