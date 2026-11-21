@@ -3,7 +3,6 @@
 from __future__ import annotations
 import re, struct, zlib
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 ROOT = Path(__file__).resolve().parents[1]
 PKG = ROOT / "pkgfiles"
@@ -108,6 +107,7 @@ def ps_mark(canvas, x, y, scale, color):
 
 
 def load_display_font(size, bold=False):
+    from PIL import ImageFont
     candidates = (
         Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf") if bold else
         Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
@@ -124,6 +124,7 @@ def load_display_font(size, bold=False):
 
 
 def generate(font):
+    from PIL import Image, ImageDraw, ImageOps
     PKG.mkdir(parents=True, exist_ok=True)
     if not PIC1_SOURCE.is_file():
         raise RuntimeError(f"Approved XMB staircase source is missing: {PIC1_SOURCE}")
