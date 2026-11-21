@@ -6001,8 +6001,6 @@ int main(int argc, char *argv[])
             if (circle && !old_circle)
                 g_screen = SCREEN_HOME;
         } else if (g_screen == SCREEN_DETAILS) {
-
-} else if (g_screen == SCREEN_DETAILS) {
             const ps3scale_game_t *game = selected_game();
             const ps3scale_profile_t *profile = profile_for_game(game);
             if (square && !old_square && game && game_is_ps3(game)) {
