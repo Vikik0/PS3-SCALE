@@ -26,7 +26,7 @@ The relay is a transport prototype. The PS3 adapter now intercepts the upstream 
 
 ## Free-tier note
 
-Cloudflare Workers Free supports SQLite-backed Durable Objects with strict daily limits. The prototype caps usage at 16 guest sessions, four open rooms, one active match at a time, and five inbound WebSocket messages per second per client, including controls and keepalive pings. The PS3 adapter batches upstream packets every 220 ms and uses a 12-step input delay, but real-world latency and billing still need validation. This is not an unlimited relay. See ../docs/CROSSPLAY-ARCHITECTURE.md for the current quota calculation.
+Cloudflare Workers Free supports SQLite-backed Durable Objects with strict daily limits. The prototype caps usage at 16 total browser and PS3 sessions, four open rooms, one active match at a time, and five inbound WebSocket messages per second per client, including controls and keepalive pings. The PS3 adapter batches upstream packets every 220 ms and uses a 12-step input delay, but real-world latency and billing still need validation. This is not an unlimited relay. See ../docs/CROSSPLAY-ARCHITECTURE.md for the current quota calculation.
 
 ## Local checks
 
