@@ -35,6 +35,7 @@ echo "== Fetch pinned PCSX-ReARMed PS3 source"
 clone_at_commit "https://github.com/Calyps0man/pcsx_rearmed_for_ps3.git" "$PCSX" "$PCSX_COMMIT"
 git -C "$PCSX" submodule update --init --recursive
 python3 "$ROOT/scripts/patch_psxonps3.py" "$PCSX"
+python3 "$ROOT/scripts/patch_psxonps3_retroarch.py" "$PCSX"
 RSX_HEADER="$PSL1GHT/ppu/include/rsx/rsx_function_macros.h"
 if ! grep -q '"memory"' "$RSX_HEADER"; then
     patch -p1 -d "$PSL1GHT" < "$PCSX/psl1ght-patches/0001-rsx-context-callback-clobbers.patch"
