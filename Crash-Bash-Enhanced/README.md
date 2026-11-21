@@ -20,6 +20,7 @@ Crash Bash Enhanced is a community project to add a modern online layer around t
 - Authenticated host UDP endpoint publishing and peer discovery.
 - Prototype room WebSocket relay with authenticated sender envelopes, 1200-byte payload limit, and per-client rate limiting.
 - PS3 relay client with TLS 1.2, WSS, SNI, and trusted-CA certificate verification.
+- Installable PS3 homebrew PKG for the VSH loader and input bridge; CI validates the PKG identity and GNPDRM finalization.
 - Host integration tests for both plain WebSocket and verified local HTTPS/WSS connections.
 - Push-based room updates over WebSocket; no rapid lobby polling.
 - Responsive web lobby.
@@ -27,7 +28,7 @@ Crash Bash Enhanced is a community project to add a modern online layer around t
 
 ## Important: gameplay status
 
-The current milestone is **transport prototype, not playable cross-platform**. The PS3 PRX now has a certificate-verified TLS 1.2/WSS transport and an in-game room-code menu, but a real Worker endpoint still needs deployment credentials and the PRX has not been tested on physical PS3 hardware. The browser lobby is not yet a game runtime: it still needs a WebGL 2 renderer and Emscripten build. Until both clients exchange synchronized game inputs in a real match, this project is not an online-playable release.
+The current milestone is **transport prototype, not playable cross-platform**. The PS3 PRX now has a certificate-verified TLS 1.2/WSS transport and an in-game room-code menu. Its installer PKG builds in CI, but a real Worker endpoint still needs deployment credentials and the PRX has not been tested on physical PS3 hardware. The browser lobby is not yet a game runtime: it still needs a WebGL 2 renderer and Emscripten build. Until both clients exchange synchronized game inputs in a real match, this project is not an online-playable release.
 
 The project will not use copyrighted game assets or distribute a game ISO/ROM. Players must supply their own legally obtained game copy.
 
@@ -60,14 +61,13 @@ The target is Cloudflare Workers Free with SQLite-backed Durable Objects. Free u
 
 ## Automated checks
 
-GitHub Actions builds the Vite lobby, runs Worker integration tests, validates the Cloudflare bundle, tests WS/WSS with certificate verification against local TLS servers, and cross-compiles the PS3 PRX. The deployment workflow still skips deployment until Cloudflare credentials are configured.
+GitHub Actions builds the Vite lobby, runs Worker integration tests, validates the Cloudflare bundle, tests WS/WSS with certificate verification against local TLS servers, cross-compiles both PS3 PRXs, and builds and validates the installable PS3 PKG. The deployment workflow still skips deployment until Cloudflare credentials are configured.
 
 ## Release gates
 
 1. Keep Worker, web, WS/WSS, and PS3 cross-build CI green.
 2. Configure Cloudflare Actions secrets and deploy the Worker; verify the public health endpoint.
 3. Configure the web API URL and publish the lobby.
-4. Build an installable PS3 PKG around the PRX and loader.
-5. Verify the plugin loads and the room menu works on physical PS3 hardware.
+4. Install the generated PS3 PKG and verify the plugin loads and the room menu works on physical PS3 hardware.
 6. Complete the browser WebGL 2/Emscripten game runtime.
 7. Verify a real PS3-to-browser match, then test disconnect/rejoin, latency, host loss, and repeated matches.
