@@ -8,6 +8,7 @@ This project packages a PS3 build of **RetroArch Netplay with PCSX-ReARMed stati
 - PCSX-ReARMed linked into the frontend as the PS1 emulator core.
 - RetroArch Netplay with public host announcements, NAT traversal and the Madrid relay endpoint enabled by default.
 - Multitap configured on PS1 Port 1; the host accepts up to three remote clients (four network players total).
+- Netplay lockstep is enabled because the pinned PS1 core has a 0x440000-byte savestate. It keeps one shared state instead of a rollback state for every buffered frame, reducing memory use at the cost of possible added input latency or stalls.
 - No PSN initialization or PSN login.
 - The original Crash Bash disc image and PlayStation BIOS are **not** included.
 
@@ -30,7 +31,9 @@ The package sets PCSX-ReARMed's `Multitap Mode` to `Port 1`. Keep the game regio
 3. Other players refresh the **Netplay Host List** and join the host.
 4. The host can accept up to three remote connections, for four players total.
 
-The build enables RetroArch's public lobby announcement, NAT traversal and the Madrid relay by default. A direct connection can also use TCP/UDP port `55435`; forward that port on the host router if needed. Strict NAT, firewall rules or relay availability can still prevent a connection.
+The build enables RetroArch's public lobby announcement, NAT traversal and the Madrid relay by default. A direct connection can also use TCP/UDP port `55435`; forward that port on the host router if needed. Strict NAT, firewall rules or relay availability can still prevent a connection. For a private match, set a Netplay Server Password on the host and share it only with invited players.
+
+**Performance warning:** RetroArch's official Netplay FAQ says PSX netplay is generally unsuitable because of the processing cost. Lockstep is enabled here to avoid keeping a full PS1 savestate for every rollback frame, but it does not remove all CPU and synchronization costs. Treat online PS1 play on this PS3 build as experimental until it passes testing on two physical consoles.
 
 **PSN is not used.** An internet connection is still required for online Netplay.
 
@@ -43,7 +46,7 @@ The installable package is built by `.github/workflows/crash-bash-build.yml` usi
 - RetroArch menu assets
 - RetroArch core metadata
 
-The build script is `scripts/build_online_pkg.sh`. It builds the PS1 core, builds the Salamander EBOOT, links the real core into RetroArch, checks the SELF/SFO identities, packages the PKG, and writes a SHA-256 file plus a build manifest.
+The build script is `scripts/build_online_pkg.sh`. It patches the PCSX-ReARMed Multitap default to Port 1, enables Netplay lockstep for the large PS1 state, builds the PS1 core and Salamander EBOOT, links the real core into RetroArch, checks the SELF/SFO identities, packages the PKG, and writes a SHA-256 file plus a build manifest.
 
 Expected CI artifacts:
 
