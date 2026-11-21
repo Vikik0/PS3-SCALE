@@ -39,6 +39,9 @@ $(BUILD)/mission_rules.o: ../mission_rules.c ../mission_rules.h | $(BUILD)
 $(BUILD)/local_input.o: ../local_input.c ../local_input.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c ../local_input.c -o $@
 
+$(BUILD)/local_player_gate.o: ../local_player_gate.c ../local_player_gate.h | $(BUILD)
+	$(PPU_CC) $(CFLAGS) -c ../local_player_gate.c -o $@
+
 $(BUILD)/local_input_ps3.o: ../local_input_ps3.c ../local_input.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c ../local_input_ps3.c -o $@
 
@@ -60,10 +63,10 @@ $(BUILD)/ghc_lobby_json.o: ../ghc_lobby_json.c ../ghc_lobby_json.h ../ghc_lobby_
 $(BUILD)/ghc_lobby_ps3.o: ../ghc_lobby_ps3.c ../ghc_lobby.h ../ghc_lobby_json.h ../ghc_lobby_string.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c ../ghc_lobby_ps3.c -o $@
 
-$(BUILD)/ghosts_coop.elf: $(BUILD)/module.o $(BUILD)/exports.o $(BUILD)/ghc_protocol.o $(BUILD)/ghc_websocket.o $(BUILD)/mission_rules.o $(BUILD)/local_input.o $(BUILD)/local_input_ps3.o $(BUILD)/ghc_lobby_json.o $(BUILD)/ghc_lobby_ps3.o $(BUILD)/ghc_stun.o $(BUILD)/ghc_udp_ps3.o $(BUILD)/ghc_game_protocol.o $(BUILD)/ghc_p2p_udp.o $(CRT) $(PRX_LD) $(PRX_SPECS)
+$(BUILD)/ghosts_coop.elf: $(BUILD)/module.o $(BUILD)/exports.o $(BUILD)/ghc_protocol.o $(BUILD)/ghc_websocket.o $(BUILD)/mission_rules.o $(BUILD)/local_input.o $(BUILD)/local_player_gate.o $(BUILD)/local_input_ps3.o $(BUILD)/ghc_lobby_json.o $(BUILD)/ghc_lobby_ps3.o $(BUILD)/ghc_stun.o $(BUILD)/ghc_udp_ps3.o $(BUILD)/ghc_game_protocol.o $(BUILD)/ghc_p2p_udp.o $(CRT) $(PRX_LD) $(PRX_SPECS)
 	$(PPU_CC) -nostdlib -nostartfiles -specs=$(PRX_SPECS) \
 		-Wl,-q -Wl,--no-warn-rwx-segments -Wl,-T,$(PRX_LD) \
-		$(BUILD)/module.o $(BUILD)/exports.o $(BUILD)/ghc_protocol.o $(BUILD)/ghc_websocket.o $(BUILD)/mission_rules.o $(BUILD)/local_input.o $(BUILD)/local_input_ps3.o $(BUILD)/ghc_lobby_json.o $(BUILD)/ghc_lobby_ps3.o $(BUILD)/ghc_stun.o $(BUILD)/ghc_udp_ps3.o $(BUILD)/ghc_game_protocol.o $(BUILD)/ghc_p2p_udp.o $(CRT) \
+		$(BUILD)/module.o $(BUILD)/exports.o $(BUILD)/ghc_protocol.o $(BUILD)/ghc_websocket.o $(BUILD)/mission_rules.o $(BUILD)/local_input.o $(BUILD)/local_player_gate.o $(BUILD)/local_input_ps3.o $(BUILD)/ghc_lobby_json.o $(BUILD)/ghc_lobby_ps3.o $(BUILD)/ghc_stun.o $(BUILD)/ghc_udp_ps3.o $(BUILD)/ghc_game_protocol.o $(BUILD)/ghc_p2p_udp.o $(CRT) \
 		-L$(PS3DK)/ppu/lib -lhttp_stub -lhttp_util_stub -lssl_stub -lnet_stub -lsysmodule_stub -lio_stub -lgcc -o $@
 
 $(BUILD)/ghosts_coop.prx: $(BUILD)/ghosts_coop.elf
