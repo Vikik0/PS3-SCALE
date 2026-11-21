@@ -235,7 +235,7 @@ assert.equal(relayA.closed.code, 1008);
 assert.equal(relayB.closed, null);
 assert.equal(relayB.deserializeAttachment().matchStarted, false);
 assert.equal(otherRoom.closed, null);
-const roomUpdate = JSON.parse(relayB.sent[1]);
+const roomUpdate = JSON.parse(relayB.sent.filter(item => typeof item === "string").at(-1));
 assert.equal(roomUpdate.type, "room_update");
 assert.equal(roomUpdate.room.status, "waiting");
 assert.equal(roomUpdate.room.players[0].player_id, players[1].session_id);
