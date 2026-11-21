@@ -327,6 +327,22 @@ assert "Smoother Performance (game-specific)" not in library_ui
 assert "TRIANGLE: APPLY PROFILE" in library_ui
 assert "TRIANGLE: DOWNLOAD CONFIG" in library_ui
 assert "CROSS: START GAME" in library_ui
+assert "SQUARE: FPS CONTROL" in library_ui
+
+# FPS control only exposes exact game/version profiles and preserves an
+# explicit Original mode; it never fabricates a generic 30/60 FPS slider.
+assert "SCREEN_FPS_CONTROL" in src
+fps_ui = section("static void draw_fps_control(void)", "static void draw_settings(void)")
+for token in ("ORIGINAL", "NO EXACT FPS PROFILE",
+              "COMMUNITY-REPORTED PROFILE", "ONE-LAUNCH PROFILE ARMED",
+              "60 FPS is not guaranteed", "CROSS: PREPARE PROFILE",
+              "TRIANGLE: CONFIRM APPLY", "SQUARE: REMOVE PROFILE"):
+    assert token in fps_ui, f"Missing FPS control UI token: {token}"
+fps_input = section("} else if (g_screen == SCREEN_FPS_CONTROL) {",
+                    "} else if (g_screen == SCREEN_ONLINE_DB) {")
+for token in ("g_fps_control_selection", "confirm_profile_install()",
+              "ps3scale_profile_script_remove", "FPS PROFILE APPLY CANCELLED"):
+    assert token in fps_input, f"Missing FPS control input behavior: {token}"
 
 # Stage 5: Settings, Help, About and profile toast share the pearl UI language.
 settings_ui = section("static void draw_settings(void)", "static void draw_tools(void)")
@@ -732,7 +748,7 @@ assert "actions/upload-artifact@v4" not in build_workflow
 assert "actions/setup-python@v5" not in index_workflow
 
 # Keep the visible app, support payload and local report on one version.
-assert '#define PS3SCALE_APP_VERSION "ALPHA 0.22"' in src
+assert '#define PS3SCALE_APP_VERSION "ALPHA 0.23"' in src
 assert "ALPHA 0.21" not in src
 assert "CFW 4.92" not in src
 assert "PS3SCALE_APP_VERSION" in section("static void draw_splash(void)",
