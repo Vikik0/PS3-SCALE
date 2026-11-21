@@ -1,4 +1,5 @@
 #include "net_adapter.h"
+#include "relay_client.h"
 
 #include <cell/libnet.h>
 #include <cell/libnetctl.h>
@@ -44,10 +45,253 @@ const Settings *settings(void);
 void settings_borrow(int skip_intro, int skip_loading, int cheat_menu, int extra_heroes);
 void settings_return(void);
 
-/* Include the upstream four-player deterministic UDP lockstep implementation
- * in this translation unit. This lets the PS3 adapter provide the platform,
- * timing, socket-interface and port-mapping functions it expects. */
+static CbRelayClient relay_client;
+static CbRelayBatchQueue relay_batch;
+static uint8_t relay_host_id[16];
+
+typedef struct CbRelayPeerAddress {
+    uint8_t session_id[16];
+    struct sockaddr_in address;
+    int used;
+} CbRelayPeerAddress;
+
+static CbRelayPeerAddress relay_peers[4];
+static uint8_t relay_rx_packet[CB_RELAY_MAX_PACKET];
+static uint8_t relay_rx_sender[16];
+static size_t relay_rx_length;
+static int relay_rx_valid;
+
+static int relay_hex_to_bytes(const char *hex, uint8_t output[16])
+{
+    size_t i;
+    if (!hex || strlen(hex) != 32u) return -1;
+    for (i = 0; i < 16u; ++i) {
+        char pair[3];
+        char *end;
+        pair[0] = hex[i * 2u];
+        pair[1] = hex[i * 2u + 1u];
+        pair[2] = '\0';
+        output[i] = (uint8_t)strtoul(pair, &end, 16);
+        if (*end != '\0') return -1;
+    }
+    return 0;
+}
+
+static void relay_session_address(const uint8_t session_id[16],
+                                  struct sockaddr_in *address)
+{
+    unsigned int a = 1u + (session_id[0] % 250u);
+    unsigned int b = 1u + (session_id[1] % 250u);
+    unsigned int c = 1u + (session_id[2] % 250u);
+    unsigned int port = 20000u +
+        ((((unsigned int)session_id[3] << 8) | session_id[4]) % 40000u);
+
+    memset(address, 0, sizeof(*address));
+    address->sin_family = AF_INET;
+    address->sin_addr.s_addr = htonl((10u << 24) | (a << 16) | (b << 8) | c);
+    address->sin_port = htons((unsigned short)port);
+}
+
+static void relay_peer_add(const uint8_t session_id[16])
+{
+    size_t i;
+    size_t slot = 4u;
+    struct sockaddr_in address;
+
+    relay_session_address(session_id, &address);
+    for (i = 0; i < 4u; ++i) {
+        if (relay_peers[i].used &&
+            memcmp(relay_peers[i].session_id, session_id, 16u) == 0) {
+            relay_peers[i].address = address;
+            return;
+        }
+        if (!relay_peers[i].used && slot == 4u) slot = i;
+    }
+    if (slot == 4u) return;
+    memcpy(relay_peers[slot].session_id, session_id, 16u);
+    relay_peers[slot].address = address;
+    relay_peers[slot].used = 1;
+}
+
+static int relay_peer_find(const struct sockaddr *destination,
+                           socklen_t destination_length, uint8_t session_id[16])
+{
+    const struct sockaddr_in *wanted;
+    size_t i;
+
+    if (!destination || destination_length < (socklen_t)sizeof(struct sockaddr_in) ||
+        destination->sa_family != AF_INET) return -1;
+    wanted = (const struct sockaddr_in *)destination;
+    for (i = 0; i < 4u; ++i) {
+        if (relay_peers[i].used &&
+            relay_peers[i].address.sin_addr.s_addr == wanted->sin_addr.s_addr &&
+            relay_peers[i].address.sin_port == wanted->sin_port) {
+            memcpy(session_id, relay_peers[i].session_id, 16u);
+            return 0;
+        }
+    }
+    return -1;
+}
+
+static int relay_receive_queue(int timeout_ms)
+{
+    int result;
+    int controls = 0;
+
+    if (relay_rx_valid) return 1;
+    do {
+        relay_rx_length = 0;
+        result = cb_relay_receive_packet(&relay_client, relay_rx_packet,
+                                         sizeof(relay_rx_packet), &relay_rx_length,
+                                         relay_rx_sender, NULL, 0, timeout_ms);
+        if (result == 2) {
+            timeout_ms = 0;
+            controls++;
+        }
+    } while (result == 2 && controls < 8);
+    if (result != 1) return result;
+    relay_peer_add(relay_rx_sender);
+    relay_rx_valid = 1;
+    return 1;
+}
+
+static ssize_t cb_relay_sendto_shim(int fd, const void *buffer, size_t length,
+                                    int flags, const struct sockaddr *destination,
+                                    socklen_t destination_length)
+{
+    uint8_t recipient[16];
+    if (!relay_client.connected) {
+        return sendto(fd, buffer, length, flags, destination, destination_length);
+    }
+    if (!buffer || length == 0 || length > CB_RELAY_MAX_PACKET ||
+        relay_peer_find(destination, destination_length, recipient) != 0) {
+        errno = EHOSTUNREACH;
+        return -1;
+    }
+    if (relay_batch.count >= CB_RELAY_MAX_BATCH_PACKETS &&
+        cb_relay_batch_flush(&relay_client, &relay_batch) != 0) {
+        errno = ENETDOWN;
+        return -1;
+    }
+    if (cb_relay_queue_packet(&relay_batch, recipient, buffer, length) != 0) {
+        errno = EMSGSIZE;
+        return -1;
+    }
+    return (ssize_t)length;
+}
+
+static ssize_t cb_relay_recvfrom_shim(int fd, void *buffer, size_t length,
+                                      int flags, struct sockaddr *source,
+                                      socklen_t *source_length)
+{
+    struct sockaddr_in address;
+    int result;
+    (void)flags;
+
+    if (!relay_client.connected) {
+        return recvfrom(fd, buffer, length, flags, source, source_length);
+    }
+    if (!relay_rx_valid) {
+        result = relay_receive_queue(0);
+        if (result != 1) {
+            errno = result < 0 ? ECONNRESET : EWOULDBLOCK;
+            return -1;
+        }
+    }
+    if (!buffer || length < relay_rx_length) {
+        relay_rx_valid = 0;
+        errno = EMSGSIZE;
+        return -1;
+    }
+
+    memcpy(buffer, relay_rx_packet, relay_rx_length);
+    relay_session_address(relay_rx_sender, &address);
+    if (source && source_length) {
+        socklen_t copy_length = *source_length < (socklen_t)sizeof(address)
+            ? *source_length : (socklen_t)sizeof(address);
+        memcpy(source, &address, copy_length);
+        *source_length = (socklen_t)sizeof(address);
+    }
+    relay_rx_valid = 0;
+    return (ssize_t)relay_rx_length;
+}
+
+static int cb_relay_select_shim(int nfds, fd_set *read_set, fd_set *write_set,
+                                fd_set *except_set, struct timeval *timeout)
+{
+    int ready_fd = -1;
+    int timeout_ms = -1;
+    int result;
+    int i;
+
+    if (!relay_client.connected) return select(nfds, read_set, write_set, except_set, timeout);
+    if (!read_set) return 0;
+    for (i = 0; i < nfds; ++i) {
+        if (FD_ISSET(i, read_set)) {
+            ready_fd = i;
+            break;
+        }
+    }
+    if (ready_fd < 0) return 0;
+    if (timeout) {
+        timeout_ms = (int)(timeout->tv_sec * 1000L + timeout->tv_usec / 1000L);
+    }
+
+    result = relay_receive_queue(timeout_ms);
+    FD_ZERO(read_set);
+    if (result == 1) {
+        FD_SET(ready_fd, read_set);
+        return 1;
+    }
+    return result < 0 ? -1 : 0;
+}
+
+static void cb_time_pings_dispatch(void);
+
+/* Only net.c's UDP send/receive/select calls are redirected. STUN and the
+ * non-relay direct-UDP path continue to use the native socket functions. */
+#define sendto cb_relay_sendto_shim
+#define recvfrom cb_relay_recvfrom_shim
+#define select cb_relay_select_shim
+#define net_lobby_start net_lobby_start_original
 #include "../upstream/crash_bash_decomp/port/platform/net.c"
+#undef net_lobby_start
+#undef select
+#undef recvfrom
+#undef sendto
+
+static void cb_time_pings_dispatch(void)
+{
+    if (!relay_client.connected) time_pings();
+}
+
+void net_lobby_start(void)
+{
+    int m;
+    int next_pad = 0;
+
+    if (!relay_client.connected) {
+        net_lobby_start_original();
+        return;
+    }
+    if (Lobby != LOBBY_OPEN || NumMachines < 2) return;
+
+    /* Relay batching adds about 200 ms. Use a fixed eight-step input delay
+     * instead of the upstream 10 ms ping burst, which exceeds the free relay cap. */
+    Delay = Options.delay > 0 ? Options.delay : 8;
+    Delay = Delay > 30 ? 30 : Delay < 1 ? 1 : Delay;
+    Machines[0].pads = own_pads();
+    for (m = 0; m < NumMachines; ++m) {
+        Machines[m].first = next_pad;
+        Machines[m].pads = Machines[m].pads > PADS - next_pad
+            ? PADS - next_pad : Machines[m].pads;
+        Machines[m].ready = 0;
+        next_pad += Machines[m].pads;
+    }
+    LobbyBegan = SDL_GetTicks();
+    LobbySent = 0;
+    Lobby = LOBBY_STARTING;
+}
 
 static volatile int net_active;
 static volatile int lobby_started;
