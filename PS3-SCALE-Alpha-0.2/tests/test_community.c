@@ -84,6 +84,11 @@ int main(void)
     strcpy(game.title_id, "BLES30464");
     if (ps3scale_community_file_matches_exact_game(&index.items[0], &game))
         return 18;
+    /* Same title and region are not sufficient for an install: the actual
+       Title ID must be present in the indexed file identity/path metadata. */
+    strcpy(game.title_id, "BLUS30465");
+    if (ps3scale_community_file_matches_exact_game(&index.items[0], &game))
+        return 24;
     if (strcmp(ps3scale_community_region_label("BLES00016"), "EU") != 0 ||
         strcmp(ps3scale_community_region_label("BLUS30012"), "US") != 0)
         return 19;
