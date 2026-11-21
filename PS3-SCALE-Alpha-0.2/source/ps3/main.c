@@ -3208,10 +3208,71 @@ static int community_url_encode(char *out, size_t capacity,
     return 0;
 }
 
+static int is_ps3scale_temp_enhancement_name(const char *name)
+{
+    size_t length, i;
+    if (!name)
+        return 0;
+    length = strlen(name);
+    if (length < 14 || strncmp(name, "PS3SCALE_", 9) != 0 ||
+        strcmp(name + length - 4, ".ncl") != 0)
+        return 0;
+    for (i = 0; i < length; i++) {
+        unsigned char ch = (unsigned char)name[i];
+        if (!(isalnum(ch) || ch == '_' || ch == '-' || ch == '.'))
+            return 0;
+    }
+    return 1;
+}
+
+static void cleanup_temporary_enhancements(void)
+{
+    FILE *manifest = fopen(PS3SCALE_TEMP_ENHANCEMENT_LIST_PATH, "r");
+    char name[192];
+    if (!manifest)
+        return;
+
+    while (fgets(name, sizeof(name), manifest)) {
+        char target[PS3SCALE_PATH_MAX];
+        size_t length = strcspn(name, "\r\n");
+        int written;
+        name[length] = '\0';
+        if (!is_ps3scale_temp_enhancement_name(name))
+            continue;
+        written = snprintf(target, sizeof(target), "%s/%s",
+                           PS3SCALE_ARTEMIS_USERLIST_DIR, name);
+        if (written > 0 && (size_t)written < sizeof(target))
+            (void)unlink(target);
+    }
+    fclose(manifest);
+    (void)unlink(PS3SCALE_TEMP_ENHANCEMENT_LIST_PATH);
+}
+
+static int record_temporary_enhancement(const char *path)
+{
+    const char *name;
+    FILE *manifest;
+    int failed;
+    if (!path || !path[0])
+        return -1;
+    name = strrchr(path, '/');
+    name = name ? name + 1 : path;
+    if (!is_ps3scale_temp_enhancement_name(name))
+        return -1;
+    manifest = fopen(PS3SCALE_TEMP_ENHANCEMENT_LIST_PATH, "a");
+    if (!manifest)
+        return -1;
+    failed = fprintf(manifest, "%s\n", name) < 0;
+    if (fclose(manifest) != 0)
+        failed = 1;
+    return failed ? -1 : 0;
+}
+
 static void community_download_worker(void *arg)
 {
     FILE *fp = NULL;
     unsigned char header[256];
+    unsigned char block[512];
     size_t got = 0;
     long file_size = -1;
     int result = -1;
@@ -3234,6 +3295,7 @@ static void community_download_worker(void *arg)
                 fseek(fp, 0, SEEK_SET) != 0) {
                 result = -3;
             } else {
+                int text_file = 1;
                 got = fread(header, 1, sizeof(header), fp);
                 if (ferror(fp) || got == 0 ||
                     (got >= 4 && header[0] == 0x7f &&
@@ -3241,6 +3303,26 @@ static void community_download_worker(void *arg)
                     (got >= 4 && header[0] == 0x7f &&
                      header[1] == 'P' && header[2] == 'K' && header[3] == 'G') ||
                     memchr(header, 0, got) != NULL) {
+                    text_file = 0;
+                }
+                if (text_file && fseek(fp, 0, SEEK_SET) != 0)
+                    text_file = 0;
+                while (text_file) {
+                    size_t i;
+                    got = fread(block, 1, sizeof(block), fp);
+                    for (i = 0; i < got; i++) {
+                        unsigned char ch = block[i];
+                        if (ch == 0 ||
+                            (ch < 0x20u && ch != '\n' &&
+                             ch != '\r' && ch != '\t')) {
+                            text_file = 0;
+                            break;
+                        }
+                    }
+                    if (!text_file || got < sizeof(block))
+                        break;
+                }
+                if (!text_file || ferror(fp)) {
                     result = -4;
                 } else if (stat(g_community_download_path, &st) == 0) {
                     result = -2;
@@ -3264,15 +3346,17 @@ static void community_download_worker(void *arg)
     g_network_task_running = 0;
 }
 
-static void start_community_file_download(const ps3scale_community_file_t *entry)
+static void start_community_file_download(
+    const ps3scale_community_file_t *entry,
+    const ps3scale_game_t *game)
 {
-    static const char download_dir[] =
-        "/dev_hdd0/game/PS3SCALE1/USRDIR/community_downloads";
+    static const char download_dir[] = PS3SCALE_ARTEMIS_USERLIST_DIR;
     struct stat st;
     char encoded_branch[192];
     char encoded_path[640];
-    char filename[160];
-    char safe_title[24];
+    char safe_base[96];
+    char safe_version[12];
+    char filename[192];
     const char *base;
     const char *dot;
     size_t i, n;
@@ -3283,10 +3367,34 @@ static void start_community_file_download(const ps3scale_community_file_t *entry
                  "SELECT A COMMUNITY FILE FIRST.");
         return;
     }
+    if (!game || !game_is_ps3(game) ||
+        strncmp(game->path, "/dev_hdd0/", 10) != 0 ||
+        !game->title_id[0] || !game->app_ver[0] ||
+        !ps3scale_community_file_matches_exact_game(entry, game)) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "INSTALL THE EXACT HDD GAME VERSION AND RESCAN FIRST.");
+        return;
+    }
+    if (stat(game->path, &st) != 0) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "GAME PATH NOT FOUND. RESCAN THE INSTALLED LIBRARY.");
+        return;
+    }
+    if (strcmp(entry->category, "GRAPHICS_FPS") != 0) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "THIS NCL FILE IS NOT A GRAPHICS / FPS ENHANCEMENT.");
+        return;
+    }
+    if (!file_exists_readonly("/dev_hdd0/game/ARTPS3001/USRDIR/EBOOT.BIN")) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "INSTALL ARTEMIS PS3 BEFORE INSTALLING NCL FILES.");
+        return;
+    }
     if (g_network_task_running ||
         g_community_download_running || g_community_download_done ||
         g_community_download_thread_started ||
-        g_catalog_sync_running || g_ps2_config_download_running) {
+        g_catalog_sync_running || g_catalog_sync_done ||
+        g_ps2_config_download_running || g_ps2_config_download_done) {
         snprintf(g_online_message, sizeof(g_online_message),
                  "WAIT FOR THE CURRENT ONLINE TASK TO FINISH.");
         return;
@@ -3306,10 +3414,9 @@ static void start_community_file_download(const ps3scale_community_file_t *entry
         return;
     }
     dot = strrchr(entry->path, '.');
-    if (!dot || (!community_extension_is(dot, ".ncl") &&
-                 !community_extension_is(dot, ".txt"))) {
+    if (!dot || !community_extension_is(dot, ".ncl")) {
         snprintf(g_online_message, sizeof(g_online_message),
-                 "ONLY NCL AND TEXT DATA FILES CAN BE DOWNLOADED.");
+                 "ONLY VERIFIED NCL GRAPHICS PATCHES CAN BE INSTALLED.");
         return;
     }
     if (community_url_encode(encoded_branch, sizeof(encoded_branch),
@@ -3333,30 +3440,48 @@ static void start_community_file_download(const ps3scale_community_file_t *entry
     base = strrchr(entry->path, '/');
     base = base ? base + 1 : entry->path;
     n = 0;
-    for (i = 0; base[i] && n + 1 < sizeof(filename); i++) {
-        unsigned char c = (unsigned char)base[i];
-        filename[n++] = (char)(isalnum(c) || c == '.' || c == '_' || c == '-' ?
-                               c : '_');
+    for (i = 0; base[i] && n + 1 < sizeof(safe_base); i++) {
+        unsigned char ch = (unsigned char)base[i];
+        safe_base[n++] = (char)(isalnum(ch) || ch == '.' ||
+                                ch == '_' || ch == '-' ? ch : '_');
     }
-    filename[n] = '\0';
+    safe_base[n] = '\0';
+    if (!safe_base[0]) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DOWNLOAD REJECTED: EMPTY PATCH FILE NAME.");
+        return;
+    }
+
     n = 0;
-    for (i = 0; entry->title_id[i] && n + 1 < sizeof(safe_title); i++) {
-        unsigned char c = (unsigned char)entry->title_id[i];
-        safe_title[n++] = (char)(isalnum(c) || c == '-' || c == '_' ? c : '_');
+    for (i = 0; game->app_ver[i] && n + 1 < sizeof(safe_version); i++) {
+        unsigned char ch = (unsigned char)game->app_ver[i];
+        safe_version[n++] = (char)(isalnum(ch) || ch == '.' ||
+                                   ch == '-' ? ch : '_');
     }
-    safe_title[n] = '\0';
-    if (!safe_title[0])
-        snprintf(safe_title, sizeof(safe_title), "COMMUNITY");
+    safe_version[n] = '\0';
+    if (!safe_version[0]) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DOWNLOAD REJECTED: INVALID GAME VERSION.");
+        return;
+    }
+
+    written = snprintf(filename, sizeof(filename), "PS3SCALE_%s_%s_%s",
+                       game->title_id, safe_version, safe_base);
+    if (written < 0 || (size_t)written >= sizeof(filename)) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DOWNLOAD REJECTED: PATCH FILE NAME IS TOO LONG.");
+        return;
+    }
 
     if (mkdir(download_dir, 0777) != 0 &&
         (stat(download_dir, &st) != 0 || !S_ISDIR(st.st_mode))) {
         snprintf(g_online_message, sizeof(g_online_message),
-                 "COULD NOT CREATE COMMUNITY DOWNLOAD FOLDER.");
+                 "ARTEMIS USERLIST FOLDER COULD NOT BE CREATED.");
         return;
     }
     written = snprintf(g_community_download_path,
                        sizeof(g_community_download_path),
-                       "%s/%s_%s", download_dir, safe_title, filename);
+                       "%s/%s", download_dir, filename);
     if (written < 0 || (size_t)written >= sizeof(g_community_download_path)) {
         snprintf(g_online_message, sizeof(g_online_message),
                  "DOWNLOAD REJECTED: DESTINATION PATH IS TOO LONG.");
@@ -3364,7 +3489,7 @@ static void start_community_file_download(const ps3scale_community_file_t *entry
     }
     if (stat(g_community_download_path, &st) == 0) {
         snprintf(g_online_message, sizeof(g_online_message),
-                 "FILE ALREADY EXISTS IN COMMUNITY_DOWNLOADS.");
+                 "PATCH FILE ALREADY EXISTS IN ARTEMIS USERLIST.");
         return;
     }
     written = snprintf(g_community_download_temp_path,
@@ -3376,6 +3501,7 @@ static void start_community_file_download(const ps3scale_community_file_t *entry
         return;
     }
 
+    g_community_download_persistent = g_enhancement_persistent;
     g_community_download_result = -1;
     g_community_downloaded = 0;
     g_community_download_total = 0;
@@ -3396,7 +3522,7 @@ static void start_community_file_download(const ps3scale_community_file_t *entry
     }
     g_community_download_thread_started = 1;
     snprintf(g_online_message, sizeof(g_online_message),
-             "DOWNLOADING NCL/TEXT DATA. IT WILL NOT BE EXECUTED.");
+             "DOWNLOADING EXACT-MATCH NCL TO ARTEMIS USERLIST...");
 }
 
 static void service_community_download(void)
@@ -3409,21 +3535,29 @@ static void service_community_download(void)
     }
     if (g_community_download_result == 0) {
         const char *base = strrchr(g_community_download_path, '/');
-        snprintf(g_online_message, sizeof(g_online_message),
-                 "DOWNLOADED %s TO COMMUNITY_DOWNLOADS. NOT APPLIED.",
-                 base ? base + 1 : g_community_download_path);
+        if (!g_community_download_persistent &&
+            record_temporary_enhancement(g_community_download_path) != 0) {
+            (void)unlink(g_community_download_path);
+            snprintf(g_online_message, sizeof(g_online_message),
+                     "TEMP CLEANUP COULD NOT BE RECORDED. PATCH FILE REMOVED.");
+        } else {
+            snprintf(g_online_message, sizeof(g_online_message),
+                     "INSTALLED %.48s IN ARTEMIS USERLIST (%s). OPEN ARTEMIS TO SELECT IT.",
+                     base ? base + 1 : g_community_download_path,
+                     g_community_download_persistent ? "PERMANENT" : "TEMPORARY");
+        }
     } else if (g_community_download_result == -2) {
         snprintf(g_online_message, sizeof(g_online_message),
-                 "FILE ALREADY EXISTS. IT WAS NOT OVERWRITTEN.");
+                 "PATCH FILE ALREADY EXISTS. IT WAS NOT OVERWRITTEN.");
     } else if (g_community_download_result == -4) {
         snprintf(g_online_message, sizeof(g_online_message),
-                 "DOWNLOAD REJECTED: FILE IS NOT SAFE TEXT DATA.");
+                 "DOWNLOAD REJECTED: FILE IS NOT SAFE NCL TEXT.");
     } else if (g_community_download_result == -5) {
         snprintf(g_online_message, sizeof(g_online_message),
                  "DOWNLOAD VALIDATED BUT COULD NOT BE SAVED.");
     } else {
         snprintf(g_online_message, sizeof(g_online_message),
-                 "COMMUNITY DOWNLOAD FAILED. CHECK NETWORK AND SOURCE.");
+                 "COMMUNITY NCL DOWNLOAD FAILED. CHECK NETWORK AND SOURCE.");
     }
     g_community_download_done = 0;
     g_community_downloaded = 0;
@@ -4419,17 +4553,23 @@ static void draw_online_database(void)
                   "Original ISO / classic is not overwritten.");
     } else if (selected_community) {
         const char *dot = strrchr(selected_community->path, '.');
+        int exact_local_game =
+            selected && game_is_ps3(selected) &&
+            selected->title_id[0] && selected->app_ver[0] &&
+            strncmp(selected->path, "/dev_hdd0/", 10) == 0 &&
+            ps3scale_community_file_matches_exact_game(
+                selected_community, selected);
         int can_download =
-            dot &&
-            (community_extension_is(dot, ".ncl") ||
-             community_extension_is(dot, ".txt")) &&
+            exact_local_game && g_artemis_installed &&
+            strcmp(selected_community->category, "GRAPHICS_FPS") == 0 &&
+            dot && community_extension_is(dot, ".ncl") &&
             selected_community->file_size <= PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT;
 
         draw_soft_chip(414.0f, 190.0f, 182.0f,
                        "GITHUB COMMUNITY DATA", 1);
         set_ui_font_size(6, 9);
         draw_text(612.0f, 197.0f, 0x875be8ff,
-                  selected ? "X: GAME DETAILS" : "X: DOWNLOAD DATA");
+                  can_download ? "X: INSTALL NCL" : "X: NOT READY");
         set_ui_font_size(7, 11);
         snprintf(line, sizeof(line), "GAME: %.54s", selected_community->title);
         draw_text(414.0f, 224.0f, 0x29243fff, line);
@@ -4450,7 +4590,7 @@ static void draw_online_database(void)
             ps3scale_community_file_matches_exact_game(selected_community,
                                                         selected)) {
             draw_text(414.0f, 357.0f, 0x26794bff,
-                      "MATCH: ID OR TITLE/REGION + VERSION");
+                      "MATCH: EXACT TITLE ID / APP VERSION");
         } else if (selected) {
             draw_text(414.0f, 357.0f, 0xb27b35ff,
                       "MATCH: REVIEW TITLE ID / VERSION");
@@ -4460,18 +4600,31 @@ static void draw_online_database(void)
         }
         snprintf(line, sizeof(line), "SIZE: %u KB | %s",
                  (unsigned)((selected_community->file_size + 1023u) / 1024u),
-                 can_download ? "NCL/TXT DATA" : "UNSUPPORTED FILE");
+                 can_download ? "NCL GRAPHICS PATCH" : "NOT INSTALLABLE");
         draw_text(414.0f, 381.0f, 0x514b69ff, line);
         if (can_download) {
             draw_text(414.0f, 393.0f, 0x875be8ff,
-                      selected ? "SELECT: SAVE TO COMMUNITY_DOWNLOADS" :
-                                 "X: DOWNLOAD TO COMMUNITY_DOWNLOADS");
+                      "CROSS: INSTALL TO ARTEMIS USERLIST");
+        } else if (!selected) {
+            draw_text(414.0f, 393.0f, 0xb27b35ff,
+                      "CROSS: SCAN THE EXACT GAME FIRST");
+        } else if (!g_artemis_installed) {
+            draw_text(414.0f, 393.0f, 0xb27b35ff,
+                      "INSTALL ARTEMIS PS3 FIRST");
+        } else if (strcmp(selected_community->category, "GRAPHICS_FPS") != 0) {
+            draw_text(414.0f, 393.0f, 0xb27b35ff,
+                      "NOT A GRAPHICS / FPS PATCH");
+        } else if (!exact_local_game) {
+            draw_text(414.0f, 393.0f, 0xb27b35ff,
+                      "EXACT TITLE ID + VERSION REQUIRED");
         } else {
             draw_text(414.0f, 393.0f, 0xb27b35ff,
-                      "NO DOWNLOAD: ONLY NCL/TXT UP TO 2 MB");
+                      "ONLY NCL PATCH FILES ARE SUPPORTED");
         }
         draw_text(414.0f, 414.0f, 0xb27b35ff,
-                  "DATA ONLY - NEVER EXECUTED OR AUTO-APPLIED");
+                  g_enhancement_persistent ?
+                  "MODE: PERMANENT | SELECT IT IN ARTEMIS" :
+                  "MODE: TEMPORARY | CLEARED NEXT PS3 SCALE START");
     } else {
         draw_text(414.0f, 215.0f, 0x77718fff,
                   g_online_result_count ?
@@ -4480,7 +4633,7 @@ static void draw_online_database(void)
         draw_text(414.0f, 241.0f, 0x514b69ff,
                   "Search by title, disc ID or title ID.");
         draw_text(414.0f, 273.0f, 0x875be8ff,
-                  "START: SYNC ONLINE METADATA");
+                  "TRIANGLE: REFRESH ONLINE DATABASE");
         draw_text(414.0f, 301.0f, 0x77718fff,
                   "Offline cache can still be browsed.");
     }
@@ -4495,9 +4648,9 @@ static void draw_online_database(void)
     }
     set_ui_font_size(6, 9);
     draw_text(24.0f, PS3SCALE_UI_FOOTER_PRIMARY_Y, 0x514b69ff,
-              "D-PAD SELECT | LEFT/RIGHT PAGE | L1/R1 PREV/NEXT | CROSS OPEN/DOWNLOAD");
+              "D-PAD SELECT | LEFT/RIGHT PAGE | L1/R1 PREV/NEXT | CROSS INSTALL/DETAILS");
     draw_text(24.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y, 0x875be8ff,
-              "TRIANGLE SEARCH | SQUARE FILTER | START SYNC | CIRCLE BACK");
+              "TRIANGLE REFRESH | SELECT SEARCH | SQUARE FILTER | CIRCLE BACK");
     set_ui_font_size(14, 22);
 }
 
@@ -6041,6 +6194,7 @@ int main(int argc, char *argv[])
                     g_scan_sidebar_selected = g_library;
                 } else if (g_home_selected == 1) {
                     g_screen = SCREEN_ONLINE_DB;
+                    refresh_companion_tool_status();
                     g_online_selected = 0;
                     rebuild_online_results();
                     if (g_community_ready) {
@@ -6050,11 +6204,15 @@ int main(int argc, char *argv[])
                                  (unsigned)g_online_community_result_count);
                     } else {
                         snprintf(g_online_message, sizeof(g_online_message),
-                                 "GITHUB INDEX NOT LOADED. PRESS START TO SYNC.");
+                                 "OPENING ONLINE DATABASE. REFRESHING ON FIRST OPEN.");
                     }
-                    if (catalog_cache_is_stale() ||
-                        community_index_cache_is_stale())
+                    if (!g_online_first_opened) {
+                        g_online_first_opened = 1;
+                        start_catalog_sync_worker(1);
+                    } else if (catalog_cache_is_stale() ||
+                               community_index_cache_is_stale()) {
                         start_catalog_sync_worker(0);
+                    }
                 } else if (g_home_selected == 2) {
                     g_screen = SCREEN_SETTINGS;
                 } else if (g_home_selected == 3) {
@@ -6369,30 +6527,21 @@ int main(int argc, char *argv[])
                          online_filter_label(), (unsigned)g_online_result_count);
             }
             if (triangle && !old_triangle)
-                (void)open_online_search_keyboard();
+                start_catalog_sync_worker(1);
             if (cross && !old_cross) {
                 const ps3scale_profile_t *profile = NULL;
                 const ps3scale_community_file_t *community = NULL;
                 const ps3scale_ps2_config_entry_t *ps2_config = NULL;
-                if (online_result_at(g_online_selected, &profile,
-                                     &community, &ps2_config) == 0 &&
-                    community)
-                    start_community_file_download(community);
+                const ps3scale_game_t *match =
+                    online_result_at((size_t)g_online_selected, &profile,
+                                     &community, &ps2_config);
+                if (community)
+                    start_community_file_download(community, match);
                 else
                     open_selected_online_match();
             }
-            /* An installed-game community match uses CROSS for Game
-               Details. SELECT safely saves the linked NCL/TXT as inert
-               data, without altering any game file or applying a patch. */
-            if (select && !old_select && matches) {
-                const ps3scale_profile_t *profile = NULL;
-                const ps3scale_community_file_t *community = NULL;
-                const ps3scale_ps2_config_entry_t *ps2_config = NULL;
-                (void)online_result_at((size_t)g_online_selected,
-                                       &profile, &community, &ps2_config);
-                if (community)
-                    start_community_file_download(community);
-            }
+            if (select && !old_select)
+                (void)open_online_search_keyboard();
             if (start && !old_start)
                 start_catalog_sync_worker(1);
             if (circle && !old_circle)
