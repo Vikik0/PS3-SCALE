@@ -83,7 +83,7 @@ static CbPadState remote_snapshot(int slot)
     copy.left_x = 0x80;
     copy.left_y = 0x80;
 
-    do {
+    for (;;) {
         before = remote_slots[slot].sequence;
         if (before & 1u) {
             continue;
@@ -92,7 +92,10 @@ static CbPadState remote_snapshot(int slot)
         copy = remote_slots[slot].state;
         __asm__ volatile("sync" ::: "memory");
         after = remote_slots[slot].sequence;
-    } while (before != after || (after & 1u));
+        if (before == after && !(after & 1u)) {
+            break;
+        }
+    }
 
     return copy;
 }
@@ -203,6 +206,8 @@ void cb_input_set_active(int active, int local_slot)
         return;
     }
 
+    bridge_active = 0;
+    __asm__ volatile("sync" ::: "memory");
     local_player_slot = local_slot;
     for (slot = 0; slot < 4; ++slot) {
         if ((int)slot == local_slot) {
