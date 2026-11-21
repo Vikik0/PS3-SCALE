@@ -133,7 +133,10 @@ function publicRoomsCard() {
     <section class="public-rooms-panel">
       <div class="public-rooms-heading">
         <div><p class="eyebrow">OPEN MATCHMAKING</p><h3>PUBLIC ROOMS</h3></div>
-        <button class="button button-secondary" data-action="refresh-public" ${!connected || state.loading ? "disabled" : ""}>REFRESH</button>
+        <div class="public-rooms-toolbar">
+          <button class="button button-primary" data-action="any-public" ${!connected || state.loading || state.room ? "disabled" : ""}>ANY PUBLIC ROOM</button>
+          <button class="button button-secondary" data-action="refresh-public" ${!connected || state.loading ? "disabled" : ""}>REFRESH</button>
+        </div>
       </div>
       ${items || `<p class="public-rooms-empty">${connected ? "No public rooms are open. Create one and let other players join." : "Public rooms will appear when the service is online."}</p>`}
     </section>`;
@@ -275,6 +278,12 @@ async function runAction(action, selectedRoomCode = "") {
       const code = (action === "join-public" ? selectedRoomCode : enteredCode).trim().toUpperCase();
       if (!/^[A-Z0-9]{6}$/.test(code)) throw new Error("Enter a valid six-character room code.");
       state.room = await api(`/v1/rooms/${code}/join`, { method: "POST", body: {} });
+    } else if (action === "any-public") {
+      await ensureSession(displayName);
+      await refreshPublicRooms({ quiet: true });
+      const room = state.publicRooms[0];
+      if (!room) throw new Error("No public rooms are open right now. Try again in a moment.");
+      state.room = await api(`/v1/rooms/${room.room_code}/join`, { method: "POST", body: {} });
     } else if (action === "ready") {
       const me = state.room?.players?.find(p => p.player_id === state.session?.session_id);
       state.room = await api(`/v1/rooms/${state.room.room_code}/ready`, { method: "POST", body: { ready: !me?.ready } });
