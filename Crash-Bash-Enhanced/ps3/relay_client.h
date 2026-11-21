@@ -14,6 +14,7 @@ typedef struct CbRelayClient {
     CbWsClient websocket;
     char room_code[7];
     char session_id[33];
+    char host_session_id[33];
     char host[256];
     unsigned short port;
     uint64_t last_ping_ms;
@@ -46,6 +47,10 @@ int cb_relay_receive_packet(CbRelayClient *client, void *packet, size_t capacity
                             size_t *length, uint8_t sender_id[16],
                             char *control, size_t control_capacity,
                             int timeout_ms);
+
+/* Returns a stable synthetic IPv4/port for the room host, for legacy netcode address matching. */
+int cb_relay_host_address(const CbRelayClient *client, char *address,
+                          size_t address_capacity, unsigned short *port);
 
 void cb_relay_leave(CbRelayClient *client);
 
