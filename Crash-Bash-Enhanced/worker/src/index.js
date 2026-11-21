@@ -13,6 +13,8 @@ const RELAY_AUTH_PREFIX = "cbash-auth.";
 const RELAY_TICKET_PREFIX = "cbash-ticket.";
 const RELAY_MAGIC = new Uint8Array([0x43, 0x42, 0x52, 0x31]); // CBR1
 const RELAY_MAX_PAYLOAD = 1200;
+const RELAY_MAX_MESSAGE = 24576;
+const RELAY_MAX_BATCH_PACKETS = 32;
 const RELAY_MAX_MESSAGES_PER_SECOND = 5;
 
 function messageBytes(message) {
@@ -34,7 +36,44 @@ function makeRelayEnvelope(sessionId, payload) {
   envelope.set(payload, 22);
   return envelope;
 }
+function makeRelayEnvelope(sessionId, payload) {
+  const sender = new Uint8Array(16);
+  for (let i = 0; i < 16; i++) sender[i] = Number.parseInt(sessionId.slice(i * 2, i * 2 + 2), 16);
+  const envelope = new Uint8Array(22 + payload.byteLength);
+  envelope.set(RELAY_MAGIC, 0);
+  envelope.set(sender, 4);
+  envelope[20] = (payload.byteLength >>> 8) & 0xff;
+  envelope[21] = payload.byteLength & 0xff;
+  envelope.set(payload, 22);
+  return envelope;
+}
 
+
+// CBU1 uplink: magic, count, then recipient ID, payload length, and CBN1 datagrams.
+// An all-zero recipient ID broadcasts the datagram to every other room member.
+function parseRelayBatch(payload) {
+  if (!payload || payload.byteLength < 1 || payload.byteLength > RELAY_MAX_MESSAGE) return null;
+  if (payload.byteLength < 4 || payload[0] !== 0x43 || payload[1] !== 0x42 || payload[2] !== 0x55 || payload[3] !== 0x31) {
+    return payload.byteLength <= RELAY_MAX_PAYLOAD ? [{ recipientId: null, payload }] : null;
+  }
+  if (payload.byteLength < 5) return null;
+  const count = payload[4];
+  if (count < 1 || count > RELAY_MAX_BATCH_PACKETS) return null;
+  const packets = [];
+  let offset = 5;
+  for (let i = 0; i < count; i++) {
+    if (offset + 18 > payload.byteLength) return null;
+    const recipientBytes = payload.subarray(offset, offset + 16);
+    const isBroadcast = recipientBytes.every(byte => byte === 0);
+    const recipientId = isBroadcast ? null : Array.from(recipientBytes, byte => byte.toString(16).padStart(2, '0')).join('');
+    const length = (payload[offset + 16] << 8) | payload[offset + 17];
+    offset += 18;
+    if (length < 1 || length > RELAY_MAX_PAYLOAD || offset + length > payload.byteLength) return null;
+    packets.push({ recipientId, payload: payload.subarray(offset, offset + length) });
+    offset += length;
+  }
+  return offset === payload.byteLength ? packets : null;
+}
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
@@ -273,26 +312,32 @@ export class CrashBashLobby {
 
     const payload = messageBytes(message);
     if (!payload) {
-      socket.close(1003, "BINARY_PACKETS_REQUIRED");
+      socket.close(1003, 'BINARY_PACKETS_REQUIRED');
       return;
     }
-    if (payload.byteLength < 1 || payload.byteLength > RELAY_MAX_PAYLOAD) {
-      socket.close(1009, "PACKET_SIZE_INVALID");
+    if (payload.byteLength > RELAY_MAX_MESSAGE) {
+      socket.close(1009, 'PACKET_SIZE_INVALID');
       return;
     }
-
-    const envelope = makeRelayEnvelope(attachment.sessionId, payload);
-    if (typeof this.ctx.getWebSockets !== "function") return;
-    for (const peer of this.ctx.getWebSockets()) {
-      if (peer === socket) continue;
-      try {
-        const peerAttachment = peer.deserializeAttachment();
-        if (peerAttachment?.roomCode === attachment.roomCode &&
-            peerAttachment?.sessionId !== attachment.sessionId) {
+    const packets = parseRelayBatch(payload);
+    if (!packets) {
+      socket.close(1008, 'BATCH_INVALID');
+      return;
+    }
+    if (typeof this.ctx.getWebSockets !== 'function') return;
+    const peers = this.ctx.getWebSockets();
+    for (const packet of packets) {
+      const envelope = makeRelayEnvelope(attachment.sessionId, packet.payload);
+      for (const peer of peers) {
+        if (peer === socket) continue;
+        try {
+          const peerAttachment = peer.deserializeAttachment();
+          if (peerAttachment?.roomCode !== attachment.roomCode || peerAttachment?.sessionId === attachment.sessionId) continue;
+          if (packet.recipientId && peerAttachment?.sessionId !== packet.recipientId) continue;
           peer.send(envelope.buffer.slice(0));
+        } catch {
+          // Ignore peers that have already disconnected.
         }
-      } catch {
-        // Ignore peers that have already disconnected.
       }
     }
   }
