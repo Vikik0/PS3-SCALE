@@ -383,6 +383,9 @@ export class BrowserLockstepClient {
 
   stop() {
     if (["stopped", "closed"].includes(this.phase)) return;
+    this.rejectWelcome?.(new Error("The browser player left before the PS3 host handshake completed."));
+    this.resolveWelcome = null;
+    this.rejectWelcome = null;
     if (this.session && this.me >= 0 && ["lobby", "starting", "playing"].includes(this.phase)) {
       this.send(encodeBye(this.session, this.me, CBN1_BYE_REASONS.LEFT, this.next), "cbn1-bye");
     }
