@@ -14,7 +14,7 @@ CFLAGS := -O2 -Wall -Wextra -Werror -std=gnu11 -mcpu=cell -mhard-float \
           -ffunction-sections -fdata-sections -fno-stack-protector -fno-builtin \
           -D_POSIX_C_SOURCE=200112L -DBASH_VERSION='"1.4.0"' -I$(CURDIR)/compat -I$(PS3DK)/ppu/include
 NET_LIBS := -L$(PS3DK)/ppu/lib -Wl,--start-group -lio_stub -lnet_stub \
-            -lnetctl_stub -llv2_stub -lsysmodule_stub -lrt -lfs_stub -lc_stub -lc \
+            -lnetctl_stub -llv2_stub -lsysmodule_stub -lrt -lfs_stub -lc_stub -lc -lsysbase \
             -Wl,--end-group -lgcc
 
 .PHONY: all clean check
@@ -39,7 +39,7 @@ $(BUILD)/netdb_compat.o: netdb_compat.c compat/netdb.h | $(BUILD)
 $(BUILD)/crash_bash_input.elf: $(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(CRT) $(PRX_LD) $(PRX_SPECS)
 	$(PPU_CC) -nostdlib -nostartfiles -specs=$(PRX_SPECS) \
 		-Wl,-q -Wl,--no-warn-rwx-segments -Wl,-T,$(PRX_LD) \
-		$(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(CRT) $(NET_LIBS) -o $@
+		$(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(CRT) $(NET_LIBS) -o $@
 
 $(BUILD)/crash_bash_input.prx: $(BUILD)/crash_bash_input.elf
 	$(PRX_GEN) build $< -o $@ --name crash_bash_input --version 0.2
