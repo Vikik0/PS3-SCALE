@@ -704,6 +704,24 @@ export class CrashBashLobby {
         return response(200, { room: roomView(current.room) });
       }
 
+      if (method === "GET" && path === "/v1/rooms/public") {
+        const rooms = Object.values(state.rooms)
+          .filter(room => !room.isPrivate &&
+                          room.status === "waiting" &&
+                          room.players.length < room.maxPlayers)
+          .sort((a, b) => a.createdAt - b.createdAt)
+          .map(room => ({
+            room_code: room.code,
+            mode: room.mode,
+            max_players: room.maxPlayers,
+            player_count: room.players.length,
+            host_name: room.players.find(player => player.sessionId === room.hostSessionId)?.name || "Host",
+            created_at: new Date(room.createdAt).toISOString()
+          }));
+        await this.save(state);
+        return response(200, { rooms });
+      }
+
       if (method === "POST" && path === "/v1/rooms") {
         if (session.roomCode) throw fail(409, "ALREADY_IN_ROOM", "Leave your current room first.");
         if (Object.keys(state.rooms).length >= MAX_ROOMS) {
