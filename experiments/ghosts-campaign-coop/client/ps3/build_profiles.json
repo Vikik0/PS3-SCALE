@@ -1,0 +1,90 @@
+{
+  "project": "Ghosts Campaign Co-op",
+  "platform": "PS3",
+  "first_target": {
+    "firmware_type": "CEX",
+    "firmware_version": "4.93",
+    "game_title_update": "1.16",
+    "status": "target_only_not_hardware_verified"
+  },
+  "build_policy": {
+    "one_binary_for_all_regions": false,
+    "select_by_title_id": true,
+    "select_by_firmware_type": true,
+    "select_by_firmware_version": true,
+    "never_install_mismatched_eboot_or_sprx": true
+  },
+  "known_title_ids": [
+    {
+      "title_id": "BLUS31270",
+      "region": "US",
+      "distribution": "disc"
+    },
+    {
+      "title_id": "NPUB31301",
+      "region": "US",
+      "distribution": "digital"
+    },
+    {
+      "title_id": "NPUB50021",
+      "region": "US",
+      "distribution": "digital",
+      "edition": "Hardened Edition"
+    },
+    {
+      "title_id": "BLES01945",
+      "region": "EU/AU",
+      "distribution": "disc"
+    },
+    {
+      "title_id": "BLES01948",
+      "region": "EU/AU",
+      "distribution": "disc"
+    },
+    {
+      "title_id": "NPEB01832",
+      "region": "EU",
+      "distribution": "digital"
+    },
+    {
+      "title_id": "NPEB01835",
+      "region": "EU",
+      "distribution": "digital"
+    },
+    {
+      "title_id": "BLJM61125",
+      "region": "JP",
+      "distribution": "disc"
+    },
+    {
+      "title_id": "BLJM61126",
+      "region": "JP",
+      "distribution": "disc"
+    },
+    {
+      "title_id": "NPJB00528",
+      "region": "JP",
+      "distribution": "digital"
+    }
+  ],
+  "notes": [
+    "The title ID registry covers known disc and digital regional variants; it does not establish that all variants have been tested.",
+    "Title update 1.16 is the initial target. Earlier updates are not in scope for the first client.",
+    "CEX 4.93 is the first firmware target. DEX and HEN require separate client builds and validation.",
+    "No EBOOT.BIN, SPRX, or PKG is included until a real game build and console test establish safe hooks.",
+    "Phase 1 is same-console offline Campaign co-op. Existing Ghosts offline local modes are a research lead for the native second local-player path; Campaign support is not established."
+  ],
+  "development_order": [
+    "local_campaign_coop_same_console_offline",
+    "online_coop_after_local_playable"
+  ],
+  "phase_1": {
+    "players": 2,
+    "network_required": false,
+    "psn_required": false,
+    "controllers": "two local DualShock 3 controllers",
+    "player_one": "Logan",
+    "player_two": "separate Multiplayer-style soldier actor",
+    "online_components": "parked_until_phase_1_passes"
+  }
+}
