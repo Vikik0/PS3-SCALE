@@ -43,7 +43,7 @@ $(BUILD)/ghosts_coop.elf: $(BUILD)/module.o $(BUILD)/ghc_protocol.o $(BUILD)/ghc
 	$(PPU_CC) -nostdlib -nostartfiles -specs=$(PRX_SPECS) \
 		-Wl,-q -Wl,--no-warn-rwx-segments -Wl,-T,$(PRX_LD) \
 		$(BUILD)/module.o $(BUILD)/ghc_protocol.o $(BUILD)/ghc_websocket.o $(BUILD)/mission_rules.o $(BUILD)/ghc_lobby_json.o $(BUILD)/ghc_lobby_ps3.o $(CRT) \
-		-L$(PS3DK)/ppu/lib -lhttp_stub -lhttp_util_stub -lssl_stub -lnet_stub -lsysmodule_stub -lc_stub -o $@
+		-L$(PS3DK)/ppu/lib -lhttp_stub -lhttp_util_stub -lssl_stub -lnet_stub -lsysmodule_stub -lc -lgcc -o $@
 
 $(BUILD)/ghosts_coop.prx: $(BUILD)/ghosts_coop.elf
 	$(PRX_GEN) build $< -o $@ --name ghosts_coop --version 0.1
