@@ -20,7 +20,7 @@ The relay is a transport prototype only. The PS3 UDP lockstep adapter and a futu
 
 ## Free-tier note
 
-Cloudflare Workers Free supports SQLite-backed Durable Objects with strict daily limits. The prototype rate limit is deliberately low to keep a small four-player room within the free-tier budget; it is not an unlimited relay. See ../docs/CROSSPLAY-ARCHITECTURE.md for the current quota calculation.
+Cloudflare Workers Free supports SQLite-backed Durable Objects with strict daily limits. The prototype caps usage at 16 guest sessions, four open rooms, one active match at a time, and five inbound WebSocket messages per second per client (including keepalive pings). This is not an unlimited relay. See ../docs/CROSSPLAY-ARCHITECTURE.md for the current quota calculation.
 
 ## Local checks
 
