@@ -225,15 +225,38 @@ int ghc_mission_get_view(const GhcMission *mission, uint32_t now_ms, GhcMissionV
     return 0;
 }
 
+static int gh_valid_snapshot_view(const GhcMissionView *view) {
+    size_t i;
+    if (!view) return 0;
+    if (view->phase > GHC_MISSION_FAILED
+        || view->failure_reason > GHC_MISSION_FAIL_BLEEDOUT) return 0;
+    if ((view->phase == GHC_MISSION_RUNNING
+            && view->failure_reason != GHC_MISSION_FAIL_NONE)
+        || (view->phase == GHC_MISSION_FAILED
+            && view->failure_reason == GHC_MISSION_FAIL_NONE)) return 0;
+
+    for (i = 0; i < 2; ++i) {
+        if (view->player_state[i] > GHC_PLAYER_DOWNED
+            || view->health_percent[i] > 100u
+            || view->revive_progress_percent[i] > 100u) return 0;
+        if (view->player_state[i] == GHC_PLAYER_DOWNED
+            && view->health_percent[i] != 0u) return 0;
+        if (view->player_state[i] == GHC_PLAYER_ALIVE
+            && view->revive_progress_percent[i] != 0u) return 0;
+    }
+    return 1;
+}
+
 int ghc_mission_encode_snapshot(
     const GhcMissionView *view,
     uint8_t *output,
     size_t output_capacity,
     size_t *output_length
 ) {
-    size_t i;
-    if (!view || !output || !output_length || output_capacity < GHC_MISSION_SNAPSHOT_SIZE) return -1;
-    if (view->phase > GHC_MISSION_FAILED || view->failure_reason > GHC_MISSION_FAIL_BLEEDOUT) return -1;
+    if (output_length) *output_length = 0u;
+    if (!view || !output || !output_length
+        || output_capacity < GHC_MISSION_SNAPSHOT_SIZE
+        || !gh_valid_snapshot_view(view)) return -1;
 
     output[0] = (uint8_t)'G';
     output[1] = (uint8_t)'M';
@@ -242,13 +265,6 @@ int ghc_mission_encode_snapshot(
     output[4] = view->phase;
     output[5] = view->failure_reason;
     gh_write_u32_be(output + 6, view->revision);
-
-    for (i = 0; i < 2; ++i) {
-        if (view->player_state[i] > GHC_PLAYER_DOWNED
-            || view->health_percent[i] > 100u
-            || view->revive_progress_percent[i] > 100u) return -1;
-    }
-
     output[10] = view->player_state[0];
     output[11] = view->health_percent[0];
     output[12] = view->revive_progress_percent[0];
@@ -266,32 +282,27 @@ int ghc_mission_decode_snapshot(
     size_t input_length,
     GhcMissionView *view
 ) {
-    size_t i;
+    GhcMissionView decoded;
     if (!input || !view || input_length != GHC_MISSION_SNAPSHOT_SIZE) return -1;
     if (input[0] != (uint8_t)'G' || input[1] != (uint8_t)'M'
         || input[2] != (uint8_t)'S' || input[3] != GHC_MISSION_SNAPSHOT_VERSION) return -1;
-    if (input[4] > GHC_MISSION_FAILED || input[5] > GHC_MISSION_FAIL_BLEEDOUT) return -1;
 
-    view->phase = input[4];
-    view->failure_reason = input[5];
-    view->revision = gh_read_u32_be(input + 6);
-    view->player_state[0] = input[10];
-    view->health_percent[0] = input[11];
-    view->revive_progress_percent[0] = input[12];
-    view->player_state[1] = input[13];
-    view->health_percent[1] = input[14];
-    view->revive_progress_percent[1] = input[15];
-    view->bleedout_remaining_ms[0] = gh_read_u32_be(input + 16);
-    view->bleedout_remaining_ms[1] = gh_read_u32_be(input + 20);
+    decoded.phase = input[4];
+    decoded.failure_reason = input[5];
+    decoded.revision = gh_read_u32_be(input + 6);
+    decoded.player_state[0] = input[10];
+    decoded.health_percent[0] = input[11];
+    decoded.revive_progress_percent[0] = input[12];
+    decoded.player_state[1] = input[13];
+    decoded.health_percent[1] = input[14];
+    decoded.revive_progress_percent[1] = input[15];
+    decoded.bleedout_remaining_ms[0] = gh_read_u32_be(input + 16);
+    decoded.bleedout_remaining_ms[1] = gh_read_u32_be(input + 20);
 
-    for (i = 0; i < 2; ++i) {
-        if (view->player_state[i] > GHC_PLAYER_DOWNED
-            || view->health_percent[i] > 100u
-            || view->revive_progress_percent[i] > 100u) return -1;
-    }
+    if (!gh_valid_snapshot_view(&decoded)) return -1;
+    *view = decoded;
     return 0;
 }
-
 
 int ghc_mission_revision_is_newer(uint32_t incoming_revision, uint32_t current_revision) {
     uint32_t difference = incoming_revision - current_revision;

@@ -139,6 +139,32 @@ static void test_snapshot_roundtrip(void) {
 
     packet[0] = 99u;
     assert(ghc_mission_decode_snapshot(packet, packet_length, &after) != 0);
+
+    // A malformed snapshot must not partially overwrite the caller's view.
+    packet[0] = (uint8_t)'G';
+    packet[4] = GHC_MISSION_RUNNING;
+    packet[5] = GHC_MISSION_FAIL_BLEEDOUT;
+    {
+        GhcMissionView preserved = after;
+        assert(ghc_mission_decode_snapshot(packet, packet_length, &after) != 0);
+        assert(memcmp(&after, &preserved, sizeof(after)) == 0);
+    }
+
+    // A downed player cannot have positive health in a wire snapshot.
+    packet[5] = GHC_MISSION_FAIL_NONE;
+    packet[11] = 1u;
+    {
+        GhcMissionView preserved = after;
+        assert(ghc_mission_decode_snapshot(packet, packet_length, &after) != 0);
+        assert(memcmp(&after, &preserved, sizeof(after)) == 0);
+    }
+
+    // Encoding rejects inconsistent mission phase/failure combinations.
+    before.phase = GHC_MISSION_FAILED;
+    before.failure_reason = GHC_MISSION_FAIL_NONE;
+    packet_length = 123u;
+    assert(ghc_mission_encode_snapshot(&before, packet, sizeof(packet), &packet_length) != 0);
+    assert(packet_length == 0u);
 }
 
 static void test_reset_restores_both_players(void) {
