@@ -128,7 +128,7 @@ static char g_community_download_url[1024];
 static char g_community_download_path[PS3SCALE_PATH_MAX];
 static char g_community_download_temp_path[PS3SCALE_PATH_MAX];
 static int g_community_download_persistent = 0;
-static unsigned long g_community_download_expected_size = 0;
+static volatile unsigned long g_community_download_expected_size = 0;
 static char g_search[64] = "";
 static u32 *g_font_texture = NULL;
 static ya2d_Texture *g_cover_texture = NULL;
