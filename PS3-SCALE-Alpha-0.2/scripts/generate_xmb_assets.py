@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Generate PS3 SCALE XMB artwork using only the Python standard library."""
+"""Generate PS3 SCALE XMB artwork from the approved pearl-white staircase source."""
 from __future__ import annotations
-import math, re, struct, zlib
+import re, struct, zlib
 from pathlib import Path
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 ROOT = Path(__file__).resolve().parents[1]
 PKG = ROOT / "pkgfiles"
 FONT_PATH = ROOT / "source/ps3/font8x12.h"
+PIC1_SOURCE = ROOT / "assets/xmb/pic1_source.jpg"
 
 def load_font():
     src = FONT_PATH.read_text(encoding="utf-8")
@@ -94,87 +96,6 @@ def stairs(c,n,x0,y0,dx,dy,w0,dw,top,front,side):
         c.line(x,y,x+w,y-16,(255,252,255),2)
         c.line(x+8,y+11,x+w+18,y-5,(170,145,225),1)
 
-def spiral_staircase(canvas, count, center_x, center_y, center_z,
-                      focal, outer_radius, inner_radius, angle_step, rise):
-    """Render a static, perspective spiral staircase for the XMB wallpaper."""
-    faces = []
-
-    def world(radius, angle, y):
-        return (center_x + math.cos(angle) * radius,
-                center_y + y,
-                center_z + math.sin(angle) * radius)
-
-    def project(point):
-        x, y, z = point
-        z = max(4.0, z)
-        return (640.0 + x * focal / z,
-                360.0 - y * focal / z)
-
-    for i in range(count):
-        angle = i * angle_step + 0.48
-        next_angle = angle + angle_step * 0.92
-        y = (i - (count - 1) * 0.5) * rise
-        top = [
-            world(inner_radius, angle, y + 0.14),
-            world(outer_radius, angle, y + 0.14),
-            world(outer_radius, next_angle, y + 0.14),
-            world(inner_radius, next_angle, y + 0.14),
-        ]
-        riser = [
-            world(outer_radius, angle, y - 0.20),
-            world(outer_radius, next_angle, y - 0.20),
-            top[2], top[1],
-        ]
-        side = [
-            world(inner_radius, next_angle, y - 0.20),
-            riser[1], top[2], top[3],
-        ]
-        faces.append((sum(p[2] for p in top) / 4.0,
-                      [project(p) for p in top],
-                      (249, 247, 254), (255, 254, 255)))
-        faces.append((sum(p[2] for p in riser) / 4.0,
-                      [project(p) for p in riser],
-                      (215, 207, 235), (241, 230, 250)))
-        faces.append((sum(p[2] for p in side) / 4.0,
-                      [project(p) for p in side],
-                      (194, 185, 218), (232, 221, 246)))
-
-    # Far treads are painted first; nearer treads cover them naturally.
-    faces.sort(key=lambda item: item[0], reverse=True)
-    for depth, points, fill, edge in faces:
-        canvas.poly(points, fill)
-        for j in range(4):
-            a, b = points[j], points[(j + 1) % 4]
-            canvas.line(a[0], a[1], b[0], b[1], edge, 2)
-
-    # Central support and a continuous illuminated outer handrail.
-    pole_top = project((center_x, 11.0, center_z))
-    pole_bottom = project((center_x, -11.0, center_z))
-    canvas.line(pole_top[0], pole_top[1], pole_bottom[0], pole_bottom[1],
-                (194, 182, 225), 8)
-    canvas.line(pole_top[0], pole_top[1], pole_bottom[0], pole_bottom[1],
-                (247, 239, 255), 2)
-
-    rail = []
-    for j in range(count * 6 + 1):
-        t = j / 6.0
-        angle = t * angle_step + 0.48
-        y = (t - (count - 1) * 0.5) * rise + 1.15
-        rail.append(project(world(outer_radius + 0.62, angle, y)))
-    for j in range(len(rail) - 1):
-        canvas.line(rail[j][0], rail[j][1], rail[j + 1][0],
-                    rail[j + 1][1], (247, 239, 255), 4)
-        canvas.line(rail[j][0], rail[j][1], rail[j + 1][0],
-                    rail[j + 1][1], (175, 145, 224), 1)
-
-    for i in range(0, count, 3):
-        angle = i * angle_step + 0.48
-        y = (i - (count - 1) * 0.5) * rise
-        base = project(world(outer_radius, angle, y + 0.18))
-        top = project(world(outer_radius + 0.62, angle, y + 1.15))
-        canvas.line(base[0], base[1], top[0], top[1], (199, 180, 242), 2)
-
-
 def ps_mark(canvas, x, y, scale, color):
     points = [
         ((0, 0), (0, 28)), ((0, 0), (16, 5)), ((16, 5), (16, 23)),
@@ -186,72 +107,54 @@ def ps_mark(canvas, x, y, scale, color):
                     x+b[0]*scale, y+b[1]*scale, color, max(1, scale))
 
 
+def load_display_font(size, bold=False):
+    candidates = (
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf") if bold else
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        Path("/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf") if bold else
+        Path("/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf"),
+    )
+    for candidate in candidates:
+        if candidate.is_file():
+            try:
+                return ImageFont.truetype(str(candidate), size=size)
+            except OSError:
+                pass
+    return ImageFont.load_default()
+
+
 def generate(font):
     PKG.mkdir(parents=True, exist_ok=True)
+    if not PIC1_SOURCE.is_file():
+        raise RuntimeError(f"Approved XMB staircase source is missing: {PIC1_SOURCE}")
 
-    # PIC1: pearl-white cinematic XMB wallpaper. The staircase is the
-    # foreground subject, while the right side stays quiet for XMB labels.
-    bg = Canvas(1280, 720, (252, 252, 255), (231, 228, 243))
-    for y in range(720):
-        # Very subtle satin/lavender horizontal highlights, no harsh bands.
-        t = y / 719.0
-        wave = (math.sin(y * 0.014) + 1.0) * 0.5
-        c = (int(253 - 15*t + 2*wave),
-             int(252 - 18*t + 2*wave),
-             int(255 - 7*t))
-        bg.rect(0, y, 1280, 1, c)
+    # PIC1 is the clean 16:9 pearl-white / lavender XMB wallpaper. The
+    # staircase stays on the left; the right side is deliberately quiet.
+    with Image.open(PIC1_SOURCE) as source_file:
+        source = source_file.convert("RGB")
+    wallpaper = ImageOps.fit(
+        source, (1280, 720), method=Image.Resampling.LANCZOS
+    )
+    wallpaper.save(PKG / "PIC1.PNG", format="PNG", optimize=True)
 
-    # Wide translucent architectural lighting behind the stairs.
-    for r, c, width in (
-        (315, (237, 233, 249), 5),
-        (260, (245, 242, 253), 4),
-        (204, (250, 248, 255), 3)
-    ):
-        bg.circle(1102, 137, r, c, width)
-
-    # Satin light tracks extend across the 16:9 background.
-    for wave in range(4):
-        last = None
-        for x in range(0, 1281, 10):
-            y = 80 + wave*145 + math.sin(x * 0.004 + wave*0.72)*17
-            if last:
-                bg.line(last[0], last[1], x, y,
-                        (232 - wave*3, 225 - wave*3, 247), 2)
-            last = (x, y)
-
-    for i in range(58):
-        x=(i*197+83)%1280
-        y=(i*113+29)%690
-        bg.rect(x,y,2 if i%5 else 3,2 if i%5 else 3,(232,224,247))
-
-    # Exact asset dimensions and key call preserved for PS3 UI contract tests.
-    spiral_staircase(bg,28,-10.5,0.0,58.0,1050.0,12.0,1.6,0.44,0.66)
-    bg.line(0, 686, 759, 18, (200, 182, 232), 2)
-    bg.line(14, 717, 790, 35, (254, 250, 255), 3)
-    bg.save(PKG/"PIC1.PNG")
-
-    # ICON0: dark violet premium package icon, designed to be readable at
-    # real PS3 XMB thumbnail size (320 x 176), not only in a close-up.
+    # ICON0 remains the separate dark-violet package icon so it is legible
+    # in the PS3 XMB's small icon slot.
     icon=Canvas(320,176,(30,27,54),(9,10,27))
     for y in range(176):
         t=y/175.0
         icon.rect(0,y,320,1,
                   (int(38-29*t),int(30-20*t),int(64-36*t)))
-    # Left-side pale steps, with silver risers and soft lavender edges.
     stairs(icon,10,-40,177,9,11,163,10,
            (252,251,255),(214,206,237),(140,127,188))
     icon.line(0, 154, 114, 25, (179,142,242), 2)
     icon.line(2, 161, 122, 25, (245,235,255), 1)
-    # Right-side legible matte panel and thin polished frame.
     icon.rect(126,8,184,160,(17,15,40))
     icon.line(125,7,311,7,(123,86,205),2)
     icon.line(311,7,311,166,(105,78,173),2)
     icon.line(311,166,125,166,(72,62,125),2)
     icon.line(125,166,125,7,(103,77,159),2)
     icon.line(130,10,305,10,(210,191,249),1)
-    # PlayStation-like line illustration drawn by this project's ps_mark.
     ps_mark(icon,234,18,1,(248,247,255))
-    # Two-line wordmark avoids tiny illegible glyphs.
     icon.text(173,61,"PS3",3,(253,253,255),font)
     icon.text(151,100,"SCALE",3,(197,155,255),font)
     icon.rect(153,141,148,2,(155,94,246))
@@ -259,29 +162,58 @@ def generate(font):
     icon.text(161,151,"GAME ENHANCER",1,(230,218,249),font)
     icon.save(PKG/"ICON0.PNG")
 
-    # PIC0: a pearl-white preview tile matching the selected app identity.
-    pic0=Canvas(310,176,(252,252,255),(229,226,242))
-    for y in range(176):
-        t=y/175.0
-        pic0.rect(0,y,310,1,(int(251-18*t),int(251-21*t),int(255-11*t)))
-    stairs(pic0,12,-28,182,8,10,240,12,
-           (253,253,255),(226,221,240),(187,176,214))
-    pic0.rect(122,15,178,143,(246,243,252))
-    pic0.line(123,15,299,15,(175,144,226),2)
-    pic0.line(123,158,299,158,(207,191,233),2)
-    ps_mark(pic0,191,22,1,(42,34,70))
-    pic0.text(148,74,"PS3",3,(45,36,72),font)
-    pic0.text(147,111,"SCALE",3,(120,60,207),font)
-    pic0.save(PKG/"PIC0.PNG")
+    # PIC0 is the XMB preview tile: the same spiral-staircase scene with a
+    # restrained PS3 SCALE identity panel on the right.
+    pic0 = ImageOps.fit(
+        source, (310, 176), method=Image.Resampling.LANCZOS
+    ).convert("RGBA")
+    overlay = Image.new("RGBA", pic0.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    draw.rounded_rectangle(
+        (143, 13, 299, 163), radius=7,
+        fill=(251, 249, 255, 232),
+        outline=(176, 150, 224, 255), width=2
+    )
+    draw.line((153, 19, 289, 19), fill=(204, 185, 239, 255), width=1)
+    draw.line((158, 139, 285, 139), fill=(177, 145, 226, 255), width=2)
+    # A small, clean PlayStation-inspired mark above the wordmark.
+    draw.line((221, 28, 221, 47), fill=(48, 39, 76, 255), width=3)
+    draw.line((221, 28, 234, 32), fill=(48, 39, 76, 255), width=3)
+    draw.line((234, 32, 234, 46), fill=(48, 39, 76, 255), width=3)
+    draw.line((221, 46, 237, 52), fill=(48, 39, 76, 255), width=2)
 
-    for name,size in (("PIC1.PNG",(1280,720)),("ICON0.PNG",(320,176)),("PIC0.PNG",(310,176))):
-        data=(PKG/name).read_bytes()
-        if data[:8]!=b"\x89PNG\r\n\x1a\n":
-            raise RuntimeError(f"{name} is not PNG")
-        dims=struct.unpack_from(">II",data,16)
-        if dims!=size:
-            raise RuntimeError(f"{name} dimensions {dims}, expected {size}")
-        print(f"XMB asset ready: {name} {dims[0]}x{dims[1]}, {len(data):,} bytes")
+    font_ps3 = load_display_font(25, bold=True)
+    font_scale = load_display_font(22, bold=True)
+    font_small = load_display_font(8, bold=True)
+
+    def centered_text(label, y, selected_font, color):
+        box = draw.textbbox((0, 0), label, font=selected_font)
+        width = box[2] - box[0]
+        x = 221 - width // 2
+        draw.text((x, y), label, font=selected_font, fill=color)
+
+    centered_text("PS3", 62, font_ps3, (43, 35, 69, 255))
+    centered_text("SCALE", 94, font_scale, (126, 75, 204, 255))
+    centered_text("GAME ENHANCER", 145, font_small, (92, 82, 119, 255))
+    pic0 = Image.alpha_composite(pic0, overlay).convert("RGB")
+    pic0.save(PKG / "PIC0.PNG", format="PNG", optimize=True)
+
+    for name, expected in (
+        ("PIC1.PNG", (1280, 720)),
+        ("ICON0.PNG", (320, 176)),
+        ("PIC0.PNG", (310, 176)),
+    ):
+        path = PKG / name
+        with Image.open(path) as image_file:
+            if image_file.format != "PNG":
+                raise RuntimeError(f"{name} is not PNG")
+            if image_file.size != expected:
+                raise RuntimeError(f"{name} dimensions {image_file.size}, expected {expected}")
+        data = path.read_bytes()
+        if data[:8] != b"\\x89PNG\\r\\n\\x1a\\n":
+            raise RuntimeError(f"{name} has an invalid PNG signature")
+        print(f"XMB asset ready: {name} {expected[0]}x{expected[1]}, {len(data):,} bytes")
+
 
 if __name__=="__main__":
     generate(load_font())
