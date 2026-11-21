@@ -4,6 +4,26 @@
 
 The next technical blocker is identifying the real Ghosts PS3 executable layout before any Campaign hook is considered. This workflow makes the binary identity, load map, PPU OPD table and candidate offsets inspectable without guessing an image base.
 
+## SELF-container preflight (before ELF analysis)
+
+Run the read-only container inspector against the exact installed files:
+
+```powershell
+python tools/ps3_self_inspect.py `"EBOOT.BIN`" `"default.self`" `"default_mp.self`" --output self-container-report.json
+```
+
+The report records each file's SHA-256, SELF header version/key revision/type, app-info fields, embedded ELF class/endianness/machine/entry point, program-header count, and encrypted container segment ranges. It deliberately does not decrypt segments or infer the Title ID/TU from SELF metadata.
+
+To confirm the installed update identity, inspect the update folder's own `PARAM.SFO` (one directory above `USRDIR`):
+
+```powershell
+python tools/ps3_sfo_inspect.py `"PARAM.SFO`"
+```
+
+The base-disc `PS3_GAME/PARAM.SFO` and the installed update's `/dev_hdd0/game/BLUS31270/PARAM.SFO` are different inputs. Do not use the former to claim that TU 1.16 is installed. `APP_VER` and `VERSION` are reported as source fields; they are not silently interpreted as a Title Update number.
+
+A SELF report showing ELF64 big-endian PowerPC64 is only a container/architecture check. The embedded executable segments remain encrypted. Continue with the decrypted-ELF workflow below only after a valid local decrypted ELF is available.
+
 ## Input requirements
 
 - Use a decrypted ELF64, big-endian, PowerPC64 image obtained from the user's own legally obtained game copy.
