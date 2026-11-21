@@ -353,9 +353,19 @@ function syncRelayConnection() {
     if (state.room && event.code !== 1008 && relayReconnectAttempts < 3) {
       const delay = 3000 * (2 ** relayReconnectAttempts);
       relayReconnectAttempts += 1;
-      relayReconnectTimer = setTimeout(() => {
+      relayReconnectTimer = setTimeout(async () => {
         relayReconnectTimer = null;
-        syncRelayConnection();
+        const roomCode = state.room?.room_code;
+        if (!roomCode) return;
+        try {
+          state.room = await api(`/v1/rooms/${roomCode}/join`, { method: "POST", body: {} });
+          render();
+          syncRelayConnection();
+        } catch (error) {
+          state.error = error.message || "Could not rejoin the room.";
+          state.relayStatus = "error";
+          render();
+        }
       }, delay);
     } else if (state.room) {
       state.relayStatus = "error";
