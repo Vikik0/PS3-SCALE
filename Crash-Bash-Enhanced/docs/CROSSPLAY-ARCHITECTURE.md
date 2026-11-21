@@ -55,7 +55,7 @@ References:
 1. Add the WebGL 2 browser renderer and an Emscripten build of the game runtime.
 2. Add browser-side disc-image selection and local-only loading; no disc image is uploaded to the server.
 3. Adapt the game's lockstep protocol to the CBR1 WebSocket relay.
-4. Replace or supplement the PS3 direct-UDP transport with a WebSocket client compatible with the same relay; prefer WSS, and if plain WS is required, use only the short-lived single-use ticket.
+4. Wire the new RFC 6455 PS3 WebSocket client into the net adapter and Worker guest-ticket flow; prefer WSS, and if plain WS is required, use only the short-lived single-use ticket.
 5. Connect the PS3 in-game host/join UI to guest room codes.
 6. Test matching builds, input delay, disconnect/rejoin, and deterministic frame fingerprints on a real PS3 and a real browser.
 
