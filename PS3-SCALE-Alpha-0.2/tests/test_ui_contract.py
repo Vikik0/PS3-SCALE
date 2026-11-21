@@ -639,8 +639,10 @@ makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 assert "scripts/generate_xmb_assets.py" in makefile
 assert "PIC1.PNG" in makefile and "ICON0.PNG" in makefile and "PIC0.PNG" in makefile
 xmb_generator = (project_root / "scripts/generate_xmb_assets.py").read_text(encoding="utf-8")
-assert '("PIC1.PNG",(1280,720))' in xmb_generator
-assert '("ICON0.PNG",(320,176))' in xmb_generator
+assert 'source, (1280, 720)' in xmb_generator
+assert 'source, (310, 176)' in xmb_generator
+assert 'Canvas(320,176' in xmb_generator
+assert 'PIC1.PNG' in xmb_generator and 'PIC0.PNG' in xmb_generator and 'ICON0.PNG' in xmb_generator
 assert 'PIC1_SOURCE = ROOT / "assets/xmb/pic1_source.jpg"' in xmb_generator
 assert "Image.open(PIC1_SOURCE)" in xmb_generator
 assert "ImageOps.fit(" in xmb_generator
