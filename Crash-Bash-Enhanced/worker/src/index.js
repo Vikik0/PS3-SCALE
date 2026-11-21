@@ -318,11 +318,14 @@ export class CrashBashLobby {
     }
 
     const state = await this.load();
-    const session = Object.values(state.sessions).find(item =>
+    const sessionEntry = Object.entries(state.sessions).find(([, item]) =>
       item.sessionId === attachment.sessionId
     );
-    if (!session || !session.roomCode) return;
+    if (!sessionEntry) return;
+    const [sessionHash, session] = sessionEntry;
+    if (!session.roomCode) return;
     this.removePlayer(state, session);
+    if (session.platform === "ps3") delete state.sessions[sessionHash];
     await this.save(state);
   }
 
@@ -369,7 +372,14 @@ export class CrashBashLobby {
       }
     }
     for (const [hash, ticket] of Object.entries(state.transportTickets || {})) {
-      if (ticket.expiresAt <= now) delete state.transportTickets[hash];
+      if (ticket.expiresAt <= now) {
+        const session = state.sessions[ticket.sessionHash];
+        if (session?.platform === "ps3" && session.roomCode) {
+          this.removePlayer(state, session);
+          delete state.sessions[ticket.sessionHash];
+        }
+        delete state.transportTickets[hash];
+      }
     }
     for (const [code, room] of Object.entries(state.rooms)) {
       if (now - room.createdAt > ROOM_TTL_MS) {
@@ -482,7 +492,7 @@ export class CrashBashLobby {
         const sessionId = randomHex(16);
         const sessionHash = await sha256(token);
         const expiresAt = Date.now() + PS3_SESSION_TTL_MS;
-        const session = { sessionId, name, expiresAt, roomCode: code };
+        const session = { sessionId, name, expiresAt, roomCode: code, platform: "ps3" };
         state.sessions[sessionHash] = session;
 
         const occupied = new Set(room.players.map(player => player.slot));
