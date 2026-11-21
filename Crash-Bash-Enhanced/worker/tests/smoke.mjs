@@ -43,6 +43,10 @@ assert.equal(health.body.max_players, 4);
 const compatibility = await call("/v1/compatibility");
 assert.equal(compatibility.body.game, "Crash Bash");
 assert.equal(compatibility.body.local_player_capacity, 4);
+assert.deepEqual(
+  compatibility.body.supported_disc_serials.map(item => item.serial),
+  ["SCUS-94570", "SCES-02834", "SCPS-10140", "SCPS-91319"]
+);
 
 const players = [];
 for (let i = 1; i <= 5; i++) {
