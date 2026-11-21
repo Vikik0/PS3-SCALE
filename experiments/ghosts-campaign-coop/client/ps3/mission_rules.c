@@ -1,5 +1,7 @@
 #include "mission_rules.h"
 
+#include <string.h>
+
 static uint32_t gh_elapsed(uint32_t now_ms, uint32_t start_ms) {
     return (uint32_t)(now_ms - start_ms);
 }
