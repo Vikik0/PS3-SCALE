@@ -22,10 +22,13 @@ typedef struct {
 
 static CbFunctionDescriptor original_get_data_descriptor;
 static CbFunctionDescriptor original_get_info2_descriptor;
+static CbFunctionDescriptor original_get_data_extra_descriptor;
 static CellPadGetDataFn original_get_data =
     (CellPadGetDataFn)(void *)&original_get_data_descriptor;
 static CellPadGetInfo2Fn original_get_info2 =
     (CellPadGetInfo2Fn)(void *)&original_get_info2_descriptor;
+static CellPadGetDataExtraFn original_get_data_extra =
+    (CellPadGetDataExtraFn)(void *)&original_get_data_extra_descriptor;
 
 typedef struct {
     volatile uint32_t sequence;
@@ -141,6 +144,29 @@ static int32_t cb_cell_pad_get_data(uint32_t port_no, CellPadData *data)
     return CELL_PAD_OK;
 }
 
+
+static int32_t cb_cell_pad_get_data_extra(uint32_t port_no, uint32_t *device_type, CellPadData *data)
+{
+    CbPadState state;
+    int slot;
+
+    if (!bridge_active || port_no >= 4 || !data) {
+        return original_get_data_extra(port_no, device_type, data);
+    }
+
+    slot = (int)port_no;
+    if (slot == local_player_slot) {
+        return original_get_data_extra(0, device_type, data);
+    }
+
+    state = remote_snapshot(slot);
+    state_to_report(&state, data);
+    if (device_type) {
+        *device_type = CELL_PAD_DEV_TYPE_STANDARD;
+    }
+    return CELL_PAD_OK;
+}
+
 static int32_t cb_cell_pad_get_info2(CellPadInfo2 *info)
 {
     int32_t result;
@@ -184,8 +210,15 @@ int cb_input_install(void)
         return -1;
     }
 
+    if (descriptor_patch((void *)cellPadGetDataExtra, (void *)cb_cell_pad_get_data_extra,
+                         &original_get_data_extra_descriptor) != 0) {
+        descriptor_restore((void *)cellPadGetData, &original_get_data_descriptor);
+        return -1;
+    }
+
     if (descriptor_patch((void *)cellPadGetInfo2, (void *)cb_cell_pad_get_info2,
                          &original_get_info2_descriptor) != 0) {
+        descriptor_restore((void *)cellPadGetDataExtra, &original_get_data_extra_descriptor);
         descriptor_restore((void *)cellPadGetData, &original_get_data_descriptor);
         return -1;
     }
@@ -202,6 +235,7 @@ void cb_input_remove(void)
     }
 
     descriptor_restore((void *)cellPadGetInfo2, &original_get_info2_descriptor);
+    descriptor_restore((void *)cellPadGetDataExtra, &original_get_data_extra_descriptor);
     descriptor_restore((void *)cellPadGetData, &original_get_data_descriptor);
     hooks_installed = 0;
 }
