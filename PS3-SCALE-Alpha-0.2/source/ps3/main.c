@@ -5589,34 +5589,6 @@ static int save_support_report(void)
     return 0;
 }
 
-static void draw_app_icon_preview(float x, float y)
-{
-    int i;
-    draw_rounded_rect(x, y, 164.0f, 190.0f, 18.0f, 0x28223fff);
-    draw_rounded_outline(x, y, 164.0f, 190.0f, 18.0f, 0xb99affff);
-    draw_rounded_rect(x + 7.0f, y + 7.0f, 150.0f, 176.0f,
-                      14.0f, 0x352c50ff);
-    for (i = 0; i < 8; i++) {
-        float sx = x + 10.0f + (float)i * 4.0f;
-        float sy = y + 154.0f - (float)i * 11.0f;
-        float sw = 142.0f - (float)i * 8.0f;
-        draw_rounded_rect(sx, sy, sw, 7.0f, 3.0f,
-                          (i % 2) ? 0xd8cff0ff : 0xfaf8ffff);
-        draw_solid_rect(sx + 2.0f, sy + 7.0f, sw - 4.0f, 2.0f,
-                        0xaaa0caff);
-    }
-    draw_ps_symbol(x + 56.0f, y + 18.0f, 0xfaf8ffff);
-    set_ui_font_size(16, 24);
-    draw_text(x + 22.0f, y + 78.0f, 0xfaf8ffff, "PS3");
-    draw_text(x + 69.0f, y + 78.0f, 0xb995ffff, "SCALE");
-    set_ui_font_size(6, 9);
-    draw_text(x + 24.0f, y + 112.0f, 0xe6dff6ff,
-              "GAME ENHANCEMENT");
-    draw_text(x + 24.0f, y + 126.0f, 0xe6dff6ff,
-              "MANAGEMENT");
-    set_ui_font_size(14, 22);
-}
-
 static void draw_about(void)
 {
     char version_line[128];
@@ -5634,8 +5606,7 @@ static void draw_about(void)
     }
 
     draw_page_header("About", "Credits, hardware and safety information");
-    draw_soft_card(20.0f, 88.0f, 586.0f, 356.0f, 0);
-    draw_soft_card(620.0f, 88.0f, 214.0f, 356.0f, 0);
+    draw_soft_card(20.0f, 88.0f, 814.0f, 356.0f, 0);
 
     set_ui_font_size(14, 21);
     draw_text(42.0f, 108.0f, 0x29243fff, "PS3 SCALE");
@@ -5643,54 +5614,49 @@ static void draw_about(void)
     draw_text(42.0f, 142.0f, 0x514b69ff,
               "PS3 / PS2 Game Library & Enhancement Manager");
     draw_text(42.0f, 166.0f, 0x77718fff,
-              "Organize local games and review version-matched community profiles.");
+              "Browse local games and version-matched online profiles.");
     draw_text(42.0f, 190.0f, 0x77718fff,
-              "Scanning is read-only. Original game files are never replaced.");
+              "Exact single-write profiles can auto-apply when Cross starts a game.");
     draw_text(42.0f, 214.0f, 0x77718fff,
+              "Patches are one-launch memory changes; original game files are never replaced.");
+    draw_text(42.0f, 232.0f, 0x77718fff,
               "No universal upscaler or guaranteed 60 FPS is claimed.");
 
-    draw_soft_chip(42.0f, 238.0f, 154.0f, "READ-ONLY SCANNING", 1);
-    draw_soft_chip(204.0f, 238.0f, 176.0f, "VERSION-MATCHED DATA", 0);
-    draw_soft_chip(388.0f, 238.0f, 190.0f, "NO AUTO-APPLY", 0);
+    draw_soft_chip(42.0f, 256.0f, 154.0f, "READ-ONLY SCANNING", 1);
+    draw_soft_chip(204.0f, 256.0f, 176.0f, "VERSION-MATCHED DATA", 0);
+    draw_soft_chip(388.0f, 256.0f, 214.0f,
+                   g_auto_apply_profiles ? "EXACT AUTO-APPLY ON" : "AUTO-APPLY OFF", 0);
 
     set_ui_font_size(9, 14);
-    draw_text(42.0f, 282.0f, 0x29243fff, "Hardware Information");
-    draw_rounded_rect(394.0f, 276.0f, 184.0f, 23.0f, 7.0f,
+    draw_text(42.0f, 302.0f, 0x29243fff, "Hardware Information");
+    draw_rounded_rect(630.0f, 296.0f, 184.0f, 23.0f, 7.0f,
                       g_hardware_info_valid ? 0xe5f5eaff : 0xfff3e5ff);
     set_ui_font_size(6, 9);
-    draw_text(404.0f, 283.0f,
+    draw_text(640.0f, 303.0f,
               g_hardware_info_valid ? 0x26794bff : 0xb27b35ff,
               g_hardware_info_valid ? "CONSOLE DETECTED" : "NOT AVAILABLE");
 
     if (g_hardware_info_valid) {
         set_ui_font_size(7, 11);
-        draw_text(42.0f, 316.0f, 0x77718fff, "Model");
-        draw_text(176.0f, 316.0f, 0x29243fff, g_hardware_info.model_series);
-        draw_text(42.0f, 340.0f, 0x77718fff, "Console type");
-        draw_text(176.0f, 340.0f, 0x29243fff,
+        draw_text(42.0f, 336.0f, 0x77718fff, "Model");
+        draw_text(176.0f, 336.0f, 0x29243fff, g_hardware_info.model_series);
+        draw_text(42.0f, 360.0f, 0x77718fff, "Console type");
+        draw_text(176.0f, 360.0f, 0x29243fff,
                   ps3scale_console_type_name(g_hardware_info.console_type));
-        draw_text(42.0f, 364.0f, 0x77718fff, "Firmware");
-        draw_text(176.0f, 364.0f, 0x29243fff,
+        draw_text(42.0f, 384.0f, 0x77718fff, "Firmware");
+        draw_text(176.0f, 384.0f, 0x29243fff,
                   g_hardware_info.firmware_version);
-        draw_text(42.0f, 388.0f, 0x77718fff, "Platform ID");
-        draw_text(176.0f, 388.0f, 0x29243fff,
+        draw_text(42.0f, 408.0f, 0x77718fff, "Platform ID");
+        draw_text(176.0f, 408.0f, 0x29243fff,
                   g_hardware_info.platform_id);
     } else {
-        draw_text(42.0f, 316.0f, 0xb27b35ff,
+        draw_text(42.0f, 336.0f, 0xb27b35ff,
                   "Hardware information is unavailable.");
-        draw_text(42.0f, 340.0f, 0x77718fff,
+        draw_text(42.0f, 360.0f, 0x77718fff,
                   "The application can still browse local information.");
     }
     set_ui_font_size(6, 9);
-    draw_text(42.0f, 420.0f, 0x77718fff, version_line);
-
-    set_ui_font_size(7, 11);
-    draw_text(644.0f, 106.0f, 0x29243fff, "XMB APP ICON");
-    draw_app_icon_preview(645.0f, 136.0f);
-    set_ui_font_size(6, 9);
-    draw_text(644.0f, 342.0f, 0x514b69ff, "PS3 SCALE");
-    draw_text(644.0f, 358.0f, 0x77718fff, "WHITE / LAVENDER THEME");
-    draw_text(644.0f, 390.0f, 0x875be8ff, "CIRCLE: BACK");
+    draw_text(630.0f, 420.0f, 0x77718fff, version_line);
     set_ui_font_size(14, 22);
 }
 
