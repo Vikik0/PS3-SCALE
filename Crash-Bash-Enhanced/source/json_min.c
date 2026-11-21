@@ -35,7 +35,8 @@ static int parse_value(parser *p, int parent, int depth) {
         if (p->pos < p->length && p->json[p->pos] == close) { p->pos++; p->tokens[id].end = p->pos; return id; }
         while (p->pos < p->length && !p->failed) {
             if (type == CB_JSON_OBJECT) {
-                if (parse_string(p, id) < 0) return -1; skip_ws(p);
+                if (parse_string(p, id) < 0) return -1;
+                skip_ws(p);
                 if (p->pos >= p->length || p->json[p->pos++] != ':') { p->failed = 1; return -1; }
                 if (parse_value(p, id, depth + 1) < 0) return -1;
             } else if (parse_value(p, id, depth + 1) < 0) return -1;
@@ -54,7 +55,8 @@ int cb_json_parse(const char *json, cb_json_token *tokens, int max_tokens) {
     parser p; int root; if (!json || !tokens || max_tokens <= 0) return -1;
     memset(&p, 0, sizeof(p)); p.json = json; p.length = (int)strlen(json); p.tokens = tokens; p.max_tokens = max_tokens;
     skip_ws(&p); root = parse_value(&p, -1, 0); skip_ws(&p);
-    if (p.failed || root != 0 || p.pos != p.length) return -1; return p.count;
+    if (p.failed || root != 0 || p.pos != p.length) return -1;
+    return p.count;
 }
 static int next_token(const cb_json_token *tokens, int count, int index) {
     int end, i; if (index < 0 || index >= count) return count; end = tokens[index].end;
@@ -68,7 +70,8 @@ int cb_json_object_get(const char *json, const cb_json_token *tokens, int count,
     int i; if (!json || !tokens || object < 0 || object >= count || tokens[object].type != CB_JSON_OBJECT) return -1;
     i = object + 1; while (i < count && tokens[i].parent == object) {
         int value = i + 1; if (value >= count || tokens[value].parent != object) return -1;
-        if (token_equals(json, &tokens[i], key)) return value; i = next_token(tokens, count, value);
+        if (token_equals(json, &tokens[i], key)) return value;
+        i = next_token(tokens, count, value);
     } return -1;
 }
 int cb_json_array_get(const cb_json_token *tokens, int count, int array, int index) {
@@ -105,10 +108,12 @@ int cb_json_int(const char *json, const cb_json_token *token, int fallback) {
     if (!json || !token || token->type != CB_JSON_PRIMITIVE) return fallback;
     len = (size_t)(token->end - token->start); if (len == 0 || len >= sizeof(value)) return fallback;
     memcpy(value, json + token->start, len); value[len] = '\0'; n = strtol(value, &end, 10);
-    if (end == value || *end != '\0' || n < -2147483647L || n > 2147483647L) return fallback; return (int)n;
+    if (end == value || *end != '\0' || n < -2147483647L || n > 2147483647L) return fallback;
+    return (int)n;
 }
 int cb_json_bool(const char *json, const cb_json_token *token, int fallback) {
     if (!json || !token || token->type != CB_JSON_PRIMITIVE) return fallback;
     if (token->end - token->start == 4 && memcmp(json + token->start, "true", 4) == 0) return 1;
-    if (token->end - token->start == 5 && memcmp(json + token->start, "false", 5) == 0) return 0; return fallback;
+    if (token->end - token->start == 5 && memcmp(json + token->start, "false", 5) == 0) return 0;
+    return fallback;
 }
