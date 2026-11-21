@@ -27,7 +27,7 @@ The server obtains the sender ID from the authenticated guest session, not from 
 
 ## Free-tier budget
 
-The free plan is not unlimited. Cloudflare's current Durable Objects pricing lists 100,000 requests per day and applies a 20:1 billing ratio to incoming WebSocket messages. Four players each sending five packets per second would use approximately 86,400 metered request-equivalents per day, before room creation, connection upgrades, and other service traffic. This is an intentionally conservative prototype ceiling, not a promise of unlimited concurrent matches. The service must reject excess traffic rather than enable paid usage.
+The free plan is not unlimited. Cloudflare's current Durable Objects pricing lists 100,000 requests per day and applies a 20:1 billing ratio to incoming WebSocket messages. Hard caps protect the free budget: 16 guest sessions, four open rooms, and one active match at a time. One four-player match at the five-message-per-second burst cap uses at most 86,400 metered request-equivalents per day (4 × 5 × 86,400 ÷ 20), including keepalive pings; the remaining margin covers lobby heartbeats, room setup, connection upgrades, and reconnects. The upstream lockstep batches 32 game steps per packet at roughly 33.37 ms per step, so typical traffic should be far below the burst cap. The service must reject excess traffic rather than enable paid usage.
 
 References:
 - Cloudflare Workers pricing: https://developers.cloudflare.com/workers/platform/pricing/
