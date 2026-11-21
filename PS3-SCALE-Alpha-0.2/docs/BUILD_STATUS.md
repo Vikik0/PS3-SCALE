@@ -10,7 +10,7 @@
 
 ## Latest code/package CI validation
 
-GitHub Actions run **#547** completed successfully on 2026-11-21.
+GitHub Actions run **#555** completed successfully on 2026-11-21.
 
 - Host-side regression tests: **PASS**
 - Arabic bitmap preview render: **PASS**
@@ -19,25 +19,26 @@ GitHub Actions run **#547** completed successfully on 2026-11-21.
 - CEX SELF generation: **PASS**
 - Standard PKG generation: **PASS**
 - GNPDRM PKG generation and package checks: **PASS**
+- Embedded XMB artwork byte-for-byte verification (`ICON0.PNG`, `PIC0.PNG`, `PIC1.PNG`): **PASS**
 - Embedded Apollo Save logo, Music 1 source and Music 2 theme: **PASS**
 
-Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/44944718303
+Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/44951980356
 
 ## Build artifact
 
-Artifact name: `PS3-SCALE-Alpha-0.23-build-with-embedded-theme`
+Artifact name: `PS3-SCALE-Alpha-0.25-build-with-embedded-theme`
 
 Contains:
-- `ps3scale.elf` — 3,503,480 bytes
-- `ps3scale.self` — 777,264 bytes
-- `ps3scale.pkg` — 11,395,872 bytes
-- `ps3scale.gnpdrm.pkg` — 11,395,872 bytes
+- `ps3scale.elf` — 3,503,574 bytes
+- `ps3scale.self` — 777,760 bytes
+- `ps3scale.pkg` — 11,400,816 bytes
+- `ps3scale.gnpdrm.pkg` — 11,400,816 bytes
 
 SHA-256:
-- ELF: `3318cb4ba49f4bccb338c6b1a3afee0218f0426167f6161bd88bec996ddf7e67`
-- SELF: `32781c62078fd939a48a5b7d849b25e7f19e9997d5892d5ff8c5f5f7d5c0e425`
-- Standard PKG: `7702b761e98e6e81590fd4333bfe0d7984052fb90c65590ce2f9d0d2afe78b2e`
-- GNPDRM PKG: `a0dea850ff0db7ab90e5847fad1d2c5e4c5ce3c80b1d51f6b03ea79541fc97cb`
+- ELF: `f78ef93b3b79a388e403d805b570129ac7d5753ec1848988d5174c171bc5c5a2`
+- SELF: `c6e7aa033a82c2103d22a9b548bb28c778afe8f79dcabff31b75e5844bcf900f`
+- Standard PKG: `e24e8cc9f421d464ddd190ac7cfc81cc6152c19af9e20f941b5152550e863fab`
+- GNPDRM PKG: `df9a9da2498f8ec672ec884c1cd04495912530462c6da34a759b065d67f7077f`
 
 ## Alpha 0.23 changes in this continuation
 
