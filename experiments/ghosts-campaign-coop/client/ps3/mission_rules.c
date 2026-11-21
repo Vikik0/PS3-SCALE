@@ -1,6 +1,5 @@
 #include "mission_rules.h"
 
-#include <string.h>
 
 static uint32_t gh_elapsed(uint32_t now_ms, uint32_t start_ms) {
     return (uint32_t)(now_ms - start_ms);
@@ -289,7 +288,13 @@ int ghc_mission_decode_snapshot(
     if (input[0] != (uint8_t)'G' || input[1] != (uint8_t)'M'
         || input[2] != (uint8_t)'S' || input[3] != GHC_MISSION_SNAPSHOT_VERSION) return -1;
 
-    memset(&decoded, 0, sizeof(decoded));
+    {
+        size_t byte_index;
+        unsigned char *decoded_bytes = (unsigned char *)&decoded;
+        for (byte_index = 0u; byte_index < sizeof(decoded); ++byte_index) {
+            decoded_bytes[byte_index] = 0u;
+        }
+    }
     decoded.phase = input[4];
     decoded.failure_reason = input[5];
     decoded.revision = gh_read_u32_be(input + 6);
