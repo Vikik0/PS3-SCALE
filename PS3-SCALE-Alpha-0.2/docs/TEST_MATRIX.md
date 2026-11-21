@@ -29,7 +29,7 @@ The About page reports the Platform ID, mapped hardware family/series, firmware,
 5. Confirm Cross refuses a non-graphics category, a non-NCL file, a mismatched version, a game outside /dev_hdd0, or a missing Artemis installation.
 6. Confirm Artemis detection works for both ARTPS3001 and ARTZ00001 package IDs.
 7. Download one reviewed NCL file and verify it appears in the detected Artemis USERLIST directory with a PS3SCALE_TitleID_APPVER filename.
-8. Confirm an existing file is never overwritten and a binary/ELF/PKG response is rejected.
+8. Confirm an existing file is never overwritten, a binary/ELF/PKG response is rejected, and a downloaded file with a byte size different from the index metadata is rejected.
 9. In TEMPORARY mode, verify the downloaded file is removed on the next PS3 SCALE launch. In PERMANENT mode, verify a new file remains after restarting PS3 SCALE.
 10. Open Artemis and verify the NCL entry is visible before applying it. Do not test an unreviewed code against a valuable save or online session.
 
