@@ -4272,7 +4272,7 @@ static void draw_online_database(void)
     draw_text(38.0f, 102.0f, 0x29243fff, "Search & Browse");
     set_ui_font_size(7, 11);
     snprintf(line, sizeof(line), "QUERY: %.36s",
-             g_online_query[0] ? g_online_query : "Installed games");
+             g_online_query[0] ? g_online_query : "All available profiles");
     draw_text(38.0f, 125.0f, 0x514b69ff, line);
     set_ui_font_size(6, 9);
     snprintf(line, sizeof(line), "FILTER: %.42s", online_filter_label());
@@ -4305,7 +4305,7 @@ static void draw_online_database(void)
         float row_y = y - (row_h - 27.0f) * 0.5f - focus * 1.0f;
         char row[128];
 
-        if (!game && !community && !ps2_config)
+        if (!game && !community && !ps2_config && !profile)
             continue;
 
         if (ps2_config) {
@@ -4326,10 +4326,14 @@ static void draw_online_database(void)
                 kind = "GITHUB";
                 badge_color = 0x7e67baff;
             }
+        } else if (profile) {
+            title = profile->title;
+            kind = game ? "PROFILE" : "PROFILE DB";
+            badge_color = game ? 0x468f78ff : 0xae884bff;
         } else {
-            title = game ? game->title : "Game profile";
-            kind = "PROFILE";
-            badge_color = 0x468f78ff;
+            title = game ? game->title : "Online result";
+            kind = "RESULT";
+            badge_color = 0x7e67baff;
         }
 
         draw_rounded_rect(row_x + 2.0f, row_y + 3.0f,
