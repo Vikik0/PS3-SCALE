@@ -18,13 +18,6 @@ static void gh_write_u16(uint8_t *bytes, uint16_t value) {
     bytes[1] = (uint8_t)value;
 }
 
-static void gh_write_u32(uint8_t *bytes, uint32_t value) {
-    bytes[0] = (uint8_t)(value >> 24);
-    bytes[1] = (uint8_t)(value >> 16);
-    bytes[2] = (uint8_t)(value >> 8);
-    bytes[3] = (uint8_t)value;
-}
-
 static int gh_bytes_equal(const uint8_t *left, const uint8_t *right, size_t length) {
     size_t i;
     uint8_t difference = 0;
@@ -78,12 +71,12 @@ int ghc_stun_parse_binding_response(
 
     message_type = gh_read_u16(packet);
     message_length = gh_read_u16(packet + 2);
-    if (message_type == GHC_STUN_BINDING_ERROR) return -2;
-    if (message_type != GHC_STUN_BINDING_SUCCESS) return -1;
+    if (message_type != GHC_STUN_BINDING_SUCCESS && message_type != GHC_STUN_BINDING_ERROR) return -1;
     if ((message_length & 3u) != 0u) return -1;
     if ((size_t)message_length + GHC_STUN_HEADER_SIZE != packet_length) return -1;
     if (!gh_bytes_equal(packet + 4, GHC_STUN_COOKIE, sizeof(GHC_STUN_COOKIE))) return -1;
     if (!gh_bytes_equal(packet + 8, expected_transaction_id, GHC_STUN_TRANSACTION_ID_SIZE)) return -1;
+    if (message_type == GHC_STUN_BINDING_ERROR) return -2;
 
     cursor = GHC_STUN_HEADER_SIZE;
     message_end = GHC_STUN_HEADER_SIZE + (size_t)message_length;
