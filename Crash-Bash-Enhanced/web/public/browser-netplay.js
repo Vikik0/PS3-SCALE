@@ -11,7 +11,7 @@ import {
   encodeJoin,
   encodePong,
   encodeReady
-} from "/cbn1.js";
+} from "./cbn1.js";
 
 const HISTORY = 2048;
 const PER_PACKET = 32;
