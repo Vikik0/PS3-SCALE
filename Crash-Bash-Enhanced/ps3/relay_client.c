@@ -1,7 +1,6 @@
 #include "relay_client.h"
 
 #include <arpa/inet.h>
-#include <errno.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +17,6 @@ static int send_all(int fd, const char *data, size_t length)
     size_t sent = 0;
     while (sent < length) {
         ssize_t count = send(fd, data + sent, length - sent, 0);
-        if (count < 0 && errno == EINTR) continue;
         if (count <= 0) return -1;
         sent += (size_t)count;
     }
