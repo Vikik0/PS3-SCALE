@@ -7,9 +7,9 @@ A PS3 player and a browser player must run the same Crash Bash match, not merely
 ## Selected architecture
 
 - **PS3 client:** the original Crash Bash disc running in the PS1 emulator on PS3, with the project PRX translating remote controller state into virtual PS1 pad slots.
-- **Browser client:** EmulatorJS with its PlayStation (PCSX-ReARMed) core. The browser player loads the user's disc image and optional BIOS locally, then exposes a four-player input hook for the CBN1 adapter.
+- **Browser client:** EmulatorJS with its PlayStation (PCSX-ReARMed) core. The browser player loads the user's disc image and optional BIOS locally, captures its local pad as a CBN1 seven-byte input record, and applies the host's authoritative four-pad records to the emulator.
 - **Identity and rooms:** guest sessions and room codes. PSN authentication is not used.
-- **Game transport:** a room-scoped WebSocket relay. The browser cannot open arbitrary UDP sockets, so its upcoming CBN1 adapter must use the same relay protocol as PS3. The PS3 adapter already intercepts the upstream UDP socket calls and translates them to CBU1/CBR1 relay messages.
+- **Game transport:** a room-scoped WebSocket relay. The browser cannot open arbitrary UDP sockets, so its CBN1 lockstep client sends packets through the same CBU1/CBR1 relay protocol as PS3. The PS3 adapter intercepts the upstream UDP socket calls and translates them to those relay messages.
 - **Hosting:** static browser files served by the same Cloudflare Worker origin as the API and SQLite-backed Durable Object. No home PC or paid database is part of the target architecture.
 
 ## Relay packet format — CBR1
@@ -35,7 +35,7 @@ References:
 
 ## Browser runtime and input bridge
 
-The browser runtime now uses EmulatorJS with its PlayStation (PCSX-ReARMed) core instead of compiling the upstream SDL_GPU desktop renderer to WebAssembly. This avoids writing a separate WebGL 2 renderer. The local browser player loads the user's disc image and optional BIOS as browser File objects, without uploading either to the Worker. It exposes `CBASH_APPLY_PAD_STATE(slot, buttons, sticks)` and `CBASH_GET_EMULATOR_FRAME()` for the network adapter. A browser WSS transport now implements authenticated `cbash-v1` connections, CBU1 batching, CBR1 decoding, a 220 ms flush cadence, and PING/PONG keepalives; framing and controller mapping have unit tests. The remaining browser work is to connect the upstream CBN1 lockstep state machine to that transport and drive EmulatorJS pad/frame hooks. Browser networking does not expose raw UDP sockets.
+The browser runtime uses EmulatorJS with its PlayStation (PCSX-ReARMed) core rather than compiling the upstream SDL_GPU desktop renderer to WebAssembly. It loads the user's disc image and optional BIOS as browser File objects; neither is uploaded to the Worker. The browser exposes pad-apply and frame-count hooks, captures the local controller through EmulatorJS's GameManager, and runs a CBN1 protocol-2 joiner. The client handles JOIN/WELCOME, PING/PONG, empty SAVE slots, START/READY, INPUT retransmission/acknowledgements, and authoritative RECORD packets. It gates the emulator in two-frame steps and applies all four pad states from each host record. The authenticated WSS transport batches CBU1 packets every 220 ms and decodes CBR1 envelopes. Browser tests cover the packet codec, controller mapping, lobby handshake, and frame-record flow. This is an integration prototype: live timing, PAL behavior, RAM fingerprints, and physical PS3/browser compatibility remain unverified. Browser networking does not expose raw UDP sockets.
 
 References:
 - EmulatorJS project and supported systems: https://github.com/EmulatorJS/EmulatorJS
@@ -54,14 +54,15 @@ References:
 - A development PS3 host/join/start menu wired to the relay APIs.
 - A local EmulatorJS browser player with user-owned CUE/BIN/CHD/PBP/ISO/IMG loading, optional local BIOS selection, and a four-player PS1-to-libretro input hook with unit tests.
 - Browser-side authenticated WSS relay transport with CBU1 batching and CBR1 envelope decoding, covered by unit tests.
+- Browser CBN1 lockstep joiner with host handshake, empty-save acknowledgements, input-history retransmission, authoritative four-pad records, and two-frame EmulatorJS stepping, covered by unit tests.
 - An installable PS3 homebrew PKG wrapper for the input PRX and VSH loader; CI validates its PKG header and content ID. Hardware installation and runtime behavior are not yet verified.
 
-### Still required before cross-platform play
-1. Connect the upstream CBN1 lockstep state machine to the browser WSS transport, then feed each synchronized pad record into the EmulatorJS input hook at the correct emulator frame.
-2. Connect the browser input hook to a WebSocket-backed CBN1 lockstep adapter, using the same per-peer relay routing as the PS3 client.
-3. Validate the PS3 lockstep-to-CBU1/CBR1 shim and browser adapter under packet loss, high RTT, disconnects, and reconnects; tune the fixed relay input delay from measured results.
-4. Configure Cloudflare deployment credentials; the deployment workflow now builds the Vite lobby, deploys the static assets and Worker together, and checks the public /health endpoint. The PS3 client now uses certificate-verified HTTPS/WSS; local TLS integration tests cover its handshake and relay protocol.
-5. Install the generated PKG on physical PS3 hardware and verify the VSH loader, process injection, and in-game host/join menu (SELECT + L3 + R3).
-6. Test matching builds, input delay, disconnect/rejoin, and deterministic frame fingerprints on a real PS3 and a real browser.
+### Still required before a public playable release
+1. Configure Cloudflare deployment credentials and deploy the Worker plus Vite lobby; CI currently skips deployment when the Cloudflare secrets are absent.
+2. Install the generated PKG on physical PS3 hardware and verify the VSH loader, process injection, and in-game host/join menu (SELECT + L3 + R3).
+3. Run the first real PS3-host/browser-joiner match using matching NTSC disc revisions and verify the CBN1 handshake, save-slot acknowledgements, start barrier, input routing, and two-frame stepping.
+4. Measure real RTT and packet loss, validate the fixed 12-step delay, and test disconnect/rejoin, host loss, slow tabs, and long matches.
+5. Add browser-side fingerprints or another desync detector; the current browser sends `print_step = -1`, so it does not yet compare emulator state against the PS3 host.
+6. Validate PAL 50 Hz timing separately. The current PS3 adapter and browser frame gate are tuned around the 30-step/s NTSC path.
 
-**Status:** the PS3 adapter routes upstream lockstep datagrams through the relay in code, and its client now uses TLS 1.2/WSS with certificate verification. The installable PS3 PKG now builds in CI and its package header/content ID are validated. The local EmulatorJS browser runtime is present, but its CBN1 input adapter is not connected yet. Cloudflare deployment credentials and physical hardware/browser match tests are also still missing. This branch is not yet cross-platform playable.
+**Status:** the browser CBN1 joiner is now connected in source to the authenticated WSS relay and EmulatorJS frame/input hooks, and CI passes its 22 web tests, Worker integration tests, PS3 WSS tests, PRX builds, and PKG verification. The PS3 adapter and browser protocol are still an unverified prototype: Cloudflare deployment credentials are missing, the PKG has not been installed on hardware, and no real PS3-to-browser match has been completed. Do not treat this branch as release-ready.
