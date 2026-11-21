@@ -14,6 +14,7 @@ int main(void)
         0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff
     };
     CbRelayPacket batch[2];
+    CbRelayBatchQueue queue;
     uint8_t recipient_a[16] = { 0x11 };
     uint8_t recipient_b[16] = { 0x22 };
     uint8_t received[64];
@@ -97,6 +98,44 @@ int main(void)
         fprintf(stderr, "PS3 relay second batch packet decode failed\n");
         cb_relay_leave(&client);
         return 7;
+    }
+
+    memset(&queue, 0, sizeof(queue));
+    for (int frame = 0; frame < 6; ++frame) {
+        uint8_t value = (uint8_t)(0x40 + frame);
+        if (cb_relay_queue_packet(&queue, recipient_a, &value, 1) != 0) {
+            fprintf(stderr, "PS3 relay frame queue failed\\n");
+            cb_relay_leave(&client);
+            return 8;
+        }
+        result = cb_relay_batch_tick(&client, &queue, 6);
+        if (result != 0 || (frame < 5 && queue.count != (size_t)(frame + 1)) ||
+            (frame == 5 && queue.count != 0)) {
+            fprintf(stderr, "PS3 relay six-frame batch cadence failed\\n");
+            cb_relay_leave(&client);
+            return 9;
+        }
+    }
+
+    for (int frame = 0; frame < 6; ++frame) {
+        result = cb_relay_receive_packet(&client, received, sizeof(received),
+                                         &received_length, sender, control,
+                                         sizeof(control), 3000);
+        if (result != 1 || received_length != 1 ||
+            received[0] != (uint8_t)(0x40 + frame) ||
+            memcmp(sender, expected_sender, sizeof(sender)) != 0) {
+            fprintf(stderr, "PS3 relay queued datagram decode failed\\n");
+            cb_relay_leave(&client);
+            return 10;
+        }
+    }
+    result = cb_relay_receive_packet(&client, received, sizeof(received),
+                                     &received_length, sender, control,
+                                     sizeof(control), 3000);
+    if (result != 2 || strcmp(control, "BATCH:6") != 0) {
+        fprintf(stderr, "PS3 relay did not send six datagrams in one batch\\n");
+        cb_relay_leave(&client);
+        return 11;
     }
 
     cb_relay_leave(&client);
