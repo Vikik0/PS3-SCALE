@@ -5,9 +5,9 @@
   "platform": "PS3",
   "compiler": "GSC Tool 1.6.2.364",
   "compile_command": "gsc-tool --mode comp --game iw6 --system ps3 ghc_campaign_player_registry.gsc",
-  "source_sha256": "3e8b2282b11d639fba179d7982b22c01ef48ddf0f25b94b49d2a0f645ae73555",
-  "compiled_gscbin_sha256": "102ec770fe31a7016697d4714fee2e8731dbfc84f987cd4941470c5830e1e099",
-  "compiled_gscbin_bytes": 339,
-  "status": "compiled and round-trip decompiled; not injected or runtime-tested",
+  "source_sha256": "74479509ed7de7e8976972bf5ed3d63b8be3eba0305e024f7e56931dea4137cf",
+  "compiled_gscbin_sha256": "7f46836e922f3db14353a284359996e1d227f067dc09165389ba6be4d0d6f7ae",
+  "compiled_gscbin_bytes": 372,
+  "status": "compiled and round-trip decompiled; waits for level.players initialized when necessary; not injected or runtime-tested",
   "behavior": "Read-only validation of two already-existing native split-screen player entities. Does not create or clone a player."
 }
