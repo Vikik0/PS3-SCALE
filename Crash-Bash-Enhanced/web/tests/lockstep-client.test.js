@@ -179,3 +179,13 @@ test("ignores packets from non-host room members", async () => {
   assert.equal(client.phase, "joining");
   client.stop();
 });
+test("pauses the browser match when the PS3 host leaves the room", async () => {
+  const { transport, client } = setupClient();
+  await client.connect();
+  transport.fromHost(welcome());
+  for (let slot = 0; slot < 4; slot++) transport.fromHost(save(slot));
+  transport.fromHost(start());
+  transport.emit("control", JSON.stringify({ type: "room_update", room: { status: "waiting", host_session_id: HOST } }));
+  assert.equal(client.phase, "failed");
+  assert.equal(transport.closed, true);
+});
