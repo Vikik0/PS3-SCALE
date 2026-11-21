@@ -230,14 +230,10 @@ function render() {
       <footer class="footer"><a class="brand footer-brand" href="#"><span class="brand-mark"><b>C</b><i></i></span><span class="brand-copy"><strong>CRASH BASH</strong><small>ENHANCED ONLINE</small></span></a><p>FREE COMMUNITY SERVICE · ONE ACTIVE MATCH · NOT AFFILIATED WITH THE ORIGINAL GAME PUBLISHER</p><span>BUILD 0.1.0</span></footer>
     </div>`;
 
-  if (!API_BASE) {
-    const chip = app.querySelector(".connection-chip");
-    if (chip) chip.textContent = "API NOT CONFIGURED";
-  }
 }
 
 async function refreshPublicRooms({ quiet = true } = {}) {
-  if (!API_BASE || state.health !== "online") return;
+  if (state.health !== "online") return;
   try {
     const response = await api("/v1/rooms/public");
     state.publicRooms = Array.isArray(response.rooms) ? response.rooms : [];
@@ -457,13 +453,8 @@ app.addEventListener("input", event => {
 
 async function init() {
   render();
-  if (!API_BASE) {
-    state.health = "offline";
-    render();
-    return;
-  }
   try {
-    const health = await fetch(API_BASE + "/health", { cache: "no-store" });
+    const health = await fetch(API_ORIGIN + "/health", { cache: "no-store" });
     if (!health.ok) throw new Error("API health check failed.");
     state.health = "online";
   } catch {
