@@ -1,26 +1,24 @@
-/*
- * Ghosts Campaign Co-op PRX bootstrap.
- *
- * This module is deliberately passive: it proves the PS3 PRX build pipeline
- * and module lifecycle only. No game memory is read or written, and no
- * Campaign actor hooks are installed until the exact title ID / TU executable
- * has been analysed and the candidate routines have been verified.
- */
+/* Ghosts Campaign Co-op PRX bootstrap. */
 #include <stddef.h>
 #include <stdint.h>
 #include "../mission_rules.h"
+#include "../local_input.h"
 
 #define SYS_PRX_RESIDENT 0
 
 static volatile uint32_t g_module_state = 0;
 static GhcMission g_mission;
+static GhcLocalInputSnapshot g_local_input;
 static volatile uint32_t g_start_count = 0;
+static volatile int32_t g_local_input_last_result = GHC_LOCAL_INPUT_ERROR_DATA;
+static volatile uint32_t g_local_input_poll_count = 0;
 
 int module_start(size_t args, void *argp)
 {
     (void)args;
     (void)argp;
     ghc_mission_init(&g_mission, 0);
+    ghc_local_input_snapshot_clear(&g_local_input);
     g_start_count++;
     g_module_state = 1;
     return SYS_PRX_RESIDENT;
@@ -34,24 +32,43 @@ int module_stop(size_t args, void *argp)
     return SYS_PRX_RESIDENT;
 }
 
-/* Kept as local diagnostics for the next exported debug interface. */
-uint32_t ghc_module_state(void)
+uint32_t ghc_module_state(void) { return g_module_state; }
+uint32_t ghc_module_start_count(void) { return g_start_count; }
+uint32_t ghc_mission_revision(void) { return g_mission.revision; }
+uint32_t ghc_mission_phase(void) { return g_mission.phase; }
+
+/* Diagnostic poll entry point for a future verified Campaign frame adapter. */
+int32_t ghc_local_input_refresh(void)
 {
-    return g_module_state;
+    int result = ghc_local_input_poll_ps3(&g_local_input);
+    g_local_input_last_result = (int32_t)result;
+    g_local_input_poll_count++;
+    return (int32_t)result;
 }
 
-uint32_t ghc_module_start_count(void)
+uint32_t ghc_local_input_last_error(void) { return (uint32_t)g_local_input_last_result; }
+uint32_t ghc_local_input_poll_total(void) { return g_local_input_poll_count; }
+uint32_t ghc_local_input_connected_mask(void) { return g_local_input.connected_mask; }
+uint32_t ghc_local_input_read_error_mask(void) { return g_local_input.read_error_mask; }
+
+uint32_t ghc_local_input_player_buttons(uint32_t player_slot)
 {
-    return g_start_count;
+    if (player_slot < 1u || player_slot > GHC_LOCAL_INPUT_PLAYER_COUNT) return 0u;
+    return g_local_input.players[player_slot - 1u].buttons;
 }
 
-/* Local rules-state diagnostic only; no Campaign hooks are installed yet. */
-uint32_t ghc_mission_revision(void)
+uint32_t ghc_local_input_player_left_stick(uint32_t player_slot)
 {
-    return g_mission.revision;
+    const GhcLocalPlayerInput *player;
+    if (player_slot < 1u || player_slot > GHC_LOCAL_INPUT_PLAYER_COUNT) return 0u;
+    player = &g_local_input.players[player_slot - 1u];
+    return ((uint32_t)player->left_x << 8) | (uint32_t)player->left_y;
 }
 
-uint32_t ghc_mission_phase(void)
+uint32_t ghc_local_input_player_right_stick(uint32_t player_slot)
 {
-    return g_mission.phase;
+    const GhcLocalPlayerInput *player;
+    if (player_slot < 1u || player_slot > GHC_LOCAL_INPUT_PLAYER_COUNT) return 0u;
+    player = &g_local_input.players[player_slot - 1u];
+    return ((uint32_t)player->right_x << 8) | (uint32_t)player->right_y;
 }

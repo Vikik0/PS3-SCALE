@@ -54,6 +54,11 @@ jobs:
         run: |
           cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/mission_rules.c tests/mission_rules_test.c -o /tmp/mission-rules-test
           /tmp/mission-rules-test
+      - name: Build and run local controller input decoder tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/local_input.c tests/local_input_test.c -o /tmp/local-input-test
+          /tmp/local-input-test
       - name: Build and run lobby JSON contract tests
         working-directory: experiments/ghosts-campaign-coop
         run: |
@@ -136,7 +141,7 @@ jobs:
           source "$RUNNER_TEMP/PS3DK-src/scripts/env.sh"
           cargo build --release --manifest-path "$PS3_TOOLCHAIN_ROOT/tools/nidgen/Cargo.toml"
           nidgen="$PS3_TOOLCHAIN_ROOT/tools/target/release/nidgen"
-          for name in libsysmodule_stub libnet_stub libssl_stub libhttp_stub libhttp_util_stub; do
+          for name in libsysmodule_stub libnet_stub libssl_stub libhttp_stub libhttp_util_stub libio_stub; do
             input="$PS3_TOOLCHAIN_ROOT/tools/nidgen/nids/extracted/$name.yaml"
             out="$RUNNER_TEMP/ps3-stubs/$name"
             mkdir -p "$out"
