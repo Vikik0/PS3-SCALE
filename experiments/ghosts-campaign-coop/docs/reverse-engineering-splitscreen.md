@@ -12,7 +12,7 @@ The public IW6 GSC dump exposes `isSplitScreen()`, `isSplitscreenPlayer()` and `
 
 ## PS3 PPU ELF and OPD workflow
 
-The project now includes `tools/ps3_elf_inspect.py`, a read-only ELF64 big-endian EM_PPC64 inspector. It maps the reported offsets against file-backed `PT_LOAD` segments, tests direct VA and explicitly supplied RVA+image-base interpretations separately, and inspects the section containing the ELF entry point as the OPD candidate region. It reads PPU OPD entries as big-endian `{u32 code, u32 TOC}` descriptors and reports the common module TOC. It never guesses the image base or modifies the binary.
+The project now includes `tools/ps3_elf_inspect.py`, a read-only ELF64 big-endian EM_PPC64 inspector. It maps function/data leads against `PT_LOAD` memory segments (including zero-filled BSS), tests direct VA and explicitly supplied RVA+image-base interpretations separately, and inspects the section containing the ELF entry point as the OPD candidate region. It reads PPU OPD entries as big-endian `{u32 code, u32 TOC}` descriptors and reports the common module TOC. It never guesses the image base or modifies the binary.
 
 `tools/ghidra/SeedGhostsOpdFunctions.java` can seed Ghidra function starts from the OPD range, while `tools/ghidra/FindGhostsSplitScreenBuiltins.java` searches for split-screen/player builtin names and reports cross-references. Import the exact decrypted ELF as `PowerPC:BE:64:default` and use only the OPD VA/size reported for that same file. The workflow is documented in `docs/ps3-elf-analysis.md`.
 
