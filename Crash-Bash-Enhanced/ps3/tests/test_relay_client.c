@@ -101,7 +101,7 @@ int main(void)
     }
 
     memset(&queue, 0, sizeof(queue));
-    for (int frame = 0; frame < 6; ++frame) {
+    for (int frame = 0; frame < 7; ++frame) {
         uint8_t value = (uint8_t)(0x40 + frame);
         if (cb_relay_queue_packet(&queue, recipient_a, &value, 1) != 0) {
             fprintf(stderr, "PS3 relay frame queue failed\\n");
@@ -109,15 +109,15 @@ int main(void)
             return 8;
         }
         result = cb_relay_batch_tick(&client, &queue, 6);
-        if (result != 0 || (frame < 5 && queue.count != (size_t)(frame + 1)) ||
-            (frame == 5 && queue.count != 0)) {
-            fprintf(stderr, "PS3 relay six-frame batch cadence failed\\n");
+        if (result != 0 || (frame < 6 && queue.count != (size_t)(frame + 1)) ||
+            (frame == 6 && queue.count != 0)) {
+            fprintf(stderr, "PS3 relay seven-frame batch cadence failed\\n");
             cb_relay_leave(&client);
             return 9;
         }
     }
 
-    for (int frame = 0; frame < 6; ++frame) {
+    for (int frame = 0; frame < 7; ++frame) {
         result = cb_relay_receive_packet(&client, received, sizeof(received),
                                          &received_length, sender, control,
                                          sizeof(control), 3000);
@@ -132,8 +132,8 @@ int main(void)
     result = cb_relay_receive_packet(&client, received, sizeof(received),
                                      &received_length, sender, control,
                                      sizeof(control), 3000);
-    if (result != 2 || strcmp(control, "BATCH:6") != 0) {
-        fprintf(stderr, "PS3 relay did not send six datagrams in one batch\\n");
+    if (result != 2 || strcmp(control, "BATCH:7") != 0) {
+        fprintf(stderr, "PS3 relay did not send seven datagrams in one batch\\n");
         cb_relay_leave(&client);
         return 11;
     }
