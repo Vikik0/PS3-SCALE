@@ -287,6 +287,7 @@ int ghc_mission_decode_snapshot(
     if (input[0] != (uint8_t)'G' || input[1] != (uint8_t)'M'
         || input[2] != (uint8_t)'S' || input[3] != GHC_MISSION_SNAPSHOT_VERSION) return -1;
 
+    memset(&decoded, 0, sizeof(decoded));
     decoded.phase = input[4];
     decoded.failure_reason = input[5];
     decoded.revision = gh_read_u32_be(input + 6);
