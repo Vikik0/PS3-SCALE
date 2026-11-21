@@ -22,7 +22,7 @@ This Worker provides the first online-service layer for the Crash Bash Enhanced 
 
 ## Not included yet
 
-The relay is a transport prototype. The PS3 adapter now intercepts the upstream lockstep UDP socket calls and routes CBU1/CBR1 packets with per-peer addressing and a 220 ms batch cadence. Host-side tests cover ticket flows, roster mapping, start control, batching, and envelope decoding. The local browser player now runs through EmulatorJS and exposes a four-player input hook. A browser-side CBN1 lockstep transport adapter still needs to connect that hook to this Worker relay. The PS3 client now has certificate-verified TLS 1.2/WSS, but the public Worker deployment is still waiting for Cloudflare account credentials. Do not describe the game as playable online until the browser runtime and real PS3/browser match tests pass.
+The relay is a transport prototype. The PS3 adapter now intercepts the upstream lockstep UDP socket calls and routes CBU1/CBR1 packets with per-peer addressing and a 220 ms batch cadence. Host-side tests cover ticket flows, roster mapping, start control, batching, and envelope decoding. The local browser player now runs through EmulatorJS and exposes a four-player input hook. Browser CBU1/CBR1 WSS transport framing is implemented and unit-tested; the remaining step is connecting the upstream CBN1 lockstep state machine to that transport and the EmulatorJS frame/input hooks. The PS3 client now has certificate-verified TLS 1.2/WSS, but the public Worker deployment is still waiting for Cloudflare account credentials. Do not describe the game as playable online until the browser runtime and real PS3/browser match tests pass.
 
 ## Free-tier note
 
