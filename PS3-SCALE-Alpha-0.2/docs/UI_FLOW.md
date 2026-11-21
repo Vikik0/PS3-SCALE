@@ -1,4 +1,4 @@
-# PS3 SCALE UI flow — Alpha 0.27
+# PS3 SCALE UI flow — Alpha 0.28
 
 ## First launch and language
 
@@ -41,6 +41,7 @@ The Home page no longer displays a separate FEATURES heading. The About page use
 ## Scan Games
 
 - Separate PS3 and PS2 views; L1 selects PS3 and R1 selects PS2.
+- PS2ISO scanning and webMAN launch routes support `.ISO`, `.BIN`, `.IMG` and `.MDF` (case-insensitive). `.BIN.ENC` remains a PS2 Classic entry, not a standard PS2 ISO.
 - The complete library counts are shown separately from the filtered result count.
 - A left navigation rail, search strip, compact cover grid and selected-game summary share the page.
 - The selected title's name, type and ID are shown in a separate detail card.

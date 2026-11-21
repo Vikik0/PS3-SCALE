@@ -132,7 +132,9 @@ static int valid_ps2_iso_path(const char *path)
     if (!allowed_game_path(path) || !strstr(path, "/PS2ISO/"))
         return 0;
     return path_ends_with_ci(path, ".ISO") ||
-           path_ends_with_ci(path, ".BIN");
+           path_ends_with_ci(path, ".BIN") ||
+           path_ends_with_ci(path, ".IMG") ||
+           path_ends_with_ci(path, ".MDF");
 }
 
 int ps3scale_webman_build_start_path(const ps3scale_game_t *game,

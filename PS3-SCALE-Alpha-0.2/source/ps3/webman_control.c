@@ -191,7 +191,7 @@ static int webman_http_get(const char *path, char *response,
 
     ret = snprintf(request, sizeof(request),
         "GET %s HTTP/1.0\r\nHost: 127.0.0.1\r\n"
-        "User-Agent: PS3SCALE/0.27\r\nConnection: close\r\n\r\n",
+        "User-Agent: PS3SCALE/0.28\r\nConnection: close\r\n\r\n",
         path);
     if (ret < 0 || (size_t)ret >= sizeof(request)) {
         result = PS3SCALE_WEBMAN_ERROR_INVALID_REQUEST;

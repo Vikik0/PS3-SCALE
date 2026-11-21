@@ -5,7 +5,7 @@ integrated PS2 Emotion Engine/Graphics Synthesizer found in early FAT models.
 
 The first safe PS2 milestone is:
 - Detect PS2 Classics installed under `/dev_hdd0/game/<TITLE_ID>/` using CATEGORY `2P`.
-- Detect PS2 ISO files under `/dev_hdd0/PS2ISO/` and mounted USB `PS2ISO` folders.
+- Detect PS2 ISO files under `/dev_hdd0/PS2ISO/` and mounted USB `PS2ISO` folders, including `.ISO`, `.BIN`, `.IMG` and `.MDF` formats supported by webMAN MOD. `.BIN.ENC` remains a separate PS2 Classics format.
 - Index title ID and matching `ps2_netemu` CONFIG metadata where available.
 - Keep original ISO and installed package files read-only.
 - Install only verified, per-title CONFIG data through a separate reversible operation.

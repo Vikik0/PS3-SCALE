@@ -1,12 +1,20 @@
-# Build status — PS3 SCALE Alpha 0.27
+# Build status — PS3 SCALE Alpha 0.28
 
 ## Current development head
 
 - Branch: `design/splash-transitions-ui-v6`
 - Pull request: Draft PR #16, targeting `design/settings-support-ui-v5`
-- Application version shown in the UI: `ALPHA 0.27`
-- Package metadata: `APP_VER=00.27`, `VERSION=00.27`
+- Application version shown in the UI: `ALPHA 0.28`
+- Package metadata: `APP_VER=00.28`, `VERSION=00.28`
 - Package title ID: `PS3SCALE1`
+
+## Alpha 0.28 — PS2 ISO format compatibility
+
+- Extended PS2ISO scanning to recognize `.ISO`, `.BIN`, `.IMG` and `.MDF` case-insensitively.
+- Extended the webMAN launch-route validator to accept the same four standard PS2 ISO extensions, so a listed IMG/MDF title can be launched through the normal path.
+- Kept `.BIN.ENC` classified separately as a PS2 Classic package; it is not treated as a standard ISO.
+- Added host scanner fixtures that verify IMG/MDF entries and recover their serials from filenames, plus route tests for encoded IMG/MDF paths.
+- Alpha 0.28 CI and physical-console launch checks are pending.
 
 ## Alpha 0.27 — Companion launch reliability
 

@@ -14,11 +14,12 @@ The About page reports the Platform ID, mapped hardware family/series, firmware,
 1. Install only the PS3 SCALE manager PKG; do not apply an unreviewed game patch.
 2. Launch the app and confirm it returns to XMB with Circle.
 3. Run scan twice and confirm the library count is stable (no duplicates).
-4. Confirm folders, ISO files, PARAM.SFO files and EBOOT files remain unchanged.
-5. Test with HDD only, then with one USB device.
-6. Keep at least 1 GB free on the internal HDD.
-7. Confirm the Home screen shows one spiral staircase and no FEATURES heading; confirm the About screen has no extra icon image.
-8. Confirm Music Playlist values read Music 1 / Music 2 and that the storage preference defaults to TEMPORARY.
+4. Verify PS2ISO lists `.ISO`, `.BIN`, `.IMG` and `.MDF` files and keeps `.BIN.ENC` in the PS2 Classics category.
+5. Confirm folders, ISO files, PARAM.SFO files and EBOOT files remain unchanged.
+6. Test with HDD only, then with one USB device.
+7. Keep at least 1 GB free on the internal HDD.
+8. Confirm the Home screen shows one spiral staircase and no FEATURES heading; confirm the About screen has no extra icon image.
+9. Confirm Music Playlist values read Music 1 / Music 2 and that the storage preference defaults to TEMPORARY.
 
 ## Online DB and NCL installation
 

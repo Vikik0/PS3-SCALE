@@ -251,7 +251,9 @@ static int scan_iso_files(const char *base, ps3scale_game_kind_t kind,
         else
             accepted = ends_with_ci(entry->d_name, ".iso") ||
                        ends_with_ci(entry->d_name, ".bin") ||
-                       ends_with_ci(entry->d_name, ".bin.enc");
+                       ends_with_ci(entry->d_name, ".bin.enc") ||
+                       ends_with_ci(entry->d_name, ".img") ||
+                       ends_with_ci(entry->d_name, ".mdf");
         if (!accepted) continue;
 
         if (path_join(path, sizeof(path), base, entry->d_name) != 0)
