@@ -12,6 +12,7 @@
 - Accepted names: `music1.mp3`, `BIOS - Zorrovian [Official Visualiser] (1).mp3`, and `BIOS - Zorrovian [Official Visualiser] (1)(2).mp3`.
 - Import uses a temporary file, mpg123 validation and atomic rename. Once copied, the internal HDD copy is used on later launches.
 - The uploaded MP3 is not yet stored in GitHub build inputs; this build therefore does not embed Music 1. Adding `audio-source/music1.mp3` or ordered `music1.mp3.part-*` chunks makes the existing packaging script include it.
+- CI now checks the exact Music 1 size and SHA-256 whenever that source is present, and requires the finalized GNPDRM PKG verifier to find `USRDIR/music1.mp3`; a missing source remains an explicit fallback state rather than a false embedded-success result.
 
 ## Playback
 - Auto alternates the first track on each app launch.
