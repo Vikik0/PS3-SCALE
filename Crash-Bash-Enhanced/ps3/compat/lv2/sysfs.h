@@ -5,6 +5,10 @@
 #include <unistd.h>
 #include <ppu-types.h>
 
+#ifndef MAXPATHLEN
+#define MAXPATHLEN 1024
+#endif
+
 #define SYS_O_RDONLY 000000
 #define SYS_O_WRONLY 000001
 #define SYS_O_RDWR   000002
