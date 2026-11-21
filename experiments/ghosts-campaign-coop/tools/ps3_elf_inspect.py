@@ -2,8 +2,8 @@
 """Read-only inspector for a user-supplied decrypted PS3 PPU ELF.
 
 This tool does not decrypt SELF files, modify binaries, or install anything.
-It fingerprints an ELF and maps explicitly reported TU 1.16 candidate offsets
-against executable PT_LOAD segments. An optional image base is never guessed.
+It fingerprints an ELF and maps explicitly reported TU 1.16 function/data candidates
+against PT_LOAD memory segments, including zero-filled BSS. An image base is never guessed.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ SHT_SYMTAB = 2
 SHT_DYNSYM = 11
 STT_FUNC = 2
 
-# Addresses are leads copied from the repository's candidate-spawn document.
+# Function and data-address leads come from the repository's public offset research.
 # They are not verified against any particular retail EBOOT or Campaign.
 CANDIDATES = (
     ("G_Spawn", 0x290E58, "entity allocation", "function"),
