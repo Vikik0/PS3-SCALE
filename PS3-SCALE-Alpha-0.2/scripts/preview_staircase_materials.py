@@ -19,6 +19,7 @@ TAU = math.pi * 2
 ANGLE_STEP = TAU / PER_TURN
 RISE = 0.72
 CENTER_X, CENTER_Z = 7.2, 34.0
+CENTER_Y = 0.0
 INNER, OUTER, FOCAL = 2.0, 14.0, 780.0
 YAW = math.atan2(CENTER_X, CENTER_Z)
 SIN_YAW, COS_YAW = math.sin(YAW), math.cos(YAW)
@@ -30,7 +31,9 @@ def blend(a, b, t):
 
 
 def world(radius, angle, y):
-    return CENTER_X + math.cos(angle) * radius, y, CENTER_Z + math.sin(angle) * radius
+    return (CENTER_X + math.cos(angle) * radius,
+            CENTER_Y + y,
+            CENTER_Z + math.sin(angle) * radius)
 
 
 def project(p, camera_y):
@@ -43,12 +46,13 @@ def project(p, camera_y):
 
 
 def frames_geometry(frame):
+    global CENTER_Y
     camera_steps = (frame % PERIOD) * PER_TURN / PERIOD
-    whole = int(camera_steps)
-    camera_y = (camera_steps - whole) * RISE
+    camera_y = camera_steps * RISE
+    CENTER_Y = camera_y
     faces = []
     for i in range(STEPS):
-        angle = (i + whole) * ANGLE_STEP
+        angle = (i + camera_steps) * ANGLE_STEP
         following = angle + ANGLE_STEP * 0.92
         y = (i - (STEPS - 1) / 2) * RISE
         top = [world(INNER, angle, y + .14),
@@ -69,10 +73,10 @@ def frames_geometry(frame):
         light = .68 + .25 * math.cos(angle + .42)
         palette = [
             (top, blend((227,221,236), (255,254,255), light), False),
-            (riser, blend((183,172,202), (226,220,236), light), False),
-            (side, blend((190,181,210), (230,224,239), light), False),
+            (riser, blend((152,142,175), (199,190,218), light), False),
+            (side, blend((169,159,190), (213,205,229), light), False),
             (lip, blend((222,215,239), (255,254,255), light), True),
-            (shadow, blend((146,138,174), (189,180,209), light), False),
+            (shadow, blend((111,103,136), (163,154,191), light), False),
         ]
         for vertices, color, outline in palette:
             points = [project(p, camera_y) for p in vertices]
@@ -80,7 +84,7 @@ def frames_geometry(frame):
                 continue
             depth = sum(p[2] for p in points) / 4
             faces.append((depth, [(p[0], p[1]) for p in points], color, outline))
-    return camera_y, whole, sorted(faces, key=lambda f: f[0], reverse=True)
+    return camera_y, camera_steps, sorted(faces, key=lambda f: f[0], reverse=True)
 
 
 def draw_background(image, frame):
@@ -90,43 +94,47 @@ def draw_background(image, frame):
     bottom = blend((216,210,231), (242,239,249), daylight)
     for y in range(H):
         image.rect(0, y, W, 1, blend(top, bottom, y / (H - 1)))
-    for ring in (178, 164):
-        image.circle(565, 250, ring, (230,221,242), 1)
+    cx = 738 + math.cos(phase) * 12
+    cy = 112 + math.sin(phase) * 7
+    for ring, color in ((74, (222,211,239)),
+                        (61, (190,171,224)),
+                        (48, (232,221,245))):
+        image.circle(cx, cy, ring, color, 1)
 
 
-def draw_rails(image, frame, camera_y, whole):
+def draw_rails(image, frame, camera_y, camera_steps):
     previous = [None, None]
     for index in range(STEPS * 6 + 1):
         t = index / 6
-        angle = (t + whole) * ANGLE_STEP
+        angle = (t + camera_steps) * ANGLE_STEP
         y = (t - (STEPS - 1) * .5) * RISE
         pts = [project(world(OUTER + .62, angle, y + 1.15), camera_y),
                project(world(INNER + .42, angle, y + .92), camera_y)]
         for j, point in enumerate(pts):
             if previous[j] is not None and point is not None:
-                color = (183,154,223) if j == 0 else (216,201,240)
+                color = (161,138,210) if j == 0 else (205,191,232)
                 image.line(*previous[j][:2], *point[:2], color, 2)
             previous[j] = point
     for i in range(0, STEPS, 3):
-        angle = (i + whole) * ANGLE_STEP
+        angle = (i + camera_steps) * ANGLE_STEP
         y = (i - (STEPS - 1) * .5) * RISE
         base = project(world(OUTER, angle, y + .16), camera_y)
         rail = project(world(OUTER + .62, angle, y + 1.15), camera_y)
         if base and rail:
-            image.line(*base[:2], *rail[:2], (185,165,221), 1)
+            image.line(*base[:2], *rail[:2], (168,148,211), 1)
 
 
 def render(frame):
     image = Canvas(W, H, (252,252,255), (230,226,242))
     draw_background(image, frame)
-    camera_y, whole, faces = frames_geometry(frame)
+    camera_y, camera_steps, faces = frames_geometry(frame)
     for _, polygon, color, outline in faces:
         image.poly(polygon, color)
         if outline:
             for i in range(4):
                 image.line(*polygon[i], *polygon[(i+1) % 4],
                            (248,244,255), 1)
-    draw_rails(image, frame, camera_y, whole)
+    draw_rails(image, frame, camera_y, camera_steps)
     return image
 
 
@@ -146,7 +154,11 @@ def main():
     sheet.save(OUT / "staircase_motion_contact_sheet.png")
     assert all((OUT / f"staircase_frame_{f:05d}.png").stat().st_size > 5000
                for f in frame_numbers)
-    print("Generated approximate staircase motion snapshots (not RSX captures)")
+    first = render(0).p
+    last = render(PERIOD - 1).p
+    seam_error = sum(abs(int(a) - int(b)) for a, b in zip(first, last)) / len(first)
+    assert seam_error < 1.0, f"staircase loop seam too visible: {seam_error:.3f}"
+    print(f"Generated approximate staircase motion snapshots; seam MAE={seam_error:.3f} (not RSX captures)")
 
 
 if __name__ == "__main__":
