@@ -12,7 +12,7 @@ Crash Bash Enhanced is a community project to add a modern online layer around t
 ## Current implementation
 
 - Guest sessions with no PSN login.
-- Private six-character room codes.
+- Private and public six-character rooms, with a read-only public-room directory.
 - Two-to-four player lobbies.
 - Free-tier safety caps: 16 guest sessions, four open rooms, and one active match at a time.
 - Ready state and host-controlled match start.
@@ -23,7 +23,7 @@ Crash Bash Enhanced is a community project to add a modern online layer around t
 - Installable PS3 homebrew PKG for the VSH loader and input bridge; CI validates the PKG identity and GNPDRM finalization.
 - Host integration tests for both plain WebSocket and verified local HTTPS/WSS connections.
 - Push-based room updates over WebSocket; no rapid lobby polling.
-- Responsive web lobby.
+- Responsive web lobby with private-code joining and public-room discovery.
 - CI tests for the Worker and web build.
 
 ## Important: gameplay status
