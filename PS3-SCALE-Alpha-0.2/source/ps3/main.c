@@ -286,6 +286,7 @@ static void rebuild_online_results(void);
 static volatile int g_game_launch_running = 0;
 static volatile int g_game_launch_done = 0;
 static volatile int g_game_launch_result = -1;
+static int g_game_launch_profile_skipped = 0;
 static int g_game_launch_thread_started = 0;
 static int g_game_launch_profile_armed = 0;
 static sys_ppu_thread_t g_game_launch_thread;
@@ -2741,11 +2742,13 @@ static void game_launch_worker(void *arg)
 
     if (g_game_launch_profile_armed &&
         ps3scale_webman_ps3mapi_available() != 0) {
-        g_game_launch_result = -2;
-    } else {
-        g_game_launch_result =
-            ps3scale_webman_start_game(&g_game_launch_target);
+        /* A missing PS3MAPI endpoint must not block normal game launch.
+           Remove only our own one-launch script, then start the game cleanly. */
+        (void)ps3scale_profile_script_remove(g_game_launch_target.title_id);
+        g_game_launch_profile_skipped = 1;
     }
+    g_game_launch_result =
+        ps3scale_webman_start_game(&g_game_launch_target);
 
     g_game_launch_done = 1;
     g_game_launch_running = 0;
@@ -2767,7 +2770,9 @@ static void service_game_launch(void)
     g_game_launch_running = 0;
 
     if (g_game_launch_result == 0) {
-        set_details_message("WEBMAN ACCEPTED START REQUEST.");
+        set_details_message(g_game_launch_profile_skipped ?
+            "PS3MAPI NOT ACTIVE. GAME STARTED WITHOUT PROFILE." :
+            "WEBMAN ACCEPTED START REQUEST.");
         g_exit_requested = 1;
     } else if (g_game_launch_result == -2) {
         set_details_message("PS3MAPI NOT ACTIVE. PROFILE WAS NOT APPLIED.");
@@ -2845,6 +2850,7 @@ static void start_selected_game(void)
 
     g_game_launch_target = *game;
     g_game_launch_profile_armed = !is_ps2_iso && (script_state == 1);
+    g_game_launch_profile_skipped = 0;
     g_game_launch_result = -1;
     g_game_launch_done = 0;
     g_game_launch_running = 1;
