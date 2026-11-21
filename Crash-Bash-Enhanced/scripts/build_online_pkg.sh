@@ -23,7 +23,7 @@ command -v ppu-gcc >/dev/null
 command -v ppu-g++ >/dev/null
 command -v spu-gcc >/dev/null
 command -v make_self_npdrm >/dev/null
-command -v make_self_wc >/dev/null
+command -v make_self >/dev/null
 command -v pkg >/dev/null
 command -v sfo >/dev/null
 command -v git >/dev/null
