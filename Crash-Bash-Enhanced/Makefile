@@ -52,7 +52,7 @@ $(OUTPUT).elf: $(OFILES)
 endif
 ca-bundle:
 	@mkdir -p "$(dir $(CA_BUNDLE))"
-	@if [ ! -s "$(CA_BUNDLE)" ]; then curl -fsSL https://curl.se/ca/cacert.pem -o "$(CA_BUNDLE)"; fi
+	@if [ ! -s "$(CA_BUNDLE)" ]; then python3 -c 'import urllib.request; urllib.request.urlretrieve("https://curl.se/ca/cacert.pem", "$(CA_BUNDLE)")'; fi
 	@test -s "$(CA_BUNDLE)"
 host-test:
 	./scripts/test_host.sh

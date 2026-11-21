@@ -61,10 +61,26 @@ jobs:
           command -v make_self
           command -v make_self_npdrm
           command -v package_finalize
-          command -v curl
-          test -f "$PS3DEV/portlibs/ppu/include/curl/curl.h"
-          test -f "$PS3DEV/portlibs/ppu/lib/libcurl.a"
-          test -f "$PS3DEV/portlibs/ppu/lib/libpolarssl.a"
+          command -v python3
+          command -v git
+          command -v wget
+          command -v patch
+          test -s "$PS3DEV/portlibs/ppu/lib/libz.a"
+      - name: Install PS3 HTTPS libraries when missing
+        run: |
+          set -eu
+          if [ ! -f "$PORTLIBS/include/curl/curl.h" ] || [ ! -f "$PORTLIBS/lib/libcurl.a" ] || [ ! -f "$PORTLIBS/lib/libpolarssl.a" ]; then
+            git clone --depth 1 https://github.com/bucanero/ps3libraries.git /tmp/ps3libraries
+            git -C /tmp/ps3libraries checkout 74095b14f6327420787ca2f7fe95b0c58c835cc4
+            mkdir -p /tmp/ps3libraries/build
+            cd /tmp/ps3libraries/build
+            sh ../scripts/015-polarssl-1.3.9.sh
+            sh ../scripts/016-libcurl-7.64.1.sh
+          fi
+          test -f "$PORTLIBS/include/curl/curl.h"
+          test -f "$PORTLIBS/lib/libcurl.a"
+          test -f "$PORTLIBS/lib/libpolarssl.a"
+          test -f "$PORTLIBS/include/polarssl/ssl.h"
       - name: Build homebrew package
         working-directory: Crash-Bash-Enhanced
         run: |
