@@ -21,6 +21,9 @@ assert "*context->total_bytes =" in source
 assert "download_total > 0.0" in source
 assert "download_total < 2147483647.0" in source
 assert "ps3scale_online_download_limited_progress(" in source
-assert "ps3scale_online_download_limited_progress(" in (root / "source/ps3/main.c").read_text(encoding="utf-8")
+main_source = (root / "source/ps3/main.c").read_text(encoding="utf-8")
+assert "ps3scale_online_download_limited_progress(" in main_source
+assert "&g_community_downloaded, &g_community_download_total" in main_source
+assert "&g_ps2_config_downloaded, &g_ps2_config_download_total" in main_source
 assert "return ps3scale_online_download_progress(url, destination, NULL, NULL);" in source
 print("Online download progress contract: PASS")
