@@ -355,7 +355,7 @@ export class CrashBashLobby {
       const session = await this.authenticate(request, state);
       if (!session) throw fail(401, "AUTH_REQUIRED", "Create a Guest Mode session first.");
 
-      const transportRoute = path.match(/^\\/v1\\/rooms\\/([A-Z0-9]{6})\\/transport$/);
+      const transportRoute = path.match(/^\/v1\/rooms\/([A-Z0-9]{6})\/transport$/);
       if (transportRoute && method === "GET") {
         if ((request.headers.get("Upgrade") || "").toLowerCase() !== "websocket") {
           throw fail(426, "WEBSOCKET_REQUIRED", "This endpoint requires a WebSocket upgrade.");
