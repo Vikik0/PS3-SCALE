@@ -11,6 +11,7 @@ This folder builds the first native PS3 PRX for Crash Bash Enhanced.
 - Adapts the upstream SDL timing/file calls to PS3 APIs.
 - Uses STUN Binding requests on the same UDP socket as the game transport to discover the external IPv4/port. A second STUN destination is used to detect some symmetric-NAT mappings.
 - Provides native host/join/lobby functions through `net_adapter.h`; the game-input hook polls the lobby and feeds synchronized pad records into the emulator.
+- Computes a guarded FNV-1a fingerprint over the PS1 RAM window documented for `ps1_netemu` 4.86 (base `0x770780`, size 2 MiB). A page-attribute probe disables the fingerprint if the address range is not readable.
 
 ## Still incomplete / not verified
 
@@ -18,7 +19,7 @@ This folder builds the first native PS3 PRX for Crash Bash Enhanced.
 - The Cloudflare Worker and web lobby are not yet connected to this PRX. The Worker currently handles guest sessions, room codes, ready state and endpoint metadata; it does not relay game traffic.
 - No TURN or gameplay relay is included. Direct UDP connectivity can fail behind symmetric NAT, carrier-grade NAT, or networks that block peer UDP. STUN discovers mappings but does not create router port-forwarding rules.
 - Memory-card save synchronization is stubbed as empty data. The first target should be same-build Battle/minigame sessions, not Adventure progression.
-- The upstream state fingerprint is currently passed as zero because the PS3 emulator's game-state memory has not been mapped. The netcode therefore cannot detect deterministic state divergence yet.
+- The PS1 RAM fingerprint uses a community-documented `ps1_netemu` 4.86 memory map. The page-attribute probe confirms that the range is mapped and readable, but it does not prove that the same offset is correct on every firmware/emulator revision. The exact 4.93 (or other target firmware) memory layout still needs hardware verification.
 - The exact PS1 emulator process, multitap behavior, title-region identity and controller-port mapping have not been verified on physical PS3 hardware.
 
 ## Target process
