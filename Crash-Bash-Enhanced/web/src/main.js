@@ -1,6 +1,7 @@
 import "./styles.css";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const API_ORIGIN = API_BASE || window.location.origin;
 const STORAGE_KEY = "crash-bash-online-session-v1";
 const app = document.querySelector("#app");
 
@@ -44,10 +45,9 @@ function initials(name) {
 }
 
 async function api(path, { method = "GET", body } = {}) {
-  if (!API_BASE) throw new Error("The matchmaking API URL has not been configured yet.");
   const headers = { "Content-Type": "application/json" };
   if (state.session?.token) headers.Authorization = `Bearer ${state.session.token}`;
-  const response = await fetch(API_BASE + path, {
+  const response = await fetch(API_ORIGIN + path, {
     method,
     headers,
     body: body === undefined ? undefined : JSON.stringify(body)
@@ -343,7 +343,7 @@ function closeRelay() {
 }
 
 function syncRelayConnection() {
-  if (!state.room || !state.session?.token || !API_BASE) {
+  if (!state.room || !state.session?.token) {
     if (relaySocket) closeRelay();
     return;
   }
@@ -351,7 +351,7 @@ function syncRelayConnection() {
     return;
   }
 
-  const socketUrl = API_BASE.replace(/^http/, "ws") + `/v1/rooms/${state.room.room_code}/transport`;
+  const socketUrl = API_ORIGIN.replace(/^http/, "ws") + `/v1/rooms/${state.room.room_code}/transport`;
   let socket;
   try {
     socket = new WebSocket(socketUrl, ["cbash-v1", `cbash-auth.${state.session.token}`]);
