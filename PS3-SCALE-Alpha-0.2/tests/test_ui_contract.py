@@ -435,7 +435,7 @@ assert "NO DOWNLOAD: ONLY NCL/TXT UP TO 2 MB" in online_ui
 assert "PS2 compatibility is game-specific." in online_ui
 assert "Not an HD texture or 1080p upgrade." in online_ui
 assert "START: SYNC ONLINE METADATA" in online_ui
-assert "draw_rounded_rect(32.0f, y, 334.0f" in online_ui
+assert "draw_rounded_rect(row_x, row_y, row_w, row_h" in online_ui
 assert "draw_soft_chip(414.0f, 190.0f" in online_ui
 assert "LEFT/RIGHT PAGE" in online_ui
 assert "CROSS OPEN/DOWNLOAD" in online_ui
