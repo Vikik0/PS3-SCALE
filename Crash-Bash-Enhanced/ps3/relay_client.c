@@ -112,6 +112,31 @@ static int json_hex_field(const char *json, const char *field,
     return 0;
 }
 
+static int json_string_field(const char *json, const char *field,
+                             char *output, size_t output_capacity)
+{
+    char needle[48];
+    const char *p;
+    const char *end;
+    size_t length;
+
+    if (snprintf(needle, sizeof(needle), "\"%s\"", field) >= (int)sizeof(needle)) return -1;
+    p = strstr(json, needle);
+    if (!p) return -1;
+    p += strlen(needle);
+    while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') p++;
+    if (*p++ != ':') return -1;
+    while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') p++;
+    if (*p++ != '"') return -1;
+    end = strchr(p, '"');
+    if (!end) return -1;
+    length = (size_t)(end - p);
+    if (length == 0 || length >= output_capacity) return -1;
+    memcpy(output, p, length);
+    output[length] = '\0';
+    return 0;
+}
+
 static int clean_display_name(const char *input, char output[17])
 {
     size_t i;
@@ -134,9 +159,11 @@ static int clean_display_name(const char *input, char output[17])
     return 0;
 }
 
-static int request_guest_ticket(const char *host, unsigned short port,
-                                const char *room_code, const char *display_name,
-                                int timeout_ms, char ticket[65], char session_id[33], char host_session_id[33])
+static int request_room_ticket(const char *host, unsigned short port,
+                                const char *join_room_code, int create_room,
+                                const char *display_name, int timeout_ms,
+                                char ticket[65], char session_id[33],
+                                char host_session_id[33], char room_code_out[7])
 {
     struct addrinfo hints;
     struct addrinfo *addresses = NULL;
@@ -146,6 +173,7 @@ static int request_guest_ticket(const char *host, unsigned short port,
     char host_header[288];
     char safe_name[17];
     char request_body[96];
+    char api_path[96];
     char request[1024];
     char response[CB_HTTP_RESPONSE_MAX + 1];
     size_t received = 0;
@@ -156,14 +184,20 @@ static int request_guest_ticket(const char *host, unsigned short port,
     int request_length;
     int result = -1;
 
-    if (!host || !*host || !room_code || strlen(room_code) != 6u || port == 0) return -1;
-    clean_display_name(display_name, safe_name);
-
-    for (size_t i = 0; i < 6u; ++i) {
-        char c = room_code[i];
-        if (!((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))) return -1;
+    if (!host || !*host || port == 0 || !room_code_out) return -1;
+    if (create_room) {
+        strcpy(api_path, "/v1/rooms/host-guest");
+    } else {
+        if (!join_room_code || strlen(join_room_code) != 6u) return -1;
+        for (size_t i = 0; i < 6u; ++i) {
+            char c = join_room_code[i];
+            if (!((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))) return -1;
+        }
+        if (snprintf(api_path, sizeof(api_path), "/v1/rooms/%s/join-guest",
+                     join_room_code) >= (int)sizeof(api_path)) return -1;
     }
 
+    clean_display_name(display_name, safe_name);
     snprintf(request_body, sizeof(request_body), "{\"display_name\":\"%s\"}", safe_name);
     if (port == 80u) {
         if (snprintf(host_header, sizeof(host_header), "%s", host) >= (int)sizeof(host_header)) return -1;
@@ -173,14 +207,14 @@ static int request_guest_ticket(const char *host, unsigned short port,
     }
 
     request_length = snprintf(request, sizeof(request),
-        "POST /v1/rooms/%s/join-guest HTTP/1.1\r\n"
+        "POST %s HTTP/1.1\r\n"
         "Host: %s\r\n"
         "Connection: close\r\n"
         "Content-Type: application/json\r\n"
         "Accept: application/json\r\n"
         "Content-Length: %lu\r\n"
         "\r\n%s",
-        room_code, host_header, (unsigned long)strlen(request_body), request_body);
+        api_path, host_header, (unsigned long)strlen(request_body), request_body);
     if (request_length < 0 || (size_t)request_length >= sizeof(request)) return -1;
 
     memset(&hints, 0, sizeof(hints));
@@ -231,13 +265,19 @@ static int request_guest_ticket(const char *host, unsigned short port,
         json_hex_field(response + header_end, "host_session_id", host_session_id, 33u, 32u) != 0) {
         goto cleanup;
     }
+    if (create_room) {
+        if (json_string_field(response + header_end, "room_code",
+                              room_code_out, 7u) != 0 || strlen(room_code_out) != 6u) goto cleanup;
+    } else {
+        memcpy(room_code_out, join_room_code, 6u);
+        room_code_out[6] = '\0';
+    }
     result = 0;
 
 cleanup:
     close(fd);
     return result;
 }
-
 static uint64_t monotonic_ms(void)
 {
     struct timeval now;
@@ -245,22 +285,13 @@ static uint64_t monotonic_ms(void)
     return (uint64_t)now.tv_sec * 1000u + (uint64_t)now.tv_usec / 1000u;
 }
 
-int cb_relay_join(CbRelayClient *client, const char *host, unsigned short port,
-                  const char *room_code, const char *display_name, int timeout_ms)
+static int connect_relay_ticket(CbRelayClient *client, const char *host,
+                                 unsigned short port, const char *room_code,
+                                 const char *ticket, int timeout_ms)
 {
-    char ticket[65];
     char protocols[112];
     char path[96];
     int length;
-
-    if (!client || !host || !room_code || strlen(room_code) != 6u) return -1;
-    memset(client, 0, sizeof(*client));
-    client->websocket.fd = -1;
-
-    if (request_guest_ticket(host, port, room_code, display_name,
-                             timeout_ms, ticket, client->session_id, client->host_session_id) != 0) {
-        return -1;
-    }
 
     length = snprintf(protocols, sizeof(protocols), "cbash-v1, cbash-ticket.%s", ticket);
     if (length < 0 || (size_t)length >= sizeof(protocols)) return -1;
@@ -270,18 +301,47 @@ int cb_relay_join(CbRelayClient *client, const char *host, unsigned short port,
     if (cb_ws_connect(&client->websocket, host, port, path, protocols, timeout_ms) != 0) {
         return -1;
     }
-
-    memcpy(client->room_code, room_code, 6u);
-    client->room_code[6] = '\0';
     if (strlen(host) >= sizeof(client->host)) {
         cb_ws_close(&client->websocket);
         return -1;
     }
+    memcpy(client->room_code, room_code, 6u);
+    client->room_code[6] = '\0';
     strcpy(client->host, host);
     client->port = port;
     client->last_ping_ms = monotonic_ms();
     client->connected = 1;
     return 0;
+}
+
+int cb_relay_join(CbRelayClient *client, const char *host, unsigned short port,
+                  const char *room_code, const char *display_name, int timeout_ms)
+{
+    char ticket[65];
+    char room_code_out[7];
+    if (!client || !host || !room_code) return -1;
+    memset(client, 0, sizeof(*client));
+    client->websocket.fd = -1;
+
+    if (request_room_ticket(host, port, room_code, 0, display_name, timeout_ms,
+                            ticket, client->session_id, client->host_session_id,
+                            room_code_out) != 0) return -1;
+    return connect_relay_ticket(client, host, port, room_code_out, ticket, timeout_ms);
+}
+
+int cb_relay_host(CbRelayClient *client, const char *host, unsigned short port,
+                  const char *display_name, int timeout_ms)
+{
+    char ticket[65];
+    char room_code[7];
+    if (!client || !host) return -1;
+    memset(client, 0, sizeof(*client));
+    client->websocket.fd = -1;
+
+    if (request_room_ticket(host, port, NULL, 1, display_name, timeout_ms,
+                            ticket, client->session_id, client->host_session_id,
+                            room_code) != 0) return -1;
+    return connect_relay_ticket(client, host, port, room_code, ticket, timeout_ms);
 }
 
 int cb_relay_send_batch(CbRelayClient *client, const CbRelayPacket *packets, size_t count)
