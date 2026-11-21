@@ -17,7 +17,7 @@ SYS_PROCESS_PARAM(1001, 0x10000);
 static volatile int g_dialog_done;
 static volatile int g_dialog_button;
 
-static void dialog_callback(CellMsgDialogButton button, void *userdata)
+static void dialog_callback(int button, void *userdata)
 {
     (void)userdata;
     g_dialog_button = (int)button;
@@ -29,7 +29,7 @@ static void sysutil_callback(uint64_t status, uint64_t parameter, void *userdata
     (void)parameter;
     (void)userdata;
     if (status == CELL_SYSUTIL_REQUEST_EXITGAME) {
-        cellSysutilExitGame();
+        sysProcessExit(0);
     }
 }
 
