@@ -265,12 +265,17 @@ int ps3scale_webman_available(void)
 int ps3scale_webman_ps3mapi_available(void)
 {
     char response[2048];
+    const char *body;
 
     if (webman_http_get("/ps3mapi.ps3?SERVER%20GETVERSION",
                         response, sizeof(response), 1) != 0)
         return -1;
 
-    if (!strstr(response, "version") && !strstr(response, "response"))
+    body = strstr(response, "\r\n\r\n");
+    if (!body)
+        return -1;
+    body += 4;
+    if (!strstr(body, "\"response\"") || !strchr(body, '}'))
         return -1;
     return 0;
 }
