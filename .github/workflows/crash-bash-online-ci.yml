@@ -208,6 +208,7 @@ jobs:
           cp -a Crash-Bash-Enhanced/ps3/installer/pkg_files/USRDIR/. "$pkg_files/USRDIR/"
           cp Crash-Bash-Enhanced/ps3/build/crash_bash_input.fake.sprx "$pkg_files/USRDIR/"
           cp Crash-Bash-Enhanced/ps3/build/loader/crash_bash_loader.fake.sprx "$pkg_files/USRDIR/"
+          ln -sf liblv2_stub.a "$PS3DK/ppu/lib/liblv2.a"
           CB_PKGFILES="$pkg_files" cmake -S Crash-Bash-Enhanced/ps3/installer -B Crash-Bash-Enhanced/ps3/build/pkg-installer -DCMAKE_TOOLCHAIN_FILE="$RUNNER_TEMP/crashbash-PS3DK-src/cmake/ps3-ppu-toolchain.cmake" -DCMAKE_BUILD_TYPE=Release
           cmake --build Crash-Bash-Enhanced/ps3/build/pkg-installer --target crash_bash_online_installer_pkg
           test -s Crash-Bash-Enhanced/ps3/build/pkg-installer/crash_bash_online_installer.pkg

@@ -9,7 +9,7 @@ endif()
 
 add_executable(crash_bash_online_installer source/main.c)
 target_compile_features(crash_bash_online_installer PRIVATE c_std_11)
-target_link_libraries(crash_bash_online_installer PRIVATE sysutil_stub rt lv2_stub)
+target_link_libraries(crash_bash_online_installer PRIVATE sysutil_stub rt)
 
 ps3_add_self(crash_bash_online_installer)
 ps3_add_pkg(crash_bash_online_installer
