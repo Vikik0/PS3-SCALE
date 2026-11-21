@@ -57,9 +57,25 @@ if ! grep -q '"memory"' "$RSX_HEADER"; then
 fi
 grep -q '"memory"' "$RSX_HEADER"
 
-# Fail early if the pinned core no longer exposes the multitap option used below.
-grep -q '"pcsx_rearmed_multitap"' "$PCSX/frontend/libretro_core_options.h"
-grep -q '"port 1"' "$PCSX/frontend/libretro_core_options.h"
+# Set the core's compiled-in default to Port 1. PS3 user-profile migration
+# relocates core_options_path, so a package-side options file is not reliable.
+python3 - "$PCSX/frontend/libretro_core_options.h" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text()
+start = text.find('"pcsx_rearmed_multitap"')
+end = text.find('"pcsx_rearmed_negcon_deadzone"', start)
+if start < 0 or end < 0:
+    raise SystemExit("Could not locate the PCSX-ReARMed multitap option")
+block = text[start:end]
+if block.count('"disabled"') != 2 or block.rfind('"disabled"') < 0:
+    raise SystemExit("Unexpected PCSX-ReARMed multitap option layout")
+position = block.rfind('"disabled"')
+block = block[:position] + '"port 1"' + block[position + len('"disabled"'):]
+path.write_text(text[:start] + block + text[end:])
+PY
 
 echo "== Build the PS1 core for the PS3"
 make -C "$PCSX" -f Makefile.libretro platform=psl1ght DYNAREC=lightrec -j"$JOBS"
@@ -194,7 +210,6 @@ cat > "$USRDIR/retroarch.cfg" <<EOF
 # Crash Bash Online - PS3
 menu_driver = "rgui"
 system_directory = "/dev_hdd0/game/$APP_ID/USRDIR/system"
-core_options_path = "/dev_hdd0/game/$APP_ID/USRDIR/retroarch-core-options.cfg"
 netplay_nickname = "CrashBashPlayer"
 netplay_public_announce = "true"
 netplay_use_mitm_server = "true"
@@ -205,10 +220,6 @@ netplay_max_connections = "3"
 netplay_start_as_spectator = "false"
 menu_show_load_content = "true"
 config_save_on_exit = "false"
-EOF
-
-cat > "$USRDIR/retroarch-core-options.cfg" <<'EOF'
-pcsx_rearmed_multitap = "port 1"
 EOF
 
 cat > "$USRDIR/README-Crash-Bash-Online.txt" <<'EOF'
