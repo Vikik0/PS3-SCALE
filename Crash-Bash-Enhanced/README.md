@@ -14,7 +14,7 @@ Crash Bash Enhanced is a community project to add a modern online layer around t
 - Guest sessions with no PSN login.
 - Private and public six-character rooms, with a read-only public-room directory.
 - Two-to-four player lobbies.
-- Free-tier safety caps: 16 guest sessions, four open rooms, and one active match at a time.
+- Free-tier safety caps: 16 total browser and PS3 sessions, four open rooms, and one active match at a time.
 - Ready state and host-controlled match start.
 - Host transfer if the host leaves.
 - Authenticated host UDP endpoint publishing and peer discovery.
