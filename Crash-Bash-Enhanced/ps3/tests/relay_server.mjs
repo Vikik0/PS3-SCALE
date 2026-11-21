@@ -21,7 +21,7 @@ const server = http.createServer((request, response) => {
       response.end(JSON.stringify({ error: "BAD_NAME" }));
       return;
     }
-    const payload = JSON.stringify({ ticket: TICKET, session_id: SESSION_ID, psn_required: false });
+    const payload = JSON.stringify({ ticket: TICKET, session_id: SESSION_ID, host_session_id: "ffeeddccbbaa99887766554433221100", psn_required: false });
     response.writeHead(201, {
       "Content-Type": "application/json",
       "Content-Length": Buffer.byteLength(payload),
