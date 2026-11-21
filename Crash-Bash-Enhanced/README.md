@@ -66,8 +66,7 @@ GitHub Actions builds the Vite lobby, runs Worker integration tests, validates t
 ## Release gates
 
 1. Keep Worker, web, WS/WSS, and PS3 cross-build CI green.
-2. Configure Cloudflare Actions secrets and deploy the Worker; verify the public health endpoint.
-3. Configure the web API URL and publish the lobby.
-4. Install the generated PS3 PKG and verify the plugin loads and the room menu works on physical PS3 hardware.
-6. Complete the browser WebGL 2/Emscripten game runtime.
-7. Verify a real PS3-to-browser match, then test disconnect/rejoin, latency, host loss, and repeated matches.
+2. Configure Cloudflare Actions secrets; the deployment workflow builds the lobby, deploys it with the Worker, and verifies the public health endpoint.
+3. Install the generated PS3 PKG and verify the plugin loads and the room menu works on physical PS3 hardware.
+4. Complete the browser WebGL 2/Emscripten game runtime and local-only disc-image loading.
+5. Verify a real PS3-to-browser match, then test disconnect/rejoin, latency, host loss, and repeated matches.
