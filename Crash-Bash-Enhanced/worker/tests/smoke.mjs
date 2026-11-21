@@ -117,6 +117,7 @@ const created = await call("/v1/rooms", "POST", { max_players: 4, is_private: tr
 assert.equal(created.status, 201);
 assert.equal(created.body.player_count, 1);
 assert.equal(created.body.max_players, 4);
+assert.equal(created.body.host_session_id, players[0].session_id);
 const code = created.body.room_code;
 
 for (let i = 1; i <= 3; i++) {
