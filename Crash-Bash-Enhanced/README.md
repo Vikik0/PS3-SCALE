@@ -6,7 +6,7 @@ Crash Bash Enhanced is a community project to add a modern online layer around t
 
 - `web/`: responsive room/lobby web interface, built with Vite.
 - `worker/`: Cloudflare Worker + SQLite-backed Durable Object for guest sessions, room matchmaking, and a prototype binary WebSocket relay. It also serves the built web lobby from the same origin.
-- `ps3/`: native PS3 / PS1-emulator input bridge and the current UDP lockstep adapter.
+- `ps3/`: native PS3 / PS1-emulator input bridge and the CBN1 lockstep adapter over WSS.
 - `docs/CROSSPLAY-ARCHITECTURE.md`: selected browser/PS3 architecture, relay wire format, free-tier budget, and remaining release gates.
 
 ## Current implementation
@@ -28,7 +28,7 @@ Crash Bash Enhanced is a community project to add a modern online layer around t
 
 ## Important: gameplay status
 
-The current milestone is **transport prototype, not playable cross-platform**. The PS3 PRX now has a certificate-verified TLS 1.2/WSS transport and an in-game room-code menu. Its installer PKG builds in CI, but a real Worker endpoint still needs deployment credentials and the PRX has not been tested on physical PS3 hardware. The browser now has a local PS1 runtime test page powered by EmulatorJS; it loads a user-selected disc image and optional BIOS directly in the browser and exposes a four-player pad-state hook. The browser input hook is not yet connected to the CBN1 lockstep relay, so PS3/browser matches are still not playable.
+The current milestone is **cross-platform protocol integrated in source, not yet hardware-verified**. The PS3 PRX has a certificate-verified TLS 1.2/WSS transport and an in-game room-code menu. The browser EmulatorJS player now joins PS3-hosted rooms, performs the CBN1 lobby/save/start handshake, captures local controller input, and advances the browser emulator from authoritative host records. CI covers the packet codec, browser lockstep flow, Worker relay, PS3 WSS client, PRX build, and PKG validation. The Worker and static site are not deployed because Cloudflare credentials are not configured, and neither the PRX nor a complete PS3/browser match has been tested on physical hardware.
 
 The project will not use copyrighted game assets or distribute a game ISO/ROM. Players must supply their own legally obtained game copy.
 
@@ -68,5 +68,6 @@ GitHub Actions builds the Vite lobby, runs Worker integration tests, validates t
 1. Keep Worker, web, WS/WSS, and PS3 cross-build CI green.
 2. Configure Cloudflare Actions secrets; the deployment workflow builds the lobby, deploys it with the Worker, and verifies the public health endpoint.
 3. Install the generated PS3 PKG and verify the plugin loads and the room menu works on physical PS3 hardware.
-4. Connect the browser EmulatorJS pad-state hook to the same CBN1 lockstep protocol and Worker WSS relay used by the PS3 client.
-5. Verify a real PS3-to-browser match, then test disconnect/rejoin, latency, host loss, and repeated matches.
+4. Configure Cloudflare deployment credentials and deploy the Worker plus static lobby.
+5. Install the generated PKG on physical PS3 hardware and verify loader injection, the in-game room menu, and the PS3 host handshake.
+6. Run a real PS3-to-browser match with matching NTSC disc revisions; test input delay, packet loss, disconnect/rejoin, host loss, and repeated matches.
