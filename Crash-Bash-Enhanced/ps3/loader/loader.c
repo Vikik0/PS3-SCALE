@@ -33,7 +33,6 @@
 #define LOADER_THREAD_STACK (64u * 1024u)
 
 static volatile int loader_running;
-static volatile int loader_thread_exited;
 static sys_ppu_thread_t loader_thread_id;
 static uint32_t attempted_pid;
 
@@ -136,7 +135,6 @@ static void loader_thread(void *argument)
         sys_timer_usleep(LOADER_POLL_US);
     }
 
-    loader_thread_exited = 1;
 }
 
 extern void __libc_init_array(void);
@@ -156,7 +154,6 @@ int module_start(size_t args, void *argp)
     }
 
     loader_running = 1;
-    loader_thread_exited = 0;
     attempted_pid = 0;
 
     result = sysThreadCreate(&loader_thread_id, loader_thread, NULL,
