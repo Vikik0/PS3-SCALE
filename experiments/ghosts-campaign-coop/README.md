@@ -28,7 +28,7 @@ Do not spend Phase 1 effort deploying online services or implementing NAT traver
 - GSC Tool supports IW6 scripts on PS3 for compile/decompile work. This does not itself solve signed FastFile repackaging.
 - Public TU 1.16 spawn offsets are multiplayer-context leads only. They are not approved Campaign addresses.
 
-See docs/local-coop-first.md for the implementation plan and research constraints. The cross-project IW-engine prior-art audit is in docs/coop-anything-prior-art.md.
+See docs/local-coop-first.md for the implementation plan and research constraints. The cross-project IW-engine prior-art audit is in docs/coop-anything-prior-art.md. The read-only executable workflow is in docs/ps3-elf-analysis.md, with the comparison checklist in docs/local-player-capture-matrix.md.
 
 ## Current implementation status
 
@@ -43,6 +43,8 @@ See docs/local-coop-first.md for the implementation plan and research constraint
 - Host-tested DualShock 3 input decoder, PS3 `sys_io` polling adapter for controller ports 0 and 1, and portable per-frame input tracker (button edges, normalized sticks and read-error preservation).
 - Diagnostic PRX polling/getter functions for raw and per-frame input, pending a verified Campaign frame adapter.
 - Reverse-engineering notes rule out treating `PlayerCMD_ClonePlayer` as a full second-player spawn path.
+- Read-only PS3 PPU ELF inspector: validates ELF64 big-endian EM_PPC64, hashes the input, maps reported TU 1.16 candidate addresses, and extracts the PPU OPD/TOC when present.
+- Ghidra OPD function-seeding helper and a local-player state comparison matrix for the next static/runtime analysis stage.
 
 ### Phase 1 Campaign integration — not implemented
 
