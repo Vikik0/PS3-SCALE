@@ -307,9 +307,9 @@ void net_lobby_start(void)
     }
     if (Lobby != LOBBY_OPEN || NumMachines < 2) return;
 
-    /* Relay batching adds about 200 ms. Use a fixed eight-step input delay
-     * instead of the upstream 10 ms ping burst, which exceeds the free relay cap. */
-    Delay = Options.delay > 0 ? Options.delay : 8;
+    /* Relay batches flush every 220 ms. Use the configured 12-step input
+     * delay (about 400 ms at 30 steps/s) instead of the upstream 10 ms ping burst. */
+    Delay = Options.delay > 0 ? Options.delay : 12;
     Delay = Delay > 30 ? 30 : Delay < 1 ? 1 : Delay;
     Machines[0].pads = own_pads();
     for (m = 0; m < NumMachines; ++m) {
@@ -1033,7 +1033,8 @@ int cb_net_relay_join_code(const char *worker_host, unsigned short worker_port,
 int cb_net_relay_start(void)
 {
     if (!relay_client.connected || !lobby_started ||
-        strcmp(relay_client.session_id, relay_client.host_session_id) != 0) return -1;
+        strcmp(relay_client.session_id, relay_client.host_session_id) != 0 ||
+        Lobby != LOBBY_OPEN || NumMachines < 2) return -1;
     if (cb_relay_start_match(&relay_client, 5000) != 0) return -1;
     relay_sync_roster();
     relay_last_flush_ms = relay_now_ms();
