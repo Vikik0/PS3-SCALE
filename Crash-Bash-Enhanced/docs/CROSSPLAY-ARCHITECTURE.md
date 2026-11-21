@@ -7,14 +7,14 @@ A PS3 player and a browser player must run the same Crash Bash match, not merely
 ## Selected architecture
 
 - **PS3 client:** the original Crash Bash disc running in the PS1 emulator on PS3, with the project PRX translating remote controller state into virtual PS1 pad slots.
-- **Browser client:** a WebAssembly build of the community port, with a browser-compatible renderer and a local file picker for the player's own disc image.
+- **Browser client:** EmulatorJS with its PlayStation (PCSX-ReARMed) core. The browser player loads the user's disc image and optional BIOS locally, then exposes a four-player input hook for the CBN1 adapter.
 - **Identity and rooms:** guest sessions and room codes. PSN authentication is not used.
 - **Game transport:** a room-scoped WebSocket relay. The browser cannot open arbitrary UDP sockets, so the browser and PS3 clients speak the same relay protocol. The PS3 adapter now intercepts the upstream UDP socket calls and translates them to CBU1/CBR1 relay messages.
 - **Hosting:** static browser files served by the same Cloudflare Worker origin as the API and SQLite-backed Durable Object. No home PC or paid database is part of the target architecture.
 
 ## Relay packet format — CBR1
 
-The client-to-relay uplink supports raw legacy packets and CBU1 batches. CBU1 is `magic[4] = CBU1`, `count[1]`, then `count` entries of `recipient_session_id[16]`, `payload_length[2, big-endian]`, and `payload[1–1200]`; an all-zero recipient ID broadcasts, otherwise the relay routes only to that peer. One WebSocket message can contain up to 32 datagrams and is capped at 24,576 bytes. The relay forwards each datagram as an authenticated CBR1 sender envelope:
+The client-to-relay uplink supports raw legacy packets and CBU1 batches. CBU1 is `magic[4] = CBU1`, `count[1]`, then `count` entries of `recipient_session_id[16]`, `payload_length[2, big-endian]`, and `payload[1–1200]`; an all-zero recipient ID broadcasts, otherwise the relay routes only to that peer. One WebSocket message can contain up to 32 datagrams and is capped at 28,672 bytes. The relay forwards each datagram as an authenticated CBR1 sender envelope:
 
 | Offset | Bytes | Meaning |
 | --- | ---: | --- |
@@ -33,7 +33,7 @@ References:
 - Cloudflare Workers pricing: https://developers.cloudflare.com/workers/platform/pricing/
 - Durable Objects limits: https://developers.cloudflare.com/durable-objects/platform/limits/
 
-## Browser-port constraints
+## Browser runtime and input bridge
 
 The browser runtime now uses EmulatorJS with its PlayStation (PCSX-ReARMed) core instead of compiling the upstream SDL_GPU desktop renderer to WebAssembly. This avoids writing a separate WebGL 2 renderer. The local browser player loads the user's disc image and optional BIOS as browser File objects, without uploading either to the Worker. It exposes `CBASH_APPLY_PAD_STATE(slot, buttons, sticks)` and `CBASH_GET_EMULATOR_FRAME()` for the network adapter. The remaining browser work is a WebSocket-backed adapter for the same CBN1 lockstep protocol; browser networking does not expose raw UDP sockets.
 
@@ -52,12 +52,13 @@ References:
 - A prototype binary WebSocket room relay with authenticated sender envelopes, packet-size checks, and per-client rate limits.
 - CI coverage for lobby behavior, relay framing/rate limits, a certificate-verified TLS 1.2/WSS PS3 client, and PRX builds.
 - A development PS3 host/join/start menu wired to the relay APIs.
+- A local EmulatorJS browser player with user-owned CUE/BIN/CHD/PBP/ISO/IMG loading, optional local BIOS selection, and a four-player PS1-to-libretro input hook with unit tests.
 - An installable PS3 homebrew PKG wrapper for the input PRX and VSH loader; CI validates its PKG header and content ID. Hardware installation and runtime behavior are not yet verified.
 
 ### Still required before cross-platform play
 1. Build a browser CBN1 transport adapter that uses the Worker WSS relay and feeds each synchronized pad record into the EmulatorJS input hook.
-2. Add browser-side disc-image selection and local-only loading; no disc image is uploaded to the server.
-3. Validate the PS3 lockstep-to-CBU1/CBR1 shim under packet loss, high RTT, disconnects, and reconnects; tune the fixed relay input delay from measured results.
+2. Connect the browser input hook to a WebSocket-backed CBN1 lockstep adapter, using the same per-peer relay routing as the PS3 client.
+3. Validate the PS3 lockstep-to-CBU1/CBR1 shim and browser adapter under packet loss, high RTT, disconnects, and reconnects; tune the fixed relay input delay from measured results.
 4. Configure Cloudflare deployment credentials; the deployment workflow now builds the Vite lobby, deploys the static assets and Worker together, and checks the public /health endpoint. The PS3 client now uses certificate-verified HTTPS/WSS; local TLS integration tests cover its handshake and relay protocol.
 5. Install the generated PKG on physical PS3 hardware and verify the VSH loader, process injection, and in-game host/join menu (SELECT + L3 + R3).
 6. Test matching builds, input delay, disconnect/rejoin, and deterministic frame fingerprints on a real PS3 and a real browser.
