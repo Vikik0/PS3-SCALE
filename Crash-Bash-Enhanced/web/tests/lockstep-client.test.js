@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { BrowserLockstepClient } from "../public/lockstep-client.js";
-import { decodeCBN1, CBN1_TYPES, decodeInput } from "../public/cbn1.js";
+import { decodeCBN1, CBN1_TYPES } from "../public/cbn1.js";
 import { createLocalPadCapture, decodePadRecord } from "../public/pad-bridge.js";
 
 const HOST = "00112233445566778899aabbccddeeff";
@@ -107,7 +107,7 @@ test("captures EmulatorJS player-one controls as the seven-byte PS1 pad layout",
   assert.equal(capture.handle(0, 18, -32767), true);
   assert.equal(capture.handle(1, 0, 1), false);
   const pad = capture.snapshot();
-  assert.deepEqual(Array.from(pad), [0x03, 0, 0x40, 0, 128, 0, 128]);
+  assert.deepEqual(Array.from(pad), [0x03, 0, 0x40, 0, 128, 255, 128]);
   assert.deepEqual(decodePadRecord(pad), { connected: true, buttons: 0x4000, sticks: [0, 128, 255, 128], flags: 0x03 });
 });
 
