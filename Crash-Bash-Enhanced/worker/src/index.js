@@ -272,19 +272,21 @@ export class CrashBashLobby {
       return;
     }
 
-    const now = Date.now();
-    if (!Number.isFinite(attachment.rateWindowStartedAt) ||
-        now - attachment.rateWindowStartedAt >= 1000 ||
-        now < attachment.rateWindowStartedAt) {
-      attachment.rateWindowStartedAt = now;
-      attachment.rateCount = 0;
+    if (typeof message !== "string") {
+      const now = Date.now();
+      if (!Number.isFinite(attachment.rateWindowStartedAt) ||
+          now - attachment.rateWindowStartedAt >= 1000 ||
+          now < attachment.rateWindowStartedAt) {
+        attachment.rateWindowStartedAt = now;
+        attachment.rateCount = 0;
+      }
+      if (attachment.rateCount >= RELAY_MAX_MESSAGES_PER_SECOND) {
+        socket.close(1008, "RATE_LIMITED");
+        return;
+      }
+      attachment.rateCount += 1;
+      socket.serializeAttachment(attachment);
     }
-    if (attachment.rateCount >= RELAY_MAX_MESSAGES_PER_SECOND) {
-      socket.close(1008, "RATE_LIMITED");
-      return;
-    }
-    attachment.rateCount += 1;
-    socket.serializeAttachment(attachment);
 
     if (typeof message === "string") {
       if (message === "PING") {
