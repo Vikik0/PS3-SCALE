@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { webcrypto } from "node:crypto";
-import { CrashBashLobby } from "../src/index.js";
+import Worker, { CrashBashLobby } from "../src/index.js";
 
 globalThis.crypto ??= webcrypto;
 
@@ -88,6 +88,70 @@ assert.equal(health.body.max_open_rooms, 4);
 assert.equal(health.body.max_total_sessions, 16);
 assert.equal(health.body.max_active_matches, 1);
 assert.equal(health.body.transport, "websocket-room-relay-prototype");
+
+// The deployed Worker serves the Vite lobby from the same origin as its API.
+const lobbyAssetResponse = new Response("lobby-index");
+let requestedAsset = null;
+const staticResponse = await Worker.fetch(
+  new Request("https://crash-bash.test/"),
+  {
+    ASSETS: {
+      async fetch(request) {
+        requestedAsset = request;
+        return lobbyAssetResponse;
+      }
+    },
+    LOBBY: {
+      idFromName() {
+        throw new Error("Static asset requests must not invoke the Durable Object.");
+      }
+    }
+  }
+);
+assert.equal(staticResponse, lobbyAssetResponse);
+assert.equal(requestedAsset.url, "https://crash-bash.test/");
+
+const apiResponse = new Response("api-response");
+let forwardedApiRequest = null;
+const routedApiResponse = await Worker.fetch(
+  new Request("https://crash-bash.test/health"),
+  {
+    ASSETS: {
+      async fetch() {
+        throw new Error("API requests must not be handled as static assets.");
+      }
+    },
+    LOBBY: {
+      idFromName(name) {
+        assert.equal(name, "crash-bash-online-lobby-v1");
+        return "lobby-id";
+      },
+      get(id) {
+        assert.equal(id, "lobby-id");
+        return {
+          async fetch(request) {
+            forwardedApiRequest = request;
+            return apiResponse;
+          }
+        };
+      }
+    }
+  }
+);
+assert.equal(routedApiResponse, apiResponse);
+assert.equal(forwardedApiRequest.url, "https://crash-bash.test/health");
+
+const preflightResponse = await Worker.fetch(
+  new Request("https://crash-bash.test/v1/sessions", { method: "OPTIONS" }),
+  {
+    LOBBY: {
+      idFromName() {
+        throw new Error("CORS preflight must not invoke the Durable Object.");
+      }
+    }
+  }
+);
+assert.equal(preflightResponse.status, 204);
 
 const compatibility = await call("/v1/compatibility");
 assert.equal(compatibility.body.game, "Crash Bash");
