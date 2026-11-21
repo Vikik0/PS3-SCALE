@@ -290,3 +290,9 @@ int ghc_mission_decode_snapshot(
     }
     return 0;
 }
+
+
+int ghc_mission_revision_is_newer(uint32_t incoming_revision, uint32_t current_revision) {
+    uint32_t difference = incoming_revision - current_revision;
+    return difference != 0u && difference < 0x80000000u;
+}
