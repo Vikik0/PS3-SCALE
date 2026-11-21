@@ -1,4 +1,7 @@
 import { applyPadStateToEmulator } from "/pad-bridge.js";
+import { CrashBashRelayTransport } from "/relay-transport.js";
+
+window.CBASH_CREATE_RELAY_TRANSPORT = options => new CrashBashRelayTransport(options);
 
 const DATA_PATH = "https://cdn.emulatorjs.org/stable/data/";
 const gameInput = document.querySelector("#game-files");
