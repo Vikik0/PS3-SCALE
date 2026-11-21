@@ -85,7 +85,11 @@ int main(void)
     if (result != 1 || received_length != sizeof(sent) ||
         memcmp(received, sent, sizeof(sent)) != 0 ||
         memcmp(sender, expected_sender, sizeof(sender)) != 0) {
-        fprintf(stderr, "PS3 relay CBR1 envelope decode failed\n");
+        fprintf(stderr,
+            "PS3 relay CBR1 decode failed: result=%d length=%lu expected=%lu first=%02x%02x%02x%02x sender=%02x%02x%02x%02x\\n",
+            result, (unsigned long)received_length, (unsigned long)sizeof(sent),
+            received[0], received[1], received[2], received[3],
+            sender[0], sender[1], sender[2], sender[3]);
         cb_relay_leave(&client);
         return 4;
     }
