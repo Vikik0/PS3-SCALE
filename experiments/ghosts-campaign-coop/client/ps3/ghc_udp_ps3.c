@@ -74,11 +74,11 @@ int ghc_udp_open(uint16_t local_port, int *socket_fd, uint16_t *bound_port) {
     local_address.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(descriptor, (const struct sockaddr *)&local_address, sizeof(local_address)) != 0) {
-        (void)closesocket(descriptor);
+        (void)socketclose(descriptor);
         return -3;
     }
     if (getsockname(descriptor, (struct sockaddr *)&local_address, &address_length) != 0) {
-        (void)closesocket(descriptor);
+        (void)socketclose(descriptor);
         return -4;
     }
 
@@ -89,7 +89,7 @@ int ghc_udp_open(uint16_t local_port, int *socket_fd, uint16_t *bound_port) {
 
 int ghc_udp_close(int socket_fd) {
     if (socket_fd < 0) return -1;
-    return closesocket(socket_fd);
+    return socketclose(socket_fd);
 }
 
 int ghc_udp_set_nonblocking(int socket_fd, int enabled) {
@@ -113,15 +113,15 @@ int ghc_udp_get_route_ipv4(
     if (descriptor < 0) return -2;
 
     if (connect(descriptor, (const struct sockaddr *)&remote_address, sizeof(remote_address)) != 0) {
-        (void)closesocket(descriptor);
+        (void)socketclose(descriptor);
         return -3;
     }
     gh_zero(&local_address, sizeof(local_address));
     if (getsockname(descriptor, (struct sockaddr *)&local_address, &local_length) != 0) {
-        (void)closesocket(descriptor);
+        (void)socketclose(descriptor);
         return -4;
     }
-    (void)closesocket(descriptor);
+    (void)socketclose(descriptor);
 
     if (local_address.sin_addr.s_addr == INADDR_ANY) return -5;
     gh_format_ipv4(local_address.sin_addr.s_addr, local_ipv4);
