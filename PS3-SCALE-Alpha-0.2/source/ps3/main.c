@@ -4854,7 +4854,9 @@ static void draw_details(void)
     set_ui_font_size(7, 11);
     draw_text(212.0f, 251.0f,
               (profile || ps2_config) ? 0x26794bff : 0xb27b35ff,
-              profile ? "MATCHED PROFILE - REVIEW FIRST" :
+              profile ? (script_state == 1 ? "ONE-LAUNCH PROFILE ARMED" :
+              (g_auto_apply_profiles ? "EXACT PROFILE - AUTO APPLY ON X" :
+                                       "EXACT PROFILE - MANUAL APPLY")) :
               ps2_config ? "MATCHED PS2 CONFIG - REVIEW FIRST" :
                            "NO MATCHED FILE - PLAY UNMODIFIED");
     set_ui_font_size(11, 17);
@@ -4887,7 +4889,10 @@ static void draw_details(void)
             else if (profile->patch_count != 1)
                 draw_text(204.0f, 322.0f, 0xffcc66ff, "Manual-only profile.");
             else
-                draw_text(204.0f, 322.0f, 0x2c9f8eff, "Exact profile available.");
+                draw_text(204.0f, 322.0f, 0x2c9f8eff,
+                          g_auto_apply_profiles ?
+                          "CROSS APPLIES THE EXACT PROFILE." :
+                          "TRIANGLE MANUAL APPLY; CROSS PLAYS.");
         } else {
             /* NO PROFILE FOR THIS TITLE. GAME WILL START UNMODIFIED. */
             draw_text(204.0f, 296.0f, 0xffcc66ff,
@@ -4943,20 +4948,23 @@ static void draw_details(void)
     set_ui_font_size(9, 14);
     draw_text(544.0f, 108.0f, 0x29243fff, "Original vs Enhanced");
     set_ui_font_size(6, 9);
-    draw_text(698.0f, 122.0f, 0x875be8ff, "CONCEPT PREVIEW");
-    draw_solid_rect(542.0f, 136.0f, 132.0f, 84.0f, 0xcbd8bfff);
-    draw_solid_rect(680.0f, 136.0f, 136.0f, 84.0f, 0xc8d9c0ff);
-    draw_solid_rect(542.0f, 136.0f, 132.0f, 28.0f, 0xa7c1a0ff);
-    draw_solid_rect(680.0f, 136.0f, 136.0f, 28.0f, 0x9fc59fff);
-    draw_solid_rect(542.0f, 190.0f, 132.0f, 30.0f, 0x8c9d7aff);
-    draw_solid_rect(680.0f, 184.0f, 136.0f, 36.0f, 0x789c72ff);
-    draw_icon_line(542.0f, 184.0f, 674.0f, 184.0f, 0xe9e5d8ff);
-    draw_icon_line(680.0f, 178.0f, 816.0f, 178.0f, 0xf4f1e5ff);
-    draw_solid_rect(674.0f, 136.0f, 6.0f, 84.0f, 0xfaf8ffff);
-    draw_circle_outline(677.0f, 178.0f, 10.0f, 0x875be8ff);
-    set_ui_font_size(6, 9);
-    draw_text(554.0f, 228.0f, 0x514b69ff, "ORIGINAL");
-    draw_text(744.0f, 228.0f, 0x875be8ff, "ENHANCED");
+    if (g_preview_before_texture && g_preview_after_texture) {
+        ya2d_drawTextureEx(g_preview_before_texture, 542.0f, 136.0f,
+                           0.0f, 132.0f, 84.0f);
+        ya2d_drawTextureEx(g_preview_after_texture, 680.0f, 136.0f,
+                           0.0f, 136.0f, 84.0f);
+        draw_text(554.0f, 228.0f, 0x514b69ff, "ORIGINAL");
+        draw_text(744.0f, 228.0f, 0x875be8ff, "ENHANCED");
+    } else {
+        draw_rounded_rect(542.0f, 136.0f, 132.0f, 84.0f, 6.0f, 0xece8f4ff);
+        draw_rounded_rect(680.0f, 136.0f, 136.0f, 84.0f, 6.0f, 0xece8f4ff);
+        draw_text(550.0f, 169.0f, 0x77718fff, "NO VERIFIED");
+        draw_text(550.0f, 184.0f, 0x77718fff, "BEFORE IMAGE");
+        draw_text(690.0f, 169.0f, 0x77718fff, "NO VERIFIED");
+        draw_text(690.0f, 184.0f, 0x77718fff, "AFTER IMAGE");
+        draw_text(544.0f, 228.0f, 0xb27b35ff,
+                  "REAL SCREENSHOT PAIR NOT AVAILABLE");
+    }
     draw_soft_chip(542.0f, 246.0f, 132.0f, "Enhancement Info", 1);
     draw_soft_chip(680.0f, 246.0f, 136.0f, "Compatibility", 0);
     /* Don't promise universal 1080p, HD textures or performance gains:
@@ -4970,7 +4978,7 @@ static void draw_details(void)
         draw_text(544.0f, 323.0f, 0x514b69ff,
                   "Results depend on the exact game version.");
         draw_text(544.0f, 342.0f, 0x875be8ff,
-                  "Illustration only; not real game footage.");
+                  "Verified screenshots only; no simulated comparison.");
     } else if (!game_is_ps3(game) && ps2_config) {
         draw_text(544.0f, 285.0f, 0x26794bff,
                   "PS2 CONFIGURATION AVAILABLE");
@@ -4979,14 +4987,14 @@ static void draw_details(void)
         draw_text(544.0f, 323.0f, 0x514b69ff,
                   "This is NOT an HD texture replacement.");
         draw_text(544.0f, 342.0f, 0x875be8ff,
-                  "Illustration only; not real game footage.");
+                  "Verified screenshots only; no simulated comparison.");
     } else {
         draw_text(544.0f, 290.0f, 0xb27b35ff,
                   "NO VERIFIED ENHANCEMENT AVAILABLE");
         draw_text(544.0f, 311.0f, 0x514b69ff,
                   "The game will start without changes.");
         draw_text(544.0f, 334.0f, 0x875be8ff,
-                  "Illustration only; not real game footage.");
+                  "Verified screenshots only; no simulated comparison.");
     }
 
     draw_soft_button(20.0f, 400.0f, 250.0f, 44.0f,
@@ -4998,14 +5006,15 @@ static void draw_details(void)
                      game_is_ps3(game) ? "SQUARE: FPS CONTROL" :
                                          "PS2 CONFIGURATION", 0);
     draw_soft_button(544.0f, 400.0f, 290.0f, 44.0f,
-                     "CROSS: START GAME", 0);
+                     (profile && g_auto_apply_profiles) ?
+                     "CROSS: APPLY & START" : "CROSS: START GAME", 0);
     set_ui_font_size(7, 11);
     draw_text(24.0f, PS3SCALE_UI_FOOTER_PRIMARY_Y, 0x77718fff,
               g_profile_confirm_pending ?
               "COMMUNITY PATCH: TRIANGLE CONFIRMS; CIRCLE CANCELS." :
               g_details_message);
     draw_text(24.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y, 0x875be8ff,
-              "CROSS / START: PLAY   |   TRIANGLE: CONFIRM   |   CIRCLE / SELECT / LEFT: BACK");
+              "CROSS: APPLY & PLAY   |   TRIANGLE: MANUAL APPLY   |   CIRCLE / SELECT / LEFT: BACK");
     set_ui_font_size(14, 22);
 }
 
