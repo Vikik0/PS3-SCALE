@@ -103,13 +103,21 @@ async function prepareRoomConnection() {
   return { session, room };
 }
 
-async function buildExternalFiles(primary, files) {
+async function buildExternalFiles(primary, files, biosFile = null) {
   const external = {};
   const selectedByName = new Map();
   const urlByFile = new Map();
   const blobUrls = [];
+  let primaryUrl = "";
+  let biosUrl = "";
 
   try {
+    primaryUrl = URL.createObjectURL(primary);
+    blobUrls.push(primaryUrl);
+    if (biosFile) {
+      biosUrl = URL.createObjectURL(biosFile);
+      blobUrls.push(biosUrl);
+    }
     for (const file of files) {
       if (file === primary) continue;
       const key = file.name.toLowerCase();
@@ -135,7 +143,7 @@ async function buildExternalFiles(primary, files) {
         external[reference] = urlByFile.get(match);
       }
     }
-    return { external, blobUrls };
+    return { external, blobUrls, primaryUrl, biosUrl };
   } catch (error) {
     blobUrls.forEach(url => URL.revokeObjectURL(url));
     throw error;
@@ -253,7 +261,7 @@ async function connectToRoom() {
   }
 }
 
-function startEmulator(primary, bios, externalFiles, blobUrls) {
+function startEmulator(primaryUrl, biosUrl, externalFiles, blobUrls) {
   if (loaderScript) loaderScript.remove();
   if (lockstepClient) stopLockstep("Previous room connection closed.");
   releaseLocalObjectUrls();
@@ -267,8 +275,8 @@ function startEmulator(primary, bios, externalFiles, blobUrls) {
   window.CBASH_EMULATOR_READY = false;
   window.EJS_player = "#game";
   window.EJS_gameName = "Crash Bash";
-  window.EJS_gameUrl = primary;
-  window.EJS_biosUrl = bios || "";
+  window.EJS_gameUrl = primaryUrl;
+  window.EJS_biosUrl = biosUrl || "";
   window.EJS_core = "psx";
   window.EJS_defaultOptions = {
     ...(window.EJS_defaultOptions || {}),
@@ -362,8 +370,8 @@ startButton.addEventListener("click", async () => {
   try {
     window.EJS_emulator?.gameManager?.exit?.();
     releaseLocalObjectUrls();
-    const { external, blobUrls } = await buildExternalFiles(primary, files);
-    startEmulator(primary, biosInput.files?.[0] || "", external, blobUrls);
+    const { external, blobUrls, primaryUrl, biosUrl } = await buildExternalFiles(primary, files, biosInput.files?.[0] || null);
+    startEmulator(primaryUrl, biosUrl, external, blobUrls);
   } catch (error) {
     releaseLocalObjectUrls();
     emulatorLoading = false;
