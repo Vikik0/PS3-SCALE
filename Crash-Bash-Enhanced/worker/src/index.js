@@ -348,6 +348,9 @@ export class CrashBashLobby {
           auth: "guest",
           psn_required: false,
           max_players: 4,
+          max_open_rooms: MAX_ROOMS,
+          max_guest_sessions: MAX_SESSIONS,
+          max_active_matches: MAX_ACTIVE_MATCHES,
           transport: "websocket-room-relay-prototype",
           gameplay_sync: "client-integration-pending"
         });
