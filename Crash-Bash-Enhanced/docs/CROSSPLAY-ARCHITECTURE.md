@@ -10,7 +10,7 @@ A PS3 player and a browser player must run the same Crash Bash match, not merely
 - **Browser client:** a WebAssembly build of the community port, with a browser-compatible renderer and a local file picker for the player's own disc image.
 - **Identity and rooms:** guest sessions and room codes. PSN authentication is not used.
 - **Game transport:** a room-scoped WebSocket relay. The browser cannot open arbitrary UDP sockets, so the browser and PS3 clients speak the same relay protocol. The PS3 adapter now intercepts the upstream UDP socket calls and translates them to CBU1/CBR1 relay messages.
-- **Hosting:** static browser files plus Cloudflare Workers and SQLite-backed Durable Objects. No home PC or paid database is part of the target architecture.
+- **Hosting:** static browser files served by the same Cloudflare Worker origin as the API and SQLite-backed Durable Object. No home PC or paid database is part of the target architecture.
 
 ## Relay packet format — CBR1
 
