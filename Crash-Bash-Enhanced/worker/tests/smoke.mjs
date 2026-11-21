@@ -267,8 +267,9 @@ const pingRateSocket = new FakeSocket({
 for (let i = 0; i < 6; i++) {
   await lobby.webSocketMessage(pingRateSocket, "PING");
 }
-assert.equal(pingRateSocket.closed.code, 1008);
-assert.equal(pingRateSocket.closed.reason, "RATE_LIMITED");
+assert.equal(pingRateSocket.closed, null);
+assert.equal(pingRateSocket.sent.length, 6);
+assert.ok(pingRateSocket.sent.every(message => message === "PONG"));
 
 const invalidEndpoint = await call(
   "/v1/rooms/" + code + "/endpoint",
