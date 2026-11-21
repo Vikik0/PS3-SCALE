@@ -7,6 +7,15 @@ const gameWrap = document.querySelector("#game-wrap");
 
 let loaderScript = null;
 let emulatorStarted = false;
+let localObjectUrls = [];
+let loadTimeout = null;
+
+function releaseLocalObjectUrls() {
+  for (const url of localObjectUrls) URL.revokeObjectURL(url);
+  localObjectUrls = [];
+  if (loadTimeout) clearTimeout(loadTimeout);
+  loadTimeout = null;
+}
 
 function setStatus(message, error = false) {
   statusLine.textContent = message;
@@ -28,38 +37,41 @@ function selectedGame(files) {
 
 async function buildExternalFiles(primary, files) {
   const external = {};
-  const blobUrls = [];
-  const fileUrls = new Map();
-  const makeUrl = file => {
-    if (!fileUrls.has(file)) {
-      const url = URL.createObjectURL(file);
-      fileUrls.set(file, url);
-      blobUrls.push(url);
-    }
-    return fileUrls.get(file);
-  };
+  const selectedByName = new Map();
+  const urlByFile = new Map();
 
   for (const file of files) {
-    if (file !== primary) external[file.name] = makeUrl(file);
-  }
-
-  if (extension(primary) === "cue") {
-    const cue = await primary.text();
-    const references = [...cue.matchAll(/^\s*FILE\s+(?:"([^"]+)"|(\S+))\s+\w+/gim)]
-      .map(match => match[1] || match[2]);
-
-    for (const reference of references) {
-      const fileName = reference.split(/[\\/]/).pop().toLowerCase();
-      const match = files.find(file => file.name.toLowerCase() === fileName);
-      if (!match) {
-        blobUrls.forEach(URL.revokeObjectURL);
-        throw new Error(`The CUE file references "${reference}", but that file was not selected.`);
-      }
-      external[reference] = makeUrl(match);
+    if (file === primary) continue;
+    const key = file.name.toLowerCase();
+    if (selectedByName.has(key)) {
+      throw new Error(`More than one selected file is named "${file.name}". Rename the duplicate before loading.`);
     }
+    selectedByName.set(key, file);
+    const url = URL.createObjectURL(file);
+    localObjectUrls.push(url);
+    urlByFile.set(file, url);
+    external[file.name] = url;
   }
 
-  return { external, blobUrls };
+  if (extension(primary) !== "cue") return external;
+
+  const cue = await primary.text();
+  const references = [...cue.matchAll(/^\\s*FILE\\s+(?:"([^"]+)"|(\\S+))\\s+\\w+/gim)]
+    .map(match => match[1] || match[2]);
+
+  if (!references.length) {
+    throw new Error("The selected CUE file does not contain any FILE track entries.");
+  }
+
+  for (const reference of references) {
+    const basename = reference.split(/[\\\\/]/).pop().toLowerCase();
+    const match = selectedByName.get(basename);
+    if (!match) {
+      throw new Error(`The CUE file references "${reference}", but that file was not selected.`);
+    }
+    external[reference] = urlByFile.get(match);
+  }
+  return external;
 }
 
 function applyPadState(slot, buttons, sticks = [128, 128, 128, 128]) {
@@ -132,6 +144,9 @@ function startEmulator(primary, bios, externalFiles, blobUrls) {
   window.EJS_askBeforeExit = false;
   window.EJS_AdUrl = "";
   window.EJS_onGameStart = () => {
+    if (loadTimeout) clearTimeout(loadTimeout);
+    loadTimeout = null;
+    startButton.disabled = false;
     emulatorStarted = true;
     setStatus("Local game started. Browser-to-PS3 input synchronization is the next integration stage.");
     const began = Date.now();
@@ -150,6 +165,8 @@ function startEmulator(primary, bios, externalFiles, blobUrls) {
   };
   window.EJS_onExit = () => {
     emulatorStarted = false;
+    startButton.disabled = false;
+    releaseLocalObjectUrls();
     window.CBASH_EMULATOR_READY = false;
     startButton.disabled = false;
     blobUrls.forEach(URL.revokeObjectURL);
@@ -208,4 +225,5 @@ window.addEventListener("beforeunload", () => {
       window.EJS_emulator?.gameManager?.saveSaveFiles?.();
     } catch {}
   }
+  releaseLocalObjectUrls();
 });
