@@ -4,6 +4,8 @@ The current online package uses the **RetroArch PSL1GHT frontend with PCSX-ReARM
 
 Online play in this package is provided by **RetroArch Netplay**. The PCSX-ReARMed core supplies PS1 emulation, serialization and Multitap support; RetroArch handles host/client synchronization, the public host list, NAT traversal and relay connections. The build configures Multitap on Port 1 and allows one host plus three remote clients.
 
+The pinned PCSX-ReARMed source reports a serialization buffer of `0x440000` bytes (4.25 MiB). The package therefore enables RetroArch's **Lockstep** mode, which keeps one shared savestate rather than a rollback state for every buffered frame. This reduces memory use, but every frame waits for all players' input, so network latency can become visible as added input delay or stalls.
+
 The package does not redistribute Crash Bash disc data or a PlayStation BIOS. Each player must use a legally obtained BIN/CUE dump and should use the same game revision, BIOS choice and core options. A BIOS dumped from the player's own console is recommended.
 
 ## Pinned upstream sources
@@ -13,6 +15,6 @@ The package does not redistribute Crash Bash disc data or a PlayStation BIOS. Ea
 
 The build applies small, documented compatibility changes for the PSL1GHT static-core link: disabling the physical-disc CD-ROM path when loading BIN/CUE through libretro, reusing RetroArch's thread implementation to avoid duplicate symbols, and applying the Cell PPU/RSX compatibility fixes required by the pinned source.
 
-A successful PKG build confirms compilation and packaging only. It does not confirm a playable session on physical PS3 hardware. Two-console online testing remains an outstanding validation step.
+RetroArch's official Netplay FAQ cautions that PSX netplay is generally unsuitable because of its processing cost. Lockstep is a mitigation, not proof that the PS3 has enough CPU headroom. A successful PKG build confirms compilation and packaging only; it does not confirm full-speed gameplay or a stable session on physical PS3 hardware. Two-console online testing remains an outstanding validation step.
 
 The earlier Tiny3D shell, Vercel guest-room service and custom UDP input transport are separate prototypes; they are not the gameplay transport used by this RetroArch package.
