@@ -224,6 +224,27 @@ assert.deepEqual(Array.from(new Uint8Array(relayB.sent[2]).slice(22)), [0x31]);
 assert.deepEqual(Array.from(new Uint8Array(relayC.sent[1]).slice(22)), [0x32, 0x33]);
 assert.equal(otherRoom.sent.length, 0);
 
+const broadcastBatch = makeUplinkBatch([{ recipientId: null, payload: [0x41] }]);
+await lobby.webSocketMessage(relayA, broadcastBatch);
+assert.equal(relayB.sent.length, 4);
+assert.equal(relayC.sent.length, 3);
+assert.deepEqual(Array.from(new Uint8Array(relayB.sent[3]).slice(22)), [0x41]);
+assert.deepEqual(Array.from(new Uint8Array(relayC.sent[2]).slice(22)), [0x41]);
+
+const malformedBatchSocket = new FakeSocket({
+  roomCode: code,
+  sessionId: players[3].session_id,
+  matchStarted: true,
+  rateWindowStartedAt: 0,
+  rateCount: 0
+});
+await lobby.webSocketMessage(
+  malformedBatchSocket,
+  new Uint8Array([0x43, 0x42, 0x55, 0x31, 0x02, 0x00]).buffer
+);
+assert.equal(malformedBatchSocket.closed.code, 1008);
+assert.equal(malformedBatchSocket.closed.reason, "BATCH_INVALID");
+
 const textSocket = new FakeSocket({
   roomCode: code,
   sessionId: players[3].session_id,
@@ -267,8 +288,9 @@ const pingRateSocket = new FakeSocket({
 for (let i = 0; i < 6; i++) {
   await lobby.webSocketMessage(pingRateSocket, "PING");
 }
-assert.equal(pingRateSocket.closed, null);
-assert.equal(pingRateSocket.sent.length, 6);
+assert.equal(pingRateSocket.closed.code, 1008);
+assert.equal(pingRateSocket.closed.reason, "RATE_LIMITED");
+assert.equal(pingRateSocket.sent.length, 5);
 assert.ok(pingRateSocket.sent.every(message => message === "PONG"));
 
 const invalidEndpoint = await call(
