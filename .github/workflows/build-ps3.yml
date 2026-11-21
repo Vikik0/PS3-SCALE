@@ -114,6 +114,11 @@ jobs:
           test -s "PS3-SCALE-Alpha-0.2/pkgfiles/USRDIR/apollo-save.png"
           echo "Verified embedded GTA V theme MP3 and Apollo Save logo in pkgfiles/USRDIR."
 
+      - name: Install XMB artwork renderer
+        run: |
+          set -eu
+          python3 -m pip install --no-cache-dir Pillow
+
       - name: Build and validate PS3 packages
         working-directory: PS3-SCALE-Alpha-0.2
         run: |
