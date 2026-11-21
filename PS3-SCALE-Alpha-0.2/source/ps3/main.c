@@ -241,6 +241,8 @@ static int g_catalog_thread_started = 0;
 static sys_ppu_thread_t g_catalog_thread;
 static int g_catalog_ready = 0;
 static int g_online_selected = 0;
+static int g_online_focus_selection = 0;
+static float g_online_row_focus = 1.0f;
 enum {
     ONLINE_FILTER_GRAPHICS_EXACT = 0,
     ONLINE_FILTER_GRAPHICS_ANY = 1,
@@ -3998,6 +4000,26 @@ static void draw_library_animated_card(float x, float y, float w, float h,
     }
 }
 
+static void update_online_row_animation(void)
+{
+    float target = (g_screen == SCREEN_ONLINE_DB &&
+                    g_online_result_count > 0) ? 1.0f : 0.0f;
+
+    if (target > 0.0f && g_online_focus_selection != g_online_selected) {
+        g_online_focus_selection = g_online_selected;
+        g_online_row_focus = 0.0f;
+    }
+
+    if (!g_animation_enabled) {
+        g_online_row_focus = target;
+    } else {
+        float difference = target - g_online_row_focus;
+        g_online_row_focus += difference * 0.28f;
+        if (fabsf(difference) < 0.006f)
+            g_online_row_focus = target;
+    }
+}
+
 static void draw_home(void)
 {
     static const char *items[5] = {
@@ -4133,8 +4155,14 @@ static void draw_online_database(void)
         const char *title, *kind;
         u32 badge_color;
         int focused = ((int)i == g_online_selected);
-        char row[128];
+        float focus = focused ? g_online_row_focus : 0.0f;
+        float scale = 1.0f + focus * 0.02f;
+        float row_w = 334.0f * scale;
+        float row_h = 27.0f * scale;
         float y = 178.0f + (float)visible_count * 30.0f;
+        float row_x = 32.0f - (row_w - 334.0f) * 0.5f;
+        float row_y = y - (row_h - 27.0f) * 0.5f - focus * 1.0f;
+        char row[128];
 
         if (!game && !community && !ps2_config)
             continue;
@@ -4163,23 +4191,35 @@ static void draw_online_database(void)
             badge_color = 0x468f78ff;
         }
 
-        draw_rounded_rect(32.0f, y, 334.0f, 27.0f, 7.0f,
-                          focused ? 0xf2eafff4 : 0xfaf9ffed);
-        draw_rounded_outline(32.0f, y, 334.0f, 27.0f, 7.0f,
-                             focused ? 0x9568edff : 0xe6dff1ff);
-        if (focused)
-            draw_solid_rect(35.0f, y + 6.0f, 3.0f, 15.0f, 0x875be8ff);
-        draw_rounded_rect(42.0f, y + 5.0f, 20.0f, 18.0f, 5.0f,
+        draw_rounded_rect(row_x + 2.0f, row_y + 3.0f,
+                          row_w, row_h, 7.0f * scale,
+                          ui_blend_color(0x5e718f25, 0x665b8f35, focus));
+        draw_rounded_rect(row_x, row_y, row_w, row_h, 7.0f * scale,
+                          ui_blend_color(0xfaf9ffed, 0xf2eafff4, focus));
+        draw_rounded_outline(row_x, row_y, row_w, row_h, 7.0f * scale,
+                             ui_blend_color(0xe6dff1ff, 0x9568edff, focus));
+        if (focus > 0.01f)
+            draw_rounded_rect(row_x + 4.0f * scale,
+                              row_y + 5.0f * scale,
+                              2.5f * scale, row_h - 10.0f * scale,
+                              1.2f * scale,
+                              color_with_alpha(0x875be8ff,
+                                               (unsigned int)(focus * 255.0f)));
+        draw_rounded_rect(row_x + 10.0f * scale, row_y + 5.0f * scale,
+                          20.0f * scale, 18.0f * scale, 5.0f * scale,
                           focused ? 0x875be8ff : 0xe9e2f6ff);
-        draw_solid_rect(47.0f, y + 9.0f, 10.0f, 2.0f,
+        draw_solid_rect(row_x + 15.0f * scale, row_y + 9.0f * scale,
+                        10.0f * scale, 2.0f * scale,
                         focused ? 0xfaf7ffff : 0xa58acbff);
-        draw_solid_rect(47.0f, y + 14.0f, 7.0f, 2.0f,
+        draw_solid_rect(row_x + 15.0f * scale, row_y + 14.0f * scale,
+                        7.0f * scale, 2.0f * scale,
                         focused ? 0xfaf7ffff : 0xa58acbff);
 
         set_ui_font_size(6, 9);
         snprintf(row, sizeof(row), "%.28s", title);
-        draw_text(70.0f, y + 9.0f, 0x29243fff, row);
-        draw_text(298.0f, y + 9.0f,
+        draw_text(row_x + 38.0f * scale, row_y + 9.0f * scale,
+                  0x29243fff, row);
+        draw_text(row_x + 266.0f * scale, row_y + 9.0f * scale,
                   focused ? 0x875be8ff : badge_color, kind);
         visible_count++;
     }
@@ -6131,6 +6171,7 @@ int main(int argc, char *argv[])
 
         update_home_card_animations();
         update_scan_card_animations();
+        update_online_row_animation();
         if (g_screen == SCREEN_SCAN || g_screen == SCREEN_DETAILS)
             update_selected_cover();
         draw_ui();
