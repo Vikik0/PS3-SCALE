@@ -9,7 +9,8 @@ FSELF := $(PS3DEV)/bin/fself
 CRT := $(PS3DK)/ppu/lib/lv2-prx-crt.o
 CRT_I := $(PS3DK)/ppu/lib/lv2-crti.o
 CRT_INIT := $(PS3DK)/ppu/lib/lv2-prx-crt1.o
-PRX_LD := $(PS3DK)/ppu/lib/lv2-prx.ld
+PRX_LD_SOURCE := $(PS3DK)/ppu/lib/lv2-prx.ld
+PRX_LD := $(BUILD)/lv2-prx.ld
 PRX_SPECS := $(PS3DK)/ppu/lib/lv2-prx.specs
 
 CFLAGS := -O2 -Wall -Wextra -Werror -std=gnu11 -mcpu=cell -mhard-float \
@@ -25,6 +26,11 @@ all: $(BUILD)/crash_bash_input.fake.sprx
 
 $(BUILD):
 	mkdir -p $@
+
+# The PPC64 TOC anchor is .got + 0x8000. Keep that address inside the
+# single PRX PT_LOAD so prx-gen can drop invariant TOC16_HA/LO relocations.
+$(PRX_LD): $(PRX_LD_SOURCE) | $(BUILD)
+	python3 -c 'from pathlib import Path; import sys; p=Path(sys.argv[1]); s=p.read_text(); needle="\\t_end = .;"; assert s.count(needle) == 1; p=Path(sys.argv[2]); p.write_text(s.replace(needle, "\\t. = MAX(., .TOC. + 0x100);\\n" + needle, 1))' $(PRX_LD_SOURCE) $@
 
 $(BUILD)/module.o: module.c input_hook.h net_adapter.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
