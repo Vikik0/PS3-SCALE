@@ -49,6 +49,7 @@ void settings_return(void);
 #include "../upstream/crash_bash_decomp/port/platform/net.c"
 
 static volatile int net_active;
+static volatile int lobby_started;
 static volatile int have_previous_step;
 static uint64_t last_frame_step_ns;
 static int finish_code;
@@ -589,9 +590,13 @@ int cb_net_init(void)
 
 int cb_net_host(void)
 {
+    int result;
     configure_options();
     net_active = 0;
-    return net_lobby_host(NULL) ? 0 : -1;
+    lobby_started = 0;
+    result = net_lobby_host(NULL);
+    if (result) lobby_started = 1;
+    return result ? 0 : -1;
 }
 
 int cb_net_join_code(const char *code)
@@ -600,14 +605,26 @@ int cb_net_join_code(const char *code)
     if (!code || !net_code_read(code, address, sizeof(address))) return -1;
     configure_options();
     net_active = 0;
-    return net_lobby_join(address) ? 0 : -1;
+    lobby_started = 0;
+    if (!net_lobby_join(address)) return -1;
+    lobby_started = 1;
+    return 0;
 }
 
 int cb_net_lobby_poll(void)
 {
-    int status = net_lobby_poll();
-    if (status == LOBBY_GO && net_on()) {
-        net_active = 1;
+    int status;
+
+    if (!lobby_started) {
+        return net_active ? LOBBY_GO : LOBBY_OFF;
+    }
+
+    status = net_lobby_poll();
+    if (status == LOBBY_GO && !net_active && net_on()) {
+        lobby_started = 0;
+        platform_online_start();
+    } else if (status == LOBBY_FAILED || status == LOBBY_OFF) {
+        lobby_started = 0;
     }
     return status;
 }
@@ -620,6 +637,7 @@ int cb_net_lobby_start(void)
 
 void cb_net_leave(void)
 {
+    lobby_started = 0;
     net_lobby_leave();
     net_end();
     net_lobby_reset();
@@ -644,7 +662,7 @@ void cb_net_frame(void)
 
     if (!cb_net_is_active()) return;
     now = SDL_GetTicksNS();
-    if (last_frame_step_ns && now - last_frame_step_ns < 25000000ULL) return;
+    if (last_frame_step_ns && now - last_frame_step_ns < 30000000ULL) return;
     last_frame_step_ns = now;
 
     if (have_previous_step) {
