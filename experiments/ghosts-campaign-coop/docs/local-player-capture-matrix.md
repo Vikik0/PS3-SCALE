@@ -22,6 +22,9 @@ Compare a verified two-controller offline mode with Campaign on the exact Ghosts
 | Concept | What must be established | Why it matters |
 |---|---|---|
 | Local player count | Where the engine records active local players and when it changes | Campaign must retain two player slots |
+| Mode split-screen flag | Value returned by `isSplitScreen()` / mode-level split-screen state | Confirms the engine entered its local split-screen mode |
+| Per-player split-screen identity | Results of `isSplitscreenPlayer()` and `isSplitscreenPlayerPrimary()` for each player | Distinguishes primary and secondary local players |
+| Client/entity identity | `clientid`, entity number and their relationship to the local-player slot | Prevents confusing a spawned actor with a real local client |
 | Controller assignment | Port-to-local-slot mapping and command generation | Player 2 must not steal Logan's input |
 | Client state | Per-slot client state and lifecycle flags | A second entity alone is not a second client |
 | Player state | Player-state address/ownership per local slot | Health, weapons and movement must remain independent |
