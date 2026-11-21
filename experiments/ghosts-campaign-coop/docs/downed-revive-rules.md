@@ -26,7 +26,7 @@ These are initial project defaults, not a claim that the original Extinction mod
 
 ## Host authority and network payload
 
-The host console is the sole authority for downed/revive/mission-failure decisions. The 24-byte versioned snapshot can be sent as the opaque payload inside an authenticated GHC2 packet. It contains mission phase, failure reason, revision, both players' states and health, revive progress, and remaining bleedout time.
+The host console is the sole authority for downed/revive/mission-failure decisions. The 24-byte `GMS`-tagged, versioned snapshot can be sent as the opaque payload inside an authenticated GHC2 packet. It contains mission phase, failure reason, revision, both players' states and health, revive progress, and remaining bleedout time.
 
 The remote client displays the received state; it must not independently trigger mission restart. The PS3 codec now exposes a combined authenticate-and-replay-check function backed by a wrap-safe 64-packet sequence window. Use the packet sequence to reject duplicate/out-of-order datagrams; use the mission revision to reject snapshots from an older mission state. Equal revisions remain valid for newer countdown/progress snapshots.
 
