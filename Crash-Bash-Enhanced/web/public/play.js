@@ -4,7 +4,7 @@ import { BrowserLockstepClient } from "/lockstep-client.js";
 
 window.CBASH_CREATE_RELAY_TRANSPORT = options => new CrashBashRelayTransport(options);
 
-const DATA_PATH = "https://cdn.emulatorjs.org/stable/data/";
+const DATA_PATH = "https://cdn.emulatorjs.org/4.2.3/data/";
 const SESSION_KEY = "crash-bash-online-session-v1";
 const API_ORIGIN = (() => {
   try { return localStorage.getItem("crash-bash-online-api-origin-v1") || window.location.origin; }
