@@ -94,12 +94,6 @@ def draw_background(image, frame):
     bottom = blend((216,210,231), (242,239,249), daylight)
     for y in range(H):
         image.rect(0, y, W, 1, blend(top, bottom, y / (H - 1)))
-    cx = 738 + math.cos(phase) * 12
-    cy = 112 + math.sin(phase) * 7
-    for ring, color in ((74, (222,211,239)),
-                        (61, (190,171,224)),
-                        (48, (232,221,245))):
-        image.circle(cx, cy, ring, color, 1)
 
 
 def draw_rails(image, frame, camera_y, camera_steps):
