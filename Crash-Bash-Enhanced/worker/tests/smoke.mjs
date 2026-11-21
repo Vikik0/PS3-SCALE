@@ -6,12 +6,14 @@ globalThis.crypto ??= webcrypto;
 
 const data = new Map();
 const sockets = [];
+let storageWrites = 0;
 const ctx = {
   storage: {
     async get(key) {
       return data.get(key);
     },
     async put(key, value) {
+      storageWrites += 1;
       data.set(key, structuredClone(value));
     }
   },
@@ -137,7 +139,9 @@ const publicCreated = await call(
 );
 assert.equal(publicCreated.status, 201);
 assert.equal(publicCreated.body.is_private, false);
+const writesBeforePublicList = storageWrites;
 const publicList = await call("/v1/rooms/public");
+assert.equal(storageWrites, writesBeforePublicList, "public-room GET must not write Durable Object state");
 assert.equal(publicList.status, 200);
 assert.equal(publicList.body.rooms.length, 1);
 assert.equal(publicList.body.rooms[0].room_code, publicCreated.body.room_code);
