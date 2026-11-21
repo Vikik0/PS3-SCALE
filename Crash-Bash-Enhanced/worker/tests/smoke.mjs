@@ -85,7 +85,7 @@ assert.equal(health.status, 200);
 assert.equal(health.body.psn_required, false);
 assert.equal(health.body.max_players, 4);
 assert.equal(health.body.max_open_rooms, 4);
-assert.equal(health.body.max_guest_sessions, 16);
+assert.equal(health.body.max_total_sessions, 16);
 assert.equal(health.body.max_active_matches, 1);
 assert.equal(health.body.transport, "websocket-room-relay-prototype");
 
