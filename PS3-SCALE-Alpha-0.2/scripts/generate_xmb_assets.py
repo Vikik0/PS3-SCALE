@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PKG = ROOT / "pkgfiles"
 FONT_PATH = ROOT / "source/ps3/font8x12.h"
 PIC1_SOURCE = ROOT / "assets/xmb/pic1_source.jpg"
+ICON0_SOURCE = ROOT / "assets/xmb/icon0_source.jpg"
 
 def load_font():
     src = FONT_PATH.read_text(encoding="utf-8")
@@ -123,80 +124,62 @@ def load_display_font(size, bold=False):
     return ImageFont.load_default()
 
 
-def generate(font):
-    from PIL import Image, ImageDraw, ImageOps
+def remove_upper_stair_flight(source):
+    """Hide the upper return-flight so the wallpaper reads as one staircase."""
+    if source.width < 520 or source.height < 160:
+        return source
+    cleaned = source.copy()
+    wall = source.crop((260, 0, 520, 154)).resize(
+        (260, 154), Image.Resampling.LANCZOS)
+    mask = Image.new("L", (260, 154), 0)
+    mask_draw = ImageDraw.Draw(mask)
+    mask_draw.polygon(
+        [(0, 0), (260, 0), (260, 44), (252, 76),
+         (236, 104), (212, 129), (182, 151), (0, 151)],
+        fill=255,
+    )
+    mask = mask.filter(ImageFilter.GaussianBlur(8))
+    cleaned.paste(wall, (0, 0), mask)
+    return cleaned
+
+
+def generate(font=None):
+    from PIL import Image, ImageDraw, ImageFilter, ImageOps
     PKG.mkdir(parents=True, exist_ok=True)
     if not PIC1_SOURCE.is_file():
         raise RuntimeError(f"Approved XMB staircase source is missing: {PIC1_SOURCE}")
+    if not ICON0_SOURCE.is_file():
+        raise RuntimeError(f"Approved Neon Glass icon source is missing: {ICON0_SOURCE}")
 
-    # PIC1 is the clean 16:9 pearl-white / lavender XMB wallpaper. The
-    # staircase stays on the left; the right side is deliberately quiet.
     with Image.open(PIC1_SOURCE) as source_file:
-        source = source_file.convert("RGB")
+        source = remove_upper_stair_flight(source_file.convert("RGB"))
     wallpaper = ImageOps.fit(
-        source, (1280, 720), method=Image.LANCZOS
+        source, (1280, 720), method=Image.Resampling.LANCZOS
     )
     wallpaper.save(PKG / "PIC1.PNG", format="PNG", optimize=True)
 
-    # ICON0 remains the separate dark-violet package icon so it is legible
-    # in the PS3 XMB's small icon slot.
-    icon=Canvas(320,176,(30,27,54),(9,10,27))
-    for y in range(176):
-        t=y/175.0
-        icon.rect(0,y,320,1,
-                  (int(38-29*t),int(30-20*t),int(64-36*t)))
-    stairs(icon,10,-40,177,9,11,163,10,
-           (252,251,255),(214,206,237),(140,127,188))
-    icon.line(0, 154, 114, 25, (179,142,242), 2)
-    icon.line(2, 161, 122, 25, (245,235,255), 1)
-    icon.rect(126,8,184,160,(17,15,40))
-    icon.line(125,7,311,7,(123,86,205),2)
-    icon.line(311,7,311,166,(105,78,173),2)
-    icon.line(311,166,125,166,(72,62,125),2)
-    icon.line(125,166,125,7,(103,77,159),2)
-    icon.line(130,10,305,10,(210,191,249),1)
-    ps_mark(icon,234,18,1,(248,247,255))
-    icon.text(173,61,"PS3",3,(253,253,255),font)
-    icon.text(151,100,"SCALE",3,(197,155,255),font)
-    icon.rect(153,141,148,2,(155,94,246))
-    icon.rect(153,144,148,1,(83,57,141))
-    icon.text(161,151,"GAME ENHANCER",1,(230,218,249),font)
-    icon.save(PKG/"ICON0.PNG")
+    # Use the user-approved square Neon Glass mark in the PS3 XMB tile.
+    with Image.open(ICON0_SOURCE) as icon_file:
+        icon0 = ImageOps.fit(
+            icon_file.convert("RGB"), (320, 176),
+            method=Image.Resampling.LANCZOS
+        )
+    icon0.save(PKG / "ICON0.PNG", format="PNG", optimize=True)
 
-    # PIC0 is the XMB preview tile: the same spiral-staircase scene with a
-    # restrained PS3 SCALE identity panel on the right.
+    # PIC0 reuses the exact same square artwork; no substitute wordmark.
     pic0 = ImageOps.fit(
-        source, (310, 176), method=Image.LANCZOS
+        source, (310, 176), method=Image.Resampling.LANCZOS
     ).convert("RGBA")
-    overlay = Image.new("RGBA", pic0.size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(overlay)
-    draw.rectangle(
-        (143, 13, 299, 163),
-        fill=(251, 249, 255, 232),
-        outline=(176, 150, 224, 255), width=2
+    icon_square = icon0.crop((72, 0, 248, 176)).resize(
+        (150, 150), Image.Resampling.LANCZOS
+    ).convert("RGBA")
+    draw = ImageDraw.Draw(pic0)
+    draw.rounded_rectangle(
+        (146, 8, 302, 168), radius=14,
+        fill=(249, 247, 255, 245), outline=(154, 134, 205, 255), width=2
     )
-    draw.line((153, 19, 289, 19), fill=(204, 185, 239, 255), width=1)
-    draw.line((158, 139, 285, 139), fill=(177, 145, 226, 255), width=2)
-    # A small, clean PlayStation-inspired mark above the wordmark.
-    draw.line((221, 28, 221, 47), fill=(48, 39, 76, 255), width=3)
-    draw.line((221, 28, 234, 32), fill=(48, 39, 76, 255), width=3)
-    draw.line((234, 32, 234, 46), fill=(48, 39, 76, 255), width=3)
-    draw.line((221, 46, 237, 52), fill=(48, 39, 76, 255), width=2)
-
-    font_ps3 = load_display_font(25, bold=True)
-    font_scale = load_display_font(22, bold=True)
-    font_small = load_display_font(8, bold=True)
-
-    def centered_text(label, y, selected_font, color):
-        width, _height = draw.textsize(label, font=selected_font)
-        x = 221 - width // 2
-        draw.text((x, y), label, font=selected_font, fill=color)
-
-    centered_text("PS3", 62, font_ps3, (43, 35, 69, 255))
-    centered_text("SCALE", 94, font_scale, (126, 75, 204, 255))
-    centered_text("GAME ENHANCER", 145, font_small, (92, 82, 119, 255))
-    pic0 = Image.alpha_composite(pic0, overlay).convert("RGB")
-    pic0.save(PKG / "PIC0.PNG", format="PNG", optimize=True)
+    pic0.alpha_composite(icon_square, (149, 13))
+    pic0.convert("RGB").save(PKG / "PIC0.PNG", format="PNG", optimize=True)
 
     for name, expected in (
         ("PIC1.PNG", (1280, 720)),
