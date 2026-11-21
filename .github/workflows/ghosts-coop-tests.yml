@@ -27,7 +27,7 @@ jobs:
           python-version: "3.12"
       - name: Compile Python modules
         working-directory: experiments/ghosts-campaign-coop
-        run: python -m compileall -q server tests
+        run: python -m compileall -q server tests tools
       - name: Run server and network tests
         working-directory: experiments/ghosts-campaign-coop
         run: python -m unittest discover -s tests -v
