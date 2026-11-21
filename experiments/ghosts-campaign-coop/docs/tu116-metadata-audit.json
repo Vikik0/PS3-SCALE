@@ -1,0 +1,122 @@
+{
+  "title": "Call of Duty Ghosts PS3 TU 1.16 metadata audit",
+  "source_file": "PARAM.SFO (installed update)",
+  "sfo": {
+    "sha256": "bd329d97380933ce0fff988e7c196b74520a1ae83bd856943c39cb05d9a62025",
+    "values": {
+      "TITLE": "Call of Duty® Ghosts",
+      "TITLE_ID": "BLUS31270",
+      "APP_VER": "01.16",
+      "VERSION": "01.00",
+      "CATEGORY": "GD",
+      "PS3_SYSTEM_VER": "04.4000",
+      "NP_COMMUNICATION_ID": "NPWR04874_00"
+    }
+  },
+  "self_comparison": [
+    {
+      "filename": "EBOOT.BIN (disc)",
+      "size_bytes": 73704,
+      "sha256": "b80bbb65f5faa5da5e21374107c0873e0a23ddd760cd21bb9346770ee883f652",
+      "self_type": 4,
+      "key_revision": 28,
+      "elf_machine": 21,
+      "elf_class": 2,
+      "elf_data": 2,
+      "elf_entrypoint": "0x20080",
+      "program_header_count": 8,
+      "encrypted_segment_indices": [0, 1, 2, 3, 4]
+    },
+    {
+      "filename": "EBOOT.BIN (installed TU)",
+      "size_bytes": 41488,
+      "sha256": "af0dc21621d4c12c7f63899d1eef7c66405c3aa78c13daccfca58d02dc165aab",
+      "self_type": 8,
+      "key_revision": 28,
+      "elf_machine": 21,
+      "elf_class": 2,
+      "elf_data": 2,
+      "elf_entrypoint": "0x20080",
+      "program_header_count": 8,
+      "encrypted_segment_indices": [0, 1, 2, 3, 4]
+    },
+    {
+      "filename": "default.self (disc)",
+      "size_bytes": 8072104,
+      "sha256": "4bd136a09381e711b2bf1709d3881d6e299dc8912f3e29d5381c7011a5b6df0e",
+      "self_type": 4,
+      "key_revision": 28,
+      "elf_machine": 21,
+      "elf_class": 2,
+      "elf_data": 2,
+      "elf_entrypoint": "0x7A8F28",
+      "program_header_count": 8,
+      "encrypted_segment_indices": [0, 1, 2, 3, 4]
+    },
+    {
+      "filename": "default.self (installed TU)",
+      "size_bytes": 4291568,
+      "sha256": "ffa0f174740cc588b85a8fe0a730695c858413572841a01cbcc2b161a6d9006e",
+      "self_type": 8,
+      "key_revision": 28,
+      "elf_machine": 21,
+      "elf_class": 2,
+      "elf_data": 2,
+      "elf_entrypoint": "0x7E9508",
+      "program_header_count": 8,
+      "encrypted_segment_indices": [0, 1, 2, 3, 4]
+    },
+    {
+      "filename": "default_mp.self (disc)",
+      "size_bytes": 9195256,
+      "sha256": "0bc1ccead2a71c7d0819fef2d2769ac1e14ba9683c341a30a06efc05be5d1098",
+      "self_type": 4,
+      "key_revision": 28,
+      "elf_machine": 21,
+      "elf_class": 2,
+      "elf_data": 2,
+      "elf_entrypoint": "0x8B9738",
+      "program_header_count": 8,
+      "encrypted_segment_indices": [0, 1, 2, 3, 4]
+    },
+    {
+      "filename": "default_mp.self (installed TU)",
+      "size_bytes": 6265632,
+      "sha256": "6dfa702761860435e22f2db7bc8bb848f2286223605415523680770ea03f6bfd",
+      "self_type": 8,
+      "key_revision": 28,
+      "elf_machine": 21,
+      "elf_class": 2,
+      "elf_data": 2,
+      "elf_entrypoint": "0xA75E38",
+      "program_header_count": 8,
+      "encrypted_segment_indices": [0, 1, 2, 3, 4]
+    }
+  ],
+  "fastfiles_currently_available": {
+    "common.ff": {
+      "size_bytes": 29796135,
+      "sha256": "5fc31ea915894566896cc5081d3688675ecde341d42e8c38b19ad37434ca4bcb",
+      "outer_magic": "IWff0100",
+      "version": "0x0000022E",
+      "inner_magic_offset": 12948,
+      "classification": "Previously analysed base sample; not a new TU-specific FastFile"
+    },
+    "clockwork.ff": {
+      "size_bytes": 85855599,
+      "sha256": "a2ac70c7349047f2eded5f45a5e46ff8278689839fe1655106263520fe639783",
+      "outer_magic": "IWff0100",
+      "version": "0x0000022E",
+      "inner_magic_offset": 91716,
+      "classification": "Previously analysed Campaign mission sample"
+    }
+  },
+  "findings": [
+    "The installed-update SFO confirms TITLE_ID BLUS31270 and APP_VER 01.16; VERSION remains 01.00 in this update metadata.",
+    "The three installed-TU executable files differ from the earlier disc-build samples.",
+    "The TU SELF files are structurally valid SELF v2 containers with ELF64 big-endian PowerPC64 headers and eight program headers.",
+    "Executable segments 0 through 4 remain encrypted; this metadata audit cannot disassemble game code.",
+    "The currently available common.ff and clockwork.ff match previously analysed base samples; no separate TU-specific Campaign FastFile has been verified.",
+    "The next engine-analysis gate is a decrypted ELF dump of the installed TU 1.16 default.self; default_mp.self is the useful split-screen comparison target."
+  ]
+}
