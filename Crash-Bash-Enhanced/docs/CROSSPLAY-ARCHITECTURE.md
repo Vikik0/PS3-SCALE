@@ -38,9 +38,10 @@ References:
 The browser runtime now uses EmulatorJS with its PlayStation (PCSX-ReARMed) core instead of compiling the upstream SDL_GPU desktop renderer to WebAssembly. This avoids writing a separate WebGL 2 renderer. The local browser player loads the user's disc image and optional BIOS as browser File objects, without uploading either to the Worker. It exposes `CBASH_APPLY_PAD_STATE(slot, buttons, sticks)` and `CBASH_GET_EMULATOR_FRAME()` for the network adapter. The remaining browser work is a WebSocket-backed adapter for the same CBN1 lockstep protocol; browser networking does not expose raw UDP sockets.
 
 References:
-- SDL3 development FAQ: https://wiki.libsdl.org/SDL3/FAQDevelopment
-- Emscripten networking: https://emscripten.org/docs/porting/networking.html
-- SDL3 Emscripten guide: https://wiki.libsdl.org/SDL3/README-emscripten
+- EmulatorJS project and supported systems: https://github.com/EmulatorJS/EmulatorJS
+- EmulatorJS 4.2.3 GameManager input API: https://github.com/EmulatorJS/EmulatorJS/blob/v4.2.3/data/src/GameManager.js
+- EmulatorJS CDN/versioning: https://github.com/EmulatorJS/EmulatorJS#cdn-integration
+- EmulatorJS license and third-party notice: ../web/THIRD-PARTY-NOTICES.md
 
 ## Implementation status
 
