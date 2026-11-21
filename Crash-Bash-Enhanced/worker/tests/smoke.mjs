@@ -374,6 +374,25 @@ const disconnectedSession = Object.values(afterDisconnectState.sessions)
   .find(session => session.sessionId === players[1].session_id);
 assert.equal(disconnectedSession.roomCode, null);
 
+const ps3Hosted = await call("/v1/rooms/host-guest", "POST", { display_name: "PS3 Host" });
+assert.equal(ps3Hosted.status, 201);
+assert.match(ps3Hosted.body.room_code, /^[A-Z0-9]{6}$/);
+assert.equal(ps3Hosted.body.psn_required, false);
+assert.equal(ps3Hosted.body.host_session_id, ps3Hosted.body.session_id);
+assert.equal(ps3Hosted.body.ticket.length, 64);
+assert.equal(ps3Hosted.body.room.players.length, 1);
+assert.equal(ps3Hosted.body.room.players[0].ready, true);
+const ps3HostTicketRequest = new Request(
+  "https://crash-bash.test/v1/rooms/" + ps3Hosted.body.room_code + "/transport",
+  { headers: { "Sec-WebSocket-Protocol": "cbash-v1, cbash-ticket." + ps3Hosted.body.ticket } }
+);
+const ps3HostState = await lobby.load();
+const ps3HostTicketSession = await lobby.authenticateTransportTicket(
+  ps3HostTicketRequest, ps3HostState, ps3Hosted.body.room_code
+);
+assert.equal(ps3HostTicketSession.sessionId, ps3Hosted.body.session_id);
+await lobby.save(ps3HostState);
+
 const extraGuest = await call("/v1/sessions", "POST", { mode: "guest", display_name: "Capacity Test" });
 assert.equal(extraGuest.status, 201);
 const capacityState = await lobby.load();
