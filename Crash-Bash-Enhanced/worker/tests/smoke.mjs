@@ -126,22 +126,27 @@ assert.equal(started.body.status, "running");
 const relayA = new FakeSocket({
   roomCode: code,
   sessionId: players[0].session_id,
+  matchStarted: true,
   rateWindowStartedAt: 0,
   rateCount: 0
 });
 const relayB = new FakeSocket({
   roomCode: code,
   sessionId: players[1].session_id,
+  matchStarted: true,
   rateWindowStartedAt: 0,
   rateCount: 0
 });
 const otherRoom = new FakeSocket({
   roomCode: "ZZZZZZ",
   sessionId: players[2].session_id,
+  matchStarted: true,
   rateWindowStartedAt: 0,
   rateCount: 0
 });
 sockets.push(relayA, relayB, otherRoom);
+lobby.webSocketMessage(relayA, "PING");
+assert.equal(relayA.sent[0], "PONG");
 lobby.webSocketMessage(relayA, new Uint8Array([0x10, 0x20, 0x30]).buffer);
 assert.equal(relayB.sent.length, 1);
 assert.equal(otherRoom.sent.length, 0);
@@ -154,6 +159,7 @@ assert.deepEqual(Array.from(relayed.slice(22)), [0x10, 0x20, 0x30]);
 const textSocket = new FakeSocket({
   roomCode: code,
   sessionId: players[3].session_id,
+  matchStarted: true,
   rateWindowStartedAt: 0,
   rateCount: 0
 });
@@ -163,6 +169,7 @@ assert.equal(textSocket.closed.code, 1003);
 const largeSocket = new FakeSocket({
   roomCode: code,
   sessionId: players[3].session_id,
+  matchStarted: true,
   rateWindowStartedAt: 0,
   rateCount: 0
 });
@@ -172,6 +179,7 @@ assert.equal(largeSocket.closed.code, 1009);
 const rateSocket = new FakeSocket({
   roomCode: code,
   sessionId: players[3].session_id,
+  matchStarted: true,
   rateWindowStartedAt: 0,
   rateCount: 0
 });
@@ -224,8 +232,13 @@ assert.equal(endpoint.body.host_endpoint.address, "198.51.100.10");
 const left = await call("/v1/rooms/" + code + "/leave", "POST", {}, players[0].token);
 assert.equal(left.status, 200);
 assert.equal(relayA.closed.code, 1008);
-assert.equal(relayB.closed.code, 1008);
+assert.equal(relayB.closed, null);
+assert.equal(relayB.deserializeAttachment().matchStarted, false);
 assert.equal(otherRoom.closed, null);
+const roomUpdate = JSON.parse(relayB.sent[2]);
+assert.equal(roomUpdate.type, "room_update");
+assert.equal(roomUpdate.room.status, "waiting");
+assert.equal(roomUpdate.room.players[0].player_id, players[1].session_id);
 const afterHostLeave = await call("/v1/rooms/" + code, "GET", undefined, players[1].token);
 assert.equal(afterHostLeave.status, 200);
 assert.equal(afterHostLeave.body.status, "waiting");
