@@ -11,10 +11,10 @@ SPEC.loader.exec_module(MODULE)
 
 def make_self() -> bytes:
     data = bytearray(0x1200)
-    MODULE.SCE_HEADER.pack_into(data, 0, b"SCE\\x00", 2, 0x1C, 1, 0x4A0, 0xA80, 0x20000)
+    MODULE.SCE_HEADER.pack_into(data, 0, b"SCE\x00", 2, 0x1C, 1, 0x4A0, 0xA80, 0x20000)
     MODULE.EXT_HEADER.pack_into(data, 0x20, 3, 0x70, 0x90, 0xD0, 0, 0x290, 0x390, 0x3C0, 0x70, 0)
     MODULE.APP_INFO.pack_into(data, 0x70, 0x1010000001000003, 0x01000002, 8, 0x0001000000000000, 0)
-    ident = b"\\x7fELF" + bytes([2, 2, 1, 0x66]) + bytes(8)
+    ident = b"\x7fELF" + bytes([2, 2, 1, 0x66]) + bytes(8)
     MODULE.ELF_HEADER.pack_into(data, 0x90, ident, 2, 21, 1, 0x10000, 64, 0, 0, 64, 56, 1, 64, 0, 0)
     MODULE.ELF64_PHDR.pack_into(data, 0xD0, 1, 5, 0, 0x10000, 0x10000, 0x100, 0x100, 0x1000)
     MODULE.SEGMENT_INFO.pack_into(data, 0x290, 0xA80, 0x100, 0x200000000, 1)
@@ -35,7 +35,7 @@ class SelfInspectorTests(unittest.TestCase):
 
     def test_rejects_truncated_header(self):
         with self.assertRaises(MODULE.SelfFormatError):
-            MODULE.inspect_self(b"SCE\\x00")
+            MODULE.inspect_self(b"SCE\x00")
 
     def test_rejects_out_of_range_segment(self):
         data = bytearray(make_self())
