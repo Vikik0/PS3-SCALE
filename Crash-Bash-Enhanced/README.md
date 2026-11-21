@@ -5,8 +5,9 @@ Crash Bash Enhanced is a community project to add a modern online layer around t
 ## Project structure
 
 - `web/`: responsive room/lobby web interface, built with Vite.
-- `worker/`: Cloudflare Worker + SQLite-backed Durable Object for guest sessions and room matchmaking.
-- `ps3/`: reserved for the native PS3 / PS1-emulator integration and controller-input synchronization.
+- `worker/`: Cloudflare Worker + SQLite-backed Durable Object for guest sessions, room matchmaking, and a prototype binary WebSocket relay.
+- `ps3/`: native PS3 / PS1-emulator input bridge and the current UDP lockstep adapter.
+- `docs/CROSSPLAY-ARCHITECTURE.md`: selected browser/PS3 architecture, relay wire format, free-tier budget, and remaining release gates.
 
 ## Current implementation
 
@@ -16,12 +17,13 @@ Crash Bash Enhanced is a community project to add a modern online layer around t
 - Ready state and host-controlled match start.
 - Host transfer if the host leaves.
 - Authenticated host UDP endpoint publishing and peer discovery.
+- Prototype room WebSocket relay with authenticated sender envelopes, 1200-byte payload limit, and per-client rate limiting.
 - Responsive web lobby.
 - CI tests for the Worker and web build.
 
 ## Important: gameplay status
 
-The current milestone is **matchmaking only**. It does not yet send controller inputs between PS3 consoles or synchronize Crash Bash gameplay. The PS3-side work must identify the exact Crash Bash executable / PS1 emulator path on the target CFW setup, then implement and test frame/input synchronization. Until that works on two real consoles, this project is not an online-playable release.
+The current milestone is **transport prototype, not playable cross-platform**. The lobby and binary WebSocket relay are implemented, but neither the PS3 PRX nor a browser game runtime is connected to that relay. The browser runtime still needs a WebGL 2 renderer and Emscripten build; the PS3 client still needs a TLS WebSocket transport and in-game room-code UI. Until both clients exchange synchronized game inputs in a real match, this project is not an online-playable release.
 
 The project will not use copyrighted game assets or distribute a game ISO/ROM. Players must supply their own legally obtained game copy.
 
@@ -50,7 +52,7 @@ npm run dev
 
 ## Free hosting target
 
-The Worker is designed for Cloudflare Workers Free with SQLite-backed Durable Objects. Free-plan limits apply; the service is designed for small lobby/signalling messages, not gameplay packet relaying. No home PC or PSN account is required for matchmaking.
+The target is Cloudflare Workers Free with SQLite-backed Durable Objects. Free usage is capped: the prototype currently limits each relay client to five incoming binary messages per second. The exact free-tier budget and the resulting four-player ceiling are documented in docs/CROSSPLAY-ARCHITECTURE.md. No home PC or PSN account is required.
 
 ## Automated checks
 
