@@ -129,6 +129,7 @@ server.on("upgrade", (request, socket) => {
           void recipient;
         }
         if (packetOffset !== payload.length) socket.destroy();
+        if (count > 2) sendFrame(socket, 1, Buffer.from("BATCH:" + count));
       } else if (opcode === 1 && payload.toString() === "PING") {
         sendFrame(socket, 1, Buffer.from("PONG"));
       } else if (opcode === 8) {
