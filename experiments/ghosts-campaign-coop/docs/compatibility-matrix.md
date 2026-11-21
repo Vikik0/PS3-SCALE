@@ -42,7 +42,7 @@ The public PS3 update catalogue lists these region-matched 1.16 package records.
 
 Source catalogue: https://ps3.aldostools.org/updates.html
 
-These records identify update packages only; they are not the full retail game. The full game must be a legitimately obtained copy, and its Title ID must match the update. Do not download or install anything until the final build's required profile is confirmed.
+Selected first profile: BLUS31270 US disc + its matching TU 1.16 package + CEX 4.93. Official Sony CDN package: https://b0.ww.np.dl.playstation.net/tppkg/np/BLUS31270/BLUS31270_T16/35760cb2130fa142/UP0002-BLUS31270_00-CALLDUTYGHOSTTU1-A0116-V0100-PE.pkg. These records identify update packages only; they are not the full retail game. The base game must be a legitimately obtained BLUS31270 copy. Do not mix another region's EBOOT, FastFiles or update package.
 
 ## Firmware policy
 
