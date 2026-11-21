@@ -39,6 +39,20 @@ The cooperative game-over rule checks whether every other player is already in l
 
 The current Campaign rules retain the agreed prototype defaults (30-second bleedout, 5-second hold and 40% health after revive). The Extinction values are reference data only; they do not silently override the Campaign design.
 
+## PS3 Ghosts runtime-mod research
+
+A community survey of Ghosts PS3 modding reports that the established console workflow was **SPRX plugins, modified/debug EBOOT loaders and RTM/RPC tools**, not the older CoD GSC `patch_mp.ff` replacement workflow. It also reports that public Ghosts SPRX source is scarce or unavailable; most released menus are binary-only. See [richard1222/ghosts-ps3-mod-menus](https://github.com/richard1222/ghosts-ps3-mod-menus) for the survey and its cited historical threads.
+
+Engineering implications:
+
+- Do not plan on editing extracted GSC and rebuilding a retail signed FastFile.
+- The compiled Campaign registry shim is not useful until a verified runtime script-loading route exists.
+- A custom SPRX/loader is the likely integration surface, but it needs the exact TU 1.16 executable layout and a verified CEX-compatible load path.
+- Do not reuse a DEX-only EBOOT or unknown binary menu as a base for the CEX 4.93 target.
+- Treat old menu compatibility claims as historical reports, not proof that a binary works on this console or is safe online. The prototype remains offline-only.
+
+This survey does not provide source code for a Ghosts loader, does not prove a public GSC injector exists, and does not establish any Campaign hook address.
+
 ## Engineering consequence for Campaign
 
 The next reverse-engineering target is no longer “invent a second player entity.” It is to locate and verify the engine-side paths behind these script concepts in the exact PS3 EBOOT:
