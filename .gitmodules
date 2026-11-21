@@ -1,0 +1,3 @@
+[submodule "Crash-Bash-Enhanced/upstream/crash_bash_decomp"]
+	path = Crash-Bash-Enhanced/upstream/crash_bash_decomp
+	url = https://github.com/jake-r-r-w/crash_bash_decomp.git
