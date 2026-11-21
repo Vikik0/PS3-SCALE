@@ -538,6 +538,7 @@ export class CrashBashLobby {
             max_players: room.maxPlayers,
             player_count: room.players.length,
             host_name: room.players.find(player => player.sessionId === room.hostSessionId)?.name || "Host",
+            host_platform: room.players.find(player => player.sessionId === room.hostSessionId)?.platform || "unknown",
             created_at: new Date(room.createdAt).toISOString()
           }));
         // This endpoint is read-only: avoid a Durable Object storage write for every
