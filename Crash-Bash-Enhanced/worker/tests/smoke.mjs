@@ -293,6 +293,22 @@ await lobby.save(ticketState);
 const reusedTicket = await lobby.authenticateTransportTicket(ticketRequest, ticketState, code);
 assert.equal(reusedTicket, null);
 
+const ps3Socket = new FakeSocket({
+  roomCode: code,
+  sessionId: ps3Join.body.session_id,
+  matchStarted: false,
+  rateWindowStartedAt: 0,
+  rateCount: 0
+});
+sockets.push(ps3Socket);
+await lobby.webSocketClose(ps3Socket, 1000, "left", true);
+assert.equal(ps3Socket.closed.code, 1008);
+const afterPs3Leave = await lobby.load();
+assert.equal(afterPs3Leave.rooms[code].players.length, 3);
+assert.equal(Object.values(afterPs3Leave.sessions).some(session =>
+  session.sessionId === ps3Join.body.session_id
+), false);
+
 const secondStarted = await call("/v1/rooms/" + secondCode + "/start", "POST", {}, players[4].token);
 assert.equal(secondStarted.status, 200);
 assert.equal(secondStarted.body.status, "running");
