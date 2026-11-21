@@ -1883,10 +1883,10 @@ static void draw_home_ambient(void)
         ps3scale_scene_point_t pearl_lip[4], contact_shadow[4];
         float light = 0.68f + 0.25f * cosf(angle + 0.42f);
         u32 top_color = scene_blend(0xe3ddecff, 0xfffeffff, light);
-        u32 riser_color = scene_blend(0xb7accaff, 0xe2dcecff, light);
-        u32 side_color = scene_blend(0xbeb5d2ff, 0xe6e0efff, light);
+        u32 riser_color = scene_blend(0x988eafff, 0xc7bedaff, light);
+        u32 side_color = scene_blend(0xa99fbeff, 0xd5cde5ff, light);
         u32 lip_color = scene_blend(0xded7efff, 0xfffeffff, light);
-        u32 contact_color = scene_blend(0x928aaeff, 0xbdb4d1ff, light);
+        u32 contact_color = scene_blend(0x6f6788ff, 0xa39abfff, light);
 
         top[0] = scene_world_point(center_x, center_y, center_z,
                                    inner_radius, angle, y + 0.14f);
@@ -1970,9 +1970,9 @@ static void draw_home_ambient(void)
                                     inner_radius + 0.42f, next_angle,
                                     next_y + 0.92f);
         scene_emit_line_segment(outer_a, outer_b, focal_length,
-                                0xb59adfff);
+                                0xa18ad2ff);
         scene_emit_line_segment(inner_a, inner_b, focal_length,
-                                0xd8c9f0cc);
+                                0xcdbfe8cc);
     }
 
     /* Fine balusters and tread-edge glints complete the staircase silhouette. */
@@ -1990,7 +1990,7 @@ static void draw_home_ambient(void)
         edge_b = scene_world_point(center_x, center_y, center_z,
                                    outer_radius, angle + angle_step * 0.92f,
                                    y + 0.14f);
-        scene_emit_line_segment(base, rail, focal_length, 0xb9a5dcbb);
+        scene_emit_line_segment(base, rail, focal_length, 0xa894d3bb);
         scene_emit_line_segment(edge_a, edge_b, focal_length, 0xe6def4e8);
     }
     tiny3d_End();
