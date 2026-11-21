@@ -11,6 +11,7 @@ assert "ps3scale_online_download_limited_progress" in header
 assert "ps3scale_online_download_progress" in header
 assert "volatile size_t *downloaded_bytes" in header
 assert "volatile size_t *total_bytes" in header
+assert "if (downloaded_bytes || total_bytes)" in source
 assert "CURLOPT_NOPROGRESS, 0L" in source
 assert "CURLOPT_PROGRESSFUNCTION, report_download_progress" in source
 assert "CURLOPT_PROGRESSDATA, &download" in source
