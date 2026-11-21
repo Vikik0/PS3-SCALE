@@ -20,8 +20,12 @@ test("guest token signs and verifies room-scoped identity", () => {
 
 test("guest token rejects tampering", () => {
   const token = signGuestToken({ sub: "player-123", room: "ABC234" });
-  const altered = token.slice(0, -1) + (token.endsWith("A") ? "B" : "A");
-  assert.equal(verifyGuestToken(altered), null);
+  const [payload, signature] = token.split(".");
+  const index = Math.floor(signature.length / 2);
+  const replacement = signature[index] === "A" ? "B" : "A";
+  const alteredSignature =
+    signature.slice(0, index) + replacement + signature.slice(index + 1);
+  assert.equal(verifyGuestToken(payload + "." + alteredSignature), null);
 });
 
 test("display names are bounded and strip markup/control characters", () => {
