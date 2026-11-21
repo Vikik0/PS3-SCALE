@@ -107,6 +107,7 @@ jobs:
           src="$RUNNER_TEMP/crashbash-PS3DK-src"
           git clone --depth 1 --branch v0.27.0 https://github.com/FirebirdTA01/PS3DK.git "$src"
           mkdir -p "$PS3DK/ppu/lib" "$PS3DK/ppu/include"
+          cp -a "$PS3DEV/ppu/include/." "$PS3DK/ppu/include/"
           cp -a "$src/sdk/include/." "$PS3DK/ppu/include/"
           mkdir -p "$PS3DK/ppu/include/sys"
           cp "$src/tests/sdk/lv2errno-fixture/sys/lv2errno.h" "$PS3DK/ppu/include/sys/lv2errno.h"
