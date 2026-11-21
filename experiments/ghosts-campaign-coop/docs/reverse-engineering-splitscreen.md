@@ -6,6 +6,14 @@ The target is the PS3 CEX retail game at TU 1.16. Public PS3 offsets are useful 
 
 A public IW6 PS4 decompilation is used only as a cross-platform engine reference. Its addresses, data layouts and observed behavior must not be copied directly into the PS3 runtime.
 
+## PS3 PPU ELF and OPD workflow
+
+The project now includes `tools/ps3_elf_inspect.py`, a read-only ELF64 big-endian EM_PPC64 inspector. It maps the reported offsets against file-backed `PT_LOAD` segments, tests direct VA and explicitly supplied RVA+image-base interpretations separately, and inspects the section containing the ELF entry point as the OPD candidate region. It reads PPU OPD entries as big-endian `{u32 code, u32 TOC}` descriptors and reports the common module TOC. It never guesses the image base or modifies the binary.
+
+`tools/ghidra/SeedGhostsOpdFunctions.java` can seed Ghidra function starts from the OPD range. Import the exact decrypted ELF as `PowerPC:BE:64:default` and use only the OPD VA/size reported for that same file. The workflow is documented in `docs/ps3-elf-analysis.md`.
+
+The inspector is covered by synthetic ELF unit tests. It has not yet been run against a Ghosts retail EBOOT, so none of the addresses below has been validated by this tool.
+
 ## Confirmed research leads
 
 The public PS3 TU 1.16 offsets collection includes:
