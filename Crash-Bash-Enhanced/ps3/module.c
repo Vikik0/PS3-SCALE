@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #include "input_hook.h"
+#include "net_adapter.h"
 
 #define SYS_PRX_RESIDENT 0
 
@@ -16,13 +17,16 @@ int module_start(size_t args, void *argp)
 {
     (void)args;
     (void)argp;
-    return cb_input_install() == 0 ? SYS_PRX_RESIDENT : -1;
+    if (cb_input_install() != 0) return -1;
+    (void)cb_net_init();
+    return SYS_PRX_RESIDENT;
 }
 
 int module_stop(size_t args, void *argp)
 {
     (void)args;
     (void)argp;
+    cb_net_leave();
     cb_input_remove();
     return SYS_PRX_RESIDENT;
 }
