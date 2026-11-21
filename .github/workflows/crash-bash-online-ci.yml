@@ -31,6 +31,8 @@ jobs:
           cache-dependency-path: Crash-Bash-Enhanced/web/package.json
       - name: Install web dependencies
         run: npm install --no-audit --no-fund
+      - name: Run browser CBN1 protocol tests
+        run: npm test
       - name: Check browser player script syntax
         run: node --check public/play.js
       - name: Test PS1-to-libretro controller mapping
