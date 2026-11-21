@@ -103,12 +103,32 @@ server.on("upgrade", (request, socket) => {
       }
 
       if (opcode === 2) {
-        const envelope = Buffer.alloc(22 + payload.length);
-        envelope.write("CBR1", 0, "ascii");
-        Buffer.from(SESSION_ID, "hex").copy(envelope, 4);
-        envelope.writeUInt16BE(payload.length, 20);
-        payload.copy(envelope, 22);
-        sendFrame(socket, 2, envelope);
+        if (payload.length < 5 || payload.toString("ascii", 0, 4) !== "CBU1") {
+          socket.destroy();
+          return;
+        }
+        const count = payload[4];
+        let packetOffset = 5;
+        for (let packetIndex = 0; packetIndex < count; packetIndex++) {
+          if (packetOffset + 18 > payload.length) return socket.destroy();
+          const recipient = payload.subarray(packetOffset, packetOffset + 16);
+          packetOffset += 16;
+          const packetLength = payload.readUInt16BE(packetOffset);
+          packetOffset += 2;
+          if (packetLength < 1 || packetLength > 1200 || packetOffset + packetLength > payload.length) {
+            return socket.destroy();
+          }
+          const packet = payload.subarray(packetOffset, packetOffset + packetLength);
+          packetOffset += packetLength;
+          const envelope = Buffer.alloc(22 + packet.length);
+          envelope.write("CBR1", 0, "ascii");
+          Buffer.from(SESSION_ID, "hex").copy(envelope, 4);
+          envelope.writeUInt16BE(packet.length, 20);
+          packet.copy(envelope, 22);
+          sendFrame(socket, 2, envelope);
+          void recipient;
+        }
+        if (packetOffset !== payload.length) socket.destroy();
       } else if (opcode === 1 && payload.toString() === "PING") {
         sendFrame(socket, 1, Buffer.from("PONG"));
       } else if (opcode === 8) {
