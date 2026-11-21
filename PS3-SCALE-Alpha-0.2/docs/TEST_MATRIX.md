@@ -1,4 +1,4 @@
-# Device test matrix — Alpha 0.23
+# Device test matrix — Alpha 0.28
 
 Primary device (user-reported):
 - Family: PS3 Slim

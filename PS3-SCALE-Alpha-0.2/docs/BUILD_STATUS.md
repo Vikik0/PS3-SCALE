@@ -14,7 +14,7 @@
 - Extended the webMAN launch-route validator to accept the same four standard PS2 ISO extensions, so a listed IMG/MDF title can be launched through the normal path.
 - Kept `.BIN.ENC` classified separately as a PS2 Classic package; it is not treated as a standard ISO.
 - Added host scanner fixtures that verify IMG/MDF entries and recover their serials from filenames, plus route tests for encoded IMG/MDF paths.
-- Alpha 0.28 CI and physical-console launch checks are pending.
+- Alpha 0.28 GitHub Actions run #562: **PASS**. Host tests, PS3 ELF/SELF build, standard PKG and GNPDRM PKG generation and package checks all passed. Physical-console scan / launch checks remain pending.
 
 ## Alpha 0.27 — Companion launch reliability
 
@@ -22,7 +22,7 @@
 - The Companion Tools UI now labels the path check as `FILE HINT`, and tells the user when it is trying the local service despite a missing hint.
 - Added shutdown joining for the companion launch worker so the app cannot tear down shared state while a local webMAN request is still running.
 - Added static regression checks for the fallback path and shutdown join.
-- Alpha 0.27 CI and physical-console launcher checks are pending.
+- Alpha 0.27 GitHub Actions run #561: **PASS**. Host tests and PS3 ELF/SELF/PKG builds passed. Physical-console Apollo / Artemis launch checks remain pending.
 
 ## Alpha 0.26 — Companion Tools launch integration
 
@@ -36,9 +36,9 @@
 
 ## Latest code/package CI validation
 
-GitHub Actions run **#559** completed successfully on 2026-11-21.
+GitHub Actions run **#562** completed successfully on 2026-11-21.
 
-- Host-side regression tests: **PASS**
+- Host-side regression tests, including the new PS2 IMG/MDF scanner and webMAN route tests: **PASS**
 - Arabic bitmap preview render: **PASS**
 - Staircase material/motion preview render: **PASS**
 - PS3 ELF link: **PASS**
@@ -48,23 +48,24 @@ GitHub Actions run **#559** completed successfully on 2026-11-21.
 - Embedded XMB artwork byte-for-byte verification (`ICON0.PNG`, `PIC0.PNG`, `PIC1.PNG`): **PASS**
 - Embedded Apollo Save logo, Music 1 source and Music 2 theme: **PASS**
 
-Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/44958963629
+Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/44963475576
 
 ## Build artifact
 
-Artifact name: `PS3-SCALE-Alpha-0.26-build-with-embedded-theme`
+Artifact name: `PS3-SCALE-Alpha-0.28-build-with-embedded-theme`
 
 Contains:
 - `ps3scale.elf` — 3,504,173 bytes
-- `ps3scale.self` — 779,184 bytes
-- `ps3scale.pkg` — 11,402,224 bytes
-- `ps3scale.gnpdrm.pkg` — 11,402,224 bytes
+- `ps3scale.self` — 779,280 bytes
+- `ps3scale.pkg` — 11,402,352 bytes
+- `ps3scale.gnpdrm.pkg` — 11,402,352 bytes
 
 SHA-256:
-- ELF: `9fa82ea4f288e4ba077588800f86c3854130a9178bd558f6666be7d0a995668a`
-- SELF: `e211b7920a6c91e59a373f4b946cd9b519f04f84b6cd59c6eda0b04f6f2bd6ec`
-- Standard PKG: `6cea7f4b6111ebb12a31b7d9d11fb6c9aa678b8cefe22b276040e69e5883d2b5`
-- GNPDRM PKG: `25ea53a626845a42ff05cdbb4188d3db3f637b6f9739e2902a2accdb20334c6d`
+- ELF: `ea70b72be8e36171a526bf6331a38a920b742b9a0942f44e5ec18a605a40a128`
+- SELF: `bb4c38d211b6800554f7855803dcbfa31bc1a7ecf1e0d8d178f506e7b0527353`
+- Standard PKG: `18a35d68a448afc4cf656e8c87537d21aae168ce8c108dede39db4d9857bf34e`
+- GNPDRM PKG: `66b6c976afd36e833952f1974b6c2909acdc0d14a7cbabb80e9481b7d5a76cac`
+- Build ZIP: `a8cf24472c8adbf99f5546f911f957360f506fac7361d661535565f980e6a1eb`
 
 ## Alpha 0.23 changes in this continuation
 
