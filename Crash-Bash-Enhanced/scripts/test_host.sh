@@ -4,8 +4,8 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 tmp="${TMPDIR:-/tmp}/cb-protocol-test-$$"
 tmp_json="${TMPDIR:-/tmp}/cb-json-test-$$"
 tmp_archive="${TMPDIR:-/tmp}/cb-archive-test-$$"
-tmp_netcode="${TMPDIR:-/tmp}/cb-netcode-test-$"
-tmp_peer="${TMPDIR:-/tmp}/cb-peer-test-$"
+tmp_netcode="${TMPDIR:-/tmp}/cb-netcode-test-$$"
+tmp_peer="${TMPDIR:-/tmp}/cb-peer-test-$$"
 trap 'rm -f "$tmp" "$tmp_json" "$tmp_archive" "$tmp_netcode" "$tmp_peer" "$ROOT/cb_archive_test.dat"' EXIT
 
 cc -std=c11 -Wall -Wextra -Werror "$ROOT/tests/test_protocol.c" -o "$tmp"
