@@ -28,25 +28,38 @@ function selectedGame(files) {
 
 async function buildExternalFiles(primary, files) {
   const external = {};
-  for (const file of files) {
-    if (file === primary) continue;
-    external[file.name] = file;
-  }
-
-  if (extension(primary) !== "cue") return external;
-
-  const cue = await primary.text();
-  const references = [...cue.matchAll(/^\s*FILE\s+(?:"([^"]+)"|(\S+))\s+\w+/gim)]
-    .map(match => match[1] || match[2]);
-
-  for (const reference of references) {
-    const match = files.find(file => file.name.toLowerCase() === reference.split(/[\\/]/).pop().toLowerCase());
-    if (!match) {
-      throw new Error(`The CUE file references "${reference}", but that file was not selected.`);
+  const blobUrls = [];
+  const fileUrls = new Map();
+  const makeUrl = file => {
+    if (!fileUrls.has(file)) {
+      const url = URL.createObjectURL(file);
+      fileUrls.set(file, url);
+      blobUrls.push(url);
     }
-    external[reference] = match;
+    return fileUrls.get(file);
+  };
+
+  for (const file of files) {
+    if (file !== primary) external[file.name] = makeUrl(file);
   }
-  return external;
+
+  if (extension(primary) === "cue") {
+    const cue = await primary.text();
+    const references = [...cue.matchAll(/^\s*FILE\s+(?:"([^"]+)"|(\S+))\s+\w+/gim)]
+      .map(match => match[1] || match[2]);
+
+    for (const reference of references) {
+      const fileName = reference.split(/[\\/]/).pop().toLowerCase();
+      const match = files.find(file => file.name.toLowerCase() === fileName);
+      if (!match) {
+        blobUrls.forEach(URL.revokeObjectURL);
+        throw new Error(`The CUE file references "${reference}", but that file was not selected.`);
+      }
+      external[reference] = makeUrl(match);
+    }
+  }
+
+  return { external, blobUrls };
 }
 
 function applyPadState(slot, buttons, sticks = [128, 128, 128, 128]) {
@@ -100,12 +113,13 @@ function exposeBrowserInputBridge() {
   return true;
 }
 
-function startEmulator(primary, files, bios, externalFiles) {
+function startEmulator(primary, bios, externalFiles, blobUrls) {
   if (loaderScript) loaderScript.remove();
   emulatorStarted = false;
   gameWrap.hidden = false;
   document.querySelector("#game").replaceChildren();
 
+  window.CBASH_EMULATOR_READY = false;
   window.EJS_player = "#game";
   window.EJS_gameName = "Crash Bash";
   window.EJS_gameUrl = primary;
@@ -120,18 +134,36 @@ function startEmulator(primary, files, bios, externalFiles) {
   window.EJS_onGameStart = () => {
     emulatorStarted = true;
     setStatus("Local game started. Browser-to-PS3 input synchronization is the next integration stage.");
-    exposeBrowserInputBridge();
+    const began = Date.now();
+    const expose = () => {
+      if (exposeBrowserInputBridge()) {
+        blobUrls.forEach(URL.revokeObjectURL);
+        return;
+      }
+      if (Date.now() - began < 10000) {
+        setTimeout(expose, 100);
+      } else {
+        setStatus("Game started, but the browser input bridge did not initialize.", true);
+      }
+    };
+    expose();
   };
   window.EJS_onExit = () => {
     emulatorStarted = false;
     window.CBASH_EMULATOR_READY = false;
+    startButton.disabled = false;
+    blobUrls.forEach(URL.revokeObjectURL);
     setStatus("Emulator closed. Your disc image and BIOS remain on this device.");
   };
 
   loaderScript = document.createElement("script");
   loaderScript.src = DATA_PATH + "loader.js";
   loaderScript.async = true;
-  loaderScript.onerror = () => setStatus("Could not load the EmulatorJS runtime CDN. Check the internet connection and try again.", true);
+  loaderScript.onerror = () => {
+    startButton.disabled = false;
+    blobUrls.forEach(URL.revokeObjectURL);
+    setStatus("Could not load the EmulatorJS runtime CDN. Check the internet connection and try again.", true);
+  };
   document.body.appendChild(loaderScript);
   setStatus("Loading the PlayStation runtime and your local disc image…");
 }
@@ -161,13 +193,12 @@ startButton.addEventListener("click", async () => {
 
   startButton.disabled = true;
   try {
-    const externalFiles = await buildExternalFiles(primary, files);
+    const { external, blobUrls } = await buildExternalFiles(primary, files);
     const bios = biosInput.files?.[0] || "";
-    startEmulator(primary, files, bios, externalFiles);
+    startEmulator(primary, bios, external, blobUrls);
   } catch (error) {
-    setStatus(error.message || "Could not prepare the selected disc files.", true);
-  } finally {
     startButton.disabled = false;
+    setStatus(error.message || "Could not prepare the selected disc files.", true);
   }
 });
 
