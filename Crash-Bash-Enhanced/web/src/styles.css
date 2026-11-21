@@ -134,6 +134,17 @@ input::placeholder { color: #606168; }
 .error-banner { display: flex; align-items: center; gap: 10px; margin-top: 15px; padding: 12px 14px; border: 1px solid rgba(239,75,66,.3); border-radius: 7px; color: #ffaaa2; background: rgba(239,75,66,.08); font-size: 10px; }
 .error-banner > span { width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; background: rgba(239,75,66,.18); font-weight: 900; }
 .error-banner button { margin-left: auto; border: 0; background: transparent; color: #ffaaa2; font-size: 18px; }
+.public-rooms-panel { margin-top: 16px; padding: 24px 27px; border: 1px solid var(--line); border-radius: 13px; background: linear-gradient(145deg, #1b1d22, #17191d); }
+.public-rooms-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 5px; }
+.public-rooms-heading .eyebrow { margin-bottom: 5px; }
+.public-rooms-heading h3 { margin: 0; font: 800 24px "Barlow Condensed", sans-serif; letter-spacing: .04em; }
+.public-room-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 0; border-top: 1px solid var(--line); }
+.public-room-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.public-room-main strong { overflow: hidden; color: var(--text); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; letter-spacing: .08em; }
+.public-room-main small { color: #85858b; font-size: 8px; font-weight: 800; letter-spacing: .1em; }
+.public-room-actions { display: flex; align-items: center; gap: 12px; }
+.public-room-code { color: var(--yellow); font: 800 18px "Barlow Condensed", sans-serif; letter-spacing: .12em; }
+.public-rooms-empty { margin: 13px 0 0; color: #898a91; font-size: 10px; line-height: 1.7; }
 .how-section { padding-top: 8px; }
 .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .step-card { min-height: 190px; position: relative; padding: 22px; border: 1px solid var(--line); border-radius: 10px; background: #17191d; overflow: hidden; }
@@ -167,6 +178,7 @@ input::placeholder { color: #606168; }
   .play-section, .how-section { padding: 54px 6% 35px; }.section-heading { align-items: center; }h2 { font-size: 35px; }
   .play-grid { grid-template-columns: 1fr; }.join-panel, .lobby-panel { min-height: auto; padding: 22px; }
   .empty-room { min-height: 260px; }.steps-grid { grid-template-columns: 1fr; }.step-card { min-height: 155px; }
+  .public-rooms-panel { padding: 20px; }.public-room-item { align-items: flex-start; flex-direction: column; }.public-room-actions { width: 100%; justify-content: space-between; }
   .rank-section { margin: 0 6% 48px; padding: 22px; align-items: stretch; flex-direction: column; }.rank-placeholder { min-width: 0; }
   .footer { padding: 18px 6%; flex-wrap: wrap; gap: 10px; }.footer p { order: 3; width: 100%; }
 }
