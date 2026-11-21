@@ -385,7 +385,6 @@ leaveButton.addEventListener("click", () => {
 window.addEventListener("beforeunload", () => {
   if (lockstepClient) lockstepClient.stop();
   if (emulatorStarted) {
-    try { gameManager()?.gameManager?.saveSaveFiles?.(); } catch {}
     try { gameManager()?.functions?.saveSaveFiles?.(); } catch {}
   }
   releaseLocalObjectUrls();
