@@ -3,11 +3,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-static void gh_copy(char *destination, const char *source, size_t length) {
-    size_t i;
-    for (i = 0; i < length; ++i) destination[i] = source[i];
-}
-
 static void gh_zero(void *destination, size_t length) {
     uint8_t *bytes = (uint8_t *)destination;
     size_t i;
@@ -227,7 +222,7 @@ int ghc_udp_stun_receive_response(
         &source_port
     );
     if (result != 0) return result;
-    if (source_port != stun_port || gh_parse_ipv4(source_ipv4, &(uint32_t){0}) != 0) return -2;
+    if (source_port != stun_port) return -2;
     {
         uint32_t expected_address;
         uint32_t source_address;
