@@ -32,6 +32,10 @@ The public PS3 update catalogue lists Ghosts Title Update 1.16 for the US and EU
 - Therefore, compiling a modified GSC file is not sufficient to install it in the retail game. Do not assume the old extract-edit-repack patch_mp.ff workflow works.
 - The current likely path is carefully verified EBOOT/PRX runtime hooks or another proven runtime script-loading mechanism.
 
+### IW6 split-screen primitives found
+
+A public IW6 Multiplayer/Extinction GSC dump contains mode-level `isSplitScreen()`, per-player `isSplitscreenPlayer()`, and primary-player `isSplitscreenPlayerPrimary()` checks. Extinction also uses `level.players` for player lifecycle and includes a native two-player last-stand/revive flow. This narrows the target from creating an arbitrary second actor to locating the engine-side implementations and local-client setup behind those builtins. The source dump's exact platform/TU is not pinned and it has no Campaign script tree, so these findings are leads, not PS3 Campaign proof. See `docs/iw6-native-splitscreen-reference.md`.
+
 ### PS3 executable identity and OPD analysis groundwork
 
 A read-only inspector now accepts a user-supplied decrypted ELF64 big-endian PPU image. It records SHA-256, ELF/load-segment metadata, the entry descriptor, the PS3 PPU OPD table and TOC, and whether the public TU 1.16 candidate addresses map into executable segments. It does not decrypt SELF, infer an image base, patch the binary or prove a function is safe. See `docs/ps3-elf-analysis.md`.
