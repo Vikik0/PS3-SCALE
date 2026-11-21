@@ -1,4 +1,5 @@
 #include <ppu-asm.h>
+#include <stdint.h>
 #include <ppu-types.h>
 #include <sys/thread.h>
 
@@ -12,7 +13,7 @@ s32 sysThreadCreate(sys_ppu_thread_t *threadid, void (*entry)(void *),
                     void *arg, s32 priority, u64 stacksize, u64 flags,
                     char *threadname)
 {
-    return sysThreadCreateEx(threadid, (opd32 *)__get_opd32(entry), arg,
+    return sysThreadCreateEx(threadid, (opd32 *)(uintptr_t)__get_opd32(entry), arg,
                              priority, stacksize, flags, threadname);
 }
 
