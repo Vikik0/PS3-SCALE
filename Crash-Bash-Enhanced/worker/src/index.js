@@ -3,6 +3,32 @@ const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
 const ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const MAX_NAME_LENGTH = 16;
 
+const RELAY_PROTOCOL = "cbash-v1";
+const RELAY_AUTH_PREFIX = "cbash-auth.";
+const RELAY_MAGIC = new Uint8Array([0x43, 0x42, 0x52, 0x31]); // CBR1
+const RELAY_MAX_PAYLOAD = 1200;
+const RELAY_MAX_MESSAGES_PER_SECOND = 5;
+
+function messageBytes(message) {
+  if (message instanceof ArrayBuffer) return new Uint8Array(message);
+  if (ArrayBuffer.isView(message)) {
+    return new Uint8Array(message.buffer, message.byteOffset, message.byteLength);
+  }
+  return null;
+}
+
+function makeRelayEnvelope(sessionId, payload) {
+  const sender = new Uint8Array(16);
+  for (let i = 0; i < 16; i++) sender[i] = Number.parseInt(sessionId.slice(i * 2, i * 2 + 2), 16);
+  const envelope = new Uint8Array(22 + payload.byteLength);
+  envelope.set(RELAY_MAGIC, 0);
+  envelope.set(sender, 4);
+  envelope[20] = (payload.byteLength >>> 8) & 0xff;
+  envelope[21] = payload.byteLength & 0xff;
+  envelope.set(payload, 22);
+  return envelope;
+}
+
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
@@ -109,8 +135,15 @@ export class CrashBashLobby {
 
   async authenticate(request, state) {
     const header = request.headers.get("Authorization") || "";
-    if (!header.startsWith("Bearer ")) return null;
-    const token = header.slice(7).trim();
+    const protocols = (request.headers.get("Sec-WebSocket-Protocol") || "")
+      .split(",")
+      .map(value => value.trim());
+    const authProtocol = protocols.find(value => value.startsWith(RELAY_AUTH_PREFIX));
+    const token = header.startsWith("Bearer ")
+      ? header.slice(7).trim()
+      : authProtocol
+        ? authProtocol.slice(RELAY_AUTH_PREFIX.length)
+        : "";
     if (!/^[0-9a-f]{64}$/i.test(token)) return null;
     const session = state.sessions[await sha256(token)];
     if (!session || session.expiresAt <= Date.now()) return null;
@@ -125,6 +158,76 @@ export class CrashBashLobby {
     return player ? { room, player } : null;
   }
 
+  closeRoomSockets(roomCode, reason = "ROOM_RESET") {
+    if (typeof this.ctx.getWebSockets !== "function") return;
+    for (const socket of this.ctx.getWebSockets()) {
+      try {
+        const attachment = socket.deserializeAttachment();
+        if (attachment?.roomCode === roomCode) socket.close(1008, reason);
+      } catch {
+        // A socket may already be closing; it must not block room cleanup.
+      }
+    }
+  }
+
+  webSocketMessage(socket, message) {
+    let attachment;
+    try {
+      attachment = socket.deserializeAttachment();
+    } catch {
+      socket.close(1008, "INVALID_SESSION");
+      return;
+    }
+
+    if (!attachment || !/^[A-Z0-9]{6}$/.test(attachment.roomCode || "") ||
+        !/^[0-9a-f]{32}$/i.test(attachment.sessionId || "")) {
+      socket.close(1008, "INVALID_SESSION");
+      return;
+    }
+
+    const payload = messageBytes(message);
+    if (!payload) {
+      socket.close(1003, "BINARY_PACKETS_REQUIRED");
+      return;
+    }
+    if (payload.byteLength < 1 || payload.byteLength > RELAY_MAX_PAYLOAD) {
+      socket.close(1009, "PACKET_SIZE_INVALID");
+      return;
+    }
+
+    const now = Date.now();
+    if (!Number.isFinite(attachment.rateWindowStartedAt) ||
+        now - attachment.rateWindowStartedAt >= 1000 ||
+        now < attachment.rateWindowStartedAt) {
+      attachment.rateWindowStartedAt = now;
+      attachment.rateCount = 0;
+    }
+    if (attachment.rateCount >= RELAY_MAX_MESSAGES_PER_SECOND) {
+      socket.close(1008, "RATE_LIMITED");
+      return;
+    }
+    attachment.rateCount += 1;
+    socket.serializeAttachment(attachment);
+
+    const envelope = makeRelayEnvelope(attachment.sessionId, payload);
+    if (typeof this.ctx.getWebSockets !== "function") return;
+    for (const peer of this.ctx.getWebSockets()) {
+      if (peer === socket) continue;
+      try {
+        const peerAttachment = peer.deserializeAttachment();
+        if (peerAttachment?.roomCode === attachment.roomCode &&
+            peerAttachment?.sessionId !== attachment.sessionId) {
+          peer.send(envelope.buffer.slice(0));
+        }
+      } catch {
+        // Ignore peers that have already disconnected.
+      }
+    }
+  }
+
+  webSocketClose() {}
+  webSocketError() {}
+
   removePlayer(state, session) {
     const current = this.roomForSession(state, session);
     if (!current) {
@@ -132,6 +235,7 @@ export class CrashBashLobby {
       return;
     }
     const { room, player } = current;
+    this.closeRoomSockets(room.code, "PLAYER_LEFT");
     room.players = room.players.filter(p => p.sessionId !== session.sessionId);
     session.roomCode = null;
 
@@ -198,7 +302,8 @@ export class CrashBashLobby {
           auth: "guest",
           psn_required: false,
           max_players: 4,
-          transport: "matchmaking-only"
+          transport: "websocket-room-relay-prototype",
+          gameplay_sync: "client-integration-pending"
         });
       }
 
@@ -217,7 +322,7 @@ export class CrashBashLobby {
             { serial: "SCPS-10140", region: "NTSC-J" },
             { serial: "SCPS-91319", region: "NTSC-J PSone Books" }
           ],
-          network_gameplay: "direct UDP lockstep prototype; end-to-end hardware test pending"
+          network_gameplay: "room WebSocket relay prototype; PS3 and browser game transports are not integrated yet"
         });
       }
 
@@ -249,6 +354,45 @@ export class CrashBashLobby {
 
       const session = await this.authenticate(request, state);
       if (!session) throw fail(401, "AUTH_REQUIRED", "Create a Guest Mode session first.");
+
+      const transportRoute = path.match(/^\\/v1\\/rooms\\/([A-Z0-9]{6})\\/transport$/);
+      if (transportRoute && method === "GET") {
+        if ((request.headers.get("Upgrade") || "").toLowerCase() !== "websocket") {
+          throw fail(426, "WEBSOCKET_REQUIRED", "This endpoint requires a WebSocket upgrade.");
+        }
+        const protocols = (request.headers.get("Sec-WebSocket-Protocol") || "")
+          .split(",")
+          .map(value => value.trim());
+        if (!protocols.includes(RELAY_PROTOCOL)) {
+          throw fail(400, "RELAY_PROTOCOL_REQUIRED", "Request the cbash-v1 WebSocket subprotocol.");
+        }
+
+        const code = transportRoute[1];
+        const room = state.rooms[code];
+        if (!room || session.roomCode !== code ||
+            !room.players.some(player => player.sessionId === session.sessionId)) {
+          throw fail(403, "NOT_IN_ROOM", "Join this room before opening its game transport.");
+        }
+        if (room.status !== "running") {
+          throw fail(409, "MATCH_NOT_STARTED", "The host must start the match before game transport opens.");
+        }
+
+        const pair = new WebSocketPair();
+        const client = pair[0];
+        const server = pair[1];
+        server.serializeAttachment({
+          roomCode: code,
+          sessionId: session.sessionId,
+          rateWindowStartedAt: 0,
+          rateCount: 0
+        });
+        this.ctx.acceptWebSocket(server);
+        return new Response(null, {
+          status: 101,
+          webSocket: client,
+          headers: { "Sec-WebSocket-Protocol": RELAY_PROTOCOL }
+        });
+      }
 
       if (method === "GET" && path === "/v1/rooms/current") {
         const current = this.roomForSession(state, session);
