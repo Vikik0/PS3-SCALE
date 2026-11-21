@@ -106,3 +106,7 @@ int ghc_mission_decode_snapshot(
     size_t input_length,
     GhcMissionView *view
 );
+
+
+// Returns 1 only when incoming_revision is newer under uint32 wraparound rules.
+int ghc_mission_revision_is_newer(uint32_t incoming_revision, uint32_t current_revision);
