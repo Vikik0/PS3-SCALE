@@ -4,6 +4,36 @@
 #include <stdint.h>
 #include <string.h>
 
+
+static void test_direct_peer_key_direction(void) {
+    uint8_t sender_id[GHC_RELAY_ID_SIZE];
+    uint8_t sender_key[GHC_RELAY_KEY_SIZE];
+    uint8_t receiver_key[GHC_RELAY_KEY_SIZE];
+    uint8_t packet[GHC_MAX_DATAGRAM];
+    static const uint8_t payload[] = {0x10, 0x20, 0x30, 0x40};
+    size_t packet_length = 0;
+    GhcClientPacket decoded;
+    size_t i;
+
+    for (i = 0; i < sizeof(sender_id); ++i) sender_id[i] = (uint8_t)(0xA0u + i);
+    for (i = 0; i < sizeof(sender_key); ++i) sender_key[i] = (uint8_t)(0x10u + i);
+    for (i = 0; i < sizeof(receiver_key); ++i) receiver_key[i] = (uint8_t)(0x80u + i);
+
+    /* Direct P2P sender authenticates with the recipient's relay key.
+       The recipient verifies with its own key, while the sender ID remains
+       the sender's relay ID. This mirrors relay-side packet re-signing. */
+    assert(ghc_encode_client_packet(
+        sender_id, receiver_key, 7u, payload, sizeof(payload),
+        packet, sizeof(packet), &packet_length
+    ) == 0);
+    assert(ghc_decode_client_packet(receiver_key, packet, packet_length, &decoded) == 0);
+    assert(memcmp(decoded.relay_id, sender_id, sizeof(sender_id)) == 0);
+    assert(decoded.sequence == 7u);
+    assert(decoded.payload_length == sizeof(payload));
+    assert(memcmp(decoded.payload, payload, sizeof(payload)) == 0);
+    assert(ghc_decode_client_packet(sender_key, packet, packet_length, &decoded) != 0);
+}
+
 int main(void) {
     uint8_t relay_id[GHC_RELAY_ID_SIZE];
     uint8_t relay_key[GHC_RELAY_KEY_SIZE];
@@ -79,5 +109,6 @@ int main(void) {
         relay_key, tampered_server_packet, sizeof(tampered_server_packet), &decoded
     ) != 0);
 
+    test_direct_peer_key_direction();
     return 0;
 }
