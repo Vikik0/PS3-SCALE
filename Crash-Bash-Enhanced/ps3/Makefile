@@ -32,7 +32,7 @@ $(BUILD)/module.o: module.c input_hook.h net_adapter.h | $(BUILD)
 $(BUILD)/input_hook.o: input_hook.c input_hook.h net_adapter.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/net_adapter.o: net_adapter.c net_adapter.h input_hook.h compat/SDL3/SDL.h compat/ifaddrs.h | $(BUILD)
+$(BUILD)/net_adapter.o: net_adapter.c net_adapter.h input_hook.h relay_client.h compat/SDL3/SDL.h compat/ifaddrs.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -Wno-error -I../upstream/crash_bash_decomp/port/platform -c $< -o $@
 
 $(BUILD)/netdb_compat.o: netdb_compat.c compat/netdb.h | $(BUILD)
