@@ -25,12 +25,17 @@ const server = http.createServer((request, response) => {
       return;
     }
     const hostId = "ffeeddccbbaa99887766554433221100";
+    const roomCode = isHost ? "HOST42" : "ABC123";
+    const hostPlayer = { player_id: hostId, name: "PS3 Host", slot: 1, ready: true, is_host: true };
+    const guestPlayer = { player_id: SESSION_ID, name: "PS3 Player", slot: 2, ready: true, is_host: false };
+    const players = isHost ? [hostPlayer] : [hostPlayer, guestPlayer];
     const payload = JSON.stringify({
       ticket: TICKET,
       session_id: isHost ? hostId : SESSION_ID,
       host_session_id: hostId,
-      room_code: isHost ? "HOST42" : undefined,
-      psn_required: false
+      room_code: isHost ? roomCode : undefined,
+      psn_required: false,
+      room: { room_code: roomCode, players }
     });
     response.writeHead(201, {
       "Content-Type": "application/json",
@@ -74,6 +79,19 @@ server.on("upgrade", (request, socket) => {
     "Sec-WebSocket-Accept: " + accept + "\r\n" +
     "Sec-WebSocket-Protocol: cbash-v1\r\n\r\n"
   );
+
+  const hostId = "ffeeddccbbaa99887766554433221100";
+  const roomCode = request.url.includes("HOST42") ? "HOST42" : "ABC123";
+  sendFrame(socket, 1, Buffer.from(JSON.stringify({
+    type: "room_update",
+    room: {
+      room_code: roomCode,
+      players: [
+        { player_id: hostId, name: "PS3 Host", slot: 1, ready: true, is_host: true },
+        { player_id: SESSION_ID, name: "PS3 Player", slot: 2, ready: true, is_host: false }
+      ]
+    }
+  })));
 
   let buffered = Buffer.alloc(0);
   socket.on("data", chunk => {
