@@ -230,7 +230,6 @@ static ssize_t cb_relay_recvfrom_shim(int fd, void *buffer, size_t length,
     }
     if (!buffer || length < relay_rx_length) {
         relay_rx_valid = 0;
-        errno = EMSGSIZE;
         return -1;
     }
 
