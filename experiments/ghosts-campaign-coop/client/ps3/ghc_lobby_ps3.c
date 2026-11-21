@@ -39,7 +39,7 @@ static int gh_load_module(uint16_t module_id, uint8_t *owned) {
         *owned = 1;
         return 0;
     }
-    if (result == CELL_SYSMODULE_ERROR_DUPLICATED) {
+    if (result == (int)CELL_SYSMODULE_ERROR_DUPLICATED) {
         *owned = 0;
         return 0;
     }
