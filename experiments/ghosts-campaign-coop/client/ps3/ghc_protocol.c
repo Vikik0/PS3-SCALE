@@ -327,3 +327,17 @@ int ghc_replay_window_accept(GhcReplayWindow *window, uint32_t sequence) {
     window->bitmap |= bit;
     return 1;
 }
+
+
+int ghc_decode_server_packet_checked(
+    const uint8_t relay_key[GHC_RELAY_KEY_SIZE],
+    const uint8_t *packet,
+    size_t packet_length,
+    GhcReplayWindow *window,
+    GhcServerPacket *decoded
+) {
+    if (!window || !decoded) return -1;
+    if (ghc_decode_server_packet(relay_key, packet, packet_length, decoded) != 0) return -1;
+    if (!ghc_replay_window_accept(window, decoded->sequence)) return -2;
+    return 0;
+}
