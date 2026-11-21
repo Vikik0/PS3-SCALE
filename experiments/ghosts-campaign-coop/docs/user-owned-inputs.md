@@ -91,3 +91,42 @@ If the game is still open inside 7-Zip, extract the files to a normal folder fir
 5. Inspect the exact disc and TU EBOOTs separately. No hook is approved from a guessed offset.
 
 A passing synthetic CI test is not a retail-game validation. The Campaign second-player path remains unproven until the exact user-owned files and, later, a two-controller runtime capture are analyzed.
+
+## Second pass — installed TU 1.16 confirmed (2026-11-22)
+
+The installed-update metadata file was received and parsed from the user's PS3:
+
+| Field | Value |
+|---|---|
+| TITLE | Call of Duty® Ghosts |
+| TITLE_ID | BLUS31270 |
+| APP_VER | 01.16 |
+| VERSION | 01.00 |
+| CATEGORY | GD |
+| PS3_SYSTEM_VER | 04.4000 |
+| NP_COMMUNICATION_ID | NPWR04874_00 |
+
+This is the installed game-data/update SFO, distinct from the previously supplied disc SFO (CATEGORY=DG, APP_VER=01.00). The update identity is now confirmed by the installed update's own metadata.
+
+### Matching installed-update SELF files received
+
+The following files were compared against the earlier disc-build samples. Only metadata and hashes are recorded; retail game binaries are not committed.
+
+| File | TU file size | Disc file size | TU ELF entry | Disc ELF entry |
+|---|---:|---:|---:|---:|
+| EBOOT.BIN | 41,488 B | 73,704 B | 0x20080 | 0x20080 |
+| default.self | 4,291,568 B | 8,072,104 B | 0x7E9508 | 0x7A8F28 |
+| default_mp.self | 6,265,632 B | 9,195,256 B | 0xA75E38 | 0x8B9738 |
+
+All three TU files are SELF v2 / key revision 28 / ELF64 big-endian PowerPC64 with 8 program headers. Their SELF type is 8, while the earlier disc samples are type 4. The executable segments 0–4 remain encrypted in the uploaded containers. This is a metadata/identity confirmation, not a decrypted code analysis.
+
+### FastFile inputs currently on hand
+
+- common.ff SHA-256 is 5fc31ea915894566896cc5081d3688675ecde341d42e8c38b19ad37434ca4bcb, matching the previously analysed base sample.
+- clockwork.ff SHA-256 is a2ac70c7349047f2eded5f45a5e46ff8278689839fe1655106263520fe639783, matching the previously analysed Campaign mission sample.
+
+No separate TU-specific Campaign FastFile has been verified in the current inputs. Do not treat the base FastFiles as TU 1.16 binaries.
+
+### Current blocker
+
+The TU 1.16 executable identity is confirmed, but the main Campaign code in default.self is still encrypted in the supplied SELF container. The next analysis input is a decrypted ELF dump of the TU 1.16 default.self; a decrypted default_mp.self dump is also useful as the reference for the game's already-supported local split-screen path. Do not send account credentials, IDPS/PSID, RAP/RIF files, or a full game image.
