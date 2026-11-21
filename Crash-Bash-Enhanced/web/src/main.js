@@ -73,7 +73,7 @@ function roomCard() {
         <div class="empty-emblem"><span>?</span></div>
         <p class="eyebrow">YOUR PARTY</p>
         <h3>No room yet</h3>
-        <p>Create a public or private room, or join with a friend's code. Up to four players can join.</p>
+        <p>Join a room created by the PS3 host. Enter the six-character code or choose an open public room.</p>
         <div class="empty-lines"><i></i><i></i><i></i><i></i></div>
       </div>`;
   }
@@ -191,16 +191,13 @@ function render() {
           <div class="section-heading"><div><p class="eyebrow">READY WHEN YOU ARE</p><h2>JUMP INTO THE <em>LOBBY</em></h2></div><span class="section-index">01 / PLAY</span></div>
           <div class="play-grid">
             <div class="join-panel">
-              <div class="panel-top"><span class="panel-label">01 — START A PARTY</span><span class="panel-symbol">＋</span></div>
-              <h3>MAKE A ROOM</h3>
-              <p>Create a public lobby for matchmaking or a private room for friends.</p>
+              <div class="panel-top"><span class="panel-label">01 — JOIN A PS3 HOST</span><span class="panel-symbol">↗</span></div>
+              <h3>JOIN THE MATCH</h3>
+              <p>The PS3 player creates the room from the in-game menu. Browser players join with the room code.</p>
               <label for="display-name">PLAYER NAME</label>
               <input id="display-name" maxlength="16" placeholder="Enter your name" value="${escapeHtml(state.session?.display_name || "")}" />
-              <label for="player-limit">PLAYER SLOTS</label>
-              <select id="player-limit"><option value="4">4 PLAYERS — FULL PARTY</option><option value="3">3 PLAYERS</option><option value="2">2 PLAYERS — DUEL</option></select>
-              <button class="button button-primary full-button" data-action="create" ${!connected || state.loading || state.room ? "disabled" : ""}>CREATE PRIVATE ROOM <span>→</span></button>
-              <button class="button button-outline full-button" data-action="create-public" ${!connected || state.loading || state.room ? "disabled" : ""}>CREATE PUBLIC ROOM <span>↗</span></button>
-              <div class="panel-divider"><span>OR JOIN A FRIEND</span></div>
+              <div class="notice-panel">PS3 HOST REQUIRED · Create the room on PS3, then share its code here.</div>
+              <div class="panel-divider"><span>JOIN WITH A CODE</span></div>
               <label for="room-code-input">ROOM CODE</label>
               <div class="join-code-row"><input id="room-code-input" maxlength="6" placeholder="ABC123" autocomplete="off" /><button class="button button-outline" data-action="join" ${!connected || state.loading ? "disabled" : ""}>JOIN</button></div>
             </div>
@@ -217,9 +214,9 @@ function render() {
         <section class="how-section" id="how">
           <div class="section-heading"><div><p class="eyebrow">THREE STEPS. ZERO FUSS.</p><h2>HOW IT <em>WORKS</em></h2></div><span class="section-index">02 / GUIDE</span></div>
           <div class="steps-grid">
-            <article class="step-card"><span class="step-number">01</span><div class="step-icon">◉</div><h3>CREATE OR JOIN</h3><p>Create a public or private room, browse open public rooms, or join a friend with a six-character code.</p></article>
-            <article class="step-card"><span class="step-number">02</span><div class="step-icon">♧</div><h3>GET YOUR CREW READY</h3><p>Wait for up to three friends to join. Everyone marks ready before the host starts.</p></article>
-            <article class="step-card"><span class="step-number">03</span><div class="step-icon">✦</div><h3>LET THE PARTY BEGIN</h3><p>The room relay prototype is in place. Browser and PS3 gameplay synchronization is still under development.</p></article>
+            <article class="step-card"><span class="step-number">01</span><div class="step-icon">◉</div><h3>PS3 CREATES THE ROOM</h3><p>The PS3 host opens Crash Bash Online in-game and shares the six-character room code.</p></article>
+            <article class="step-card"><span class="step-number">02</span><div class="step-icon">♧</div><h3>BROWSER JOINS</h3><p>Browser players enter the code, load the same disc revision, and connect to the PS3 host.</p></article>
+            <article class="step-card"><span class="step-number">03</span><div class="step-icon">✦</div><h3>SYNCED GAMEPLAY BETA</h3><p>The CBN1 browser adapter is integrated in source. A live PS3/browser match still needs hardware verification.</p></article>
           </div>
         </section>
 
