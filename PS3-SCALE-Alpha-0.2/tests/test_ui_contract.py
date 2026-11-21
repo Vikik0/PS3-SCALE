@@ -290,7 +290,7 @@ assert "TINY3D_CLEAR_ZBUFFER" not in draw_ui_impl
 library_ui = section("static void draw_library_filter_item(", "static void draw_settings(void)")
 assert "draw_rounded_rect(x, y, w, 24.0f, 7.0f" in library_ui
 assert "draw_rounded_outline(x - 2.0f, y - 2.0f, w + 4.0f" in library_ui
-assert "draw_rounded_rect(x + 107.0f, y + 82.0f" in library_ui
+assert "draw_rounded_rect(card_x + 107.0f * scale" in library_ui
 assert "game_is_ps3(game) ? \"PS3\" : \"PS2\"" in library_ui
 assert "PAGE %u / %u" in library_ui
 assert "PS3SCALE_SCAN_GRID_COUNT" in library_ui
