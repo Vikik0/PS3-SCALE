@@ -113,6 +113,7 @@ jobs:
           cp "$src/tests/sdk/lv2syscall-fixture/legacy-psl1ght/ppu-lv2.h" "$src/sdk/include/ppu-lv2.h"
           cp Crash-Bash-Enhanced/ps3/compat/lv2/sysfs.h "$src/sdk/include/lv2/sysfs.h"
           cp Crash-Bash-Enhanced/ps3/compat/lv2/spinlock.h "$src/sdk/include/lv2/spinlock.h"
+          cp Crash-Bash-Enhanced/ps3/compat/lv2/thread.h "$src/sdk/include/lv2/thread.h"
           cp Crash-Bash-Enhanced/ps3/compat/sys/lv2errno.h "$src/sdk/include/sys/lv2errno.h"
           cp Crash-Bash-Enhanced/ps3/compat/sys/systime.h "$src/sdk/include/sys/systime.h"
           python3 - "$src/scripts/build-runtime-lv2.sh" <<'PY'
@@ -125,6 +126,7 @@ jobs:
               'mkdir -p "$PS3DK/ppu/include/lv2" "$PS3DK/ppu/include/sys"',
               'cp "$PS3_TOOLCHAIN_ROOT/sdk/include/lv2/sysfs.h" "$PS3DK/ppu/include/lv2/sysfs.h"',
               'cp "$PS3_TOOLCHAIN_ROOT/sdk/include/lv2/spinlock.h" "$PS3DK/ppu/include/lv2/spinlock.h"',
+              'cp "$PS3_TOOLCHAIN_ROOT/sdk/include/lv2/thread.h" "$PS3DK/ppu/include/lv2/thread.h"',
               'cp "$PS3_TOOLCHAIN_ROOT/sdk/include/lv2/process.h" "$PS3DK/ppu/include/lv2/process.h"',
               'cp "$PS3_TOOLCHAIN_ROOT/sdk/include/lv2/syscalls.h" "$PS3DK/ppu/include/lv2/syscalls.h"',
               'cp "$PS3_TOOLCHAIN_ROOT/sdk/include/lv2/systime.h" "$PS3DK/ppu/include/lv2/systime.h"',
