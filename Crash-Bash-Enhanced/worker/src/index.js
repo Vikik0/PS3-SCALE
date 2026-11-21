@@ -5,9 +5,12 @@ const MAX_NAME_LENGTH = 16;
 const MAX_SESSIONS = 16;
 const MAX_ROOMS = 4;
 const MAX_ACTIVE_MATCHES = 1;
+const TRANSPORT_TICKET_TTL_MS = 60 * 1000;
+const PS3_SESSION_TTL_MS = 6 * 60 * 60 * 1000;
 
 const RELAY_PROTOCOL = "cbash-v1";
 const RELAY_AUTH_PREFIX = "cbash-auth.";
+const RELAY_TICKET_PREFIX = "cbash-ticket.";
 const RELAY_MAGIC = new Uint8Array([0x43, 0x42, 0x52, 0x31]); // CBR1
 const RELAY_MAX_PAYLOAD = 1200;
 const RELAY_MAX_MESSAGES_PER_SECOND = 5;
@@ -129,7 +132,13 @@ export class CrashBashLobby {
   }
 
   async load() {
-    return (await this.ctx.storage.get("state")) || { sessions: {}, rooms: {} };
+    const state = (await this.ctx.storage.get("state")) || {
+      sessions: {},
+      rooms: {},
+      transportTickets: {}
+    };
+    state.transportTickets ||= {};
+    return state;
   }
 
   async save(state) {
@@ -150,6 +159,24 @@ export class CrashBashLobby {
     if (!/^[0-9a-f]{64}$/i.test(token)) return null;
     const session = state.sessions[await sha256(token)];
     if (!session || session.expiresAt <= Date.now()) return null;
+    return session;
+  }
+
+  async authenticateTransportTicket(request, state, roomCode) {
+    const protocols = (request.headers.get("Sec-WebSocket-Protocol") || "")
+      .split(",")
+      .map(value => value.trim());
+    const ticketProtocol = protocols.find(value => value.startsWith(RELAY_TICKET_PREFIX));
+    const ticket = ticketProtocol ? ticketProtocol.slice(RELAY_TICKET_PREFIX.length) : "";
+    if (!/^[0-9a-f]{64}$/i.test(ticket)) return null;
+
+    const ticketHash = await sha256(ticket);
+    const record = state.transportTickets[ticketHash];
+    if (!record || record.expiresAt <= Date.now() || record.roomCode !== roomCode) return null;
+    const session = state.sessions[record.sessionHash];
+    if (!session || session.expiresAt <= Date.now() || session.roomCode !== roomCode) return null;
+
+    delete state.transportTickets[ticketHash];
     return session;
   }
 
@@ -313,6 +340,9 @@ export class CrashBashLobby {
         delete state.sessions[hash];
       }
     }
+    for (const [hash, ticket] of Object.entries(state.transportTickets || {})) {
+      if (ticket.expiresAt <= now) delete state.transportTickets[hash];
+    }
     for (const [code, room] of Object.entries(state.rooms)) {
       if (now - room.createdAt > ROOM_TTL_MS) {
         this.closeRoomSockets(code, "ROOM_EXPIRED");
@@ -407,9 +437,53 @@ export class CrashBashLobby {
         });
       }
 
-      const session = await this.authenticate(request, state);
-      if (!session) throw fail(401, "AUTH_REQUIRED", "Create a Guest Mode session first.");
+      const guestJoinRoute = path.match(/^\/v1\/rooms\/([A-Z0-9]{6})\/join-guest$/);
+      if (method === "POST" && guestJoinRoute) {
+        if (Object.keys(state.sessions).length >= MAX_SESSIONS) {
+          throw fail(503, "FREE_TIER_SESSION_LIMIT", "The free service has reached its guest-session limit. Try again later.");
+        }
+        const code = guestJoinRoute[1];
+        const room = state.rooms[code];
+        if (!room) throw fail(404, "ROOM_NOT_FOUND", "Room code was not found.");
+        if (room.status !== "waiting") throw fail(409, "ROOM_ALREADY_STARTED", "This match has already started.");
+        if (room.players.length >= room.maxPlayers) throw fail(409, "ROOM_FULL", "This room is full.");
 
+        const body = await readBody(request);
+        const name = cleanName(body.display_name || "PS3 Player");
+        const token = randomHex(32);
+        const sessionId = randomHex(16);
+        const sessionHash = await sha256(token);
+        const expiresAt = Date.now() + PS3_SESSION_TTL_MS;
+        const session = { sessionId, name, expiresAt, roomCode: code };
+        state.sessions[sessionHash] = session;
+
+        const occupied = new Set(room.players.map(player => player.slot));
+        let slot = 1;
+        while (occupied.has(slot)) slot++;
+        room.players.push({ sessionId, name, slot, ready: false, candidate: null });
+
+        const ticket = randomHex(32);
+        const ticketHash = await sha256(ticket);
+        const ticketExpiresAt = Date.now() + TRANSPORT_TICKET_TTL_MS;
+        state.transportTickets[ticketHash] = {
+          sessionHash,
+          roomCode: code,
+          expiresAt: ticketExpiresAt
+        };
+        await this.save(state);
+        this.broadcastRoomUpdate(room);
+        return response(201, {
+          session_id: sessionId,
+          display_name: name,
+          ticket,
+          ticket_expires_at: new Date(ticketExpiresAt).toISOString(),
+          expires_at: new Date(expiresAt).toISOString(),
+          psn_required: false,
+          room: roomView(room)
+        });
+      }
+
+      let session = await this.authenticate(request, state);
       const transportRoute = path.match(/^\/v1\/rooms\/([A-Z0-9]{6})\/transport$/);
       if (transportRoute && method === "GET") {
         if ((request.headers.get("Upgrade") || "").toLowerCase() !== "websocket") {
@@ -424,7 +498,13 @@ export class CrashBashLobby {
 
         const code = transportRoute[1];
         const room = state.rooms[code];
-        if (!room || session.roomCode !== code ||
+        if (!room) throw fail(404, "ROOM_NOT_FOUND", "Room code was not found.");
+        if (!session) {
+          session = await this.authenticateTransportTicket(request, state, code);
+          if (session) await this.save(state);
+        }
+        if (!session) throw fail(401, "AUTH_REQUIRED", "A guest session or one-time PS3 transport ticket is required.");
+        if (session.roomCode !== code ||
             !room.players.some(player => player.sessionId === session.sessionId)) {
           throw fail(403, "NOT_IN_ROOM", "Join this room before opening its game transport.");
         }
@@ -458,6 +538,8 @@ export class CrashBashLobby {
           headers: { "Sec-WebSocket-Protocol": RELAY_PROTOCOL }
         });
       }
+
+      if (!session) throw fail(401, "AUTH_REQUIRED", "Create a Guest Mode session first.");
 
       if (method === "GET" && path === "/v1/rooms/current") {
         const current = this.roomForSession(state, session);
