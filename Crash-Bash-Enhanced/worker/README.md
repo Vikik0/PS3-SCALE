@@ -8,6 +8,7 @@ This Worker provides the first online-service layer for the Crash Bash Enhanced 
 - PS3 room-code join endpoint that issues a short-lived, single-use WebSocket ticket instead of exposing a long-lived guest token to the PS3 client.
 - Private room codes and up to four player slots.
 - Host handoff when the host leaves.
+- Disconnect cleanup and idempotent browser rejoin.
 - Ready state and host-controlled match start.
 - Authenticated WebSocket room relay for opaque binary packets, with sender IDs, packet-size/rate limits, keepalive handling, and pushed room-state updates.
 - Room state is pushed over the WebSocket relay; the browser does not poll every few seconds.
