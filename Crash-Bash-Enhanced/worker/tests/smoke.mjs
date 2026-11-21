@@ -94,7 +94,8 @@ assert.equal(afterHostLeave.body.status, "waiting");
 assert.equal(afterHostLeave.body.players.length, 3);
 assert.equal(afterHostLeave.body.players.find(p => p.player_id === players[1].session_id).is_host, true);
 
-const mismatch = await call("/v1/rooms/AAAAAA/ready", "POST", { ready: true }, players[1].token);
+const wrongCode = (code[0] === "A" ? "B" : "A") + code.slice(1);
+const mismatch = await call("/v1/rooms/" + wrongCode + "/ready", "POST", { ready: true }, players[1].token);
 assert.equal(mismatch.status, 404);
 
 const unauthorized = await call("/v1/rooms/" + code, "GET");
