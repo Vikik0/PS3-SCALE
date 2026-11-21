@@ -32,6 +32,14 @@ The public PS3 update catalogue lists Ghosts Title Update 1.16 for the US and EU
 - Therefore, compiling a modified GSC file is not sufficient to install it in the retail game. Do not assume the old extract-edit-repack patch_mp.ff workflow works.
 - The current likely path is carefully verified EBOOT/PRX runtime hooks or another proven runtime script-loading mechanism.
 
+### PS3 executable identity and OPD analysis groundwork
+
+A read-only inspector now accepts a user-supplied decrypted ELF64 big-endian PPU image. It records SHA-256, ELF/load-segment metadata, the entry descriptor, the PS3 PPU OPD table and TOC, and whether the public TU 1.16 candidate addresses map into executable segments. It does not decrypt SELF, infer an image base, patch the binary or prove a function is safe. See `docs/ps3-elf-analysis.md`.
+
+A Ghidra script can seed functions from the OPD descriptor table once the same local ELF has been imported as `PowerPC:BE:64:default`. The local-player capture matrix in `docs/local-player-capture-matrix.md` defines what must be compared between an existing offline two-player mode and Campaign.
+
+This tooling is built and unit-tested on synthetic ELF fixtures only. It has not yet been run against the user's exact Ghosts EBOOT because no game executable was available in the development workspace.
+
 ### Split-screen identity and clone-path checks
 
 The public TU 1.16 function list includes `PlayerCMD_IsSplitScreenPlayer` and `PlayerCMD_IsSplitScreenPlayerPrimary`, but their PS3 Campaign behavior is unverified. A public PS4 IW6 decompilation shows the first query returning false in that build and the primary query inspecting server-client state, so the names alone are not proof of useful PS3 behavior. The same decompilation shows `PlayerCMD_ClonePlayer` creating a clone/corpse-like entity rather than a second client/player. Do not use it as Player 2. These are research notes, not approved Campaign hooks. See `docs/reverse-engineering-splitscreen.md`.
@@ -48,15 +56,16 @@ Host tests cover button mapping, analog axes, two-port independence, disconnecte
 
 ## Work sequence
 
-1. **Baseline local mode:** establish which Ghosts offline mode initializes two local players on the exact PS3 release. Verify the new controller poll on ports 0 and 1, then record controller mapping, player slots, camera/viewports, HUD and restart behavior.
-2. **Campaign comparison:** compare one-player Campaign runtime state with the two-player local-mode state. Identify which player/client initialization and split-screen components are missing.
-3. **Campaign second slot:** find a safe way to retain or initialize local player slot 2 during Campaign startup.
-4. **Player identity:** keep Logan as Player 1 and assign a separate soldier actor to Player 2. Do not substitute a story NPC.
-5. **Independent controls:** verify each DualShock controls only its own player, camera, weapon and HUD.
-6. **Campaign compatibility:** verify AI targeting, objective triggers, vehicles, cinematics, scripted sequences and checkpoints.
-7. **Revive:** connect the existing downed/revive rules to Campaign health, animation and checkpoint failure logic.
-8. **Mission coverage:** expand from one mission to all Campaign missions and edge cases.
-9. **Online conversion:** only after the local build passes the hardware gate, add remote transport and state synchronization.
+1. **Executable identity:** obtain the exact user-owned TU 1.16 decrypted ELF, record Title ID and SHA-256, run the read-only inspector, establish the OPD range and import the same image into Ghidra.
+2. **Baseline local mode:** establish which Ghosts offline mode initializes two local players on the exact PS3 release. Verify the new controller poll on ports 0 and 1, then record controller mapping, player slots, camera/viewports, HUD and restart behavior.
+3. **Campaign comparison:** compare one-player Campaign runtime state with the two-player local-mode state. Identify which player/client initialization and split-screen components are missing.
+4. **Campaign second slot:** find a safe way to retain or initialize local player slot 2 during Campaign startup.
+5. **Player identity:** keep Logan as Player 1 and assign a separate soldier actor to Player 2. Do not substitute a story NPC.
+6. **Independent controls:** verify each DualShock controls only its own player, camera, weapon and HUD.
+7. **Campaign compatibility:** verify AI targeting, objective triggers, vehicles, cinematics, scripted sequences and checkpoints.
+8. **Revive:** connect the existing downed/revive rules to Campaign health, animation and checkpoint failure logic.
+9. **Mission coverage:** expand from one mission to all Campaign missions and edge cases.
+10. **Online conversion:** only after the local build passes the hardware gate, add remote transport and state synchronization.
 
 ## Phase 1 success gate
 
