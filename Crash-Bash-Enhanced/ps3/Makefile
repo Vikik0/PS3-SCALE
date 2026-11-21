@@ -9,8 +9,7 @@ FSELF := $(PS3DEV)/bin/fself
 CRT := $(PS3DK)/ppu/lib/lv2-prx-crt.o
 CRT_I := $(PS3DK)/ppu/lib/lv2-crti.o
 CRT_INIT := $(PS3DK)/ppu/lib/lv2-prx-crt1.o
-PRX_LD_SOURCE := $(PS3DK)/ppu/lib/lv2-prx.ld
-PRX_LD := $(BUILD)/lv2-prx.ld
+PRX_LD := $(PS3DK)/ppu/lib/lv2-prx.ld
 PRX_SPECS := $(PS3DK)/ppu/lib/lv2-prx.specs
 
 CFLAGS := -O2 -Wall -Wextra -Werror -std=gnu11 -mcpu=cell -mhard-float \
@@ -26,11 +25,6 @@ all: $(BUILD)/crash_bash_input.fake.sprx
 
 $(BUILD):
 	mkdir -p $@
-
-# The PPC64 TOC anchor is .got + 0x8000. Extend the loadable segment through
-# that address so prx-gen can resolve invariant TOC16_HA/LO relocations.
-$(PRX_LD): $(PRX_LD_SOURCE) | $(BUILD)
-	python3 -c 'from pathlib import Path; import sys; src=Path(sys.argv[1]); text=src.read_text(); needle=chr(9)+"_end = .;"; assert text.count(needle) == 1; pad=chr(9)+".toc_anchor_pad MAX(., .TOC.) : { . += 0x10000; } : hdr_load"; Path(sys.argv[2]).write_text(text.replace(needle, pad+chr(10)+needle, 1))' $(PRX_LD_SOURCE) $@
 
 $(BUILD)/module.o: module.c input_hook.h net_adapter.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
@@ -58,10 +52,12 @@ $(BUILD)/crash_bash_input.elf: $(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/
 		-Wl,-q -Wl,--gc-sections -Wl,--no-warn-rwx-segments -Wl,-T,$(PRX_LD) \
 		$(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(BUILD)/ws_client.o $(BUILD)/relay_client.o $(CRT_I) $(CRT) $(CRT_INIT) $(NET_LIBS) -o $@
 
-$(BUILD)/crash_bash_input.prx: $(BUILD)/crash_bash_input.elf
+$(BUILD)/crash_bash_input.prx: $(BUILD)/crash_bash_input.elf patch_prx_load_segment.py
+	python3 patch_prx_load_segment.py $<
 	$(PRX_GEN) build $< -o $@ --name crash_bash_input --version 0.2 || { \
 		echo "PRX relocation diagnostics:"; \
 		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-readelf -lW $<; \
+		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-readelf -SW $<; \
 		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-readelf -rW $< | grep -B3 -A3 "0000000000003212" || true; \
 		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-nm -n $< | grep -B4 -A4 -i "195ce8" || true; \
 		exit 1; \
