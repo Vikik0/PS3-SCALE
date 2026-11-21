@@ -8,7 +8,6 @@
 #include <sys/timer.h>
 
 #include <arpa/inet.h>
-#include <errno.h>
 #include <fcntl.h>
 #include <ifaddrs.h>
 #include <net/if.h>
@@ -201,15 +200,12 @@ static ssize_t cb_relay_sendto_shim(int fd, const void *buffer, size_t length,
     }
     if (!buffer || length == 0 || length > CB_RELAY_MAX_PACKET ||
         relay_peer_find(destination, destination_length, recipient) != 0) {
-        errno = EHOSTUNREACH;
         return -1;
     }
     if (cb_relay_queue_packet(&relay_batch, recipient, buffer, length) != 0) {
-        errno = EMSGSIZE;
         return -1;
     }
     if (relay_flush_due(0) != 0) {
-        errno = ENETDOWN;
         return -1;
     }
     return (ssize_t)length;
@@ -229,7 +225,6 @@ static ssize_t cb_relay_recvfrom_shim(int fd, void *buffer, size_t length,
     if (!relay_rx_valid) {
         result = relay_receive_queue(0);
         if (result != 1) {
-            errno = result < 0 ? ECONNRESET : EWOULDBLOCK;
             return -1;
         }
     }
