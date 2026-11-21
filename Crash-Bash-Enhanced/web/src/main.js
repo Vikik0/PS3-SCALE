@@ -270,6 +270,7 @@ let relaySocket = null;
 let relayHeartbeatTimer = null;
 let relayReconnectTimer = null;
 let relayReconnectAttempts = 0;
+let relayLastActivityAt = 0;
 
 function closeRelay() {
   const socket = relaySocket;
@@ -279,6 +280,7 @@ function closeRelay() {
   relayHeartbeatTimer = null;
   relayReconnectTimer = null;
   relayReconnectAttempts = 0;
+  relayLastActivityAt = 0;
   if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
     socket.close(1000, "Leaving room");
   }
@@ -313,14 +315,20 @@ function syncRelayConnection() {
     if (relaySocket !== socket) return;
     state.relayStatus = "connected";
     relayReconnectAttempts = 0;
+    relayLastActivityAt = Date.now();
     relayHeartbeatTimer = setInterval(() => {
-      if (relaySocket === socket && socket.readyState === WebSocket.OPEN) socket.send("PING");
+      if (relaySocket === socket && socket.readyState === WebSocket.OPEN &&
+          Date.now() - relayLastActivityAt >= 20000) {
+        socket.send("PING");
+        relayLastActivityAt = Date.now();
+      }
     }, 20000);
     render();
   });
 
   socket.addEventListener("message", event => {
     if (relaySocket !== socket) return;
+    relayLastActivityAt = Date.now();
     if (typeof event.data === "string") {
       if (event.data === "PONG") return;
       try {
