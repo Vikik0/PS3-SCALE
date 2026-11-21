@@ -24,11 +24,11 @@ Do not spend Phase 1 effort deploying online services or implementing NAT traver
 
 - PS3 patch notes explicitly mention a split-screen UI fix, and community reports describe two-player offline local play in Multiplayer, Squads and Extinction. This is a lead for reusing Ghosts' existing local-player initialization; it is not proof that Campaign can accept a second player.
 - The original Campaign is documented as single-player. Adding a second Campaign participant requires engine/gameplay integration.
-- Ghosts PS3 IW6 FastFiles can be decompressed and inspected, but the documented retail container is signed and cannot be rebuilt/re-signed without the publisher's private signing key. A simple extract-edit-repack GSC workflow is therefore not a viable assumption.
+- Ghosts PS3 IW6 FastFiles can be decompressed and inspected; retail files are signed and cannot be rebuilt/re-signed without the publisher's private signing key. The new read-only FastFile inspector and GSC asset exporter are documented in docs/ps3-fastfile-research.md.
 - GSC Tool supports IW6 scripts on PS3 for compile/decompile work. This does not itself solve signed FastFile repackaging.
 - Public TU 1.16 spawn offsets are multiplayer-context leads only. They are not approved Campaign addresses.
 
-See docs/local-coop-first.md for the implementation plan and research constraints. The cross-project IW-engine prior-art audit is in docs/coop-anything-prior-art.md. Newer IW6 script-level split-screen and Extinction findings are in docs/iw6-native-splitscreen-reference.md. The read-only executable workflow is in docs/ps3-elf-analysis.md, with the comparison checklist in docs/local-player-capture-matrix.md.
+See docs/local-coop-first.md for the implementation plan and research constraints. PS3 FastFile/GSC extraction findings and the new read-only tools are documented in docs/ps3-fastfile-research.md. The cross-project IW-engine prior-art audit is in docs/coop-anything-prior-art.md. Newer IW6 script-level split-screen and Extinction findings are in docs/iw6-native-splitscreen-reference.md. The read-only executable workflow is in docs/ps3-elf-analysis.md, with the comparison checklist in docs/local-player-capture-matrix.md.
 
 ## Current implementation status
 
@@ -44,6 +44,8 @@ See docs/local-coop-first.md for the implementation plan and research constraint
 - Diagnostic PRX polling/getter functions for raw and per-frame input, pending a verified Campaign frame adapter.
 - Reverse-engineering notes rule out treating `PlayerCMD_ClonePlayer` as a full second-player spawn path.
 - Read-only PS3 PPU ELF inspector: validates ELF64 big-endian EM_PPC64, hashes the input, maps reported TU 1.16 function/data candidates including BSS, and extracts the PPU OPD/TOC when present.
+- Read-only Ghosts PS3 FastFile inspector: expands IW6 raw-deflate blocks and validated inline zlib assets, with SHA-256 reporting and bounded decompression.
+- Ghosts PS3 GSC/CSC asset exporter for already inflated zones, with short/long header recognition, compiled GSC detection, and safe output paths.
 - Fail-closed local-player readiness gate: requires two distinct native split-screen players, correct primary/secondary identity, controller ports, local-client/client/entity IDs, Logan/guest roles and independent state addresses before a future adapter can enable controls.
 - Ghidra OPD function-seeding and split-screen builtin cross-reference helpers, plus a local-player state comparison matrix for the next static/runtime analysis stage.
 
@@ -76,7 +78,7 @@ The first target is CEX 4.93 + TU 1.16. The project must select builds by exact 
 
 ## Verification
 
-CI validates the standalone codecs, controller-input decoder, local-player readiness gate, read-only ELF/OPD inspector tests, and PRX build including `sys_io` imports. These tests do not prove that the game runtime can use a second player in Campaign. The Phase 1 success gate is defined in docs/local-coop-first.md.
+CI validates the standalone codecs, controller-input decoder, local-player readiness gate, read-only ELF/OPD and Ghosts FastFile/GSC parser tests, and PRX build including `sys_io` imports. These tests do not prove that the game runtime can use a second player in Campaign. The Phase 1 success gate is defined in docs/local-coop-first.md.
 
 ## Important
 
