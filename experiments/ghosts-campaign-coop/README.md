@@ -28,7 +28,7 @@ Do not spend Phase 1 effort deploying online services or implementing NAT traver
 - GSC Tool supports IW6 scripts on PS3 for compile/decompile work. This does not itself solve signed FastFile repackaging.
 - Public TU 1.16 spawn offsets are multiplayer-context leads only. They are not approved Campaign addresses.
 
-See docs/local-coop-first.md for the implementation plan and research constraints. PS3 FastFile/GSC extraction findings and the new read-only tools are documented in docs/ps3-fastfile-research.md. The cross-project IW-engine prior-art audit is in docs/coop-anything-prior-art.md. Newer IW6 script-level split-screen, per-player connect lifecycle, client-ID assignment, HUD scaling and Extinction revive findings are in docs/iw6-native-splitscreen-reference.md. The read-only executable workflow is in docs/ps3-elf-analysis.md, with the comparison checklist in docs/local-player-capture-matrix.md.
+See docs/local-coop-first.md for the implementation plan and research constraints. The first executable profile is now selected as BLUS31270 US disc + TU 1.16 + CEX 4.93 (not hardware-verified); see docs/compatibility-matrix.md. PS3 FastFile/GSC extraction findings and the new read-only tools are documented in docs/ps3-fastfile-research.md. The cross-project IW-engine prior-art audit is in docs/coop-anything-prior-art.md. Newer IW6 script-level split-screen, per-player connect lifecycle, client-ID assignment, HUD scaling and Extinction revive findings are in docs/iw6-native-splitscreen-reference.md. The read-only executable workflow is in docs/ps3-elf-analysis.md, with the comparison checklist in docs/local-player-capture-matrix.md.
 
 ## Current implementation status
 
@@ -47,6 +47,7 @@ See docs/local-coop-first.md for the implementation plan and research constraint
 - Read-only Ghosts PS3 FastFile inspector: expands IW6 raw-deflate blocks and validated inline zlib assets, with SHA-256 reporting and bounded decompression.
 - Ghosts PS3 GSC/CSC asset exporter for already inflated zones, with short/long header recognition, compiled GSC detection, and safe output paths.
 - Text-only GSC audit utility that indexes split-screen, player lifecycle, per-client HUD/omnvar, solo/co-op revive branches, engine-player API, checkpoint and mission-flow references.
+- Windows PowerShell batch helper to decompile extracted PS3 GSC binaries with GSC Tool's IW6/PS3 backend.
 - Fail-closed local-player readiness gate: requires two distinct native split-screen players, correct primary/secondary identity, controller ports, local-client/client/entity IDs, Logan/guest roles and independent state addresses before a future adapter can enable controls.
 - Ghidra OPD function-seeding and split-screen builtin cross-reference helpers, plus a local-player state comparison matrix for the next static/runtime analysis stage.
 
