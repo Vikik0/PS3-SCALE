@@ -73,7 +73,9 @@ assert draw_text_impl.count("SetFontSize(") == 2
 # Library uses a full-width 4x2 cover grid, real cached covers and working filters.
 scan = section("static void draw_scan(void)", "static void draw_details(void)")
 assert "draw_soft_card(20.0f, 88.0f, 150.0f, 356.0f" in scan
-assert "draw_soft_card(x, y, 150.0f, 148.0f, selected)" in scan
+assert "draw_library_animated_card(card_x, card_y, card_w, card_h, focus);" in scan
+assert "float card_w = 150.0f * scale;" in scan
+assert "float card_h = 148.0f * scale;" in scan
 assert "ya2d_drawTextureEx(g_scan_cover_textures[i]" in scan
 assert "draw_library_filter_item" in scan
 assert "Favorites" in scan and "Recently Added" in scan
