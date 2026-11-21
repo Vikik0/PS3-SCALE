@@ -5,7 +5,7 @@ Crash Bash Enhanced is a community project to add a modern online layer around t
 ## Project structure
 
 - `web/`: responsive room/lobby web interface, built with Vite.
-- `worker/`: Cloudflare Worker + SQLite-backed Durable Object for guest sessions, room matchmaking, and a prototype binary WebSocket relay.
+- `worker/`: Cloudflare Worker + SQLite-backed Durable Object for guest sessions, room matchmaking, and a prototype binary WebSocket relay. It also serves the built web lobby from the same origin.
 - `ps3/`: native PS3 / PS1-emulator input bridge and the current UDP lockstep adapter.
 - `docs/CROSSPLAY-ARCHITECTURE.md`: selected browser/PS3 architecture, relay wire format, free-tier budget, and remaining release gates.
 
@@ -61,7 +61,7 @@ The target is Cloudflare Workers Free with SQLite-backed Durable Objects. Free u
 
 ## Automated checks
 
-GitHub Actions builds the Vite lobby, runs Worker integration tests, validates the Cloudflare bundle, tests WS/WSS with certificate verification against local TLS servers, cross-compiles both PS3 PRXs, and builds and validates the installable PS3 PKG. The deployment workflow still skips deployment until Cloudflare credentials are configured.
+GitHub Actions builds the Vite lobby, runs Worker integration tests, validates the Cloudflare bundle, tests WS/WSS with certificate verification against local TLS servers, cross-compiles both PS3 PRXs, and builds and validates the installable PS3 PKG. The deployment workflow builds the web lobby and deploys it together with the Worker; the public deployment still waits for Cloudflare credentials.
 
 ## Release gates
 
