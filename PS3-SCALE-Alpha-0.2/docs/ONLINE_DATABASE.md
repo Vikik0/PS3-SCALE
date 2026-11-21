@@ -1,45 +1,74 @@
-# Online enhancement catalogue — Alpha 0.2
+# Online enhancement catalogue — Alpha 0.23
 
-## Current implementation
+## Data sources
 
-PS3 SCALE bundles a starter catalogue at **data/online_profiles.tsv** and can refresh it from the project's HTTPS raw-file endpoint. The current starter catalogue contains 40 community-reported PS3 records.
+PS3 SCALE reads two separate community datasets:
 
-The TSV fields are:
+- `data/online_profiles.tsv` — version-matched memory profiles used by the FPS Control screen.
+- `data/community_game_files.tsv` — metadata for community NCL files. Only entries categorized as `GRAPHICS_FPS` are eligible for the Artemis install action.
 
-1. **TITLE_ID** — exact nine-character PS3 product code.
-2. **APP_VER** — exact game update version in NN.NN format.
-3. **TITLE** — display name only; never used as the identity key.
-4. **EFFECT** — reported effect, such as an FPS cap change.
-5. **TRUST** — B_COMMUNITY for community-reported profiles; B_COMMUNITY_MANUAL for source entries that require in-game timing/reapplication and are excluded from one-launch automation.
-6. **PATCHES** — semicolon-separated address,expected_hex,replacement_hex records.
-7. **NOTES** — source confidence and limitations.
-8. **SOURCE_URL** — HTTPS source reference.
+The catalogue is community-maintained. A title name is not enough to install a patch; the installed game identity and update version must match exactly.
 
-This is a data catalogue, not a collection of downloaded executable files or EBOOT binaries. The app downloads only the small TSV catalogue; it does not fetch arbitrary patch binaries or run downloaded executables.
+## Online DB controls and refresh
 
-## Synchronization and cache
+- The first time Online DB is opened in a session, PS3 SCALE starts a real HTTPS refresh automatically while keeping the last valid local cache visible.
+- **Triangle** forces a fresh profile + community-index download. **Start** remains an alternate refresh shortcut.
+- **Select** opens the search keyboard.
+- **Square** cycles the result filter. The default is Graphics + Any Region/Version so available candidates appear without cycling the filter first. A non-exact candidate is shown for review only; it is not installable.
+- **Cross** installs an eligible NCL file to Artemis, or opens the selected game details when the result is a profile rather than a community file.
+- Online DB remains browsable from the last valid cache if the console is offline.
 
-- HTTPS peer and host verification are enabled using the bundled CA certificate file.
-- The response is capped at 64 KiB and written to a temporary download file.
-- The complete catalogue must pass strict parsing, exact identity validation, patch syntax validation and duplicate detection before replacing the current cache.
-- The previous valid catalogue remains available if the network request or validation fails.
-- When the user opens Online Graphics Database, the app automatically refreshes if the local cache is older than 24 hours. START on that screen requests a manual refresh. Normal app startup and game launching remain offline.
-- A normal HTTPS catalogue does not require a PSN account.
+The HTTPS catalogue response is size-limited and parsed before replacing the previous cache. A failed refresh does not discard a valid cached dataset. No PSN account is required for this HTTPS catalogue.
 
-## Matching and application limits
+## NCL installation to Artemis
 
-- A profile matches only when both Title ID and APP_VER are exact. Title names alone never select a patch.
-- The starter catalogue contains 33 one-launch-eligible B_COMMUNITY records, 6 multi-write B_COMMUNITY records that remain disabled, and 1 B_COMMUNITY_MANUAL record (Brütal Legend) that requires in-game reapplication and is excluded from automation. All are community reports, not profiles independently hardware-verified by PS3 SCALE.
-- An eligible single-write B_COMMUNITY profile can be armed only after PS3 SCALE revalidates the exact installed HDD title's Title ID + APP_VER from PARAM.SFO, or verifies the exact mounted /dev_bdvd title for disc/folder games, and the user explicitly confirms. Manual-only and multi-write profiles cannot be armed by this build. webMAN MOD and its PS3MAPI endpoint must respond.
-- Start Game is independent of profile availability: installed PS3 HDD titles are sent to webMAN as /play.ps3?<TITLE_ID>; folder/ISO titles use /play.ps3<URL-encoded-path>. If no exact profile exists, the game starts unmodified. The request runs off the UI thread with bounded connection and read timeouts.
-- Multi-write profiles remain disabled for automatic application in this build.
-- The generated webMAN script is one-launch only. It checks the Title ID, in-game state, exact target address and expected original bytes, then deletes itself after the launch attempt. Before allowing Start Game, PS3 SCALE compares the complete script body against the deterministic generated script; a matching header alone is not trusted, and any manual body edit is treated as stale.
-- The script does not show a success popup. webMAN's batch command does not provide PS3 SCALE with a verified post-write memory value, so the app must not claim that the patch succeeded.
-- The patch changes the running game's memory only. It does not modify the original game folder, EBOOT, ISO or update files. Closing the game ends that process and clears its in-memory patch.
+The Cross install action is deliberately narrow:
+
+1. The result must be a `GRAPHICS_FPS` community entry with a `.ncl` extension.
+2. The matching PS3 game must already be scanned from an HDD path under `/dev_hdd0/`.
+3. The installed game's Title ID and APP_VER must exactly match the community entry.
+4. Artemis PS3 must be installed at `/dev_hdd0/game/ARTPS3001/USRDIR/EBOOT.BIN`.
+5. The source repository, branch and path must pass path validation. The downloaded file is limited to 2 MiB, must be plain text, and ELF/PKG/binary content is rejected.
+6. Existing destination files are never overwritten.
+
+Accepted files are saved to:
+
+`/dev_hdd0/game/ARTPS3001/USRDIR/USERLIST/`
+
+The filename is prefixed with `PS3SCALE_<TITLE_ID>_<APP_VER>_` so the target game and version are visible in Artemis' user list.
+
+PS3 SCALE does **not** execute an NCL file or apply it automatically. After installation, open Artemis PS3 and select the NCL entry for the matching game. The community file may contain in-game memory codes; review the source and use it at your own discretion. PS3 SCALE does not modify the original game folder, EBOOT, update data or ISO.
+
+### Temporary or permanent storage
+
+Settings → **Enhancement Storage** controls future NCL downloads:
+
+- **Temporary** is the default. PS3 SCALE records each file it installs and removes those files the next time PS3 SCALE starts.
+- **Permanent** leaves newly installed NCL files in Artemis' USERLIST until the user removes them.
+
+Temporary cleanup is intentionally performed on the next PS3 SCALE launch, not while Artemis may still need to read the file. Changing this setting does not retroactively change files already installed.
+
+## Version-matched FPS profiles
+
+- A profile matches only when both Title ID and APP_VER are exact.
+- A one-launch profile is armed only after PS3 SCALE revalidates the exact installed or mounted game and the user confirms.
+- Multi-write and manual-only profiles remain excluded from automatic application.
+- The generated webMAN script is one-launch only. It checks the Title ID, in-game state, target address and expected original bytes before attempting a memory write. PS3 SCALE does not claim success without a verified post-write value.
+- If PS3MAPI is unavailable, PS3 SCALE removes its own one-launch profile script and still asks webMAN to start the game unmodified. A missing PS3MAPI endpoint no longer blocks normal game launch.
+- If webMAN's local HTTP endpoint cannot be reached or rejects the request, the UI reports the specific network/HTTP failure instead of silently treating it as a game-file issue.
+
+## Game launch transport
+
+PS3 SCALE loads the PS3 NET and NETCTL modules, initializes the network control layer, sends the bounded local HTTP request to webMAN MOD on `127.0.0.1:80`, then closes the socket and releases the modules. Launching is performed on a worker thread so the UI remains responsive.
+
+- Installed HDD/NPDRM titles use `/play.ps3?<TITLE_ID>`.
+- PS3 folder/ISO titles use `/play.ps3<URL-encoded-path>`.
+- PS2 Classics must be started through their compatible launcher.
 
 ## Known limitations
 
-- The webMAN batch language does not expose a direct APP_VER condition. PS3 SCALE checks APP_VER before arming and again against the mounted game when Start Game is used; the script additionally checks the exact original bytes at one address. Do not arm a profile and then update the game before launching it.
-- Community-reported values can still be wrong for a particular console or game build. Start with one profile at a time and test stability.
-- No universal upscaler, frame generation, or guaranteed 60 FPS is provided.
-- A future binary/file-based patch catalogue would require per-file SHA-256, size, author/license, backup and rollback metadata before those patch types are enabled.
+- The community index and NCL files are community-supplied, not independently hardware-verified by PS3 SCALE.
+- Exact Title ID + APP_VER matching reduces cross-version mistakes but cannot prove that a community patch is safe or stable on every console.
+- The NCL installer accepts only text files tagged `GRAPHICS_FPS`; it does not install arbitrary binaries, EBOOT replacements, PKG files or general `.txt` downloads.
+- No universal upscaler, frame generation or guaranteed 60 FPS is provided.
+- A future binary patch installer would need cryptographic hashes, source/license metadata, backups, restore and rollback support before it could be enabled.
