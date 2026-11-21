@@ -95,6 +95,7 @@ export class CBN1BrowserClient {
     this.slow = 0;
     this.pendingSaves = new Map();
     this.joinTimer = null;
+    this.joinDeadline = 0;
     this.stopped = false;
     this.waiters = new Set();
     this.unsubscribePacket = null;
@@ -112,6 +113,10 @@ export class CBN1BrowserClient {
   async connect() {
     if (this.state !== "idle") throw new Error("CBN1 client has already been started.");
     this.stopped = false;
+    this.welcomePromise = new Promise((resolve, reject) => {
+      this.resolveWelcome = resolve;
+      this.rejectWelcome = reject;
+    });
     this.unsubscribePacket = this.transport.on("packet", packet => {
       if (packet?.senderId === this.hostSessionId) {
         try { this.handlePacket(packet.payload); }
@@ -123,6 +128,12 @@ export class CBN1BrowserClient {
         this.fail(new Error(message));
       }
     });
+    this.transport.on("error", error => {
+      if (this.state !== "playing") this.fail(error instanceof Error ? error : new Error("Relay transport error."));
+    });
+    this.transport.on("close", () => {
+      if (!this.stopped && this.state !== "closed") this.fail(new Error("The room relay connection closed."));
+    });
 
     this.setState("connecting");
     try {
@@ -133,16 +144,18 @@ export class CBN1BrowserClient {
     }
 
     this.lastHostHeard = this.now();
+    this.joinDeadline = this.now() + 30000;
     this.setState("joining");
     this.sendJoin();
     this.joinTimer = setInterval(() => {
-      if (this.state === "joining") this.sendJoin();
+      if (this.state !== "joining") return;
+      if (this.now() >= this.joinDeadline) {
+        this.fail(new Error("Timed out waiting for the PS3 host to accept the browser player."));
+        return;
+      }
+      this.sendJoin();
     }, JOIN_RETRY_MS);
 
-    this.welcomePromise = new Promise((resolve, reject) => {
-      this.resolveWelcome = resolve;
-      this.rejectWelcome = reject;
-    });
     return this.welcomePromise;
   }
 
