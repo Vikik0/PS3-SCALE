@@ -73,6 +73,7 @@ $(BUILD)/crash_bash_input.prx: $(BUILD)/crash_bash_input.elf
 		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-readelf -rW $< | grep -E "R_PPC64_.*(TLS|TPREL|DTPREL)" || true; \
 		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-readelf -sW $< | grep -E "TLS|__tls|errno" || true; \
 		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-addr2line -e $< -f -C 0x1464e 0x1473a || true; \
+		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-objdump -d -C --start-address=0x14620 --stop-address=0x14790 $< || true; \
 		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-readelf -rW $< | grep -B3 -A3 "0000000000003212" || true; \
 		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-nm -n $< | grep -B4 -A4 -i "195ce8" || true; \
 		exit 1; \
