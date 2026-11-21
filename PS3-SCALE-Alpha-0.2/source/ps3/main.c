@@ -97,6 +97,10 @@ static app_screen_t g_screen = SCREEN_HOME;
 static app_screen_t g_splash_next_screen = SCREEN_BOOT;
 static int g_splash_frames = 0;
 #define PS3SCALE_TRANSITION_FRAMES 16u
+/* Keep controller hints inside the TV-safe area on overscanning displays. */
+#define PS3SCALE_UI_FOOTER_PRIMARY_Y 452.0f
+#define PS3SCALE_UI_FOOTER_SECONDARY_Y 468.0f
+#define PS3SCALE_UI_FOOTER_SINGLE_Y 460.0f
 static app_screen_t g_transition_screen = SCREEN_SPLASH;
 static unsigned int g_transition_frames = PS3SCALE_TRANSITION_FRAMES;
 static ps3scale_ps2_config_db_t g_ps2_config_db;
@@ -3722,7 +3726,7 @@ static void draw_keyboard(void)
     set_ui_font_size(7, 11);
     draw_text(34.0f, 440.0f, 0x77718fff,
               "ARROWS MOVE  |  CROSS SELECT  |  CIRCLE CANCEL");
-    draw_text(34.0f, 478.0f, 0x875be8ff,
+    draw_text(34.0f, PS3SCALE_UI_FOOTER_SINGLE_Y, 0x875be8ff,
               "CUSTOM KEYBOARD  |  NO PS3 SYSTEM KEYBOARD REQUIRED");
     set_ui_font_size(14, 22);
 }
@@ -4094,12 +4098,12 @@ static void draw_home(void)
              (unsigned)library_total_count(LIBRARY_PS2),
              (unsigned)(library_total_count(LIBRARY_PS3) +
                         library_total_count(LIBRARY_PS2)));
-    draw_soft_card(30.0f, 410.0f, 322.0f, 44.0f, 0);
+    draw_soft_card(30.0f, 392.0f, 322.0f, 42.0f, 0);
     set_ui_font_size(8, 12);
-    draw_text(46.0f, 426.0f, 0x514b69ff, line);
-    draw_text(31.0f, 480.0f, 0x77718fff,
+    draw_text(46.0f, 407.0f, 0x514b69ff, line);
+    draw_text(31.0f, PS3SCALE_UI_FOOTER_PRIMARY_Y, 0x77718fff,
               "D-PAD LEFT / RIGHT: MOVE   |   CROSS: SELECT   |   CIRCLE: EXIT");
-    draw_text(31.0f, 496.0f, 0x875be8ff,
+    draw_text(31.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y, 0x875be8ff,
               "SELECT: COMPANION TOOLS");
     set_ui_font_size(14, 22);
 }
@@ -4232,7 +4236,7 @@ static void draw_online_database(void)
     } else {
         snprintf(line, sizeof(line), "RESULTS 0  |  NO MATCHES");
     }
-    draw_text(38.0f, 424.0f, 0x514b69ff, line);
+    draw_text(38.0f, 414.0f, 0x514b69ff, line);
 
     /* Cache status is not a claim that GitHub is currently online or that
        any community file is safe to auto-apply. */
@@ -4274,7 +4278,7 @@ static void draw_online_database(void)
                   "APPLY: REVIEW + CONFIRM IN DETAILS");
         draw_text(414.0f, 390.0f, 0x875be8ff,
                   "CROSS: OPEN GAME DETAILS");
-        draw_text(414.0f, 418.0f, 0x77718fff,
+        draw_text(414.0f, 406.0f, 0x77718fff,
                   "No automatic game-file replacement.");
     } else if (selected_ps2_config) {
         draw_soft_chip(414.0f, 190.0f, 182.0f,
@@ -4293,7 +4297,7 @@ static void draw_online_database(void)
                   "Not an HD texture or 1080p upgrade.");
         draw_text(414.0f, 394.0f, 0x875be8ff,
                   "CROSS: OPEN / REVIEW MATCH");
-        draw_text(414.0f, 418.0f, 0x77718fff,
+        draw_text(414.0f, 406.0f, 0x77718fff,
                   "Original ISO / classic is not overwritten.");
     } else if (selected_community) {
         const char *dot = strrchr(selected_community->path, '.');
@@ -4341,14 +4345,14 @@ static void draw_online_database(void)
                  can_download ? "NCL/TXT DATA" : "UNSUPPORTED FILE");
         draw_text(414.0f, 381.0f, 0x514b69ff, line);
         if (can_download) {
-            draw_text(414.0f, 405.0f, 0x875be8ff,
+            draw_text(414.0f, 393.0f, 0x875be8ff,
                       selected ? "SELECT: SAVE TO COMMUNITY_DOWNLOADS" :
                                  "X: DOWNLOAD TO COMMUNITY_DOWNLOADS");
         } else {
-            draw_text(414.0f, 405.0f, 0xb27b35ff,
+            draw_text(414.0f, 393.0f, 0xb27b35ff,
                       "NO DOWNLOAD: ONLY NCL/TXT UP TO 2 MB");
         }
-        draw_text(414.0f, 426.0f, 0xb27b35ff,
+        draw_text(414.0f, 414.0f, 0xb27b35ff,
                   "DATA ONLY - NEVER EXECUTED OR AUTO-APPLIED");
     } else {
         draw_text(414.0f, 215.0f, 0x77718fff,
@@ -4365,16 +4369,16 @@ static void draw_online_database(void)
 
     /* Separate task status from controls to avoid text overlap at 720p. */
     if (g_online_message[0]) {
-        draw_rounded_rect(20.0f, 453.0f, 814.0f, 22.0f, 6.0f,
+        draw_rounded_rect(20.0f, 426.0f, 814.0f, 22.0f, 6.0f,
                           0xf5effff0);
         set_ui_font_size(6, 9);
         snprintf(line, sizeof(line), "%.114s", g_online_message);
-        draw_text(29.0f, 460.0f, 0x514b69ff, line);
+        draw_text(29.0f, 432.0f, 0x514b69ff, line);
     }
     set_ui_font_size(6, 9);
-    draw_text(24.0f, 482.0f, 0x514b69ff,
+    draw_text(24.0f, PS3SCALE_UI_FOOTER_PRIMARY_Y, 0x514b69ff,
               "D-PAD SELECT | LEFT/RIGHT PAGE | L1/R1 PREV/NEXT | CROSS OPEN/DOWNLOAD");
-    draw_text(24.0f, 497.0f, 0x875be8ff,
+    draw_text(24.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y, 0x875be8ff,
               "TRIANGLE SEARCH | SQUARE FILTER | START SYNC | CIRCLE BACK");
     set_ui_font_size(14, 22);
 }
@@ -4520,24 +4524,25 @@ static void draw_scan(void)
                            0x77718fff, "No games match this filter.");
     }
     set_ui_font_size(7, 11);
-    snprintf(line, sizeof(line), "%u GAMES FOUND", (unsigned)count);
-    draw_text(188.0f, 446.0f, 0x514b69ff, line);
+    snprintf(line, sizeof(line), "%u GAMES FOUND%s", (unsigned)count,
+             g_games.truncated ? " *" : "");
+    draw_text(188.0f, 440.0f, 0x514b69ff, line);
     if (count > 0) {
         size_t pages = (count + PS3SCALE_SCAN_GRID_COUNT - 1u) /
                        PS3SCALE_SCAN_GRID_COUNT;
         size_t page = start / PS3SCALE_SCAN_GRID_COUNT + 1u;
         snprintf(line, sizeof(line), "PAGE %u / %u",
                  (unsigned)page, (unsigned)pages);
-        draw_text(727.0f, 446.0f, 0x875be8ff, line);
+        draw_text(727.0f, 440.0f, 0x875be8ff, line);
     }
     if (g_scan_message[0])
-        draw_text(360.0f, 446.0f, 0x875be8ff, g_scan_message);
-    if (g_games.truncated)
-        draw_text(188.0f, 462.0f, 0xffcc66ff,
+        draw_text(360.0f, 440.0f, 0x875be8ff, g_scan_message);
+    else if (g_games.truncated)
+        draw_text(360.0f, 440.0f, 0xffcc66ff,
                   "WARNING: LIBRARY LIMIT REACHED (256 TITLES)");
-    draw_text(24.0f, 480.0f, 0x77718fff,
+    draw_text(24.0f, PS3SCALE_UI_FOOTER_PRIMARY_Y, 0x77718fff,
               "D-PAD: MOVE   |   LEFT EDGE: FILTERS   |   CROSS: DETAILS   |   CIRCLE: BACK");
-    draw_text(24.0f, 496.0f, 0x875be8ff,
+    draw_text(24.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y, 0x875be8ff,
               "SQUARE: FAVORITE   |   SELECT+SQUARE: RESCAN   |   START / SELECT: SEARCH");
     set_ui_font_size(14, 22);
 }
@@ -4555,7 +4560,7 @@ static void draw_details(void)
     if (!game) {
         draw_soft_card(24.0f, 92.0f, 806.0f, 340.0f, 0);
         draw_text(52.0f, 128.0f, 0x29243fff, "No game selected.");
-        draw_text(52.0f, 474.0f, 0x77718fff, "CIRCLE: BACK");
+        draw_text(52.0f, PS3SCALE_UI_FOOTER_SINGLE_Y, 0x77718fff, "CIRCLE: BACK");
         set_ui_font_size(14, 22);
         return;
     }
@@ -4695,11 +4700,11 @@ static void draw_details(void)
     draw_soft_button(544.0f, 400.0f, 290.0f, 44.0f,
                      "CROSS: START GAME", 0);
     set_ui_font_size(7, 11);
-    draw_text(24.0f, 474.0f, 0x77718fff,
+    draw_text(24.0f, PS3SCALE_UI_FOOTER_PRIMARY_Y, 0x77718fff,
               g_profile_confirm_pending ?
               "COMMUNITY PATCH: TRIANGLE CONFIRMS; CIRCLE CANCELS." :
               g_details_message);
-    draw_text(24.0f, 496.0f, 0x875be8ff,
+    draw_text(24.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y, 0x875be8ff,
               "CROSS / START: PLAY   |   TRIANGLE: CONFIRM   |   CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
@@ -4822,9 +4827,9 @@ static void draw_settings(void)
     else
         draw_text(202.0f, 418.0f, 0x77718fff, g_settings_message);
 
-    draw_text(24.0f, 474.0f, 0x77718fff,
+    draw_text(24.0f, PS3SCALE_UI_FOOTER_PRIMARY_Y, 0x77718fff,
               "UP / DOWN: MOVE   |   CROSS: CHANGE   |   LEFT / RIGHT: ADJUST");
-    draw_text(24.0f, 496.0f, 0x875be8ff, "CIRCLE: BACK");
+    draw_text(24.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y, 0x875be8ff, "CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
 
@@ -4866,7 +4871,7 @@ static void draw_tools(void)
               "Game mounting, FTP, temperature and optional PS3MAPI.");
     draw_text(48.0f, 362.0f, 0x77718fff,
               "CROSS: REFRESH TOOL STATUS");
-    draw_text(24.0f, 478.0f, 0x77718fff, "CIRCLE: BACK");
+    draw_text(24.0f, PS3SCALE_UI_FOOTER_SINGLE_Y, 0x77718fff, "CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
 
@@ -4929,7 +4934,7 @@ static void draw_help(void)
     draw_text(38.0f, 414.0f, 0x77718fff,
               "Community files are saved as data only; they are never auto-executed.");
     set_ui_font_size(7, 11);
-    draw_text(24.0f, 478.0f, 0x77718fff,
+    draw_text(24.0f, PS3SCALE_UI_FOOTER_SINGLE_Y, 0x77718fff,
               "UP / DOWN: CHOOSE SUPPORT ACTION   |   CROSS: OPEN   |   CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
@@ -4970,7 +4975,7 @@ static void draw_support_form(void)
     draw_text(44.0f, 388.0f, 0x77718fff,
               "Device model, firmware and app version are added automatically.");
     draw_text(44.0f, 408.0f, 0x77718fff, g_support_status);
-    draw_text(24.0f, 478.0f, 0x77718fff,
+    draw_text(24.0f, PS3SCALE_UI_FOOTER_SINGLE_Y, 0x77718fff,
               "UP / DOWN: MOVE   |   CROSS: EDIT / SAVE   |   CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
