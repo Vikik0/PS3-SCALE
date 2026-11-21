@@ -47,6 +47,7 @@ typedef enum app_screen {
     SCREEN_HOME = 0,
     SCREEN_SCAN,
     SCREEN_DETAILS,
+    SCREEN_FPS_CONTROL,
     SCREEN_ONLINE_DB,
     SCREEN_SETTINGS,
     SCREEN_TOOLS,
@@ -137,7 +138,7 @@ static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 #define PS3SCALE_SUPPORT_OUTBOX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox.txt"
 /* Replace with the URL of the separate PS3 SCALE Supabase project after deployment. */
 #define PS3SCALE_SUPPORT_URL "https://YOUR_PROJECT.supabase.co/functions/v1/ps3scale-support"
-#define PS3SCALE_APP_VERSION "ALPHA 0.22"
+#define PS3SCALE_APP_VERSION "ALPHA 0.23"
 #define PS3SCALE_PS2_CONFIG_INDEX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/ps2_config_index.tsv"
 #define PS3SCALE_PS2_CLASSICS_CONFIG_DIR "/dev_hdd0/game/PS2CONFIG/USRDIR/CONFIG/ENC"
 #define PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT (PS3SCALE_PS2_CONFIG_MAX_BYTES * 2u)
@@ -259,6 +260,7 @@ static char g_online_query[64] = "";
 static char g_scan_search_stash[64] = "";
 static int g_keyboard_online_mode = 0;
 static int g_profile_confirm_pending = 0;
+static int g_fps_control_selection = 0;
 static char g_catalog_status[96] = "LOCAL PROFILE + GITHUB INDEX NOT LOADED";
 static char g_online_message[128] = "SELECT A GAME RESULT OR PRESS START TO REFRESH GITHUB.";
 static void rebuild_online_results(void);
@@ -4692,11 +4694,12 @@ static void draw_details(void)
 
     draw_soft_button(20.0f, 400.0f, 250.0f, 44.0f,
                      game_is_ps3(game) ?
-                     (profile ? "TRIANGLE: APPLY PROFILE" : "NO VERIFIED PROFILE") :
+                     (profile ? "TRIANGLE: APPLY PROFILE" : "NO EXACT FPS PROFILE") :
                      (ps2_config ? "TRIANGLE: DOWNLOAD CONFIG" : "NO CONFIG MATCH"),
                      1);
     draw_soft_button(282.0f, 400.0f, 250.0f, 44.0f,
-                     "SQUARE: PROFILE OPTIONS", 0);
+                     game_is_ps3(game) ? "SQUARE: FPS CONTROL" :
+                                         "PS2 CONFIGURATION", 0);
     draw_soft_button(544.0f, 400.0f, 290.0f, 44.0f,
                      "CROSS: START GAME", 0);
     set_ui_font_size(7, 11);
@@ -4706,6 +4709,122 @@ static void draw_details(void)
               g_details_message);
     draw_text(24.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y, 0x875be8ff,
               "CROSS / START: PLAY   |   TRIANGLE: CONFIRM   |   CIRCLE: BACK");
+    set_ui_font_size(14, 22);
+}
+
+
+static void draw_fps_control(void)
+{
+    char line[192];
+    const ps3scale_game_t *game = selected_game();
+    const ps3scale_profile_t *profile = profile_for_game(game);
+    int script_state = profile_script_state_for_game(game, profile);
+    int can_apply = profile &&
+        strcmp(profile->trust, "B_COMMUNITY") == 0 &&
+        profile->patch_count == 1;
+
+    draw_page_header("FPS Control",
+        "Choose an exact game-version profile; PS3 SCALE never guesses patch addresses.");
+
+    if (!game || !game_is_ps3(game)) {
+        draw_soft_card(24.0f, 92.0f, 806.0f, 340.0f, 0);
+        draw_text(48.0f, 128.0f, 0x29243fff,
+                  "FPS profiles are currently available for PS3 games only.");
+        draw_text(48.0f, PS3SCALE_UI_FOOTER_SINGLE_Y, 0x77718fff,
+                  "CIRCLE: BACK");
+        set_ui_font_size(14, 22);
+        return;
+    }
+
+    if (!profile)
+        g_fps_control_selection = 0;
+    if (g_fps_control_selection < 0 || g_fps_control_selection > 1)
+        g_fps_control_selection = 0;
+
+    draw_soft_card(20.0f, 88.0f, 814.0f, 344.0f, 0);
+    set_ui_font_size(11, 17);
+    snprintf(line, sizeof(line), "%.64s", game->title);
+    draw_text(42.0f, 104.0f, 0x29243fff, line);
+    set_ui_font_size(7, 11);
+    snprintf(line, sizeof(line), "TITLE ID: %.9s     APP VERSION: %.5s",
+             game->title_id, game->app_ver[0] ? game->app_ver : "UNKNOWN");
+    draw_text(42.0f, 130.0f, 0x514b69ff, line);
+
+    draw_soft_card(38.0f, 158.0f, 374.0f, 88.0f,
+                   g_fps_control_selection == 0);
+    set_ui_font_size(10, 15);
+    draw_text(56.0f, 176.0f, 0x29243fff, "ORIGINAL");
+    set_ui_font_size(7, 11);
+    draw_text(56.0f, 202.0f, 0x514b69ff,
+              "Use the game's native frame-rate behavior.");
+    draw_text(56.0f, 222.0f, 0x77718fff,
+              "No PS3 SCALE memory patch is armed.");
+
+    draw_soft_card(426.0f, 158.0f, 390.0f, 88.0f,
+                   g_fps_control_selection == 1 && profile != NULL);
+    if (profile) {
+        set_ui_font_size(10, 15);
+        snprintf(line, sizeof(line), "%.54s", profile->effect);
+        draw_text(444.0f, 176.0f, 0x29243fff, line);
+        set_ui_font_size(7, 11);
+        draw_text(444.0f, 202.0f, 0x514b69ff,
+                  strcmp(profile->trust, "B_COMMUNITY") == 0 ?
+                  "COMMUNITY-REPORTED PROFILE" :
+                  "MANUAL-ONLY COMMUNITY PROFILE");
+        snprintf(line, sizeof(line), "%u memory write(s); exact version match.",
+                 profile->patch_count);
+        draw_text(444.0f, 222.0f, 0x77718fff, line);
+    } else {
+        set_ui_font_size(10, 15);
+        draw_text(444.0f, 176.0f, 0xb27b35ff,
+                  "NO EXACT FPS PROFILE");
+        set_ui_font_size(7, 11);
+        draw_text(444.0f, 202.0f, 0x514b69ff,
+                  "No profile matches this Title ID + APP_VER.");
+        draw_text(444.0f, 222.0f, 0x77718fff,
+                  "The game remains unmodified; no generic slider exists.");
+    }
+
+    draw_soft_card(38.0f, 258.0f, 778.0f, 98.0f, 0);
+    set_ui_font_size(8, 12);
+    draw_text(56.0f, 274.0f, 0x29243fff, "PATCH STATUS");
+    set_ui_font_size(7, 11);
+    if (script_state == 1) {
+        draw_text(56.0f, 298.0f, 0x26794bff,
+                  "ONE-LAUNCH PROFILE ARMED FOR THE NEXT GAME START.");
+    } else if (script_state == -2) {
+        draw_text(56.0f, 298.0f, 0xc58a4dff,
+                  "STALE PS3 SCALE SCRIPT FOUND. REMOVE IT BEFORE RE-ARMING.");
+    } else if (script_state == -1) {
+        draw_text(56.0f, 298.0f, 0xc58a4dff,
+                  "A USER WEBMAN SCRIPT EXISTS. PS3 SCALE WILL NOT CHANGE IT.");
+    } else {
+        draw_text(56.0f, 298.0f, 0x514b69ff,
+                  "NO PROFILE IS ARMED. ORIGINAL GAME BEHAVIOR IS PRESERVED.");
+    }
+    if (profile && !can_apply) {
+        draw_text(56.0f, 322.0f, 0xc58a4dff,
+                  "AUTO APPLY DISABLED: MANUAL-ONLY OR MULTI-WRITE PROFILE.");
+    } else {
+        draw_text(56.0f, 322.0f, 0x77718fff,
+                  "Community data is not hardware-verified; 60 FPS is not guaranteed.");
+    }
+
+    draw_soft_button(38.0f, 374.0f, 244.0f, 42.0f,
+                     "CROSS: PREPARE PROFILE", 0);
+    draw_soft_button(294.0f, 374.0f, 244.0f, 42.0f,
+                     "TRIANGLE: CONFIRM APPLY",
+                     g_profile_confirm_pending);
+    draw_soft_button(550.0f, 374.0f, 266.0f, 42.0f,
+                     "SQUARE: REMOVE PROFILE", 0);
+
+    set_ui_font_size(7, 11);
+    draw_text(24.0f, PS3SCALE_UI_FOOTER_PRIMARY_Y, 0x77718fff,
+              g_profile_confirm_pending ?
+              "COMMUNITY PATCH: TRIANGLE CONFIRMS; CIRCLE CANCELS." :
+              g_details_message);
+    draw_text(24.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y, 0x875be8ff,
+              "UP/DOWN: SELECT MODE   |   EXIT GAME TO CLEAR MEMORY PATCH.");
     set_ui_font_size(14, 22);
 }
 
@@ -5355,6 +5474,7 @@ static void draw_ui(void)
         case SCREEN_HOME: draw_home(); break;
         case SCREEN_SCAN: draw_scan(); break;
         case SCREEN_DETAILS: draw_details(); break;
+        case SCREEN_FPS_CONTROL: draw_fps_control(); break;
         case SCREEN_ONLINE_DB: draw_online_database(); break;
         case SCREEN_SETTINGS: draw_settings(); break;
         case SCREEN_TOOLS: draw_tools(); break;
@@ -5879,36 +5999,23 @@ int main(int argc, char *argv[])
             const ps3scale_game_t *game = selected_game();
             const ps3scale_profile_t *profile = profile_for_game(game);
             if (square && !old_square && game && game_is_ps3(game)) {
-                int state;
-                if (g_profile_arm_running || g_profile_arm_done) {
-                    set_details_message("WAIT FOR PROFILE ARMING TO FINISH.");
-                    state = 99;
-                } else {
-                    state = profile_script_state_for_game(game, profile);
-                }
-                if (state == 99) {
-                    /* The profile worker owns this script path until it finishes. */
-                } else if (state == 1 || state == -2) {
-                    if (ps3scale_profile_script_remove(game->title_id) == 0)
-                        set_details_message("ONE-LAUNCH PROFILE SCRIPT REMOVED FROM WEBMAN.");
-                    else
-                        set_details_message("COULD NOT REMOVE THE PS3 SCALE PROFILE SCRIPT.");
-                } else if (state == -1) {
-                    set_details_message("A USER WEBMAN SCRIPT EXISTS. IT WAS NOT OVERWRITTEN.");
-                } else if (!profile) {
-                    set_details_message("NO EXACT ONLINE PROFILE FOR THIS GAME UPDATE.");
-                } else if (strcmp(profile->trust, "B_COMMUNITY_MANUAL") == 0) {
-                    set_details_message("MANUAL-ONLY PROFILE. ONE-LAUNCH APPLY IS NOT SUPPORTED.");
-                } else if (profile->patch_count != 1) {
-                    set_details_message("MULTI-WRITE PROFILE: AUTO APPLY DISABLED FOR SAFETY.");
-                } else {
-                    g_profile_confirm_pending = 1;
-                    set_details_message("COMMUNITY PATCH. TRIANGLE TO ARM ONE-LAUNCH PROFILE.");
-                }
+                g_profile_confirm_pending = 0;
+                g_fps_control_selection = 0;
+                g_screen = SCREEN_FPS_CONTROL;
             }
             if (triangle && !old_triangle) {
                 if (g_profile_confirm_pending) {
                     confirm_profile_install();
+                } else if (game && game_is_ps3(game)) {
+                    if (!profile) {
+                        set_details_message("NO EXACT FPS PROFILE FOR THIS GAME UPDATE.");
+                    } else if (strcmp(profile->trust, "B_COMMUNITY_MANUAL") == 0 ||
+                               profile->patch_count != 1) {
+                        set_details_message("PROFILE IS MANUAL-ONLY OR MULTI-WRITE. OPEN FPS CONTROL.");
+                    } else {
+                        g_profile_confirm_pending = 1;
+                        set_details_message("COMMUNITY PATCH. TRIANGLE AGAIN TO CONFIRM APPLY.");
+                    }
                 } else if (game &&
                            (game->kind == PS3SCALE_GAME_PS2_ISO ||
                             game->kind == PS3SCALE_GAME_PS2_CLASSIC)) {
@@ -5935,6 +6042,89 @@ int main(int argc, char *argv[])
                     set_details_message("PROFILE INSTALL CANCELLED.");
                 } else {
                     g_screen = SCREEN_SCAN;
+                }
+            }
+        } else if (g_screen == SCREEN_FPS_CONTROL) {
+            const ps3scale_game_t *game = selected_game();
+            const ps3scale_profile_t *profile = profile_for_game(game);
+            int state;
+
+            if (up && !old_up)
+                g_fps_control_selection = 0;
+            if (down && !old_down && profile)
+                g_fps_control_selection = 1;
+
+            if (cross && !old_cross) {
+                if (g_profile_confirm_pending) {
+                    set_details_message("PRESS TRIANGLE TO CONFIRM OR CIRCLE TO CANCEL.");
+                } else if (!game || !game_is_ps3(game)) {
+                    set_details_message("FPS CONTROL REQUIRES A SELECTED PS3 GAME.");
+                } else if (g_fps_control_selection == 0) {
+                    state = profile_script_state_for_game(game, profile);
+                    if (state == 1 || state == -2) {
+                        if (ps3scale_profile_script_remove(game->title_id) == 0)
+                            set_details_message("ORIGINAL MODE SELECTED. PS3 SCALE PROFILE REMOVED.");
+                        else
+                            set_details_message("COULD NOT REMOVE THE PS3 SCALE PROFILE SCRIPT.");
+                    } else if (state == -1) {
+                        set_details_message("USER WEBMAN SCRIPT PROTECTED. NO FILE WAS CHANGED.");
+                    } else {
+                        set_details_message("ORIGINAL MODE SELECTED. NO PROFILE IS ARMED.");
+                    }
+                } else if (!profile) {
+                    set_details_message("NO EXACT FPS PROFILE FOR THIS TITLE ID + APP VERSION.");
+                } else if (strcmp(profile->trust, "B_COMMUNITY_MANUAL") == 0) {
+                    set_details_message("MANUAL-ONLY PROFILE. AUTOMATIC APPLY IS DISABLED.");
+                } else if (profile->patch_count != 1) {
+                    set_details_message("MULTI-WRITE PROFILE. AUTOMATIC APPLY IS DISABLED.");
+                } else {
+                    state = profile_script_state_for_game(game, profile);
+                    if (state == 1) {
+                        set_details_message("PROFILE ALREADY ARMED FOR THE NEXT GAME START.");
+                    } else if (state == -1) {
+                        set_details_message("USER WEBMAN SCRIPT EXISTS. IT WILL NOT BE OVERWRITTEN.");
+                    } else if (state == -2) {
+                        set_details_message("STALE SCRIPT FOUND. PRESS SQUARE TO REMOVE IT FIRST.");
+                    } else {
+                        g_profile_confirm_pending = 1;
+                        set_details_message("COMMUNITY FPS PATCH. TRIANGLE TO CONFIRM APPLY.");
+                    }
+                }
+            }
+
+            if (triangle && !old_triangle) {
+                if (g_profile_confirm_pending) {
+                    confirm_profile_install();
+                } else {
+                    set_details_message("SELECT A PROFILE AND PRESS CROSS BEFORE CONFIRMING.");
+                }
+            }
+
+            if (square && !old_square) {
+                if (!game || !game_is_ps3(game)) {
+                    set_details_message("NO PS3 GAME SELECTED.");
+                } else {
+                    state = profile_script_state_for_game(game, profile);
+                    if (state == 1 || state == -2) {
+                        if (ps3scale_profile_script_remove(game->title_id) == 0)
+                            set_details_message("PS3 SCALE ONE-LAUNCH PROFILE REMOVED.");
+                        else
+                            set_details_message("COULD NOT REMOVE THE PS3 SCALE PROFILE.");
+                    } else if (state == -1) {
+                        set_details_message("USER WEBMAN SCRIPT PROTECTED. NO FILE WAS CHANGED.");
+                    } else {
+                        set_details_message("NO PS3 SCALE PROFILE SCRIPT TO REMOVE.");
+                    }
+                }
+                g_profile_confirm_pending = 0;
+            }
+
+            if (circle && !old_circle) {
+                if (g_profile_confirm_pending) {
+                    g_profile_confirm_pending = 0;
+                    set_details_message("FPS PROFILE APPLY CANCELLED.");
+                } else {
+                    g_screen = SCREEN_DETAILS;
                 }
             }
         } else if (g_screen == SCREEN_ONLINE_DB) {
