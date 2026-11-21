@@ -128,6 +128,11 @@ int ghc_p2p_send(GhcP2PLink *link, const uint8_t *payload, size_t payload_length
             link->peer_public_port,
             link->peer_local_address,
             link->peer_local_port
+        ) && !gh_same_endpoint(
+            link->peer_observed_address,
+            link->peer_observed_port,
+            link->peer_local_address,
+            link->peer_local_port
         )) {
         local_result = ghc_udp_sendto_ipv4(
             link->socket_fd,
@@ -179,8 +184,8 @@ int ghc_p2p_receive(
         for (i = 0; i < GHC_RELAY_ID_SIZE; ++i) difference |= (uint8_t)(decoded.relay_id[i] ^ link->peer_relay_id[i]);
         if (difference != 0) return -5;
     }
-    if (!ghc_replay_window_accept(&link->receive_window, decoded.sequence)) return -6;
     if (decoded.payload_length > payload_capacity) return -7;
+    if (!ghc_replay_window_accept(&link->receive_window, decoded.sequence)) return -6;
 
     gh_copy_text(link->peer_observed_address, source_address, sizeof(link->peer_observed_address));
     link->peer_observed_port = source_port;
