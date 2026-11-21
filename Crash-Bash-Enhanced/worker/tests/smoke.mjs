@@ -124,6 +124,9 @@ for (const player of players.slice(0, 4)) {
 const started = await call("/v1/rooms/" + code + "/start", "POST", {}, players[0].token);
 assert.equal(started.status, 200);
 assert.equal(started.body.status, "running");
+const idempotentJoin = await call("/v1/rooms/" + code + "/join", "POST", {}, players[1].token);
+assert.equal(idempotentJoin.status, 200);
+assert.equal(idempotentJoin.body.player_count, 4);
 
 const secondCreated = await call("/v1/rooms", "POST", { max_players: 2, is_private: true }, players[4].token);
 assert.equal(secondCreated.status, 201);
@@ -293,6 +296,13 @@ assert.equal(reusedTicket, null);
 const secondStarted = await call("/v1/rooms/" + secondCode + "/start", "POST", {}, players[4].token);
 assert.equal(secondStarted.status, 200);
 assert.equal(secondStarted.body.status, "running");
+
+await lobby.webSocketClose(relayB, 1006, "network lost", false);
+assert.equal(relayB.closed.code, 1008);
+const afterDisconnectState = await lobby.load();
+assert.equal(afterDisconnectState.rooms[code].players.length, 3);
+assert.equal(afterDisconnectState.rooms[code].hostSessionId, players[2].session_id);
+assert.equal(afterDisconnectState.sessions[await sha256(players[1].token)].roomCode, null);
 
 const extraGuest = await call("/v1/sessions", "POST", { mode: "guest", display_name: "Capacity Test" });
 assert.equal(extraGuest.status, 201);
