@@ -24,6 +24,11 @@ void cb_input_remove(void);
  */
 void cb_input_set_active(int active, int local_slot);
 
+/* Read the real physical controller on PS3 port 0 without passing through
+ * this module's virtual-pad hook. Returns 0 when a valid report is available.
+ */
+int cb_input_read_physical(CbPadState *state);
+
 /* Update one remote PS1 player slot. The local slot is ignored. */
 void cb_input_set_remote_state(int slot, const CbPadState *state);
 
