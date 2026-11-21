@@ -216,7 +216,7 @@ def inspect_bytes(data: bytes, *, max_blocks: int = DEFAULT_MAX_BLOCKS) -> tuple
         complete = (
             stop_reason == "eof"
             or (stop_reason == "zero_terminator" and trailing_bytes == 0)
-            or (stop_reason == "invalid_or_non_deflate_trailing_data" and 0 < trailing_bytes <= 64)
+            or (stop_reason in ("invalid_or_non_deflate_trailing_data", "truncated_block_payload") and 0 < trailing_bytes <= 64)
         )
         raw_zone = b"".join(zone_parts)
         zone, inner_streams = _inflate_zone_assets(raw_zone)
