@@ -321,6 +321,7 @@ int cb_relay_send_batch(CbRelayClient *client, const CbRelayPacket *packets, siz
 
     result = cb_ws_send_binary(&client->websocket, message, total);
     free(message);
+    if (result == 0) client->last_ping_ms = monotonic_ms();
     return result;
 }
 
@@ -361,6 +362,7 @@ int cb_relay_receive_packet(CbRelayClient *client, void *packet, size_t capacity
     result = cb_ws_receive(&client->websocket, frame, sizeof(frame),
                            &frame_length, &opcode, timeout_ms);
     if (result <= 0) return result;
+    client->last_ping_ms = monotonic_ms();
 
     if (opcode == CB_WS_OPCODE_TEXT) {
         if (control && control_capacity) {
