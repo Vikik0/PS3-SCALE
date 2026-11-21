@@ -133,7 +133,7 @@ static int wait_for_readable(int sock)
 }
 
 static int webman_http_get(const char *path, char *response,
-                           size_t response_size)
+                           size_t response_size, int read_response_body)
 {
     int sock = -1;
     int ret;
@@ -221,10 +221,21 @@ static int webman_http_get(const char *path, char *response,
         used += (size_t)ret;
         response[used] = '\0';
 
-        /* The status line is enough to confirm that webMAN accepted the
-           request; do not wait for a body that may be delayed by game launch. */
-        if (strstr(response, "\r\n\r\n") != NULL)
-            break;
+        /*
+         * Game-launch and basic webMAN probes only need the HTTP headers;
+         * a launch can keep the connection busy while webMAN mounts the game.
+         * The PS3MAPI version probe is different: it must read the JSON body,
+         * otherwise a headers-only TCP packet creates a false "MAPI offline".
+         */
+        if (strstr(response, "\r\n\r\n") != NULL) {
+            if (!read_response_body)
+                break;
+            {
+                const char *body = strstr(response, "\r\n\r\n") + 4;
+                if (strstr(body, "\"response\"") && strchr(body, '}'))
+                    break;
+            }
+        }
     }
     response[used] = '\0';
     if (used == 0 || strncmp(response, "HTTP/", 5) != 0) {
@@ -248,7 +259,7 @@ cleanup:
 int ps3scale_webman_available(void)
 {
     char response[1024];
-    return webman_http_get("/cpursx.ps3", response, sizeof(response));
+    return webman_http_get("/cpursx.ps3", response, sizeof(response), 0);
 }
 
 int ps3scale_webman_ps3mapi_available(void)
@@ -256,7 +267,7 @@ int ps3scale_webman_ps3mapi_available(void)
     char response[2048];
 
     if (webman_http_get("/ps3mapi.ps3?SERVER%20GETVERSION",
-                        response, sizeof(response)) != 0)
+                        response, sizeof(response), 1) != 0)
         return -1;
 
     if (!strstr(response, "version") && !strstr(response, "response"))
@@ -273,5 +284,5 @@ int ps3scale_webman_start_game(const ps3scale_game_t *game)
                                          sizeof(request_path)) != 0)
         return PS3SCALE_WEBMAN_ERROR_INVALID_REQUEST;
 
-    return webman_http_get(request_path, response, sizeof(response));
+    return webman_http_get(request_path, response, sizeof(response), 0);
 }
