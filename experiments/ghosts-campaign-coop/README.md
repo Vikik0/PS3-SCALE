@@ -33,7 +33,7 @@ The project will not claim one universal EBOOT/SPRX. It selects profiles by titl
 
 ## Verification
 
-Prototype 0.2 contains 16 passing Python unit/UDP integration tests plus portable C tests for GHC2, WebSocket frames, mission revive rules, lobby JSON parsing and STUN. GitHub Actions also builds and validates the PPU PRX. These checks do not validate a second player in Campaign or live networking on a console.
+Prototype 0.2 contains 16 passing Python unit/UDP integration tests plus portable C tests for GHC2, WebSocket frames, mission revive rules, lobby JSON parsing, STUN, direct peer-key direction and GCP1 gameplay payloads. GitHub Actions also builds and validates the PPU PRX. These checks do not validate a second player in Campaign or live networking on a console.
 
 ## Important
 

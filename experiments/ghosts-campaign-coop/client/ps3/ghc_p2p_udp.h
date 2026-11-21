@@ -5,6 +5,7 @@
 #include "ghc_lobby.h"
 #include "ghc_protocol.h"
 #include "ghc_udp_ps3.h"
+#include "ghc_game_protocol.h"
 
 typedef struct {
     int socket_fd;
@@ -43,3 +44,8 @@ int ghc_p2p_receive(
 );
 
 void ghc_p2p_link_reset(GhcP2PLink *link);
+
+
+/* Encode/decode game-level messages over the authenticated direct UDP link. */
+int ghc_p2p_send_game_message(GhcP2PLink *link, const GhcGameMessage *message);
+int ghc_p2p_receive_game_message(GhcP2PLink *link, GhcGameMessage *message, uint32_t *sequence);

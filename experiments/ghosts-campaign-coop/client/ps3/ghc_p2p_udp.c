@@ -193,3 +193,20 @@ int ghc_p2p_receive(
     *sequence = decoded.sequence;
     return (int)decoded.payload_length;
 }
+
+
+int ghc_p2p_send_game_message(GhcP2PLink *link, const GhcGameMessage *message) {
+    uint8_t packet[GHC_GAME_MAX_PACKET_SIZE];
+    size_t packet_length = 0;
+    if (ghc_game_encode_message(message, packet, sizeof(packet), &packet_length) != 0) return -1;
+    return ghc_p2p_send(link, packet, packet_length);
+}
+
+int ghc_p2p_receive_game_message(GhcP2PLink *link, GhcGameMessage *message, uint32_t *sequence) {
+    uint8_t packet[GHC_GAME_MAX_PACKET_SIZE];
+    int packet_length;
+    if (!message || !sequence) return -1;
+    packet_length = ghc_p2p_receive(link, packet, sizeof(packet), sequence);
+    if (packet_length < 0) return packet_length;
+    return ghc_game_decode_message(packet, (size_t)packet_length, message);
+}
