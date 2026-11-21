@@ -152,7 +152,11 @@ jobs:
               --toolchain-bin "$PS3DEV/ppu/bin" \
               --out-dir "$out" \
               --abi ilp32
-            archive="$(find "$out" -type f -name "lib${stub}_stub.a" -print -quit)"
+            archive_name="lib${stub}_stub.a"
+            if [ "$stub" = "fs" ]; then
+              archive_name="libsys_fs_stub.a"
+            fi
+            archive="$(find "$out" -type f -name "$archive_name" -print -quit)"
             test -n "$archive"
             if [ "$stub" = "net" ]; then
               PS3DEV="$PS3DEV" PS3DK="$PS3DK" PS3_TOOLCHAIN_ROOT="$src" \
