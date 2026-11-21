@@ -187,6 +187,148 @@ int ghc_lobby_parse_guest_session(const char *json, GhcGuestSession *session) {
     return 0;
 }
 
+int ghc_json_get_bool(const char *json, const char *key, int *value) {
+    const char *cursor;
+    char parsed_key[96];
+    size_t key_length;
+
+    if (!json || !key || !value) return -1;
+    key_length = ghc_strlen(key);
+    if (key_length == 0 || key_length >= sizeof(parsed_key)) return -1;
+
+    cursor = json;
+    while (*cursor) {
+        if (*cursor != '"') {
+            ++cursor;
+            continue;
+        }
+
+        {
+            const char *after_key = NULL;
+            const char *boolean;
+            int parse_result = gh_parse_json_string(cursor, parsed_key, sizeof(parsed_key), &after_key);
+            if (parse_result != 0) return -1;
+
+            boolean = gh_skip_space(after_key);
+            if (*boolean == ':'
+                && ghc_strlen(parsed_key) == key_length
+                && ghc_memcmp(parsed_key, key, key_length) == 0) {
+                boolean = gh_skip_space(boolean + 1);
+                if (ghc_strncmp(boolean, "true", 4) == 0) {
+                    *value = 1;
+                    return 0;
+                }
+                if (ghc_strncmp(boolean, "false", 5) == 0) {
+                    *value = 0;
+                    return 0;
+                }
+                return -1;
+            }
+            cursor = after_key;
+        }
+    }
+    return -1;
+}
+
+static int gh_lobby_is_ipv4(const char *address) {
+    unsigned int octet = 0;
+    unsigned int digits = 0;
+    unsigned int dots = 0;
+    const char *cursor = address;
+
+    if (!address || !*address) return 0;
+    while (*cursor) {
+        if (*cursor >= '0' && *cursor <= '9') {
+            octet = octet * 10u + (unsigned int)(*cursor - '0');
+            if (octet > 255u || ++digits > 3u) return 0;
+        } else if (*cursor == '.') {
+            if (digits == 0 || ++dots > 3u) return 0;
+            octet = 0;
+            digits = 0;
+        } else {
+            return 0;
+        }
+        ++cursor;
+    }
+    return dots == 3u && digits > 0;
+}
+
+int ghc_lobby_parse_peer_snapshot(const char *json, GhcPeerSnapshot *snapshot) {
+    char room_status[16];
+    char relay_id_hex[33];
+    char relay_key_hex[65];
+    char peer_session_id[GHC_LOBBY_SESSION_ID_HEX_LENGTH + 1];
+    char public_address[16];
+    char local_address[16];
+    char nat_type[16];
+    uint32_t slot = 0;
+    uint32_t public_port = 0;
+    uint32_t local_port = 0;
+    int peer_ready = 0;
+    int has_peer_candidate = 1;
+    uint8_t session_id_bytes[16];
+
+    if (!json || !snapshot) return -1;
+    ghc_memset(snapshot, 0, sizeof(*snapshot));
+
+    if (ghc_json_get_string(json, "room_status", room_status, sizeof(room_status)) != 0) return -1;
+    if (ghc_strncmp(room_status, "running", sizeof(room_status)) == 0) {
+        snapshot->room_running = 1;
+    } else if (ghc_strncmp(room_status, "waiting", sizeof(room_status)) != 0) {
+        return -1;
+    }
+
+    if (ghc_json_get_bool(json, "peer_ready", &peer_ready) == 0) {
+        snapshot->peer_ready = (uint8_t)(peer_ready != 0);
+    }
+
+    if (ghc_json_get_string(json, "session_id", peer_session_id, sizeof(peer_session_id)) != 0) {
+        return 0; /* peer is null / not joined yet */
+    }
+    if (ghc_json_get_u32(json, "slot", &slot) != 0 || (slot != 1u && slot != 2u)) return -1;
+    if (ghc_json_get_string(json, "relay_id", relay_id_hex, sizeof(relay_id_hex)) != 0
+        || ghc_json_get_string(json, "relay_key", relay_key_hex, sizeof(relay_key_hex)) != 0
+        || ghc_hex_decode_exact(peer_session_id, session_id_bytes, sizeof(session_id_bytes)) != 0
+        || ghc_hex_decode_exact(relay_id_hex, snapshot->relay_id, sizeof(snapshot->relay_id)) != 0
+        || ghc_hex_decode_exact(relay_key_hex, snapshot->relay_key, sizeof(snapshot->relay_key)) != 0) {
+        ghc_memset(snapshot, 0, sizeof(*snapshot));
+        return -1;
+    }
+
+    ghc_memcpy(snapshot->peer_session_id, peer_session_id, sizeof(peer_session_id));
+    snapshot->peer_slot = (uint8_t)slot;
+    snapshot->peer_present = 1;
+
+    if (ghc_json_get_string(json, "public_address", public_address, sizeof(public_address)) != 0
+        || ghc_json_get_u32(json, "public_port", &public_port) != 0
+        || ghc_json_get_string(json, "local_address", local_address, sizeof(local_address)) != 0
+        || ghc_json_get_u32(json, "local_port", &local_port) != 0
+        || ghc_json_get_string(json, "nat_type", nat_type, sizeof(nat_type)) != 0) {
+        has_peer_candidate = 0;
+    }
+
+    if (has_peer_candidate) {
+        if (!gh_lobby_is_ipv4(public_address) || !gh_lobby_is_ipv4(local_address)
+            || public_port == 0 || public_port > 65535u
+            || local_port == 0 || local_port > 65535u
+            || !(ghc_strncmp(nat_type, "open", 16) == 0
+                 || ghc_strncmp(nat_type, "moderate", 16) == 0
+                 || ghc_strncmp(nat_type, "strict", 16) == 0
+                 || ghc_strncmp(nat_type, "symmetric", 16) == 0
+                 || ghc_strncmp(nat_type, "unknown", 16) == 0)) {
+            ghc_memset(snapshot, 0, sizeof(*snapshot));
+            return -1;
+        }
+        ghc_memcpy(snapshot->candidate.public_address, public_address, sizeof(public_address));
+        ghc_memcpy(snapshot->candidate.local_address, local_address, sizeof(local_address));
+        ghc_memcpy(snapshot->candidate.nat_type, nat_type, sizeof(nat_type));
+        snapshot->candidate.public_port = (uint16_t)public_port;
+        snapshot->candidate.local_port = (uint16_t)local_port;
+        snapshot->candidate_present = 1;
+    }
+    return 0;
+}
+
 int ghc_lobby_parse_room_code(const char *json, char room_code[7]) {
     size_t i;
     if (!json || !room_code) return -1;

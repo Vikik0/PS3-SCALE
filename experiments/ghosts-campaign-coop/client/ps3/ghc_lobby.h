@@ -57,3 +57,21 @@ int ghc_lobby_leave_room(
     const char room_code[7],
     int *http_status
 );
+
+
+int ghc_lobby_get_peer(
+    const char *https_base_url,
+    const GhcGuestSession *session,
+    const char room_code[7],
+    GhcPeerSnapshot *snapshot,
+    int *http_status
+);
+
+int ghc_lobby_publish_candidate(
+    const char *https_base_url,
+    const GhcGuestSession *session,
+    const char room_code[7],
+    const GhcNetworkCandidate *candidate,
+    GhcPeerSnapshot *snapshot,
+    int *http_status
+);

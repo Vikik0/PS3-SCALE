@@ -269,9 +269,10 @@ static int gh_header_safe(const char *value) {
     return 1;
 }
 
-static int gh_http_post_json(
+static int gh_http_request_json(
     const char *url,
     const char *bearer_token,
+    const char *method,
     const char *body,
     char *response,
     size_t response_capacity,
@@ -293,7 +294,7 @@ static int gh_http_post_json(
     int result;
 
     if (!g_runtime_started || !g_http_client) return GHC_LOBBY_ERR_NOT_INITIALIZED;
-    if (!body || !response || response_capacity < 2 || !response_length || !http_status) return -1;
+    if (!method || !response || response_capacity < 2 || !response_length || !http_status) return -1;
     if (bearer_token && !gh_header_safe(bearer_token)) return -1;
 
     result = gh_parse_https_url(url, hostname, sizeof(hostname), path, sizeof(path), &port);
@@ -305,11 +306,13 @@ static int gh_http_post_json(
     uri.path = path;
     uri.port = port;
 
-    result = cellHttpCreateTransaction(&transaction, g_http_client, CELL_HTTP_METHOD_POST, &uri);
+    result = cellHttpCreateTransaction(&transaction, g_http_client, method, &uri);
     if (result != 0) return result;
 
-    result = cellHttpRequestAddHeader(transaction, &content_type);
-    if (result != 0) goto cleanup;
+    if (body) {
+        result = cellHttpRequestAddHeader(transaction, &content_type);
+        if (result != 0) goto cleanup;
+    }
     result = cellHttpRequestAddHeader(transaction, &accept);
     if (result != 0) goto cleanup;
 
@@ -329,24 +332,29 @@ static int gh_http_post_json(
         if (result != 0) goto cleanup;
     }
 
-    body_length = ghc_strlen(body);
-    result = cellHttpRequestSetContentLength(transaction, body_length);
-    if (result != 0) goto cleanup;
-
-    while (sent_total < body_length) {
-        size_t sent = 0;
-        result = cellHttpSendRequest(
-            transaction,
-            body + sent_total,
-            body_length - sent_total,
-            &sent
-        );
+    if (body) {
+        body_length = ghc_strlen(body);
+        result = cellHttpRequestSetContentLength(transaction, body_length);
         if (result != 0) goto cleanup;
-        if (sent == 0) {
-            result = CELL_HTTP_ERROR_INTERNAL;
-            goto cleanup;
+
+        while (sent_total < body_length) {
+            size_t sent = 0;
+            result = cellHttpSendRequest(
+                transaction,
+                body + sent_total,
+                body_length - sent_total,
+                &sent
+            );
+            if (result != 0) goto cleanup;
+            if (sent == 0) {
+                result = CELL_HTTP_ERROR_INTERNAL;
+                goto cleanup;
+            }
+            sent_total += sent;
         }
-        sent_total += sent;
+    } else {
+        result = cellHttpSendRequest(transaction, NULL, 0, &sent_total);
+        if (result != 0) goto cleanup;
     }
 
     response[0] = '\0';
@@ -418,9 +426,10 @@ static int gh_authenticated_post(
     if (!session || !session->token[0] || !path) return -1;
     if (gh_build_url(base_url, path, url, sizeof(url)) != 0) return GHC_LOBBY_ERR_BAD_URL;
 
-    result = gh_http_post_json(
+    result = gh_http_request_json(
         url,
         session->token,
+        CELL_HTTP_METHOD_POST,
         body,
         response,
         sizeof(response),
@@ -446,7 +455,7 @@ int ghc_lobby_create_guest_session(
     if (!session || gh_build_url(https_base_url, "/v1/sessions", url, sizeof(url)) != 0) {
         return GHC_LOBBY_ERR_BAD_URL;
     }
-    result = gh_http_post_json(
+    result = gh_http_request_json(
         url,
         NULL,
         "{\"mode\":\"guest\"}",
@@ -477,9 +486,10 @@ int ghc_lobby_create_room(
     if (!session || !room_code || gh_build_url(https_base_url, "/v1/rooms", url, sizeof(url)) != 0) {
         return GHC_LOBBY_ERR_BAD_URL;
     }
-    result = gh_http_post_json(
+    result = gh_http_request_json(
         url,
         session->token,
+        CELL_HTTP_METHOD_POST,
         "{}",
         response,
         sizeof(response),
@@ -532,6 +542,155 @@ int ghc_lobby_start_mission(
     char path[96];
     if (gh_room_path(room_code, "start", path, sizeof(path)) != 0) return -1;
     return gh_authenticated_post(https_base_url, session, path, "{}", 200, http_status);
+}
+
+static int gh_ipv4_valid(const char *address) {
+    unsigned int octet = 0;
+    unsigned int digits = 0;
+    unsigned int dots = 0;
+    const char *cursor = address;
+    if (!address || !*address) return 0;
+    while (*cursor) {
+        if (*cursor >= '0' && *cursor <= '9') {
+            octet = octet * 10u + (unsigned int)(*cursor - '0');
+            if (octet > 255u || ++digits > 3u) return 0;
+        } else if (*cursor == '.') {
+            if (digits == 0 || ++dots > 3u) return 0;
+            octet = 0;
+            digits = 0;
+        } else return 0;
+        ++cursor;
+    }
+    return dots == 3u && digits > 0;
+}
+
+static int gh_nat_type_valid(const char *value) {
+    return value && (
+        ghc_strncmp(value, "open", 16) == 0
+        || ghc_strncmp(value, "moderate", 16) == 0
+        || ghc_strncmp(value, "strict", 16) == 0
+        || ghc_strncmp(value, "symmetric", 16) == 0
+        || ghc_strncmp(value, "unknown", 16) == 0
+    );
+}
+
+static int gh_append_text(char *output, size_t capacity, size_t *cursor, const char *value) {
+    size_t length = ghc_strlen(value);
+    if (*cursor + length >= capacity) return -1;
+    ghc_memcpy(output + *cursor, value, length);
+    *cursor += length;
+    output[*cursor] = '\0';
+    return 0;
+}
+
+static int gh_append_u32(char *output, size_t capacity, size_t *cursor, uint32_t value) {
+    char digits[10];
+    size_t count = 0;
+    size_t i;
+    do {
+        digits[count++] = (char)('0' + (value % 10u));
+        value /= 10u;
+    } while (value && count < sizeof(digits));
+    if (*cursor + count >= capacity) return -1;
+    for (i = 0; i < count; ++i) output[*cursor + i] = digits[count - i - 1u];
+    *cursor += count;
+    output[*cursor] = '\0';
+    return 0;
+}
+
+static int gh_candidate_to_json(
+    const GhcNetworkCandidate *candidate,
+    char *output,
+    size_t capacity
+) {
+    size_t cursor = 0;
+    if (!candidate || !output || capacity == 0) return -1;
+    if (!gh_ipv4_valid(candidate->public_address) || !gh_ipv4_valid(candidate->local_address)
+        || candidate->public_port == 0 || candidate->local_port == 0
+        || !gh_nat_type_valid(candidate->nat_type)) return -1;
+
+    output[0] = '\0';
+    if (gh_append_text(output, capacity, &cursor, "{\"public_address\":\"") != 0
+        || gh_append_text(output, capacity, &cursor, candidate->public_address) != 0
+        || gh_append_text(output, capacity, &cursor, "\",\"public_port\":") != 0
+        || gh_append_u32(output, capacity, &cursor, candidate->public_port) != 0
+        || gh_append_text(output, capacity, &cursor, ",\"local_address\":\"") != 0
+        || gh_append_text(output, capacity, &cursor, candidate->local_address) != 0
+        || gh_append_text(output, capacity, &cursor, "\",\"local_port\":") != 0
+        || gh_append_u32(output, capacity, &cursor, candidate->local_port) != 0
+        || gh_append_text(output, capacity, &cursor, ",\"nat_type\":\"") != 0
+        || gh_append_text(output, capacity, &cursor, candidate->nat_type) != 0
+        || gh_append_text(output, capacity, &cursor, "\"}") != 0) return -1;
+    return 0;
+}
+
+int ghc_lobby_get_peer(
+    const char *https_base_url,
+    const GhcGuestSession *session,
+    const char room_code[7],
+    GhcPeerSnapshot *snapshot,
+    int *http_status
+) {
+    char path[96];
+    char url[768];
+    char response[GHC_HTTP_RESPONSE_CAPACITY];
+    size_t response_length = 0;
+    int status = 0;
+    int result;
+
+    if (!session || !snapshot || gh_room_path(room_code, "peer", path, sizeof(path)) != 0) return -1;
+    if (gh_build_url(https_base_url, path, url, sizeof(url)) != 0) return GHC_LOBBY_ERR_BAD_URL;
+    result = gh_http_request_json(
+        url,
+        session->token,
+        CELL_HTTP_METHOD_GET,
+        NULL,
+        response,
+        sizeof(response),
+        &response_length,
+        &status
+    );
+    if (http_status) *http_status = status;
+    if (result != 0) return result;
+    if (status != 200) return GHC_LOBBY_ERR_HTTP_STATUS;
+    return ghc_lobby_parse_peer_snapshot(response, snapshot) == 0
+        ? GHC_LOBBY_OK : GHC_LOBBY_ERR_BAD_RESPONSE;
+}
+
+int ghc_lobby_publish_candidate(
+    const char *https_base_url,
+    const GhcGuestSession *session,
+    const char room_code[7],
+    const GhcNetworkCandidate *candidate,
+    GhcPeerSnapshot *snapshot,
+    int *http_status
+) {
+    char path[96];
+    char url[768];
+    char body[256];
+    char response[GHC_HTTP_RESPONSE_CAPACITY];
+    size_t response_length = 0;
+    int status = 0;
+    int result;
+
+    if (!session || !snapshot || gh_room_path(room_code, "candidate", path, sizeof(path)) != 0) return -1;
+    if (gh_candidate_to_json(candidate, body, sizeof(body)) != 0) return -1;
+    if (gh_build_url(https_base_url, path, url, sizeof(url)) != 0) return GHC_LOBBY_ERR_BAD_URL;
+    result = gh_http_request_json(
+        url,
+        session->token,
+        CELL_HTTP_METHOD_POST,
+        body,
+        response,
+        sizeof(response),
+        &response_length,
+        &status
+    );
+    if (http_status) *http_status = status;
+    if (result != 0) return result;
+    if (status != 200) return GHC_LOBBY_ERR_HTTP_STATUS;
+    return ghc_lobby_parse_peer_snapshot(response, snapshot) == 0
+        ? GHC_LOBBY_OK : GHC_LOBBY_ERR_BAD_RESPONSE;
 }
 
 int ghc_lobby_leave_room(
