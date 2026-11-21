@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 
-static void *cb_cb_memset(void *destination, int value, size_t length)
+static void *cb_memset(void *destination, int value, size_t length)
 {
     uint8_t *out = (uint8_t *)destination;
     size_t i;
