@@ -1,6 +1,6 @@
 #include "ghc_lobby_json.h"
 
-#include <string.h>
+#include "ghc_lobby_string.h"
 
 static int gh_is_space(char value) {
     return value == ' ' || value == '\t' || value == '\r' || value == '\n';
@@ -73,7 +73,7 @@ int ghc_json_get_string(
     char parsed_key[96];
 
     if (!json || !key || !output || output_capacity == 0) return -1;
-    key_length = strlen(key);
+    key_length = ghc_strlen(key);
     if (key_length == 0 || key_length >= sizeof(parsed_key)) return -1;
 
     cursor = json;
@@ -92,8 +92,8 @@ int ghc_json_get_string(
             value_start = gh_skip_space(after_key);
             if (*value_start == ':') {
                 value_start = gh_skip_space(value_start + 1);
-                if (strlen(parsed_key) == key_length
-                    && memcmp(parsed_key, key, key_length) == 0) {
+                if (ghc_strlen(parsed_key) == key_length
+                    && ghc_memcmp(parsed_key, key, key_length) == 0) {
                     const char *after_value = NULL;
                     return gh_parse_json_string(value_start, output, output_capacity, &after_value);
                 }
@@ -110,7 +110,7 @@ int ghc_json_get_u32(const char *json, const char *key, uint32_t *value) {
     size_t key_length;
 
     if (!json || !key || !value) return -1;
-    key_length = strlen(key);
+    key_length = ghc_strlen(key);
     if (key_length == 0 || key_length >= sizeof(parsed_key)) return -1;
 
     cursor = json;
@@ -128,8 +128,8 @@ int ghc_json_get_u32(const char *json, const char *key, uint32_t *value) {
 
             number = gh_skip_space(after_key);
             if (*number == ':'
-                && strlen(parsed_key) == key_length
-                && memcmp(parsed_key, key, key_length) == 0) {
+                && ghc_strlen(parsed_key) == key_length
+                && ghc_memcmp(parsed_key, key, key_length) == 0) {
                 uint32_t parsed = 0;
                 number = gh_skip_space(number + 1);
                 if (*number < '0' || *number > '9') return -1;
@@ -152,7 +152,7 @@ int ghc_json_get_u32(const char *json, const char *key, uint32_t *value) {
 
 int ghc_hex_decode_exact(const char *hex, uint8_t *output, size_t output_length) {
     size_t i;
-    if (!hex || !output || strlen(hex) != output_length * 2u) return -1;
+    if (!hex || !output || ghc_strlen(hex) != output_length * 2u) return -1;
     for (i = 0; i < output_length; ++i) {
         int high = gh_hex_value(hex[i * 2u]);
         int low = gh_hex_value(hex[i * 2u + 1u]);
@@ -167,21 +167,21 @@ int ghc_lobby_parse_guest_session(const char *json, GhcGuestSession *session) {
     char relay_key_hex[65];
     if (!json || !session) return -1;
 
-    memset(session, 0, sizeof(*session));
+    ghc_memset(session, 0, sizeof(*session));
     if (ghc_json_get_string(json, "token", session->token, sizeof(session->token)) != 0
         || ghc_json_get_string(json, "session_id", session->session_id, sizeof(session->session_id)) != 0
         || ghc_json_get_string(json, "relay_id", relay_id_hex, sizeof(relay_id_hex)) != 0
         || ghc_json_get_string(json, "relay_key", relay_key_hex, sizeof(relay_key_hex)) != 0
         || ghc_json_get_u32(json, "expires_in_seconds", &session->expires_in_seconds) != 0) {
-        memset(session, 0, sizeof(*session));
+        ghc_memset(session, 0, sizeof(*session));
         return -1;
     }
 
-    if (strlen(session->token) != GHC_LOBBY_TOKEN_HEX_LENGTH
-        || strlen(session->session_id) != GHC_LOBBY_SESSION_ID_HEX_LENGTH
+    if (ghc_strlen(session->token) != GHC_LOBBY_TOKEN_HEX_LENGTH
+        || ghc_strlen(session->session_id) != GHC_LOBBY_SESSION_ID_HEX_LENGTH
         || ghc_hex_decode_exact(relay_id_hex, session->relay_id, sizeof(session->relay_id)) != 0
         || ghc_hex_decode_exact(relay_key_hex, session->relay_key, sizeof(session->relay_key)) != 0) {
-        memset(session, 0, sizeof(*session));
+        ghc_memset(session, 0, sizeof(*session));
         return -1;
     }
     return 0;
@@ -191,7 +191,7 @@ int ghc_lobby_parse_room_code(const char *json, char room_code[7]) {
     size_t i;
     if (!json || !room_code) return -1;
     if (ghc_json_get_string(json, "code", room_code, 7) != 0) return -1;
-    if (strlen(room_code) != GHC_LOBBY_ROOM_CODE_LENGTH) return -1;
+    if (ghc_strlen(room_code) != GHC_LOBBY_ROOM_CODE_LENGTH) return -1;
     for (i = 0; i < GHC_LOBBY_ROOM_CODE_LENGTH; ++i) {
         char c = room_code[i];
         if (!((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))) {

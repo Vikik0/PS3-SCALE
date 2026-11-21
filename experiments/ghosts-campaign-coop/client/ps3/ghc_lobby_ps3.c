@@ -7,8 +7,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <string.h>
+#include "ghc_lobby_string.h"
 
 #define GHC_HTTP_POOL_SIZE (256u * 1024u)
 #define GHC_SSL_POOL_SIZE  (128u * 1024u)
@@ -190,7 +189,7 @@ static int gh_parse_https_url(
     const char *cursor;
 
     if (!url || !hostname || !path || !port) return GHC_LOBBY_ERR_BAD_URL;
-    if (strncmp(url, "https://", 8) != 0) return GHC_LOBBY_ERR_BAD_URL;
+    if (ghc_strncmp(url, "https://", 8) != 0) return GHC_LOBBY_ERR_BAD_URL;
 
     authority = url + 8;
     authority_end = authority;
@@ -203,7 +202,7 @@ static int gh_parse_https_url(
 
     host_length = colon ? (size_t)(colon - authority) : (size_t)(authority_end - authority);
     if (host_length == 0 || host_length >= hostname_capacity) return GHC_LOBBY_ERR_BAD_URL;
-    memcpy(hostname, authority, host_length);
+    ghc_memcpy(hostname, authority, host_length);
     hostname[host_length] = '\0';
 
     if (colon) {
@@ -227,9 +226,9 @@ static int gh_parse_https_url(
         path[0] = '/';
         path[1] = '\0';
     } else {
-        path_length = strlen(path_start);
+        path_length = ghc_strlen(path_start);
         if (path_length >= path_capacity) return GHC_LOBBY_ERR_BAD_URL;
-        memcpy(path, path_start, path_length + 1);
+        ghc_memcpy(path, path_start, path_length + 1);
     }
 
     *port = parsed_port;
@@ -247,8 +246,8 @@ static int gh_build_url(
     size_t trim = 0;
 
     if (!base_url || !suffix || !output || output_capacity == 0) return -1;
-    base_length = strlen(base_url);
-    suffix_length = strlen(suffix);
+    base_length = ghc_strlen(base_url);
+    suffix_length = ghc_strlen(suffix);
     if (base_length == 0 || suffix_length == 0) return -1;
     while (base_length > 0 && base_url[base_length - 1] == '/') {
         --base_length;
@@ -256,8 +255,8 @@ static int gh_build_url(
     }
     (void)trim;
     if (base_length + suffix_length + 1 > output_capacity) return -1;
-    memcpy(output, base_url, base_length);
-    memcpy(output + base_length, suffix, suffix_length + 1);
+    ghc_memcpy(output, base_url, base_length);
+    ghc_memcpy(output + base_length, suffix, suffix_length + 1);
     return 0;
 }
 
@@ -300,7 +299,7 @@ static int gh_http_post_json(
     result = gh_parse_https_url(url, hostname, sizeof(hostname), path, sizeof(path), &port);
     if (result != 0) return result;
 
-    memset(&uri, 0, sizeof(uri));
+    ghc_memset(&uri, 0, sizeof(uri));
     uri.scheme = "https";
     uri.hostname = hostname;
     uri.path = path;
@@ -316,21 +315,21 @@ static int gh_http_post_json(
 
     if (bearer_token) {
         char authorization_value[GHC_LOBBY_TOKEN_HEX_LENGTH + 8];
-        size_t token_length = strlen(bearer_token);
+        size_t token_length = ghc_strlen(bearer_token);
         if (token_length != GHC_LOBBY_TOKEN_HEX_LENGTH
             || token_length + sizeof("Bearer ") > sizeof(authorization_value)) {
             result = -1;
             goto cleanup;
         }
-        memcpy(authorization_value, "Bearer ", 7);
-        memcpy(authorization_value + 7, bearer_token, token_length + 1);
+        ghc_memcpy(authorization_value, "Bearer ", 7);
+        ghc_memcpy(authorization_value + 7, bearer_token, token_length + 1);
         authorization.name = "Authorization";
         authorization.value = authorization_value;
         result = cellHttpRequestAddHeader(transaction, &authorization);
         if (result != 0) goto cleanup;
     }
 
-    body_length = strlen(body);
+    body_length = ghc_strlen(body);
     result = cellHttpRequestSetContentLength(transaction, body_length);
     if (result != 0) goto cleanup;
 
@@ -378,17 +377,27 @@ cleanup:
 }
 
 static int gh_room_path(const char *room_code, const char *action, char *path, size_t capacity) {
+    static const char prefix[] = "/v1/rooms/";
     size_t i;
-    int written;
-    if (!room_code || !path || capacity == 0) return -1;
-    if (strlen(room_code) != 6) return -1;
+    size_t action_length = action ? ghc_strlen(action) : 0;
+    size_t required = sizeof(prefix) - 1u + 6u + (action ? 1u + action_length : 0u) + 1u;
+    size_t cursor = 0;
+    if (!room_code || !path || capacity < required) return -1;
+    if (ghc_strlen(room_code) != 6u) return -1;
     for (i = 0; i < 6; ++i) {
         char c = room_code[i];
         if (!((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))) return -1;
     }
-    written = snprintf(path, capacity, "/v1/rooms/%s%s%s", room_code,
-                       action ? "/" : "", action ? action : "");
-    if (written < 0 || (size_t)written >= capacity) return -1;
+    ghc_memcpy(path + cursor, prefix, sizeof(prefix) - 1u);
+    cursor += sizeof(prefix) - 1u;
+    ghc_memcpy(path + cursor, room_code, 6u);
+    cursor += 6u;
+    if (action) {
+        path[cursor++] = '/';
+        ghc_memcpy(path + cursor, action, action_length);
+        cursor += action_length;
+    }
+    path[cursor] = '\0';
     return 0;
 }
 
