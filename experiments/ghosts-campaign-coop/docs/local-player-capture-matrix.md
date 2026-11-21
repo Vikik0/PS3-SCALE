@@ -26,7 +26,9 @@ Compare a verified two-controller offline mode with Campaign on the exact Ghosts
 | Per-player split-screen identity | Results of `isSplitscreenPlayer()` and `isSplitscreenPlayerPrimary()` for each player | Distinguishes primary and secondary local players |
 | Client/entity identity | `clientid`, entity number and their relationship to the local-player slot | Prevents confusing a spawned actor with a real local client |
 | Controller assignment | Port-to-local-slot mapping and command generation | Player 2 must not steal Logan's input |
-| Client state | Per-slot client state and lifecycle flags | A second entity alone is not a second client |
+| Client state | Per-slot client state and lifecycle flags; compare against the reported `G_Client` base/stride | A second entity alone is not a second client |
+| Entity array | Entity index and `G_Entity` base/stride | Confirms whether the player has a real world entity and how it relates to its client slot |
+| Script VM state | `scrVmPub_t` context and current entity when split-screen builtins are invoked | Prevents unsafe direct calls to script-command handlers |
 | Player state | Player-state address/ownership per local slot | Health, weapons and movement must remain independent |
 | Player entity | Entity number and client pointer for each local player | AI and game logic need a real player target |
 | Camera | Camera/refdef owner, local-client index and view origin | Each player needs an independent view |
