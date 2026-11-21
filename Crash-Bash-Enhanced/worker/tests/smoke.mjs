@@ -275,6 +275,21 @@ assert.equal(afterHostLeave.body.players.length, 3);
 assert.equal(afterHostLeave.body.players.find(p => p.player_id === players[1].session_id).is_host, true);
 assert.equal(afterHostLeave.body.host_endpoint_ready, false);
 
+const ps3Join = await call("/v1/rooms/" + code + "/join-guest", "POST", { display_name: "PS3 Player" });
+assert.equal(ps3Join.status, 201);
+assert.equal(ps3Join.body.psn_required, false);
+assert.equal(typeof ps3Join.body.ticket, "string");
+assert.equal(ps3Join.body.ticket.length, 64);
+const ticketRequest = new Request("https://crash-bash.test/v1/rooms/" + code + "/transport", {
+  headers: { "Sec-WebSocket-Protocol": "cbash-v1, cbash-ticket." + ps3Join.body.ticket }
+});
+const ticketState = await lobby.load();
+const ticketSession = await lobby.authenticateTransportTicket(ticketRequest, ticketState, code);
+assert.equal(ticketSession.sessionId, ps3Join.body.session_id);
+await lobby.save(ticketState);
+const reusedTicket = await lobby.authenticateTransportTicket(ticketRequest, ticketState, code);
+assert.equal(reusedTicket, null);
+
 const secondStarted = await call("/v1/rooms/" + secondCode + "/start", "POST", {}, players[4].token);
 assert.equal(secondStarted.status, 200);
 assert.equal(secondStarted.body.status, "running");
