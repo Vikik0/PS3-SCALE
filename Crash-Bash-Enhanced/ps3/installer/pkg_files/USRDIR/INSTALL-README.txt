@@ -8,7 +8,7 @@ INSTALL
 5. Start your own legally obtained supported Crash Bash (USA) copy.
 6. Press SELECT + L3 + R3 in the game to open the online menu.
 7. Enter your deployed Worker hostname (without https://) and port 443.
-8. Host a room and share the six-character code, or join with a friend's code.
+8. Host a room and share the six-character code, or join with a friend's code. A browser player can also share the code of a public room.
 
 REQUIREMENTS
 - Cobra-compatible CFW/HEN with boot_plugins.txt and PS3MAPI support.
