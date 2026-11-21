@@ -1,4 +1,5 @@
 #include "input_hook.h"
+#include "net_adapter.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -38,6 +39,7 @@ typedef struct {
 
 static CbRemoteSlot remote_slots[4];
 static volatile int bridge_active;
+static volatile int netplay_active;
 static volatile int local_player_slot = 0;
 static int hooks_installed;
 
@@ -129,11 +131,21 @@ static int32_t cb_cell_pad_get_data(uint32_t port_no, CellPadData *data)
     CbPadState state;
     int slot;
 
+    if (port_no == 0) {
+        (void)cb_net_lobby_poll();
+    }
+
     if (!bridge_active || port_no >= 4 || !data) {
         return original_get_data(port_no, data);
     }
 
     slot = (int)port_no;
+    if (netplay_active) {
+        if (slot == 0) cb_net_frame();
+        state = remote_snapshot(slot);
+        state_to_report(&state, data);
+        return CELL_PAD_OK;
+    }
     if (slot == local_player_slot) {
         /* The one physical controller remains PS3 port 0, regardless of
          * which virtual PS1 player slot the room assigned to this console. */
@@ -151,11 +163,22 @@ static int32_t cb_cell_pad_get_data_extra(uint32_t port_no, uint32_t *device_typ
     CbPadState state;
     int slot;
 
+    if (port_no == 0) {
+        (void)cb_net_lobby_poll();
+    }
+
     if (!bridge_active || port_no >= 4 || !data) {
         return original_get_data_extra(port_no, device_type, data);
     }
 
     slot = (int)port_no;
+    if (netplay_active) {
+        if (slot == 0) cb_net_frame();
+        state = remote_snapshot(slot);
+        state_to_report(&state, data);
+        if (device_type) *device_type = CELL_PAD_DEV_TYPE_STANDARD;
+        return CELL_PAD_OK;
+    }
     if (slot == local_player_slot) {
         return original_get_data_extra(0, device_type, data);
     }
@@ -250,6 +273,7 @@ void cb_input_set_active(int active, int local_slot)
     }
 
     bridge_active = 0;
+    netplay_active = 0;
     __asm__ volatile("sync" ::: "memory");
     local_player_slot = local_slot;
     for (slot = 0; slot < 4; ++slot) {
@@ -290,11 +314,18 @@ int cb_input_read_physical(CbPadState *state)
     return 0;
 }
 
+void cb_input_set_netplay_active(int active)
+{
+    __asm__ volatile("sync" ::: "memory");
+    netplay_active = active ? 1 : 0;
+    if (active) bridge_active = 1;
+}
+
 void cb_input_set_remote_state(int slot, const CbPadState *state)
 {
     CbRemoteSlot *target;
 
-    if (!state || slot < 0 || slot > 3 || slot == local_player_slot) {
+    if (!state || slot < 0 || slot > 3) {
         return;
     }
 
