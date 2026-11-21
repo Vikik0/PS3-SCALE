@@ -10,6 +10,20 @@
 #define CB_RELAY_MAX_BATCH_PACKETS 32
 #define CB_RELAY_MAX_MESSAGE 24576
 
+typedef struct CbRelayPacket {
+    /* Sixteen raw bytes. Set to all zeroes to broadcast to the room. */
+    uint8_t recipient_id[16];
+    const void *payload;
+    size_t length;
+} CbRelayPacket;
+
+typedef struct CbRelayBatchQueue {
+    CbRelayPacket packets[CB_RELAY_MAX_BATCH_PACKETS];
+    uint8_t payloads[CB_RELAY_MAX_BATCH_PACKETS][CB_RELAY_MAX_PACKET];
+    size_t count;
+    unsigned int frame_count;
+} CbRelayBatchQueue;
+
 typedef struct CbRelayClient {
     CbWsClient websocket;
     char room_code[7];
@@ -20,13 +34,6 @@ typedef struct CbRelayClient {
     uint64_t last_ping_ms;
     int connected;
 } CbRelayClient;
-
-typedef struct CbRelayPacket {
-    /* Sixteen raw bytes. Set to all zeroes to broadcast to the room. */
-    uint8_t recipient_id[16];
-    const void *payload;
-    size_t length;
-} CbRelayPacket;
 
 /* Creates a PS3 guest slot using the room code, then consumes its one-time WS ticket. */
 int cb_relay_join(CbRelayClient *client, const char *host, unsigned short port,
@@ -41,6 +48,15 @@ int cb_relay_send_to(CbRelayClient *client, const uint8_t recipient_id[16],
 
 /* Sends up to 32 targeted datagrams in one CBU1 message to stay within relay rate limits. */
 int cb_relay_send_batch(CbRelayClient *client, const CbRelayPacket *packets, size_t count);
+
+/* Copy a datagram into a frame queue; recipient NULL means broadcast. */
+int cb_relay_queue_packet(CbRelayBatchQueue *queue, const uint8_t recipient_id[16],
+                          const void *packet, size_t length);
+/* Flushes the queue immediately. A failed send leaves queued data intact. */
+int cb_relay_batch_flush(CbRelayClient *client, CbRelayBatchQueue *queue);
+/* Call once per 30–33 ms game frame; default cadence should be six frames (about 5 sends/sec). */
+int cb_relay_batch_tick(CbRelayClient *client, CbRelayBatchQueue *queue,
+                        unsigned int frames_per_batch);
 
 /* Returns 1 for a game packet, 2 for a text control message, 0 for timeout/PONG, -1 on error. */
 int cb_relay_receive_packet(CbRelayClient *client, void *packet, size_t capacity,
