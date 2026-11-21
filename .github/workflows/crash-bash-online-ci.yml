@@ -225,6 +225,9 @@ jobs:
           cmake --build Crash-Bash-Enhanced/ps3/build/pkg-installer --target crash_bash_online_installer_pkg
           test -s Crash-Bash-Enhanced/ps3/build/pkg-installer/crash_bash_online_installer.pkg
           test -s Crash-Bash-Enhanced/ps3/build/pkg-installer/crash_bash_online_installer.gnpdrm.pkg
+          python3 Crash-Bash-Enhanced/ps3/installer/verify_pkg.py \
+            Crash-Bash-Enhanced/ps3/build/pkg-installer/crash_bash_online_installer.pkg \
+            Crash-Bash-Enhanced/ps3/build/pkg-installer/crash_bash_online_installer.gnpdrm.pkg
       - uses: actions/upload-artifact@v6
         with:
           name: crash-bash-ps3-pkg
