@@ -15,11 +15,12 @@
 - The request runs on a worker thread with bounded local HTTP timeouts; failed requests leave PS3 SCALE open.
 - Added host tests for valid/invalid app IDs and static UI contract checks for navigation, launch and refresh actions.
 - Apollo save operations and Artemis NCL execution remain in their own applications; this change does not claim in-app reimplementation.
-- Alpha 0.26 CI and physical-console launch checks are pending.
+- Alpha 0.26 CI run #559: **PASS**. Host tests and PS3 ELF/SELF/standard PKG/GNPDRM PKG builds all passed.
+- Physical-console launch checks for Apollo and both Artemis package IDs remain pending.
 
 ## Latest code/package CI validation
 
-GitHub Actions run **#555** completed successfully on 2026-11-21.
+GitHub Actions run **#559** completed successfully on 2026-11-21.
 
 - Host-side regression tests: **PASS**
 - Arabic bitmap preview render: **PASS**
@@ -31,23 +32,23 @@ GitHub Actions run **#555** completed successfully on 2026-11-21.
 - Embedded XMB artwork byte-for-byte verification (`ICON0.PNG`, `PIC0.PNG`, `PIC1.PNG`): **PASS**
 - Embedded Apollo Save logo, Music 1 source and Music 2 theme: **PASS**
 
-Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/44951980356
+Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/44958963629
 
 ## Build artifact
 
-Previous successful artifact (Alpha 0.25): `PS3-SCALE-Alpha-0.25-build-with-embedded-theme`
+Artifact name: `PS3-SCALE-Alpha-0.26-build-with-embedded-theme`
 
 Contains:
-- `ps3scale.elf` — 3,503,574 bytes
-- `ps3scale.self` — 777,760 bytes
-- `ps3scale.pkg` — 11,400,816 bytes
-- `ps3scale.gnpdrm.pkg` — 11,400,816 bytes
+- `ps3scale.elf` — 3,504,173 bytes
+- `ps3scale.self` — 779,184 bytes
+- `ps3scale.pkg` — 11,402,224 bytes
+- `ps3scale.gnpdrm.pkg` — 11,402,224 bytes
 
 SHA-256:
-- ELF: `f78ef93b3b79a388e403d805b570129ac7d5753ec1848988d5174c171bc5c5a2`
-- SELF: `c6e7aa033a82c2103d22a9b548bb28c778afe8f79dcabff31b75e5844bcf900f`
-- Standard PKG: `e24e8cc9f421d464ddd190ac7cfc81cc6152c19af9e20f941b5152550e863fab`
-- GNPDRM PKG: `df9a9da2498f8ec672ec884c1cd04495912530462c6da34a759b065d67f7077f`
+- ELF: `9fa82ea4f288e4ba077588800f86c3854130a9178bd558f6666be7d0a995668a`
+- SELF: `e211b7920a6c91e59a373f4b946cd9b519f04f84b6cd59c6eda0b04f6f2bd6ec`
+- Standard PKG: `6cea7f4b6111ebb12a31b7d9d11fb6c9aa678b8cefe22b276040e69e5883d2b5`
+- GNPDRM PKG: `25ea53a626845a42ff05cdbb4188d3db3f637b6f9739e2902a2accdb20334c6d`
 
 ## Alpha 0.23 changes in this continuation
 
