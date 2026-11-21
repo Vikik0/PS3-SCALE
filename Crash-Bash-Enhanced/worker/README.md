@@ -39,4 +39,4 @@ npm run dev
 
 ## Deployment
 
-Set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub Actions secrets to enable the deployment workflow. No local PS3 or home PC server is required.
+The deployment workflow builds `../web` and uploads its static output with the Worker, so the lobby, HTTPS API, and WSS relay share one `workers.dev` origin. The production lobby uses same-origin requests when `VITE_API_BASE_URL` is blank. Set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub Actions secrets to enable public deployment. No local PS3 or home PC server is required.
