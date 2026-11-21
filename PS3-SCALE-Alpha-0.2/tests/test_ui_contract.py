@@ -646,7 +646,7 @@ assert "Image.open(PIC1_SOURCE)" in xmb_generator
 assert "ImageOps.fit(" in xmb_generator
 assert "(1280, 720)" in xmb_generator
 assert "(310, 176)" in xmb_generator
-assert "Image.Resampling.LANCZOS" in xmb_generator
+assert "Image.LANCZOS" in xmb_generator
 assert (project_root / "assets/xmb/pic1_source.jpg").is_file()
 assert "import_music1_from_usb" in src
 assert '"/dev_usb000/music1.mp3"' in src
