@@ -108,7 +108,6 @@ function roomCard() {
       <div class="player-list">${slots}</div>
       <div class="room-actions">
         <button class="button button-secondary" data-action="leave">LEAVE ROOM</button>
-        <button class="button button-primary" data-action="ready" ${room.status !== "waiting" ? "disabled" : ""}>${me?.ready ? "CANCEL READY" : "I'M READY"}</button>
         <a class="button button-secondary" href="/play.html?room=${encodeURIComponent(room.room_code)}" target="_blank" rel="noopener">OPEN BROWSER PLAYER ↗</a>
         ${isHost && me?.platform === "ps3" ? `<button class="button button-start" data-action="start" ${!allReady || room.status !== "waiting" ? "disabled" : ""}>START MATCH <span>→</span></button>` : ""}
         ${isHost && me?.platform !== "ps3" ? `<p class="room-footnote">Browser-created rooms cannot host this match. Create the room from the PS3 in-game menu.</p>` : ""}
