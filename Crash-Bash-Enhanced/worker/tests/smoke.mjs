@@ -31,6 +31,10 @@ async function call(path, method = "GET", body, token, extraHeaders = {}) {
   return { status: response.status, body: await response.json() };
 }
 
+const oversized = await call("/v1/sessions", "POST", { mode: "guest", padding: "x".repeat(9000) });
+assert.equal(oversized.status, 413);
+assert.equal(oversized.body.error, "BODY_TOO_LARGE");
+
 const health = await call("/health");
 assert.equal(health.status, 200);
 assert.equal(health.body.psn_required, false);
