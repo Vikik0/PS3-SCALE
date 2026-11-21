@@ -480,6 +480,17 @@ const guestSocket = new FakeSocket({
   rateCount: 0
 });
 startSockets.push(hostSocket, guestSocket);
+const preStartPacket = makeUplinkBatch([{
+  recipientId: startHost.body.session_id,
+  payload: [0x50, 0x53, 0x31]
+}]);
+await startLobby.webSocketMessage(guestSocket, preStartPacket);
+assert.equal(hostSocket.sent.length, 1);
+assert.equal(new Uint8Array(hostSocket.sent[0]).toString(), new Uint8Array([
+  0x43, 0x42, 0x52, 0x31,
+  ...Buffer.from(startGuest.body.session_id, "hex"),
+  0, 3, 0x50, 0x53, 0x31
+]).toString());
 await startLobby.webSocketMessage(guestSocket, "START");
 assert.equal(guestSocket.sent.at(-1), "ERROR:NOT_HOST");
 await startLobby.webSocketMessage(hostSocket, "START");
