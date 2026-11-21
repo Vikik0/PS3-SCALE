@@ -61,7 +61,6 @@ static uint8_t relay_rx_sender[16];
 static size_t relay_rx_length;
 static int relay_rx_valid;
 static uint64_t relay_last_flush_ms;
-static uint64_t relay_last_flush_ms;
 
 static int relay_hex_to_bytes(const char *hex, uint8_t output[16])
 {
