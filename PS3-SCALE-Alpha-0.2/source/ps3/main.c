@@ -174,6 +174,9 @@ static int g_animation_enabled = 1;
 static unsigned long g_frame_counter = 0;
 static char g_settings_message[128] = "SETTINGS ARE STORED ON THE PS3 HDD.";
 static char g_details_message[128] = "NO VERIFIED GRAPHICS PROFILE FOR THIS VERSION.";
+static int g_details_cache_valid = 0;
+static int g_details_ps2_config_exists = 0;
+static int g_details_script_state = 0;
 static int g_apollo_installed = 0;
 static int g_artemis_installed = 0;
 static int g_webman_installed = 0;
@@ -285,6 +288,7 @@ static int find_mounted_game(const ps3scale_game_t *selected,
 static int find_installed_game(const ps3scale_game_t *selected);
 static void service_game_launch(void);
 static void service_profile_arm(void);
+static void refresh_details_cache(void);
 static void service_ps2_config_download(void);
 static void start_ps2_config_download(void);
 static void service_community_download(void);
@@ -1481,9 +1485,8 @@ static void update_selected_cover(void)
     }
     g_cover_path[0] = '\0';
     if (path[0]) {
+        snprintf(g_cover_path, sizeof(g_cover_path), "%s", path);
         g_cover_texture = ya2d_loadPNGfromFile(path);
-        if (g_cover_texture)
-            strncpy(g_cover_path, path, sizeof(g_cover_path) - 1);
     }
 }
 
@@ -1719,7 +1722,7 @@ static void draw_scene_background(void)
     float daylight = 0.82f + 0.12f * cosf(phase);
     float night = 1.0f - daylight;
     float dusk = 1.0f - fabsf(daylight - 0.82f) / 0.12f;
-    u32 top, bottom, accent, glow, color;
+    u32 top, bottom, color;
     int i, wave;
 
     if (!g_animation_enabled) {
@@ -1733,8 +1736,6 @@ static void draw_scene_background(void)
     bottom = scene_blend(0xd8d2e7ff, 0xf2eff9ff, daylight);
     top = scene_blend(top, 0xe9defcff, dusk * 0.06f);
     bottom = scene_blend(bottom, 0xe0d4f5ff, dusk * 0.08f);
-    accent = scene_blend(0x8b73c8ff, 0xb995ffff, daylight * 0.72f);
-    glow = scene_blend(0x8a73b8ff, 0xf4eaffff, daylight);
 
     /* Batch the 24 gradient strips into one RSX submission. */
     tiny3d_SetPolygon(TINY3D_QUADS);
@@ -1753,17 +1754,7 @@ static void draw_scene_background(void)
     }
     tiny3d_End();
 
-    /* Quiet light ribbons and particles add depth without competing with UI. */
-    draw_circle_outline(738.0f + cosf(phase) * 12.0f,
-                        112.0f + sinf(phase) * 7.0f,
-                        74.0f, glow);
-    draw_circle_outline(738.0f + cosf(phase) * 12.0f,
-                        112.0f + sinf(phase) * 7.0f,
-                        61.0f, accent);
-    draw_circle_outline(738.0f + cosf(phase) * 12.0f,
-                        112.0f + sinf(phase) * 7.0f,
-                        48.0f, 0xe8ddffff);
-
+    /* Light ribbons and particles retain the background depth without rings. */
     /* All three light ribbons are submitted in one line batch. */
     tiny3d_SetPolygon(TINY3D_LINES);
     for (wave = 0; wave < 3; wave++) {
@@ -2575,6 +2566,7 @@ static void service_profile_arm(void)
     result = g_profile_arm_result;
     g_profile_arm_done = 0;
     g_profile_arm_running = 0;
+    g_details_cache_valid = 0;
 
     if (result == 0 || result == 1) {
         set_details_message("ONE-LAUNCH PROFILE ARMED. START THIS GAME.");
@@ -3408,6 +3400,7 @@ static void service_ps2_config_download(void)
         set_details_message("PS2 CONFIG DOWNLOAD FAILED. GAME FILES WERE NOT CHANGED.");
 
     g_ps2_config_download_done = 0;
+    g_details_cache_valid = 0;
 }
 
 static int ps2_config_target_exists(const ps3scale_game_t *game,
@@ -3427,6 +3420,19 @@ static int ps2_config_target_exists(const ps3scale_game_t *game,
     if (written < 0 || (size_t)written >= sizeof(target))
         return 0;
     return stat(target, &st) == 0;
+}
+
+static void refresh_details_cache(void)
+{
+    const ps3scale_game_t *game = selected_game();
+    const ps3scale_profile_t *profile = profile_for_game(game);
+    const ps3scale_ps2_config_entry_t *ps2_config = ps2_config_for_game(game);
+
+    /* Filesystem checks belong to screen entry / action completion, never
+       to the render loop. Reopening these files every frame can stall pad input. */
+    g_details_ps2_config_exists = ps2_config_target_exists(game, ps2_config);
+    g_details_script_state = profile_script_state_for_game(game, profile);
+    g_details_cache_valid = 1;
 }
 
 static int file_contains_text_readonly(const char *path, const char *needle)
@@ -4070,8 +4076,8 @@ static void draw_home(void)
 
     draw_text(30.0f, 132.0f, 0x77718fff, "FEATURES");
     for (i = 0; i < 5; i++) {
-        float x = 168.0f + (float)i * 134.0f;
-        float y = 126.0f;
+        float x = 96.0f + (float)i * 134.0f;
+        float y = 148.0f;
         const float w = 126.0f, h = 150.0f;
         float focus = g_home_card_focus[i];
         float scale = 1.0f + focus * 0.035f;
@@ -4555,14 +4561,14 @@ static void draw_details(void)
     const ps3scale_game_t *game = selected_game();
     const ps3scale_profile_t *profile = profile_for_game(game);
     const ps3scale_ps2_config_entry_t *ps2_config = ps2_config_for_game(game);
-    int ps2_config_exists = ps2_config_target_exists(game, ps2_config);
-    int script_state = profile_script_state_for_game(game, profile);
+    int ps2_config_exists = g_details_cache_valid ? g_details_ps2_config_exists : 0;
+    int script_state = g_details_cache_valid ? g_details_script_state : 0;
 
     draw_page_header("Game Details", "Review compatibility and available enhancements");
     if (!game) {
         draw_soft_card(24.0f, 92.0f, 806.0f, 340.0f, 0);
         draw_text(52.0f, 128.0f, 0x29243fff, "No game selected.");
-        draw_text(52.0f, PS3SCALE_UI_FOOTER_SINGLE_Y, 0x77718fff, "CIRCLE: BACK");
+        draw_text(52.0f, PS3SCALE_UI_FOOTER_SINGLE_Y, 0x77718fff, "CIRCLE / SELECT / LEFT: BACK");
         set_ui_font_size(14, 22);
         return;
     }
@@ -4708,7 +4714,7 @@ static void draw_details(void)
               "COMMUNITY PATCH: TRIANGLE CONFIRMS; CIRCLE CANCELS." :
               g_details_message);
     draw_text(24.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y, 0x875be8ff,
-              "CROSS / START: PLAY   |   TRIANGLE: CONFIRM   |   CIRCLE: BACK");
+              "CROSS / START: PLAY   |   TRIANGLE: CONFIRM   |   CIRCLE / SELECT / LEFT: BACK");
     set_ui_font_size(14, 22);
 }
 
@@ -4718,7 +4724,7 @@ static void draw_fps_control(void)
     char line[192];
     const ps3scale_game_t *game = selected_game();
     const ps3scale_profile_t *profile = profile_for_game(game);
-    int script_state = profile_script_state_for_game(game, profile);
+    int script_state = g_details_cache_valid ? g_details_script_state : 0;
     int can_apply = profile &&
         strcmp(profile->trust, "B_COMMUNITY") == 0 &&
         profile->patch_count == 1;
@@ -4731,7 +4737,7 @@ static void draw_fps_control(void)
         draw_text(48.0f, 128.0f, 0x29243fff,
                   "FPS profiles are currently available for PS3 games only.");
         draw_text(48.0f, PS3SCALE_UI_FOOTER_SINGLE_Y, 0x77718fff,
-                  "CIRCLE: BACK");
+                  "CIRCLE / SELECT / LEFT: BACK");
         set_ui_font_size(14, 22);
         return;
     }
@@ -5778,6 +5784,7 @@ int main(int argc, char *argv[])
     g_boot_stage_frames = 0;
 
     while (!g_exit_requested) {
+        app_screen_t screen_at_frame_start = g_screen;
         u16 up = 0, down = 0, square = 0, cross = 0, circle = 0;
         u16 l1 = 0, r1 = 0, triangle = 0, select = 0;
         u16 left = 0, right = 0, start = 0;
@@ -6036,7 +6043,8 @@ int main(int argc, char *argv[])
                 else
                     start_selected_game();
             }
-            if (circle && !old_circle) {
+            if ((circle && !old_circle) || (select && !old_select) ||
+                (left && !old_left)) {
                 if (g_profile_confirm_pending) {
                     g_profile_confirm_pending = 0;
                     set_details_message("PROFILE INSTALL CANCELLED.");
@@ -6048,6 +6056,9 @@ int main(int argc, char *argv[])
             const ps3scale_game_t *game = selected_game();
             const ps3scale_profile_t *profile = profile_for_game(game);
             int state;
+
+            if ((cross && !old_cross) || (square && !old_square))
+                g_details_cache_valid = 0;
 
             if (up && !old_up)
                 g_fps_control_selection = 0;
@@ -6123,7 +6134,8 @@ int main(int argc, char *argv[])
                 g_profile_confirm_pending = 0;
             }
 
-            if (circle && !old_circle) {
+            if ((circle && !old_circle) || (select && !old_select) ||
+                (left && !old_left)) {
                 if (g_profile_confirm_pending) {
                     g_profile_confirm_pending = 0;
                     set_details_message("FPS PROFILE APPLY CANCELLED.");
@@ -6354,6 +6366,13 @@ int main(int argc, char *argv[])
         } else if (circle && !old_circle) {
             g_screen = SCREEN_HOME;
         }
+
+        if (g_screen != screen_at_frame_start &&
+            (g_screen == SCREEN_DETAILS || g_screen == SCREEN_FPS_CONTROL))
+            g_details_cache_valid = 0;
+        if ((g_screen == SCREEN_DETAILS || g_screen == SCREEN_FPS_CONTROL) &&
+            !g_details_cache_valid)
+            refresh_details_cache();
 
         old_up = up;
         old_down = down;
