@@ -10,9 +10,23 @@ Provide a small, testable input boundary for the two local player slots before c
 - Player slot 2 maps to PS3 controller port 1.
 - The PS3 adapter checks port presence with `cellPadGetInfo2`.
 - Each connected port is read independently with `cellPadGetData`.
-- The decoder maps the two digital button words, both analog sticks, and L2/R2 pressure values.
-- A per-port error mask distinguishes a missing controller from a read failure.
+- The decoder maps digital buttons, both analog sticks, and L2/R2 pressure values.
+- A per-port error mask distinguishes a missing controller from a failed read.
 - Host tests cover mapping, analog data, two-port separation, disconnected ports, and invalid data lengths.
+
+## Per-frame input processing
+
+The portable tracker turns each raw snapshot into a stable per-frame input record:
+
+- `buttons`: buttons currently held.
+- `pressed`: buttons that changed from released to held in this frame.
+- `released`: buttons that changed from held to released in this frame.
+- Analog sticks are normalized to signed -127..127 values with a configurable radial-independent axis deadzone (default 20).
+- Trigger pressure is preserved as 0..255.
+- A confirmed disconnect emits one release edge for held buttons, then clears the prior state.
+- A read error is marked invalid and preserves the last known player state; it does not fabricate button releases.
+
+The tracker is independent for each player slot and uses no PS3 SDK calls, so its behavior is host-testable.
 
 ## Lifecycle rule
 
@@ -20,17 +34,18 @@ This code runs inside an already active game process. It must not call `cellPadI
 
 ## Current call path
 
-The PRX exposes `ghc_local_input_refresh` and snapshot getters. These functions are compiled into the PRX but are not yet called from a game frame hook. The next integration stage must identify a safe per-frame point and verify that polling does not interfere with the title's own controller reads.
+The PRX exposes `ghc_local_input_refresh` and diagnostic getters. Refresh reads the two PS3 ports and updates the portable frame tracker. The function is still manual and is not called from a verified game frame hook. It has not been tested on physical hardware.
 
-## PRX export surface
-
-The PRX now publishes a named `ghosts_coop` export library. It exposes the manual input refresh function, poll result/count, connected and read-error masks, per-player connected state, button bits, stick axes, trigger pressure, and basic module/mission diagnostics.
-
-The NIDs are recorded in `client/ps3/prx/exports.yml`, emitted in `exports.S`, and checked by the pinned PS3DK `nidgen verify` command. CI also generates `libghosts_coop_stub.a` for future diagnostic/importing PRXs. This validates the export/import metadata pair; it does not execute the functions on a console.
+The exported getters now expose:
+- connected, valid and read-error masks;
+- held, newly pressed and newly released button bitsets for each player;
+- raw and normalized stick axes;
+- L2/R2 pressure values.
 
 ## Not yet verified
 
 - Physical PS3 controller reads from inside Ghosts.
+- Whether the game's own `cellPadGetData` polling conflicts with an additional read.
 - Correct controller assignment in a live two-player local mode.
 - Whether Campaign can retain two local-player slots.
 - Independent Campaign camera, HUD, actor, weapon, health, AI and checkpoint behavior.

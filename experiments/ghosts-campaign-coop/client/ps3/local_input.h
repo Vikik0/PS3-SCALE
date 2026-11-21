@@ -5,6 +5,7 @@
 
 #define GHC_LOCAL_INPUT_PLAYER_COUNT 2u
 #define GHC_PAD_BUTTON_DATA_COUNT 64u
+#define GHC_LOCAL_STICK_DEADZONE_DEFAULT 20u
 
 typedef enum {
     GHC_LOCAL_INPUT_OK = 0,
@@ -54,6 +55,34 @@ typedef struct {
     GhcLocalPlayerInput players[GHC_LOCAL_INPUT_PLAYER_COUNT];
 } GhcLocalInputSnapshot;
 
+typedef struct {
+    uint8_t connected;
+    uint8_t port;
+    int8_t left_x;
+    int8_t left_y;
+    int8_t right_x;
+    int8_t right_y;
+    uint8_t l2_pressure;
+    uint8_t r2_pressure;
+    uint32_t buttons;
+    uint32_t pressed;
+    uint32_t released;
+} GhcLocalPlayerFrame;
+
+typedef struct {
+    uint8_t connected_mask;
+    uint8_t valid_mask;
+    uint8_t read_error_mask;
+    uint8_t reserved;
+    GhcLocalPlayerFrame players[GHC_LOCAL_INPUT_PLAYER_COUNT];
+} GhcLocalInputFrame;
+
+typedef struct {
+    uint8_t previous_connected_mask;
+    uint8_t reserved[3];
+    GhcLocalPlayerFrame previous_players[GHC_LOCAL_INPUT_PLAYER_COUNT];
+} GhcLocalInputTracker;
+
 /* Pure decoder. It has no PS3 SDK dependency and is host-testable. */
 int ghc_local_input_decode_port(
     uint8_t port,
@@ -64,6 +93,15 @@ int ghc_local_input_decode_port(
 );
 
 void ghc_local_input_snapshot_clear(GhcLocalInputSnapshot *snapshot);
+
+/* Converts raw snapshots into per-frame button edges and normalized sticks. */
+void ghc_local_input_tracker_reset(GhcLocalInputTracker *tracker);
+int ghc_local_input_tracker_update(
+    const GhcLocalInputSnapshot *snapshot,
+    GhcLocalInputTracker *tracker,
+    uint8_t stick_deadzone,
+    GhcLocalInputFrame *frame
+);
 
 /*
  * PS3 adapter. It reads only ports 0 and 1.

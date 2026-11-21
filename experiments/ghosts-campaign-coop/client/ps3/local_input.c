@@ -47,6 +47,44 @@ static void ghc_local_player_clear(GhcLocalPlayerInput *player, uint8_t port)
     player->buttons = 0u;
 }
 
+static void ghc_frame_player_clear(GhcLocalPlayerFrame *player, uint8_t port)
+{
+    player->connected = 0u;
+    player->port = port;
+    player->left_x = 0;
+    player->left_y = 0;
+    player->right_x = 0;
+    player->right_y = 0;
+    player->l2_pressure = 0u;
+    player->r2_pressure = 0u;
+    player->buttons = 0u;
+    player->pressed = 0u;
+    player->released = 0u;
+}
+
+static int8_t ghc_normalize_axis(uint8_t raw, uint8_t deadzone)
+{
+    int16_t delta = (int16_t)raw - 128;
+    uint16_t magnitude;
+    uint16_t available;
+    uint16_t scaled;
+
+    if (delta > 0) {
+        if ((uint16_t)delta <= deadzone) return 0;
+        magnitude = (uint16_t)delta - deadzone;
+        available = (uint16_t)(127u - deadzone);
+        scaled = (uint16_t)((magnitude * 127u) / available);
+        return (int8_t)(scaled > 127u ? 127 : scaled);
+    }
+
+    magnitude = (uint16_t)(-delta);
+    if (magnitude <= deadzone) return 0;
+    magnitude = (uint16_t)(magnitude - deadzone);
+    available = (uint16_t)(128u - deadzone);
+    scaled = (uint16_t)((magnitude * 127u) / available);
+    return (int8_t)-(int16_t)(scaled > 127u ? 127 : scaled);
+}
+
 void ghc_local_input_snapshot_clear(GhcLocalInputSnapshot *snapshot)
 {
     uint32_t i;
@@ -110,5 +148,74 @@ int ghc_local_input_decode_port(
     ghc_map_button(&output->buttons, output->digital2, GHC_PAD_D2_R2, GHC_LOCAL_BUTTON_R2);
     ghc_map_button(&output->buttons, output->digital2, GHC_PAD_D2_L2, GHC_LOCAL_BUTTON_L2);
 
+    return GHC_LOCAL_INPUT_OK;
+}
+
+void ghc_local_input_tracker_reset(GhcLocalInputTracker *tracker)
+{
+    uint32_t i;
+    if (!tracker) return;
+    tracker->previous_connected_mask = 0u;
+    tracker->reserved[0] = 0u;
+    tracker->reserved[1] = 0u;
+    tracker->reserved[2] = 0u;
+    for (i = 0; i < GHC_LOCAL_INPUT_PLAYER_COUNT; ++i) {
+        ghc_frame_player_clear(&tracker->previous_players[i], (uint8_t)i);
+    }
+}
+
+int ghc_local_input_tracker_update(
+    const GhcLocalInputSnapshot *snapshot,
+    GhcLocalInputTracker *tracker,
+    uint8_t stick_deadzone,
+    GhcLocalInputFrame *frame
+)
+{
+    uint32_t i;
+
+    if (!snapshot || !tracker || !frame || stick_deadzone >= 127u) {
+        return GHC_LOCAL_INPUT_ERROR_ARGUMENT;
+    }
+
+    frame->connected_mask = 0u;
+    frame->valid_mask = 0u;
+    frame->read_error_mask = snapshot->read_error_mask;
+    frame->reserved = 0u;
+
+    for (i = 0; i < GHC_LOCAL_INPUT_PLAYER_COUNT; ++i) {
+        uint8_t bit = (uint8_t)(1u << i);
+        const GhcLocalPlayerInput *input = &snapshot->players[i];
+        GhcLocalPlayerFrame *output = &frame->players[i];
+        const GhcLocalPlayerFrame *previous = &tracker->previous_players[i];
+
+        if ((snapshot->read_error_mask & bit) != 0u) {
+            *output = *previous;
+            continue;
+        }
+
+        frame->valid_mask |= bit;
+        ghc_frame_player_clear(output, (uint8_t)i);
+
+        if ((snapshot->connected_mask & bit) != 0u && input->connected) {
+            output->connected = 1u;
+            output->port = (uint8_t)i;
+            output->left_x = ghc_normalize_axis(input->left_x, stick_deadzone);
+            output->left_y = ghc_normalize_axis(input->left_y, stick_deadzone);
+            output->right_x = ghc_normalize_axis(input->right_x, stick_deadzone);
+            output->right_y = ghc_normalize_axis(input->right_y, stick_deadzone);
+            output->l2_pressure = input->l2_pressure;
+            output->r2_pressure = input->r2_pressure;
+            output->buttons = input->buttons;
+            output->pressed = input->buttons & ~previous->buttons;
+            output->released = previous->buttons & ~input->buttons;
+            frame->connected_mask |= bit;
+        } else {
+            output->released = previous->buttons;
+        }
+
+        tracker->previous_players[i] = *output;
+    }
+
+    tracker->previous_connected_mask = frame->connected_mask;
     return GHC_LOCAL_INPUT_OK;
 }

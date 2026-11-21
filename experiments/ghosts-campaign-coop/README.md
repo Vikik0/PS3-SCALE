@@ -40,8 +40,9 @@ See docs/local-coop-first.md for the implementation plan and research constraint
 - UDP/STUN helpers and direct-P2P packet layer.
 - Lobby/Worker prototype and WebSocket frame codec.
 - PS3 PRX bootstrap build and CI validation.
-- Host-tested DualShock 3 input decoder and PS3 `sys_io` polling adapter for controller ports 0 and 1.
-- Diagnostic PRX polling/getter functions for a future verified Campaign frame adapter.
+- Host-tested DualShock 3 input decoder, PS3 `sys_io` polling adapter for controller ports 0 and 1, and portable per-frame input tracker (button edges, normalized sticks and read-error preservation).
+- Diagnostic PRX polling/getter functions for raw and per-frame input, pending a verified Campaign frame adapter.
+- Reverse-engineering notes rule out treating `PlayerCMD_ClonePlayer` as a full second-player spawn path.
 
 ### Phase 1 Campaign integration — not implemented
 

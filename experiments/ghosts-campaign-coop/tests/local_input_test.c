@@ -5,6 +5,16 @@
 #include <stdio.h>
 #include <string.h>
 
+static void decode_cross(GhcLocalInputSnapshot *snapshot, uint8_t port)
+{
+    uint16_t raw[GHC_PAD_BUTTON_DATA_COUNT] = {0};
+    raw[3] = (uint16_t)(1u << 6);
+    raw[4] = 128u; raw[5] = 128u; raw[6] = 128u; raw[7] = 128u;
+    assert(ghc_local_input_decode_port(port, 1u, 24, raw, &snapshot->players[port]) == GHC_LOCAL_INPUT_OK);
+    snapshot->connected_mask |= (uint8_t)(1u << port);
+    snapshot->connected_count++;
+}
+
 static void test_disconnected_port_is_zeroed(void)
 {
     GhcLocalPlayerInput player;
@@ -78,6 +88,114 @@ static void test_snapshot_clear_sets_port_numbers(void)
     assert(snapshot.players[0].connected == 0u && snapshot.players[1].connected == 0u);
 }
 
+static void test_frame_button_edges_and_stick_deadzone(void)
+{
+    GhcLocalInputSnapshot snapshot;
+    GhcLocalInputTracker tracker;
+    GhcLocalInputFrame frame;
+    uint16_t raw[GHC_PAD_BUTTON_DATA_COUNT] = {0};
+
+    ghc_local_input_snapshot_clear(&snapshot);
+    ghc_local_input_tracker_reset(&tracker);
+    raw[3] = (uint16_t)(1u << 6);
+    raw[4] = 255u; raw[5] = 128u; raw[6] = 148u; raw[7] = 107u;
+    raw[18] = 201u; raw[19] = 222u;
+    assert(ghc_local_input_decode_port(0u, 1u, 24, raw, &snapshot.players[0]) == GHC_LOCAL_INPUT_OK);
+    snapshot.connected_mask = 1u;
+    snapshot.connected_count = 1u;
+
+    assert(ghc_local_input_tracker_update(&snapshot, &tracker, GHC_LOCAL_STICK_DEADZONE_DEFAULT, &frame) == GHC_LOCAL_INPUT_OK);
+    assert(frame.valid_mask == 1u && frame.connected_mask == 1u);
+    assert(frame.players[0].buttons == GHC_LOCAL_BUTTON_CROSS);
+    assert(frame.players[0].pressed == GHC_LOCAL_BUTTON_CROSS && frame.players[0].released == 0u);
+    assert(frame.players[0].left_x == 0 && frame.players[0].left_y == -1);
+    assert(frame.players[0].right_x == 127 && frame.players[0].right_y == 0);
+    assert(frame.players[0].l2_pressure == 201u && frame.players[0].r2_pressure == 222u);
+
+    assert(ghc_local_input_tracker_update(&snapshot, &tracker, GHC_LOCAL_STICK_DEADZONE_DEFAULT, &frame) == GHC_LOCAL_INPUT_OK);
+    assert(frame.players[0].pressed == 0u && frame.players[0].released == 0u);
+}
+
+static void test_two_player_frame_edges_are_independent(void)
+{
+    GhcLocalInputSnapshot snapshot;
+    GhcLocalInputTracker tracker;
+    GhcLocalInputFrame frame;
+    uint16_t raw0[GHC_PAD_BUTTON_DATA_COUNT] = {0};
+    uint16_t raw1[GHC_PAD_BUTTON_DATA_COUNT] = {0};
+
+    ghc_local_input_snapshot_clear(&snapshot);
+    ghc_local_input_tracker_reset(&tracker);
+    raw0[3] = (uint16_t)(1u << 6);
+    raw1[3] = (uint16_t)(1u << 5);
+    raw0[6] = 255u;
+    raw1[6] = 0u;
+    assert(ghc_local_input_decode_port(0u, 1u, 24, raw0, &snapshot.players[0]) == GHC_LOCAL_INPUT_OK);
+    assert(ghc_local_input_decode_port(1u, 1u, 24, raw1, &snapshot.players[1]) == GHC_LOCAL_INPUT_OK);
+    snapshot.connected_mask = 3u;
+    snapshot.connected_count = 2u;
+
+    assert(ghc_local_input_tracker_update(&snapshot, &tracker, 20u, &frame) == GHC_LOCAL_INPUT_OK);
+    assert(frame.connected_mask == 3u && frame.valid_mask == 3u);
+    assert(frame.players[0].pressed == GHC_LOCAL_BUTTON_CROSS);
+    assert(frame.players[1].pressed == GHC_LOCAL_BUTTON_CIRCLE);
+    assert(frame.players[0].left_x == 127 && frame.players[1].left_x == -127);
+    assert((frame.players[0].buttons & GHC_LOCAL_BUTTON_CIRCLE) == 0u);
+    assert((frame.players[1].buttons & GHC_LOCAL_BUTTON_CROSS) == 0u);
+}
+
+static void test_disconnect_emits_release_once(void)
+{
+    GhcLocalInputSnapshot snapshot;
+    GhcLocalInputTracker tracker;
+    GhcLocalInputFrame frame;
+
+    ghc_local_input_snapshot_clear(&snapshot);
+    ghc_local_input_tracker_reset(&tracker);
+    decode_cross(&snapshot, 0u);
+    assert(ghc_local_input_tracker_update(&snapshot, &tracker, 20u, &frame) == GHC_LOCAL_INPUT_OK);
+    assert(frame.players[0].pressed == GHC_LOCAL_BUTTON_CROSS);
+
+    ghc_local_input_snapshot_clear(&snapshot);
+    assert(ghc_local_input_tracker_update(&snapshot, &tracker, 20u, &frame) == GHC_LOCAL_INPUT_OK);
+    assert(frame.connected_mask == 0u);
+    assert(frame.players[0].released == GHC_LOCAL_BUTTON_CROSS);
+    assert(frame.players[0].buttons == 0u);
+
+    assert(ghc_local_input_tracker_update(&snapshot, &tracker, 20u, &frame) == GHC_LOCAL_INPUT_OK);
+    assert(frame.players[0].released == 0u);
+}
+
+static void test_read_error_does_not_fake_button_release(void)
+{
+    GhcLocalInputSnapshot snapshot;
+    GhcLocalInputTracker tracker;
+    GhcLocalInputFrame frame;
+
+    ghc_local_input_snapshot_clear(&snapshot);
+    ghc_local_input_tracker_reset(&tracker);
+    decode_cross(&snapshot, 0u);
+    assert(ghc_local_input_tracker_update(&snapshot, &tracker, 20u, &frame) == GHC_LOCAL_INPUT_OK);
+
+    ghc_local_input_snapshot_clear(&snapshot);
+    snapshot.read_error_mask = 1u;
+    assert(ghc_local_input_tracker_update(&snapshot, &tracker, 20u, &frame) == GHC_LOCAL_INPUT_OK);
+    assert(frame.read_error_mask == 1u && frame.valid_mask == 2u);
+    assert(frame.players[0].connected == 1u);
+    assert(frame.players[0].buttons == GHC_LOCAL_BUTTON_CROSS);
+    assert(frame.players[0].pressed == 0u && frame.players[0].released == 0u);
+}
+
+static void test_invalid_deadzone_is_rejected(void)
+{
+    GhcLocalInputSnapshot snapshot;
+    GhcLocalInputTracker tracker;
+    GhcLocalInputFrame frame;
+    ghc_local_input_snapshot_clear(&snapshot);
+    ghc_local_input_tracker_reset(&tracker);
+    assert(ghc_local_input_tracker_update(&snapshot, &tracker, 127u, &frame) == GHC_LOCAL_INPUT_ERROR_ARGUMENT);
+}
+
 int main(void)
 {
     test_disconnected_port_is_zeroed();
@@ -85,6 +203,11 @@ int main(void)
     test_second_controller_is_independent();
     test_invalid_input_is_rejected();
     test_snapshot_clear_sets_port_numbers();
-    puts("Ghosts local controller input decoder: PASS");
+    test_frame_button_edges_and_stick_deadzone();
+    test_two_player_frame_edges_are_independent();
+    test_disconnect_emits_release_once();
+    test_read_error_does_not_fake_button_release();
+    test_invalid_deadzone_is_rejected();
+    puts("Ghosts local controller input decoder and frame tracker: PASS");
     return 0;
 }

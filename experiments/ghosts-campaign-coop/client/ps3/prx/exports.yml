@@ -24,6 +24,9 @@ exports:
   - name: ghc_local_input_connected_mask
     nid: '0xc484d0d6'
     signature: 'uint32_t ghc_local_input_connected_mask(void);'
+  - name: ghc_local_input_valid_mask
+    nid: '0xdcb9d5ed'
+    signature: 'uint32_t ghc_local_input_valid_mask(void);'
   - name: ghc_local_input_read_error_mask
     nid: '0xa32aa35b'
     signature: 'uint32_t ghc_local_input_read_error_mask(void);'
@@ -33,12 +36,24 @@ exports:
   - name: ghc_local_input_player_buttons
     nid: '0x500bb977'
     signature: 'uint32_t ghc_local_input_player_buttons(uint32_t player_slot);'
+  - name: ghc_local_input_player_pressed_buttons
+    nid: '0xf81f4f22'
+    signature: 'uint32_t ghc_local_input_player_pressed_buttons(uint32_t player_slot);'
+  - name: ghc_local_input_player_released_buttons
+    nid: '0xb56a7795'
+    signature: 'uint32_t ghc_local_input_player_released_buttons(uint32_t player_slot);'
   - name: ghc_local_input_player_left_stick
     nid: '0xc6c42d42'
     signature: 'uint32_t ghc_local_input_player_left_stick(uint32_t player_slot);'
   - name: ghc_local_input_player_right_stick
     nid: '0x78e1e83f'
     signature: 'uint32_t ghc_local_input_player_right_stick(uint32_t player_slot);'
+  - name: ghc_local_input_player_left_stick_normalized
+    nid: '0x85f0b249'
+    signature: 'uint32_t ghc_local_input_player_left_stick_normalized(uint32_t player_slot);'
+  - name: ghc_local_input_player_right_stick_normalized
+    nid: '0x2c788b12'
+    signature: 'uint32_t ghc_local_input_player_right_stick_normalized(uint32_t player_slot);'
   - name: ghc_local_input_player_l2_pressure
     nid: '0x8ad32755'
     signature: 'uint32_t ghc_local_input_player_l2_pressure(uint32_t player_slot);'

@@ -32,9 +32,9 @@ The public PS3 update catalogue lists Ghosts Title Update 1.16 for the US and EU
 - Therefore, compiling a modified GSC file is not sufficient to install it in the retail game. Do not assume the old extract-edit-repack patch_mp.ff workflow works.
 - The current likely path is carefully verified EBOOT/PRX runtime hooks or another proven runtime script-loading mechanism.
 
-### Split-screen identity checks
+### Split-screen identity and clone-path checks
 
-The public TU 1.16 function list includes `PlayerCMD_IsSplitScreenPlayer` and `PlayerCMD_IsSplitScreenPlayerPrimary`. These are promising validation probes for identifying the primary and secondary local player after a native local session has initialized. They are script-command handlers, so they must be invoked only through a verified script VM path; the listed offsets are not approved Campaign hooks.
+The public TU 1.16 function list includes `PlayerCMD_IsSplitScreenPlayer` and `PlayerCMD_IsSplitScreenPlayerPrimary`, but their PS3 Campaign behavior is unverified. A public PS4 IW6 decompilation shows the first query returning false in that build and the primary query inspecting server-client state, so the names alone are not proof of useful PS3 behavior. The same decompilation shows `PlayerCMD_ClonePlayer` creating a clone/corpse-like entity rather than a second client/player. Do not use it as Player 2. These are research notes, not approved Campaign hooks. See `docs/reverse-engineering-splitscreen.md`.
 
 ### Spawn functions
 
@@ -44,7 +44,7 @@ A public TU 1.16 offsets thread lists G_Spawn, G_CallSpawnEntity, PlayerCMD_Spaw
 
 A host-testable decoder and PS3 `sys_io` adapter have been added for controller ports 0 and 1. The adapter reads `cellPadGetInfo2` and `cellPadGetData`, keeps each port in a separate player snapshot, and maps digital buttons, analog sticks and trigger pressure. It does not initialize or shut down the pad subsystem and does not replace the game's own input path.
 
-Host tests cover button mapping, analog axes, two-port independence, disconnected ports and invalid data lengths. The PRX has diagnostic polling/getter functions for a future frame hook or debugger. These functions are not yet called by a Campaign hook and have not been tested on physical hardware.
+Host tests cover button mapping, analog axes, two-port independence, disconnected ports and invalid data lengths. A portable per-frame tracker now also computes pressed/released button edges, normalizes sticks with a deadzone, and preserves the last known state when a port read fails. The PRX exposes these frame values through diagnostic getters. The polling function is still manual, is not called by a Campaign hook, and has not been tested on physical hardware.
 
 ## Work sequence
 

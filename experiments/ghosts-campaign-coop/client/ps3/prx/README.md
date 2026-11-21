@@ -1,3 +1,4 @@
+
 # PS3 PRX bootstrap
 
 ## Phase 1 purpose
@@ -14,9 +15,10 @@ The first playable target is local Campaign co-op on one PS3:
 - Standalone downed/revive state machine.
 - Host-tested controller-data decoder.
 - PS3 `sys_io` adapter for controller ports 0 and 1 using `cellPadGetInfo2` and `cellPadGetData`.
-- Diagnostic PRX functions expose a fresh input snapshot, connected-port mask, read-error mask, button bitset and packed stick axes for a future debug/frame adapter.
+- Portable per-frame tracker for pressed/released edges, normalized stick axes, trigger pressure and safe read-error handling.
+- Diagnostic PRX exports for raw input and per-frame input values.
 
-The PRX does not call `cellPadInit` or `cellPadEnd`; the running game owns that subsystem lifecycle. It does not change the game's controller routing.
+The PRX does **not** call `cellPadInit` or `cellPadEnd`; the running game owns that subsystem lifecycle. It does not change the game's controller routing.
 
 ## Explicit limitation
 
