@@ -441,6 +441,11 @@ assert "if (!read_response_body)" in webman_control_src
 assert 'strstr(body, "\\"response\\"")' in webman_control_src
 assert 'response, sizeof(response), 1)' in webman_control_src
 assert 'response, sizeof(response), 0)' in webman_control_src
+ps3mapi_check = webman_control_src.split(
+    "int ps3scale_webman_ps3mapi_available(void)", 1)[1].split(
+    "int ps3scale_webman_start_game", 1)[0]
+assert 'body = strstr(response, "\\r\\n\\r\\n");' in ps3mapi_check
+assert "strchr(body, '}')" in ps3mapi_check
 
 # Online graphics database: HTTPS sync, exact version matching, and a dedicated UI.
 assert "ONLINE GAME DATABASE" in src
