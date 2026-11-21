@@ -194,3 +194,6 @@ jobs:
             Crash-Bash-Enhanced/ps3/build/crash_bash_input.prx
             Crash-Bash-Enhanced/ps3/build/crash_bash_input.fake.sprx
             Crash-Bash-Enhanced/ps3/build/crash_bash_input.elf
+            Crash-Bash-Enhanced/ps3/build/loader/crash_bash_loader.prx
+            Crash-Bash-Enhanced/ps3/build/loader/crash_bash_loader.fake.sprx
+            Crash-Bash-Enhanced/ps3/build/loader/crash_bash_loader.elf
