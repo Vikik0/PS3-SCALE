@@ -74,7 +74,7 @@ assert.deepEqual(
 );
 
 const players = [];
-for (let i = 1; i <= 5; i++) {
+for (let i = 1; i <= 6; i++) {
   const result = await call("/v1/sessions", "POST", {
     mode: "guest",
     display_name: "Player " + i
@@ -121,6 +121,19 @@ for (const player of players.slice(0, 4)) {
 const started = await call("/v1/rooms/" + code + "/start", "POST", {}, players[0].token);
 assert.equal(started.status, 200);
 assert.equal(started.body.status, "running");
+
+const secondCreated = await call("/v1/rooms", "POST", { max_players: 2, is_private: true }, players[4].token);
+assert.equal(secondCreated.status, 201);
+const secondCode = secondCreated.body.room_code;
+const secondJoined = await call("/v1/rooms/" + secondCode + "/join", "POST", {}, players[5].token);
+assert.equal(secondJoined.status, 200);
+for (const player of players.slice(4, 6)) {
+  const ready = await call("/v1/rooms/" + secondCode + "/ready", "POST", { ready: true }, player.token);
+  assert.equal(ready.status, 200);
+}
+const secondStartBlocked = await call("/v1/rooms/" + secondCode + "/start", "POST", {}, players[4].token);
+assert.equal(secondStartBlocked.status, 409);
+assert.equal(secondStartBlocked.body.error, "FREE_TIER_MATCH_LIMIT");
 
 // The room relay wraps opaque game packets with the authenticated sender ID.
 const relayA = new FakeSocket({
@@ -258,6 +271,48 @@ assert.equal(afterHostLeave.body.status, "waiting");
 assert.equal(afterHostLeave.body.players.length, 3);
 assert.equal(afterHostLeave.body.players.find(p => p.player_id === players[1].session_id).is_host, true);
 assert.equal(afterHostLeave.body.host_endpoint_ready, false);
+
+const secondStarted = await call("/v1/rooms/" + secondCode + "/start", "POST", {}, players[4].token);
+assert.equal(secondStarted.status, 200);
+assert.equal(secondStarted.body.status, "running");
+
+const extraGuest = await call("/v1/sessions", "POST", { mode: "guest", display_name: "Capacity Test" });
+assert.equal(extraGuest.status, 201);
+const capacityState = await lobby.load();
+for (let i = 0; Object.keys(capacityState.rooms).length < 4; i++) {
+  const dummyCode = "Z" + String(i).padStart(5, "0");
+  capacityState.rooms[dummyCode] = {
+    code: dummyCode,
+    hostSessionId: "0".repeat(32),
+    status: "waiting",
+    mode: "party",
+    maxPlayers: 4,
+    isPrivate: true,
+    createdAt: Date.now(),
+    startedAt: null,
+    hostEndpoint: null,
+    players: []
+  };
+}
+await lobby.save(capacityState);
+const roomCapped = await call("/v1/rooms", "POST", { max_players: 2 }, extraGuest.body.token);
+assert.equal(roomCapped.status, 503);
+assert.equal(roomCapped.body.error, "FREE_TIER_ROOM_LIMIT");
+
+const fullState = await lobby.load();
+for (let i = 0; Object.keys(fullState.sessions).length < 16; i++) {
+  const id = (i + 100).toString(16);
+  fullState.sessions[id.padStart(64, "0")] = {
+    sessionId: id.padStart(32, "0"),
+    name: "Capacity Test",
+    expiresAt: Date.now() + 60000,
+    roomCode: null
+  };
+}
+await lobby.save(fullState);
+const sessionCapped = await call("/v1/sessions", "POST", { mode: "guest", display_name: "Overflow" });
+assert.equal(sessionCapped.status, 503);
+assert.equal(sessionCapped.body.error, "FREE_TIER_SESSION_LIMIT");
 
 const wrongCode = (code[0] === "A" ? "B" : "A") + code.slice(1);
 const mismatch = await call("/v1/rooms/" + wrongCode + "/ready", "POST", { ready: true }, players[1].token);
