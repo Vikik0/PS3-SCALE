@@ -14,7 +14,7 @@ This Worker provides the first online-service layer for the Crash Bash Enhanced 
 - Room state is pushed over the WebSocket relay; the browser does not poll every few seconds.
 - Room snapshot and peer roster endpoints for recovery.
 - Prototype binary WebSocket room relay at /v1/rooms/:code/transport.
-- Authenticated CBR1 sender envelope, 1200-byte payload cap, and five inbound messages/second per connected player, including keepalive pings.
+- Authenticated CBR1 sender envelope, 1200-byte per-datagram cap, CBU1 batches of up to 32 targeted datagrams (24,576 bytes total), and five inbound WebSocket messages/second per connected player, including keepalive pings.
 - SQLite-backed Durable Object storage with WebSocket hibernation.
 
 ## Not included yet
