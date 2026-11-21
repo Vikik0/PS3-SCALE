@@ -61,7 +61,7 @@ int main(void)
     batch[1].payload = batch_b;
     batch[1].length = sizeof(batch_b);
     if (cb_relay_send_batch(&client, batch, 2) != 0) {
-        fprintf(stderr, "PS3 relay batch send failed\\n");
+        fprintf(stderr, "PS3 relay batch send failed\n");
         cb_relay_leave(&client);
         return 5;
     }
@@ -72,7 +72,7 @@ int main(void)
     if (result != 1 || received_length != sizeof(batch_a) ||
         memcmp(received, batch_a, sizeof(batch_a)) != 0 ||
         memcmp(sender, expected_sender, sizeof(sender)) != 0) {
-        fprintf(stderr, "PS3 relay first batch packet decode failed\\n");
+        fprintf(stderr, "PS3 relay first batch packet decode failed\n");
         cb_relay_leave(&client);
         return 6;
     }
@@ -83,7 +83,7 @@ int main(void)
     if (result != 1 || received_length != sizeof(batch_b) ||
         memcmp(received, batch_b, sizeof(batch_b)) != 0 ||
         memcmp(sender, expected_sender, sizeof(sender)) != 0) {
-        fprintf(stderr, "PS3 relay second batch packet decode failed\\n");
+        fprintf(stderr, "PS3 relay second batch packet decode failed\n");
         cb_relay_leave(&client);
         return 7;
     }
