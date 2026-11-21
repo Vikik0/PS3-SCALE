@@ -23,6 +23,7 @@ void cb_input_remove(void);
  * The physical controller on PS3 port 0 is routed to that slot.
  */
 void cb_input_set_active(int active, int local_slot);
+void cb_input_set_netplay_active(int active);
 
 /* Read the real physical controller on PS3 port 0 without passing through
  * this module's virtual-pad hook. Returns 0 when a valid report is available.
