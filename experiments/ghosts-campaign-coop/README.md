@@ -14,11 +14,13 @@ This is an isolated research experiment for a two-player cooperative mode in the
 ## Prototype status
 
 - Guest lobby/session prototype: implemented and host-tested.
+- Host-authoritative downed/revive rules: implemented in portable C, unit-tested, and linked into the PS3 PRX bootstrap. One downed player does not restart the mission; the living partner can revive them. Both downed or bleedout expiry fails the mission.
 - Six-character room codes, two-player cap and ready/start flow: implemented and tested.
 - UDP peer relay: implemented; local two-client UDP integration test passes.
 - Regional title-ID registry: implemented as metadata; profiles are untested.
 - Candidate TU 1.16 spawn primitives documented for offline research only.
-- PS3 client plugin, Campaign actor spawn, game-state replication, PSN identity and PKG/EBOOT/SPRX: not implemented.
+- Campaign-specific damage/downed hooks, crawl/sidearm animations, revive interaction, checkpoint restart hook, second actor spawn and live game-state replication: not implemented.
+- PSN identity and installable PKG/EBOOT/SPRX: not implemented.
 
 ## Compatibility policy
 
@@ -30,4 +32,4 @@ Prototype 0.2 contains 16 passing Python unit and UDP integration tests. They va
 
 ## Important
 
-No retail game files, copyrighted game assets, EBOOT, SPRX or installable PKG are included. The Campaign co-op feasibility gate remains open until a second actor can be spawned safely in a user-owned game build and tested on real hardware. The source tree is maintained on this isolated branch, separate from PS3-SCALE main.
+No retail game files, copyrighted game assets, EBOOT, SPRX or installable PKG are included. The Campaign co-op feasibility gate remains open until a second actor can be spawned safely in a user-owned game build and tested on real hardware. The revive rules are currently a tested standalone gameplay-state component; they are not yet connected to the retail Campaign health or animation systems. The source tree is maintained on this isolated branch, separate from PS3-SCALE main.
