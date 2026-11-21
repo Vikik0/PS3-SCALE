@@ -23,7 +23,7 @@ Every client sends one binary game packet as the WebSocket message payload. The 
 | 20 | 2 | Payload length, unsigned big-endian |
 | 22 | 1–1200 | Opaque game packet |
 
-The server obtains the sender ID from the authenticated guest session, not from a client-supplied field. Text messages are rejected. The initial relay prototype caps each connected player at five inbound WebSocket messages per second (including keepalive pings) and 1200 payload bytes per message.
+The server obtains the sender ID from the authenticated guest session, not from a client-supplied field. Text messages are rejected. The initial relay prototype caps each connected player at five inbound WebSocket messages per second (including keepalive pings) and 1200 payload bytes per message. The upstream lockstep protocol batches 32 game steps per packet at roughly 33.37 ms per step, so normal game traffic is expected to be around one packet per second per player; the five-message limit is a burst guard, not the intended send rate.
 
 ## Free-tier budget
 
