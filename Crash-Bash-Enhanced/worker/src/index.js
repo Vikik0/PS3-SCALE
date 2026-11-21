@@ -32,6 +32,12 @@ async function sha256(value) {
   return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
 }
 
+function isIPv4(value) {
+  const parts = String(value || "").split(".");
+  if (parts.length !== 4) return false;
+  return parts.every(part => /^\\d{1,3}$/.test(part) && Number(part) >= 0 && Number(part) <= 255);
+}
+
 function cleanName(value) {
   const name = String(value || "Player").trim().replace(/[^a-zA-Z0-9 _-]/g, "").slice(0, MAX_NAME_LENGTH);
   return name || "Player";
@@ -68,7 +74,8 @@ function roomView(room) {
     player_count: room.players.length,
     is_private: room.isPrivate,
     created_at: new Date(room.createdAt).toISOString(),
-    players: [...room.players].sort((a, b) => a.slot - b.slot).map(p => playerView(room, p))
+    players: [...room.players].sort((a, b) => a.slot - b.slot).map(p => playerView(room, p)),
+    host_endpoint_ready: Boolean(room.hostEndpoint)
   };
 }
 
@@ -129,6 +136,7 @@ export class CrashBashLobby {
 
     if (room.hostSessionId === player.sessionId) {
       room.hostSessionId = room.players.sort((a, b) => a.slot - b.slot)[0].sessionId;
+      room.hostEndpoint = null;
     }
 
     room.status = "waiting";
@@ -253,6 +261,7 @@ export class CrashBashLobby {
           isPrivate: body.is_private !== false,
           createdAt: Date.now(),
           startedAt: null,
+          hostEndpoint: null,
           players: [{
             sessionId: session.sessionId,
             name: session.name,
@@ -337,6 +346,7 @@ export class CrashBashLobby {
         if (!player) throw fail(403, "NOT_IN_ROOM", "You are not a member of this room.");
         return response(200, {
           room_status: room.status,
+          host_endpoint: room.hostEndpoint,
           players: room.players.filter(p => p.sessionId !== session.sessionId).map(p => ({
             player_id: p.sessionId,
             name: p.name,
@@ -344,6 +354,41 @@ export class CrashBashLobby {
             ready: p.ready
           }))
         });
+      }
+
+      if (action === "endpoint" && method === "POST") {
+        if (session.roomCode !== code) throw fail(404, "ROOM_NOT_FOUND", "Room code does not match your session.");
+        if (room.hostSessionId !== session.sessionId) throw fail(403, "HOST_ONLY", "Only the room host can publish the game endpoint.");
+        const body = await readBody(request);
+        const port = Number(body.public_port);
+        const observedAddress = request.headers.get("CF-Connecting-IP") || "";
+        const suppliedAddress = String(body.public_address || "");
+        const address = observedAddress || suppliedAddress;
+        if (!Number.isInteger(port) || port < 1 || port > 65535) {
+          throw fail(400, "INVALID_UDP_PORT", "public_port must be between 1 and 65535.");
+        }
+        if (!isIPv4(address)) {
+          throw fail(400, "INVALID_PUBLIC_IP", "A public IPv4 address is required for the first PS3 transport.");
+        }
+        if (observedAddress && suppliedAddress && suppliedAddress !== observedAddress) {
+          throw fail(400, "PUBLIC_IP_MISMATCH", "The advertised IP does not match the request source IP.");
+        }
+        room.hostEndpoint = {
+          address,
+          port,
+          protocol: "udp",
+          published_at: new Date().toISOString()
+        };
+        await this.save(state);
+        return response(200, { host_endpoint: room.hostEndpoint });
+      }
+
+      if (action === "endpoint" && method === "GET") {
+        if (session.roomCode !== code) throw fail(404, "ROOM_NOT_FOUND", "Room code does not match your session.");
+        if (!room.players.some(p => p.sessionId === session.sessionId)) {
+          throw fail(403, "NOT_IN_ROOM", "You are not a member of this room.");
+        }
+        return response(200, { host_endpoint: room.hostEndpoint });
       }
 
       throw fail(404, "NOT_FOUND", "API route was not found.");
