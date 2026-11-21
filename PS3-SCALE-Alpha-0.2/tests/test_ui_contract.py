@@ -106,7 +106,8 @@ assert "music_sample_fade" in src
 assert "Keep this block on one track" in src
 assert "AUTO: %s > %s" in settings
 assert "music_fade_ms=%d" in src
-assert "settings_version=2" in src
+assert "settings_version=3" in src
+assert "settings_version < 3" in src
 assert "cycle_music_fade_ms" in src
 assert "g_settings_selected == 8" in main
 assert "MUSIC 1: BIOS - ZORROVIAN (USB IMPORT)" in settings
