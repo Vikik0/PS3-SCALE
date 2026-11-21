@@ -219,7 +219,7 @@ async function runAction(action) {
   if (state.loading) return;
   const displayName = document.querySelector("#display-name")?.value?.trim() || "";
   const selectedLimit = document.querySelector("#player-limit")?.value || "4";
-  const enteredCode = enteredCode;
+  const enteredCode = document.querySelector("#room-code-input")?.value?.trim().toUpperCase() || "";
   state.loading = true;
   state.error = "";
   render();
@@ -231,7 +231,7 @@ async function runAction(action) {
       beginPolling();
     } else if (action === "join") {
       await ensureSession(displayName);
-      const code = document.querySelector("#room-code-input")?.value?.trim().toUpperCase() || "";
+      const code = enteredCode;
       if (!/^[A-Z0-9]{6}$/.test(code)) throw new Error("Enter a valid six-character room code.");
       state.room = await api(`/v1/rooms/${code}/join`, { method: "POST", body: {} });
       beginPolling();
@@ -243,6 +243,7 @@ async function runAction(action) {
     } else if (action === "leave") {
       await api(`/v1/rooms/${state.room.room_code}/leave`, { method: "POST", body: {} });
       state.room = null;
+      stopPolling();
     } else if (action === "copy-code") {
       await navigator.clipboard.writeText(state.room.room_code);
       state.error = "Room code copied.";
