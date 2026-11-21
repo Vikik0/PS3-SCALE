@@ -11,6 +11,7 @@ APP_TITLE="Crash Bash"
 rm -rf "$WORK"
 git clone --filter=blob:none "$UPSTREAM" "$WORK"
 git -C "$WORK" checkout --detach "$COMMIT"
+python3 "$ROOT/scripts/patch_psxonps3.py" "$WORK"
 
 python3 - "$WORK" "$APP_ID" "$APP_TITLE" <<'PY'
 from pathlib import Path
