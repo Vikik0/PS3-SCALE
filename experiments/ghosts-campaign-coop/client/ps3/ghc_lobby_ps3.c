@@ -429,7 +429,7 @@ static int gh_authenticated_post(
     result = gh_http_request_json(
         url,
         session->token,
-        CELL_HTTP_METHOD_POST,
+        "POST",
         body,
         response,
         sizeof(response),
@@ -458,7 +458,7 @@ int ghc_lobby_create_guest_session(
     result = gh_http_request_json(
         url,
         NULL,
-        CELL_HTTP_METHOD_POST,
+        "POST",
         "{\"mode\":\"guest\"}",
         response,
         sizeof(response),
@@ -490,7 +490,7 @@ int ghc_lobby_create_room(
     result = gh_http_request_json(
         url,
         session->token,
-        CELL_HTTP_METHOD_POST,
+        "POST",
         "{}",
         response,
         sizeof(response),
@@ -644,7 +644,7 @@ int ghc_lobby_get_peer(
     result = gh_http_request_json(
         url,
         session->token,
-        CELL_HTTP_METHOD_GET,
+        "GET",
         NULL,
         response,
         sizeof(response),
@@ -680,7 +680,7 @@ int ghc_lobby_publish_candidate(
     result = gh_http_request_json(
         url,
         session->token,
-        CELL_HTTP_METHOD_POST,
+        "POST",
         body,
         response,
         sizeof(response),
