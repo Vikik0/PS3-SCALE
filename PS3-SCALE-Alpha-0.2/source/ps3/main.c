@@ -1483,15 +1483,57 @@ static void update_scan_cover_cache(void)
     }
 }
 
+static void clear_selected_preview_textures(void)
+{
+    if (g_preview_before_texture) {
+        ya2d_freeTexture(g_preview_before_texture);
+        g_preview_before_texture = NULL;
+    }
+    if (g_preview_after_texture) {
+        ya2d_freeTexture(g_preview_after_texture);
+        g_preview_after_texture = NULL;
+    }
+    g_preview_key[0] = '\0';
+}
+
+static void update_selected_preview_textures(const ps3scale_game_t *game)
+{
+    char key[32];
+    char before_path[256];
+    char after_path[256];
+
+    if (!game || !game->title_id[0] || !game->app_ver[0]) {
+        clear_selected_preview_textures();
+        return;
+    }
+
+    snprintf(key, sizeof(key), "%.9s_%.5s", game->title_id, game->app_ver);
+    if (strcmp(key, g_preview_key) == 0)
+        return;
+
+    clear_selected_preview_textures();
+    snprintf(g_preview_key, sizeof(g_preview_key), "%s", key);
+    snprintf(before_path, sizeof(before_path),
+             "%s/%.9s_%.5s_before.png",
+             PS3SCALE_PREVIEW_DIR, game->title_id, game->app_ver);
+    snprintf(after_path, sizeof(after_path),
+             "%s/%.9s_%.5s_after.png",
+             PS3SCALE_PREVIEW_DIR, game->title_id, game->app_ver);
+    g_preview_before_texture = ya2d_loadPNGfromFile(before_path);
+    g_preview_after_texture = ya2d_loadPNGfromFile(after_path);
+}
+
 static void update_selected_cover(void)
 {
     const ps3scale_game_t *game;
     const char *path;
     if (g_screen == SCREEN_SCAN) {
+        update_selected_preview_textures(NULL);
         update_scan_cover_cache();
         return;
     }
     game = selected_game();
+    update_selected_preview_textures(g_screen == SCREEN_DETAILS ? game : NULL);
     path = (game && game->cover_path[0]) ? game->cover_path : "";
     if (strcmp(path, g_cover_path) == 0) return;
     if (g_cover_texture) {
@@ -6593,6 +6635,7 @@ int main(int argc, char *argv[])
     clear_scan_cover_cache();
     if (g_cover_texture) ya2d_freeTexture(g_cover_texture);
     g_cover_texture = NULL;
+    clear_selected_preview_textures();
     if (g_apollo_texture) ya2d_freeTexture(g_apollo_texture);
     g_apollo_texture = NULL;
     if (pad_ready) ya2d_deinit();
