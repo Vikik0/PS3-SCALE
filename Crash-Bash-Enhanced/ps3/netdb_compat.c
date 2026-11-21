@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 int getaddrinfo(const char *node, const char *service,
                 const struct addrinfo *hints, struct addrinfo **result)
@@ -73,4 +74,17 @@ void freeaddrinfo(struct addrinfo *result)
         free(result);
         result = next;
     }
+}
+
+int gethostname(char *name, size_t length)
+{
+    static const char host[] = "PS3";
+    if (!name || length == 0) return -1;
+    if (length < sizeof(host)) {
+        memcpy(name, host, length - 1);
+        name[length - 1] = '\0';
+        return -1;
+    }
+    memcpy(name, host, sizeof(host));
+    return 0;
 }
