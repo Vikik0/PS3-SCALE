@@ -90,6 +90,21 @@ The engine/shared-script layer has data structures and predicates for more than 
 - A spawned AI soldier is not equivalent to a second local player: the second slot needs its own client identity, controller command stream, player state, camera, viewport and HUD ownership.
 - The next critical gate is still the exact TU 1.16 native local-client creation/initialization path. The uploaded retail SELF containers expose metadata but not decrypted PPU instructions. No unverified offset should be hooked.
 
+## Read-only native-player registry shim
+
+A first IW6/PS3 GSC shim now exists at `client/ps3/gsc/ghc_campaign_player_registry.gsc`. It was compiled and round-trip decompiled with GSC Tool 1.6.2.364.
+
+The shim:
+- waits for the existing `level.playerpiggyback` list;
+- requires `issplitscreen()` and at least two already-registered players;
+- validates `issplitscreenplayer()` for both slots;
+- validates primary identity on slot 0 and non-primary identity on slot 1;
+- exposes a read-only slot accessor after validation.
+
+It deliberately does **not** spawn, clone, respawn, move, or equip a player. Its 339-byte compiled GSC binary has SHA-256 `102ec770fe31a7016697d4714fee2e8731dbfc84f987cd4941470c5830e1e099`; the source hash and compiler command are recorded in `client/ps3/gsc/ghc_campaign_player_registry.manifest.json`.
+
+The shim is a compiled adapter component only. There is no verified runtime GSC injection/loading path in the current project, so it is not yet loaded by the game and does not make the Campaign playable.
+
 ## Adaptation order after the native client gate
 
 1. Prove two native local player slots exist in a supported offline mode and identify the primary/secondary identity and controller-port mapping.
