@@ -118,7 +118,7 @@ jobs:
         run: |
           set -eu
           apt-get update
-          apt-get install -y python3-pil
+          apt-get install -y python3-pil fonts-dejavu-core
 
       - name: Build and validate PS3 packages
         working-directory: PS3-SCALE-Alpha-0.2
