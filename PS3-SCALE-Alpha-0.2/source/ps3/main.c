@@ -2339,7 +2339,7 @@ static void rebuild_online_results(void)
     }
 
     if (g_community_ready && g_community_index.items) {
-        /* Installed-game matches are preferred; search-only matches are still shown. */
+        /* Installed-game matches are preferred; unmatched index entries remain browse-only. */
         for (j = 0; j < g_community_index.count; j++) {
             const ps3scale_community_file_t *file = &g_community_index.items[j];
             int matched_installed_game = 0;
