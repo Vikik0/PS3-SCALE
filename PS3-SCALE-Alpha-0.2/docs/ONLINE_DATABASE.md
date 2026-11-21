@@ -27,15 +27,16 @@ The Cross install action is deliberately narrow:
 1. The result must be a `GRAPHICS_FPS` community entry with a `.ncl` extension.
 2. The matching PS3 game must already be scanned from an HDD path under `/dev_hdd0/`.
 3. The installed game's Title ID and APP_VER must exactly match the community entry.
-4. Artemis PS3 must be installed at `/dev_hdd0/game/ARTPS3001/USRDIR/EBOOT.BIN`.
+4. Artemis PS3 must be installed. PS3 SCALE detects the upstream `ARTPS3001` package ID and the Artemis R5 `ARTZ00001` package ID, then selects that installation's USERLIST directory.
 5. The source repository, branch and path must pass path validation. The downloaded file is limited to 2 MiB, must be plain text, and ELF/PKG/binary content is rejected.
 6. Existing destination files are never overwritten.
 
-Accepted files are saved to:
+Accepted files are saved to the detected Artemis installation:
 
-`/dev_hdd0/game/ARTPS3001/USRDIR/USERLIST/`
+- `/dev_hdd0/game/ARTPS3001/USRDIR/USERLIST/` for the upstream package.
+- `/dev_hdd0/game/ARTZ00001/USRDIR/USERLIST/` for Artemis R5 builds using that package ID.
 
-The filename is prefixed with `PS3SCALE_<TITLE_ID>_<APP_VER>_` so the target game and version are visible in Artemis' user list.
+Temporary cleanup checks both supported USERLIST locations. The filename is prefixed with `PS3SCALE_<TITLE_ID>_<APP_VER>_` so the target game and version are visible in Artemis' user list.
 
 PS3 SCALE does **not** execute an NCL file or apply it automatically. After installation, open Artemis PS3 and select the NCL entry for the matching game. The community file may contain in-game memory codes; review the source and use it at your own discretion. PS3 SCALE does not modify the original game folder, EBOOT, update data or ISO.
 
