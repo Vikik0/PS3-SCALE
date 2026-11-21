@@ -23,7 +23,7 @@ Every client sends one binary game packet as the WebSocket message payload. The 
 | 20 | 2 | Payload length, unsigned big-endian |
 | 22 | 1–1200 | Opaque game packet |
 
-The server obtains the sender ID from the authenticated guest session, not from a client-supplied field. Text messages are rejected. The initial relay prototype caps each connected player at five inbound WebSocket messages per second (including keepalive pings) and 1200 payload bytes per message. The upstream lockstep protocol batches 32 game steps per packet at roughly 33.37 ms per step, so normal game traffic is expected to be around one packet per second per player; the five-message limit is a burst guard, not the intended send rate.
+The server obtains the sender ID from the authenticated guest session, not from a client-supplied field. The browser authenticates with the guest token in the `cbash-auth.<token>` subprotocol. The PS3 uses `POST /v1/rooms/:code/join-guest` and receives a 60-second, single-use ticket for the `cbash-ticket.<ticket>` subprotocol; the long-lived guest token is not returned to the PS3 client. Only the `PING` text keepalive is accepted; other text messages are rejected. The initial relay prototype caps each connected player at five inbound WebSocket messages per second (including keepalive pings) and 1200 payload bytes per message. The upstream lockstep protocol batches 32 game steps per packet at roughly 33.37 ms per step, so normal game traffic is expected to be around one packet per second per player; the five-message limit is a burst guard, not the intended send rate.
 
 ## Free-tier budget
 
@@ -55,7 +55,7 @@ References:
 1. Add the WebGL 2 browser renderer and an Emscripten build of the game runtime.
 2. Add browser-side disc-image selection and local-only loading; no disc image is uploaded to the server.
 3. Adapt the game's lockstep protocol to the CBR1 WebSocket relay.
-4. Replace or supplement the PS3 direct-UDP transport with a TLS WebSocket client compatible with the same relay.
+4. Replace or supplement the PS3 direct-UDP transport with a WebSocket client compatible with the same relay; prefer WSS, and if plain WS is required, use only the short-lived single-use ticket.
 5. Connect the PS3 in-game host/join UI to guest room codes.
 6. Test matching builds, input delay, disconnect/rejoin, and deterministic frame fingerprints on a real PS3 and a real browser.
 
