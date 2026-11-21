@@ -14,6 +14,7 @@ static void *cb_memset(void *destination, int value, size_t length)
 
 typedef int32_t (*CellPadGetDataFn)(uint32_t port_no, CellPadData *data);
 typedef int32_t (*CellPadGetInfo2Fn)(CellPadInfo2 *info);
+typedef int32_t (*CellPadGetDataExtraFn)(uint32_t port_no, uint32_t *device_type, CellPadData *data);
 
 typedef struct {
     uint32_t entry;
