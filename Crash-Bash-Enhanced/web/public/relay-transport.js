@@ -84,7 +84,7 @@ export class CrashBashRelayTransport {
     this.now = now;
     this.socket = null;
     this.queue = [];
-    this.lastFlushAt = 0;
+    this.lastFlushAt = Number.NEGATIVE_INFINITY;
     this.flushTimer = null;
     this.heartbeatTimer = null;
     this.listeners = new Map();
@@ -161,9 +161,9 @@ export class CrashBashRelayTransport {
   sendPacket(payload, recipientId = null, coalesceKey = "") {
     const bytes = payload instanceof Uint8Array ? payload.slice() : new Uint8Array(payload || []);
     if (bytes.length < 1 || bytes.length > MAX_PACKET_BYTES) return false;
-    let recipientBytes;
+    const recipientKey = recipientId ? String(recipientId).toUpperCase() : "";
     try {
-      recipientBytes = recipientId ? bytesFromHex(recipientId) : new Uint8Array(16);
+      if (recipientKey) bytesFromHex(recipientKey);
     } catch {
       return false;
     }
@@ -171,10 +171,10 @@ export class CrashBashRelayTransport {
     if (coalesceKey) {
       const existing = this.queue.findIndex(item =>
         item.coalesceKey === coalesceKey &&
-        item.recipientId === (recipientId || "")
+        item.recipientId === recipientKey
       );
       if (existing >= 0) {
-        this.queue[existing] = { recipientId: recipientId || "", recipientBytes, payload: bytes, coalesceKey };
+        this.queue[existing] = { recipientId: recipientKey, payload: bytes, coalesceKey };
         return true;
       }
     }
@@ -183,7 +183,7 @@ export class CrashBashRelayTransport {
       this.flush();
       if (this.queue.length >= MAX_BATCH_PACKETS) return false;
     }
-    this.queue.push({ recipientId: recipientId || "", recipientBytes, payload: bytes, coalesceKey });
+    this.queue.push({ recipientId: recipientKey, payload: bytes, coalesceKey });
     return true;
   }
 
@@ -193,21 +193,23 @@ export class CrashBashRelayTransport {
 
     const batch = [];
     let size = 5;
-    while (this.queue.length && batch.length < MAX_BATCH_PACKETS) {
-      const next = this.queue[0];
+    let takeCount = 0;
+    while (takeCount < this.queue.length && batch.length < MAX_BATCH_PACKETS) {
+      const next = this.queue[takeCount];
       const nextSize = 18 + next.payload.length;
       if (size + nextSize > MAX_MESSAGE_BYTES) break;
       batch.push({
         recipientId: next.recipientId || null,
         payload: next.payload
       });
-      this.queue.shift();
+      takeCount += 1;
       size += nextSize;
     }
     if (!batch.length) return false;
 
     try {
       this.socket.send(encodeRelayBatch(batch));
+      this.queue.splice(0, takeCount);
       this.lastFlushAt = this.now();
       this.emit("flush", { packetCount: batch.length, byteLength: size });
       return true;
