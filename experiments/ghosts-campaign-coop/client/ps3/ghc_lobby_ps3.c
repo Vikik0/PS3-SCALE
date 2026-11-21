@@ -66,7 +66,7 @@ static int gh_ssl_verify(
     (void)hostname;
     (void)id;
     (void)user_arg;
-    return verify_error == CELL_HTTPS_VERIFY_ERROR_NONE ? 0 : -1;
+    return verify_error == (uint32_t)CELL_HTTPS_VERIFY_ERROR_NONE ? 0 : -1;
 }
 
 static void gh_runtime_rollback(void) {
@@ -130,14 +130,14 @@ int ghc_lobby_runtime_start(void) {
     result = cellSslInit(g_ssl_pool, sizeof(g_ssl_pool));
     if (result == 0) {
         g_owned_ssl_runtime = 1;
-    } else if (result != CELL_SSL_ERROR_ALREADY_INITIALIZED) {
+    } else if (result != (int)CELL_SSL_ERROR_ALREADY_INITIALIZED) {
         goto failed;
     }
 
     result = cellHttpInit(g_http_pool, sizeof(g_http_pool));
     if (result == 0) {
         g_owned_http_runtime = 1;
-    } else if (result != CELL_HTTP_ERROR_ALREADY_INITIALIZED) {
+    } else if (result != (int)CELL_HTTP_ERROR_ALREADY_INITIALIZED) {
         goto failed;
     }
 
