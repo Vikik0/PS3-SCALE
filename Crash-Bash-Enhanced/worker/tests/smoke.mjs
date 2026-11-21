@@ -186,12 +186,14 @@ assert.equal(created.status, 201);
 assert.equal(created.body.player_count, 1);
 assert.equal(created.body.max_players, 4);
 assert.equal(created.body.host_session_id, players[0].session_id);
+assert.equal(created.body.players[0].platform, "browser");
 const code = created.body.room_code;
 
 for (let i = 1; i <= 3; i++) {
   const joined = await call("/v1/rooms/" + code + "/join", "POST", {}, players[i].token);
   assert.equal(joined.status, 200);
   assert.equal(joined.body.player_count, i + 1);
+  assert.equal(joined.body.players.find(player => player.player_id === players[i].session_id).platform, "browser");
 }
 const full = await call("/v1/rooms/" + code + "/join", "POST", {}, players[4].token);
 assert.equal(full.status, 409);
@@ -458,6 +460,9 @@ assert.equal(ps3Join.body.ticket.length, 64);
 assert.equal(ps3Join.body.room.players.find(player =>
   player.player_id === ps3Join.body.session_id
 ).ready, true);
+assert.equal(ps3Join.body.room.players.find(player =>
+  player.player_id === ps3Join.body.session_id
+).platform, "ps3");
 const ticketRequest = new Request("https://crash-bash.test/v1/rooms/" + code + "/transport", {
   headers: { "Sec-WebSocket-Protocol": "cbash-v1, cbash-ticket." + ps3Join.body.ticket }
 });
@@ -505,6 +510,7 @@ assert.equal(ps3Hosted.body.host_session_id, ps3Hosted.body.session_id);
 assert.equal(ps3Hosted.body.ticket.length, 64);
 assert.equal(ps3Hosted.body.room.players.length, 1);
 assert.equal(ps3Hosted.body.room.players[0].ready, true);
+assert.equal(ps3Hosted.body.room.players[0].platform, "ps3");
 const ps3HostTicketRequest = new Request(
   "https://crash-bash.test/v1/rooms/" + ps3Hosted.body.room_code + "/transport",
   { headers: { "Sec-WebSocket-Protocol": "cbash-v1, cbash-ticket." + ps3Hosted.body.ticket } }
