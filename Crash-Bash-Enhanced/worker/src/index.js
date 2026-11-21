@@ -509,6 +509,24 @@ export class CrashBashLobby {
         });
       }
 
+      if (method === "GET" && path === "/v1/rooms/public") {
+        const rooms = Object.values(state.rooms)
+          .filter(room => !room.isPrivate &&
+                          room.status === "waiting" &&
+                          room.players.length < room.maxPlayers)
+          .sort((a, b) => a.createdAt - b.createdAt)
+          .map(room => ({
+            room_code: room.code,
+            mode: room.mode,
+            max_players: room.maxPlayers,
+            player_count: room.players.length,
+            host_name: room.players.find(player => player.sessionId === room.hostSessionId)?.name || "Host",
+            created_at: new Date(room.createdAt).toISOString()
+          }));
+        await this.save(state);
+        return response(200, { rooms });
+      }
+
       if (method === "POST" && path === "/v1/sessions") {
         if (Object.keys(state.sessions).length >= MAX_SESSIONS) {
           throw fail(503, "FREE_TIER_SESSION_LIMIT", "The free service has reached its guest-session limit. Try again later.");
@@ -702,24 +720,6 @@ export class CrashBashLobby {
         if (!current) return response(200, { room: null });
         await this.save(state);
         return response(200, { room: roomView(current.room) });
-      }
-
-      if (method === "GET" && path === "/v1/rooms/public") {
-        const rooms = Object.values(state.rooms)
-          .filter(room => !room.isPrivate &&
-                          room.status === "waiting" &&
-                          room.players.length < room.maxPlayers)
-          .sort((a, b) => a.createdAt - b.createdAt)
-          .map(room => ({
-            room_code: room.code,
-            mode: room.mode,
-            max_players: room.maxPlayers,
-            player_count: room.players.length,
-            host_name: room.players.find(player => player.sessionId === room.hostSessionId)?.name || "Host",
-            created_at: new Date(room.createdAt).toISOString()
-          }));
-        await this.save(state);
-        return response(200, { rooms });
       }
 
       if (method === "POST" && path === "/v1/rooms") {
