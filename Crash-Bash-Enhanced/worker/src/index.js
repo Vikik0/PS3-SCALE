@@ -127,6 +127,7 @@ function playerView(room, player) {
     name: player.name,
     slot: player.slot,
     ready: player.ready,
+    platform: player.platform || "unknown",
     is_host: player.sessionId === room.hostSessionId
   };
 }
@@ -559,7 +560,8 @@ export class CrashBashLobby {
           sessionId,
           name: cleanName(body.display_name),
           expiresAt,
-          roomCode: null
+          roomCode: null,
+          platform: "browser"
         };
         state.sessions[await sha256(token)] = session;
         await this.save(state);
@@ -601,7 +603,7 @@ export class CrashBashLobby {
           createdAt: Date.now(),
           startedAt: null,
           hostEndpoint: null,
-          players: [{ sessionId, name, slot: 1, ready: true, candidate: null }]
+          players: [{ sessionId, name, slot: 1, ready: true, candidate: null, platform: "ps3" }]
         };
         state.rooms[code] = room;
 
@@ -651,7 +653,7 @@ export class CrashBashLobby {
         const occupied = new Set(room.players.map(player => player.slot));
         let slot = 1;
         while (occupied.has(slot)) slot++;
-        room.players.push({ sessionId, name, slot, ready: true, candidate: null });
+        room.players.push({ sessionId, name, slot, ready: true, candidate: null, platform: "ps3" });
 
         const ticket = randomHex(32);
         const ticketHash = await sha256(ticket);
@@ -765,7 +767,8 @@ export class CrashBashLobby {
             name: session.name,
             slot: 1,
             ready: false,
-            candidate: null
+            candidate: null,
+            platform: session.platform || "browser"
           }]
         };
         state.rooms[code] = room;
@@ -802,7 +805,8 @@ export class CrashBashLobby {
           name: session.name,
           slot,
           ready: false,
-          candidate: null
+          candidate: null,
+          platform: session.platform || "browser"
         });
         session.roomCode = code;
         await this.save(state);
