@@ -28,7 +28,7 @@ If convenient, include the matching `patch_common_mp.ff` too. It is useful as a 
 
 ## Optional local identity checks (Windows PowerShell)
 
-Run these in the folder containing the copied files:
+Run these in the folder containing the copied files. To identify the title metadata without uploading game files to GitHub, the repository includes a free local parser:
 
 ```powershell
 Get-Item .\EBOOT.BIN, .\common.ff, .\PARAM.SFO | Select-Object Name, Length
