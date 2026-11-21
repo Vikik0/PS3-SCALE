@@ -56,7 +56,7 @@ export class BrowserLockstepClient {
     this.hostWatchTimer = null;
     this.phase = "idle";
     this.nonce = 0;
-    this.session = 0;
+    this.session = null;
     this.me = -1;
     this.readyMask = 0;
     this.delay = 0;
@@ -192,7 +192,7 @@ export class BrowserLockstepClient {
   }
 
   handlePing(packet) {
-    if (!this.session || (this.phase !== "lobby" && this.phase !== "starting" && this.phase !== "playing")) return;
+    if (this.session === null || (this.phase !== "lobby" && this.phase !== "starting" && this.phase !== "playing")) return;
     const ping = decodePing(packet);
     if (ping.session !== this.session) return;
     if (ping.me !== this.me || ping.machines < 2 || ping.machines > 4 || ping.pads.length !== ping.machines) {
@@ -336,7 +336,7 @@ export class BrowserLockstepClient {
 
   handleBye(packet) {
     const bye = decodeBye(packet);
-    if (this.session && bye.session !== this.session) return;
+    if (this.session !== null && bye.session !== this.session) return;
     this.fail(reasonText(bye.reason), false);
   }
 
@@ -357,7 +357,7 @@ export class BrowserLockstepClient {
     this.rejectWelcome?.(new Error(message));
     this.resolveWelcome = null;
     this.rejectWelcome = null;
-    if (sendBye && this.session) {
+    if (sendBye && this.session !== null) {
       try { this.send(encodeBye(this.session, this.me < 0 ? 0 : this.me, CBN1_BYE_REASONS.LEFT, this.next), "cbn1-bye"); } catch {}
     }
     this.phase = "failed";
@@ -386,7 +386,7 @@ export class BrowserLockstepClient {
     this.rejectWelcome?.(new Error("The browser player left before the PS3 host handshake completed."));
     this.resolveWelcome = null;
     this.rejectWelcome = null;
-    if (this.session && this.me >= 0 && ["lobby", "starting", "playing"].includes(this.phase)) {
+    if (this.session !== null && this.me >= 0 && ["lobby", "starting", "playing"].includes(this.phase)) {
       this.send(encodeBye(this.session, this.me, CBN1_BYE_REASONS.LEFT, this.next), "cbn1-bye");
     }
     this.phase = "stopped";
