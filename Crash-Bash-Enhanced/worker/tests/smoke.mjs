@@ -316,8 +316,8 @@ assert.equal(secondStarted.body.status, "running");
 await lobby.webSocketClose(relayB, 1006, "network lost", false);
 assert.equal(relayB.closed.code, 1008);
 const afterDisconnectState = await lobby.load();
-assert.equal(afterDisconnectState.rooms[code].players.length, 3);
-assert.equal(afterDisconnectState.rooms[code].hostSessionId, ps3Join.body.session_id);
+assert.equal(afterDisconnectState.rooms[code].players.length, 2);
+assert.equal(afterDisconnectState.rooms[code].hostSessionId, players[2].session_id);
 const disconnectedSession = Object.values(afterDisconnectState.sessions)
   .find(session => session.sessionId === players[1].session_id);
 assert.equal(disconnectedSession.roomCode, null);
