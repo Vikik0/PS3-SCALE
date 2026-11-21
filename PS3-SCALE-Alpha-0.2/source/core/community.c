@@ -512,34 +512,6 @@ static int file_contains_title_id(
     return 0;
 }
 
-static int file_has_region(
-    const ps3scale_community_file_t *file,
-    int wanted_region)
-{
-    size_t i, length;
-    if (!file || wanted_region == 0)
-        return 0;
-    if (title_region(file->title_id) == wanted_region)
-        return 1;
-
-    length = strlen(file->path);
-    for (i = 0; i + 9 <= length; i++) {
-        char candidate[10];
-        size_t j;
-        if (i > 0 && isalnum((unsigned char)file->path[i - 1]))
-            continue;
-        if (i + 9 < length &&
-            isalnum((unsigned char)file->path[i + 9]))
-            continue;
-        for (j = 0; j < 9; j++)
-            candidate[j] = (char)toupper((unsigned char)file->path[i + j]);
-        candidate[9] = '\0';
-        if (valid_title_id(candidate) &&
-            title_region(candidate) == wanted_region)
-            return 1;
-    }
-    return 0;
-}
 
 int ps3scale_community_file_matches_exact_game(
     const ps3scale_community_file_t *file,
