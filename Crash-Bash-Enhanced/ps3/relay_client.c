@@ -136,7 +136,7 @@ static int clean_display_name(const char *input, char output[17])
 
 static int request_guest_ticket(const char *host, unsigned short port,
                                 const char *room_code, const char *display_name,
-                                int timeout_ms, char ticket[65], char session_id[33])
+                                int timeout_ms, char ticket[65], char session_id[33], char host_session_id[33])
 {
     struct addrinfo hints;
     struct addrinfo *addresses = NULL;
@@ -227,7 +227,8 @@ static int request_guest_ticket(const char *host, unsigned short port,
          strncmp(response, "HTTP/1.0 201", 12) != 0)) goto cleanup;
     if (have_content_length && received < header_end + body_length) goto cleanup;
     if (json_hex_field(response + header_end, "ticket", ticket, 65u, 64u) != 0 ||
-        json_hex_field(response + header_end, "session_id", session_id, 33u, 32u) != 0) {
+        json_hex_field(response + header_end, "session_id", session_id, 33u, 32u) != 0 ||
+        json_hex_field(response + header_end, "host_session_id", host_session_id, 33u, 32u) != 0) {
         goto cleanup;
     }
     result = 0;
@@ -257,7 +258,7 @@ int cb_relay_join(CbRelayClient *client, const char *host, unsigned short port,
     client->websocket.fd = -1;
 
     if (request_guest_ticket(host, port, room_code, display_name,
-                             timeout_ms, ticket, client->session_id) != 0) {
+                             timeout_ms, ticket, client->session_id, client->host_session_id) != 0) {
         return -1;
     }
 
@@ -387,6 +388,42 @@ int cb_relay_receive_packet(CbRelayClient *client, void *packet, size_t capacity
     return 1;
 }
 
+int cb_relay_host_address(const CbRelayClient *client, char *address,
+                          size_t address_capacity, unsigned short *port)
+{
+    unsigned int a;
+    unsigned int b;
+    unsigned int c;
+    unsigned int port_value;
+
+    if (!client || !client->host_session_id[0] || !address ||
+        address_capacity == 0 || !port) return -1;
+
+    if (json_hex_field) { /* Keep this function independent of JSON parsing. */ }
+    {
+        unsigned int bytes[5];
+        size_t i;
+        for (i = 0; i < 5u; ++i) {
+            char pair[3];
+            char *end;
+            pair[0] = client->host_session_id[i * 2u];
+            pair[1] = client->host_session_id[i * 2u + 1u];
+            pair[2] = '\0';
+            bytes[i] = (unsigned int)strtoul(pair, &end, 16);
+            if (*end != '\0') return -1;
+        }
+        a = 1u + (bytes[0] % 250u);
+        b = 1u + (bytes[1] % 250u);
+        c = 1u + (bytes[2] % 250u);
+        port_value = 20000u + (((bytes[3] << 8) | bytes[4]) % 40000u);
+    }
+
+    if (snprintf(address, address_capacity, "10.%u.%u.%u", a, b, c) >=
+        (int)address_capacity) return -1;
+    *port = (unsigned short)port_value;
+    return 0;
+}
+
 void cb_relay_leave(CbRelayClient *client)
 {
     if (!client) return;
@@ -394,6 +431,7 @@ void cb_relay_leave(CbRelayClient *client)
     client->connected = 0;
     client->room_code[0] = '\0';
     client->session_id[0] = '\0';
+    client->host_session_id[0] = '\0';
     client->host[0] = '\0';
     client->port = 0;
 }
