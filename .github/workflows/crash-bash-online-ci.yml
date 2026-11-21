@@ -116,16 +116,29 @@ jobs:
           CARGO_TARGET_DIR="$src/tools/target" cargo build --release --manifest-path "$src/tools/nidgen/Cargo.toml"
           nidgen="$src/tools/target/release/nidgen"
           test -x "$nidgen"
-          mkdir -p "$RUNNER_TEMP/crashbash-libio-stub"
-          "$nidgen" archive \
-            --input "$src/tools/nidgen/nids/extracted/libio_stub.yaml" \
-            --toolchain-bin "$PS3DEV/ppu/bin" \
-            --out-dir "$RUNNER_TEMP/crashbash-libio-stub"
-          libio="$(find "$RUNNER_TEMP/crashbash-libio-stub" -type f -name libio_stub.a -print -quit)"
-          test -n "$libio"
-          cp "$libio" "$PS3DK/ppu/lib/libio_stub.a"
+          mkdir -p "$RUNNER_TEMP/crashbash-ps3-stubs"
+          for stub in io net netctl lv2 sysmodule fs libc; do
+            out="$RUNNER_TEMP/crashbash-ps3-stubs/$stub"
+            mkdir -p "$out"
+            "$nidgen" archive \
+              --input "$src/tools/nidgen/nids/extracted/lib${stub}_stub.yaml" \
+              --toolchain-bin "$PS3DEV/ppu/bin" \
+              --out-dir "$out" \
+              --abi ilp32
+            archive="$(find "$out" -type f -name "lib${stub}_stub.a" -print -quit)"
+            test -n "$archive"
+            if [ "$stub" = "net" ]; then
+              PS3DEV="$PS3DEV" PS3DK="$PS3DK" PS3_TOOLCHAIN_ROOT="$src" \
+                bash "$src/scripts/build-libnet-archive.sh" \
+                "$archive" "$PS3DK/ppu/lib/libnet_stub.a" ilp32
+            else
+              cp "$archive" "$PS3DK/ppu/lib/lib${stub}_stub.a"
+            fi
+          done
           test -f "$PS3DK/ppu/include/cell/pad.h"
-          test -f "$PS3DK/ppu/lib/libio_stub.a"
+          for stub in io net netctl lv2 sysmodule fs libc; do
+            test -f "$PS3DK/ppu/lib/lib${stub}_stub.a"
+          done
       - name: Build Crash Bash PS3 input bridge
         run: make -C Crash-Bash-Enhanced/ps3 PS3DEV="$PS3DEV" PS3DK="$PS3DK"
       - uses: actions/upload-artifact@v6
