@@ -49,15 +49,15 @@ References:
 - Four-player room creation, joining, ready state, and host start.
 - Host handoff and room cleanup.
 - A prototype binary WebSocket room relay with authenticated sender envelopes, packet-size checks, and per-client rate limits.
-- CI coverage for lobby behavior, relay framing/rate limits, the PS3 WebSocket client, and PRX packaging.
+- CI coverage for lobby behavior, relay framing/rate limits, a certificate-verified TLS 1.2/WSS PS3 client, and PRX builds.
 - A development PS3 host/join/start menu wired to the relay APIs.
 
 ### Still required before cross-platform play
 1. Add the WebGL 2 browser renderer and an Emscripten build of the game runtime.
 2. Add browser-side disc-image selection and local-only loading; no disc image is uploaded to the server.
 3. Validate the PS3 lockstep-to-CBU1/CBR1 shim under packet loss, high RTT, disconnects, and reconnects; tune the fixed relay input delay from measured results.
-4. Add TLS/HTTPS and WSS to the PS3 client and configure a real Worker endpoint; plain HTTP/WS is not suitable for the public Cloudflare deployment.
-5. Verify the new PS3 in-game host/join menu (SELECT + L3 + R3) on hardware; it now calls the native relay host/join/start APIs and uses six-character room codes.
+4. Configure Cloudflare deployment credentials, deploy the Worker, and publish the lobby. The PS3 client now uses certificate-verified HTTPS/WSS; local TLS integration tests cover its handshake and relay protocol.
+5. Build an installable PKG wrapper for the PRX and VSH loader, then verify the in-game host/join menu (SELECT + L3 + R3) on physical PS3 hardware.
 6. Test matching builds, input delay, disconnect/rejoin, and deterministic frame fingerprints on a real PS3 and a real browser.
 
-**Status:** the PS3 adapter routes upstream lockstep datagrams through the relay in code, and a development in-game menu is wired to the room APIs. Public secure access still needs TLS/WSS and Cloudflare deployment credentials; the browser game runtime and physical hardware/browser match tests are also missing. This branch is not yet cross-platform playable.
+**Status:** the PS3 adapter routes upstream lockstep datagrams through the relay in code, and its client now uses TLS 1.2/WSS with certificate verification. The browser game runtime, an installable PS3 PKG, Cloudflare deployment credentials, and physical hardware/browser match tests are still missing. This branch is not yet cross-platform playable.

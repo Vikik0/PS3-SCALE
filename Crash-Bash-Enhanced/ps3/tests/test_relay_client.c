@@ -48,7 +48,7 @@ int main(void)
         return 1;
     }
 
-    if (cb_relay_join(&client, "127.0.0.1", 8766, "ABC123",
+    if (cb_relay_join(&client, "localhost", 8766, "ABC123",
                       "PS3 Player", 3000) != 0) {
         fprintf(stderr, "PS3 relay join/ticket handshake failed\n");
         return 1;
@@ -190,7 +190,7 @@ int main(void)
         return 12;
     }
 
-    if (cb_relay_host(&client, "127.0.0.1", 8766, "PS3 Host", 3000) != 0 ||
+    if (cb_relay_host(&client, "localhost", 8766, "PS3 Host", 3000) != 0 ||
         !client.connected || strcmp(client.room_code, "HOST42") != 0 ||
         strcmp(client.session_id, "ffeeddccbbaa99887766554433221100") != 0 ||
         strcmp(client.host_session_id, client.session_id) != 0) {

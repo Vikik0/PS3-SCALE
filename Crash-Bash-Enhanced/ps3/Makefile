@@ -3,6 +3,9 @@ SHELL := /bin/bash
 PS3DEV ?=
 PS3DK ?= $(PS3DEV)/ps3dk
 BUILD := build
+MBEDTLS_BUILD := $(BUILD)/mbedtls
+MBEDTLS_A := $(MBEDTLS_BUILD)/libcb_mbedtls.a
+MBEDTLS_INC := $(MBEDTLS_BUILD)/include
 LOADER_BUILD := $(BUILD)/loader
 PPU_CC := $(PS3DEV)/ppu/bin/powerpc64-ps3-elf-gcc
 PRX_GEN := $(PS3DEV)/bin/prx-gen
@@ -16,7 +19,7 @@ PRX_SPECS := $(PS3DK)/ppu/lib/lv2-prx.specs
 
 CFLAGS := -O2 -Wall -Wextra -Werror -std=gnu11 -mcpu=cell -mhard-float \
           -ffunction-sections -fno-stack-protector -fno-builtin \
-          -D_POSIX_C_SOURCE=200112L -DBASH_VERSION='"1.4.0"' -I$(CURDIR)/compat -I$(PS3DK)/ppu/include
+          -D_POSIX_C_SOURCE=200112L -DBASH_VERSION='"1.4.0"' -DMBEDTLS_CONFIG_FILE='"cb_mbedtls_config.h"' -I$(CURDIR) -I$(CURDIR)/compat -I$(PS3DK)/ppu/include -I$(MBEDTLS_INC)
 NET_LIBS := -L$(PS3DK)/ppu/lib -Wl,--start-group -lio_stub -lnet_stub \
             -lnetctl_stub -llv2_stub -lsysmodule_stub -lsysutil_stub -lrt -lfs_stub -lc_stub -lc -lsysbase \
             -Wl,--end-group -lgcc
@@ -56,16 +59,25 @@ $(BUILD)/errno_compat.o: errno_compat.c | $(BUILD)
 
 
 
-$(BUILD)/ws_client.o: ws_client.c ws_client.h | $(BUILD)
+$(BUILD)/ca_bundle.c: tools/embed_ca_bundle.py | $(BUILD)
+	python3 tools/embed_ca_bundle.py /etc/ssl/certs/ca-certificates.crt $@
+
+$(BUILD)/ca_bundle.o: $(BUILD)/ca_bundle.c | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/relay_client.o: relay_client.c relay_client.h ws_client.h | $(BUILD)
+$(BUILD)/tls_client.o: tls_client.c tls_client.h cb_mbedtls_config.h $(MBEDTLS_A) | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/crash_bash_input.elf: $(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/relay_ui.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(BUILD)/errno_compat.o $(BUILD)/ws_client.o $(BUILD)/relay_client.o $(CRT_I) $(CRT) $(CRT_INIT) $(PRX_LD) $(PRX_SPECS)
+$(BUILD)/ws_client.o: ws_client.c ws_client.h tls_client.h | $(BUILD)
+	$(PPU_CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/relay_client.o: relay_client.c relay_client.h ws_client.h tls_client.h | $(BUILD)
+	$(PPU_CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/crash_bash_input.elf: $(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/relay_ui.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(BUILD)/errno_compat.o $(BUILD)/ws_client.o $(BUILD)/relay_client.o $(BUILD)/tls_client.o $(BUILD)/ca_bundle.o $(MBEDTLS_A) $(CRT_I) $(CRT) $(CRT_INIT) $(PRX_LD) $(PRX_SPECS)
 	$(PPU_CC) -nostdlib -nostartfiles -specs=$(PRX_SPECS) \
 		-Wl,-q -Wl,--gc-sections -Wl,--no-warn-rwx-segments -Wl,-T,$(PRX_LD) \
-		$(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/relay_ui.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(BUILD)/errno_compat.o $(BUILD)/ws_client.o $(BUILD)/relay_client.o $(CRT_I) $(CRT) $(CRT_INIT) $(NET_LIBS) -o $@
+		$(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/relay_ui.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(BUILD)/errno_compat.o $(BUILD)/ws_client.o $(BUILD)/relay_client.o $(BUILD)/tls_client.o $(BUILD)/ca_bundle.o $(MBEDTLS_A) $(CRT_I) $(CRT) $(CRT_INIT) $(NET_LIBS) -o $@
 
 $(BUILD)/crash_bash_input.prx: $(BUILD)/crash_bash_input.elf
 	$(PRX_GEN) build $< -o $@ --name crash_bash_input --version 0.2 || { \

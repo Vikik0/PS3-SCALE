@@ -31,7 +31,7 @@ static int ui_game_was_active;
 static int ui_transport_warning_shown;
 static int ui_callback_slot = -1;
 static char ui_worker_host[128];
-static char ui_worker_port[8] = "80";
+static char ui_worker_port[8] = "443";
 
 static volatile int dialog_done;
 static volatile int dialog_button;
@@ -260,7 +260,7 @@ static int get_worker_endpoint(void)
     unsigned long port;
     int answer;
 
-    answer = prompt_text("Worker hostname or LAN IP (no http://)", ui_worker_host,
+    answer = prompt_text("Worker hostname (no https://)", ui_worker_host,
                          120, value, sizeof(value));
     if (answer <= 0) return answer;
     if (!validate_worker_host(value)) {
@@ -268,7 +268,7 @@ static int get_worker_endpoint(void)
         return -1;
     }
 
-    answer = prompt_text("Worker port (local test often uses 8787)", ui_worker_port,
+    answer = prompt_text("HTTPS/WSS port (normally 443)", ui_worker_port,
                          5, port_text, sizeof(port_text));
     if (answer <= 0) return answer;
     port = strtoul(port_text, &end, 10);
@@ -293,7 +293,7 @@ static int open_relay_menu(void)
     if (ui_start_pending || ui_joined_room) return 0;
 
     if (!ui_transport_warning_shown) {
-        (void)show_dialog("Prototype transport uses plain HTTP/WS. Public HTTPS/WSS Workers are not supported yet; use a local test Worker endpoint.", 0);
+        (void)show_dialog("Secure HTTPS/WSS is enabled. Set the PS3 date and time correctly so the Worker certificate can be verified.", 0);
         ui_transport_warning_shown = 1;
     }
 

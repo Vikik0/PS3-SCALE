@@ -10,6 +10,7 @@
 
 #include "input_hook.h"
 #include "net_adapter.h"
+#include "tls_client.h"
 
 #define SYS_PRX_RESIDENT 0
 
@@ -35,6 +36,7 @@ int module_stop(size_t args, void *argp)
     (void)args;
     (void)argp;
     cb_net_leave();
+    cb_tls_global_cleanup();
     cb_input_remove();
     if (runtime_initialized) {
         __libc_fini_array();

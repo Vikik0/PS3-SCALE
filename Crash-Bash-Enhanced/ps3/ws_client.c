@@ -1,4 +1,5 @@
 #include "ws_client.h"
+#include "tls_client.h"
 
 #include <netdb.h>
 #include <stdint.h>
@@ -188,17 +189,36 @@ static int wait_readable(int fd, int timeout_ms)
     return -1;
 }
 
-static int send_all(int fd, const void *data, size_t length)
+static int send_all(CbWsClient *client, const void *data, size_t length)
 {
     const uint8_t *bytes = (const uint8_t *)data;
     size_t sent = 0;
 
+    if (!client || client->fd < 0) return -1;
+    if (client->tls) return cb_tls_send_all(client->tls, data, length, 5000);
+
     while (sent < length) {
-        ssize_t count = send(fd, bytes + sent, length - sent, 0);
+        ssize_t count = send(client->fd, bytes + sent, length - sent, 0);
         if (count <= 0) return -1;
         sent += (size_t)count;
     }
     return 0;
+}
+
+static ssize_t client_read_some(CbWsClient *client, void *buffer,
+                                size_t capacity, int timeout_ms)
+{
+    int ready;
+    ssize_t received;
+
+    if (!client || client->fd < 0 || !buffer || capacity == 0) return -1;
+    if (client->tls) return cb_tls_recv(client->tls, buffer, capacity, timeout_ms);
+
+    ready = wait_readable(client->fd, timeout_ms);
+    if (ready == 0) return 0;
+    if (ready < 0) return -1;
+    received = recv(client->fd, buffer, capacity, 0);
+    return received > 0 ? received : -1;
 }
 
 static int read_exact(CbWsClient *client, uint8_t *output,
@@ -219,13 +239,11 @@ static int read_exact(CbWsClient *client, uint8_t *output,
 
         if (client->rx_end >= sizeof(client->rx_buffer)) return -1;
         {
-            int ready = wait_readable(client->fd, timeout_ms);
-            ssize_t received;
-            if (ready == 0) return available == 0 ? 0 : -1;
-            if (ready < 0) return -1;
-            received = recv(client->fd, client->rx_buffer + client->rx_end,
-                            sizeof(client->rx_buffer) - client->rx_end, 0);
-            if (received <= 0) return -1;
+            ssize_t received = client_read_some(
+                client, client->rx_buffer + client->rx_end,
+                sizeof(client->rx_buffer) - client->rx_end, timeout_ms);
+            if (received == 0) return available == 0 ? 0 : -1;
+            if (received < 0) return -1;
             client->rx_end += (size_t)received;
         }
     }
@@ -245,17 +263,14 @@ static int read_http_headers(CbWsClient *client, size_t *header_length,
     for (;;) {
         size_t i;
         size_t previous_end = client->rx_end;
+        ssize_t received;
         if (client->rx_end >= WS_HEADER_LIMIT) return -1;
 
-        {
-            int ready = wait_readable(client->fd, timeout_ms);
-            ssize_t received;
-            if (ready <= 0) return -1;
-            received = recv(client->fd, client->rx_buffer + client->rx_end,
-                            sizeof(client->rx_buffer) - client->rx_end, 0);
-            if (received <= 0) return -1;
-            client->rx_end += (size_t)received;
-        }
+        received = client_read_some(client, client->rx_buffer + client->rx_end,
+                                    sizeof(client->rx_buffer) - client->rx_end,
+                                    timeout_ms);
+        if (received <= 0) return -1;
+        client->rx_end += (size_t)received;
 
         if (client->rx_end < 4u) continue;
         i = previous_end > 3u ? previous_end - 3u : 0u;
@@ -372,17 +387,20 @@ static int websocket_send_frame(CbWsClient *client, uint8_t opcode,
         bytes[header_length + i] = ((const uint8_t *)payload)[i] ^ mask[i & 3u];
     }
 
-    return send_all(client->fd, frame, header_length + length);
+    return send_all(client, frame, header_length + length);
 }
 
-int cb_ws_connect(CbWsClient *client, const char *host, unsigned short port,
-                  const char *path, const char *subprotocols, int timeout_ms)
+static int ws_connect_impl(CbWsClient *client, const char *host,
+                           unsigned short port, const char *path,
+                           const char *subprotocols, int timeout_ms,
+                           int secure)
 {
     struct addrinfo hints;
     struct addrinfo *addresses = NULL;
     struct addrinfo *address;
     char service[8];
     char host_header[256];
+    char origin[320];
     char key[32];
     char expected_accept[64];
     char request[2048];
@@ -410,21 +428,27 @@ int cb_ws_connect(CbWsClient *client, const char *host, unsigned short port,
                         (uint32_t)(uintptr_t)client;
     if (client->rng_state == 0) client->rng_state = 0x6d2b79f5u;
 
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    snprintf(service, sizeof(service), "%u", (unsigned int)port);
-    if (getaddrinfo(host, service, &hints, &addresses) != 0) return -1;
+    if (secure) {
+        if (cb_tls_connect(&client->tls, host, port, timeout_ms) != 0) goto cleanup;
+        fd = cb_tls_fd(client->tls);
+    } else {
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_STREAM;
+        snprintf(service, sizeof(service), "%u", (unsigned int)port);
+        if (getaddrinfo(host, service, &hints, &addresses) != 0) goto cleanup;
 
-    for (address = addresses; address; address = address->ai_next) {
-        fd = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
-        if (fd < 0) continue;
-        if (connect(fd, address->ai_addr, (socklen_t)address->ai_addrlen) == 0) break;
-        close(fd);
-        fd = -1;
+        for (address = addresses; address; address = address->ai_next) {
+            fd = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
+            if (fd < 0) continue;
+            if (connect(fd, address->ai_addr, (socklen_t)address->ai_addrlen) == 0) break;
+            close(fd);
+            fd = -1;
+        }
+        freeaddrinfo(addresses);
+        addresses = NULL;
+        if (fd < 0) goto cleanup;
     }
-    freeaddrinfo(addresses);
-    if (fd < 0) return -1;
 
     client->fd = fd;
 
@@ -439,12 +463,14 @@ int cb_ws_connect(CbWsClient *client, const char *host, unsigned short port,
     sha1_digest((const uint8_t *)key_material, key_material_length, digest);
     if (base64_encode(digest, sizeof(digest), expected_accept, sizeof(expected_accept)) < 0) goto cleanup;
 
-    if (port == 80u) {
+    if (port == (secure ? 443u : 80u)) {
         if (snprintf(host_header, sizeof(host_header), "%s", host) >= (int)sizeof(host_header)) goto cleanup;
     } else {
         if (snprintf(host_header, sizeof(host_header), "%s:%u", host,
                      (unsigned int)port) >= (int)sizeof(host_header)) goto cleanup;
     }
+    if (snprintf(origin, sizeof(origin), "%s://%s",
+                 secure ? "https" : "http", host) >= (int)sizeof(origin)) goto cleanup;
 
     request_length = snprintf(request, sizeof(request),
         "GET %s HTTP/1.1\r\n"
@@ -454,12 +480,12 @@ int cb_ws_connect(CbWsClient *client, const char *host, unsigned short port,
         "Sec-WebSocket-Key: %s\r\n"
         "Sec-WebSocket-Version: 13\r\n"
         "Sec-WebSocket-Protocol: %s\r\n"
-        "Origin: http://%s\r\n"
-        "User-Agent: CrashBash-PS3/0.1\r\n"
+        "Origin: %s\r\n"
+        "User-Agent: CrashBash-PS3/0.2\r\n"
         "\r\n",
-        path, host_header, key, subprotocols, host);
+        path, host_header, key, subprotocols, origin);
     if (request_length < 0 || (size_t)request_length >= sizeof(request)) goto cleanup;
-    if (send_all(fd, request, (size_t)request_length) != 0) goto cleanup;
+    if (send_all(client, request, (size_t)request_length) != 0) goto cleanup;
 
     if (read_http_headers(client, &response_length, timeout_ms) != 0 ||
         response_length >= sizeof(response_header)) goto cleanup;
@@ -485,12 +511,30 @@ int cb_ws_connect(CbWsClient *client, const char *host, unsigned short port,
     return 0;
 
 cleanup:
-    if (fd >= 0) close(fd);
+    if (addresses) freeaddrinfo(addresses);
+    if (client->tls) {
+        cb_tls_close(client->tls);
+        client->tls = NULL;
+    } else if (fd >= 0) {
+        close(fd);
+    }
     client->fd = -1;
     client->open = 0;
     client->rx_start = 0;
     client->rx_end = 0;
     return result;
+}
+
+int cb_ws_connect(CbWsClient *client, const char *host, unsigned short port,
+                  const char *path, const char *subprotocols, int timeout_ms)
+{
+    return ws_connect_impl(client, host, port, path, subprotocols, timeout_ms, 0);
+}
+
+int cb_wss_connect(CbWsClient *client, const char *host, unsigned short port,
+                   const char *path, const char *subprotocols, int timeout_ms)
+{
+    return ws_connect_impl(client, host, port, path, subprotocols, timeout_ms, 1);
 }
 
 int cb_ws_send_binary(CbWsClient *client, const void *payload, size_t length)
@@ -562,10 +606,17 @@ int cb_ws_receive(CbWsClient *client, void *payload, size_t capacity,
     if (frame_opcode == 10u) return 0;
     if (frame_opcode == 8u) {
         (void)websocket_send_frame(client, 8u, payload, (size_t)payload_length);
-        shutdown(client->fd, SHUT_RDWR);
-        close(client->fd);
+        if (client->tls) {
+            cb_tls_close(client->tls);
+            client->tls = NULL;
+        } else if (client->fd >= 0) {
+            shutdown(client->fd, SHUT_RDWR);
+            close(client->fd);
+        }
         client->fd = -1;
         client->open = 0;
+        client->rx_start = 0;
+        client->rx_end = 0;
         return -1;
     }
     if (frame_opcode != 1u && frame_opcode != 2u) return -1;
@@ -576,10 +627,17 @@ int cb_ws_receive(CbWsClient *client, void *payload, size_t capacity,
 void cb_ws_close(CbWsClient *client)
 {
     uint8_t close_payload[2] = { 0x03u, 0xe8u };
-    if (!client || !client->open) return;
-    (void)websocket_send_frame(client, 8u, close_payload, sizeof(close_payload));
-    (void)shutdown(client->fd, SHUT_RDWR);
-    close(client->fd);
+    if (!client) return;
+    if (client->open) {
+        (void)websocket_send_frame(client, 8u, close_payload, sizeof(close_payload));
+    }
+    if (client->tls) {
+        cb_tls_close(client->tls);
+        client->tls = NULL;
+    } else if (client->fd >= 0) {
+        (void)shutdown(client->fd, SHUT_RDWR);
+        close(client->fd);
+    }
     client->fd = -1;
     client->open = 0;
     client->rx_start = 0;

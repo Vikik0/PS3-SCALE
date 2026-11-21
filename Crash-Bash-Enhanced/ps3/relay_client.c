@@ -1,4 +1,5 @@
 #include "relay_client.h"
+#include "tls_client.h"
 
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -14,17 +15,6 @@
 
 #define CB_HTTP_RESPONSE_MAX 4096
 #define CB_RELAY_ENVELOPE_SIZE 22
-
-static int send_all(int fd, const char *data, size_t length)
-{
-    size_t sent = 0;
-    while (sent < length) {
-        ssize_t count = send(fd, data + sent, length - sent, 0);
-        if (count <= 0) return -1;
-        sent += (size_t)count;
-    }
-    return 0;
-}
 
 static int find_header_end(const char *data, size_t length, size_t *end)
 {
@@ -260,11 +250,7 @@ static int request_room_ticket(CbRelayClient *client, const char *host, unsigned
                                 char ticket[65], char session_id[33],
                                 char host_session_id[33], char room_code_out[7])
 {
-    struct addrinfo hints;
-    struct addrinfo *addresses = NULL;
-    struct addrinfo *address;
-    struct timeval timeout;
-    char service[8];
+    CbTlsClient *tls = NULL;
     char host_header[288];
     char safe_name[17];
     char request_body[96];
@@ -275,11 +261,10 @@ static int request_room_ticket(CbRelayClient *client, const char *host, unsigned
     size_t header_end = 0;
     size_t body_length = 0;
     int have_content_length = 0;
-    int fd = -1;
     int request_length;
     int result = -1;
 
-    if (!host || !*host || port == 0 || !room_code_out) return -1;
+    if (!client || !host || !*host || port == 0 || !room_code_out) return -1;
     if (create_room) {
         strcpy(api_path, "/v1/rooms/host-guest");
     } else {
@@ -294,7 +279,7 @@ static int request_room_ticket(CbRelayClient *client, const char *host, unsigned
 
     clean_display_name(display_name, safe_name);
     snprintf(request_body, sizeof(request_body), "{\"display_name\":\"%s\"}", safe_name);
-    if (port == 80u) {
+    if (port == 80u || port == 443u) {
         if (snprintf(host_header, sizeof(host_header), "%s", host) >= (int)sizeof(host_header)) return -1;
     } else {
         if (snprintf(host_header, sizeof(host_header), "%s:%u", host,
@@ -312,33 +297,14 @@ static int request_room_ticket(CbRelayClient *client, const char *host, unsigned
         api_path, host_header, (unsigned long)strlen(request_body), request_body);
     if (request_length < 0 || (size_t)request_length >= sizeof(request)) return -1;
 
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
-    snprintf(service, sizeof(service), "%u", (unsigned int)port);
-    if (getaddrinfo(host, service, &hints, &addresses) != 0) return -1;
-
-    timeout.tv_sec = timeout_ms > 0 ? timeout_ms / 1000 : 5;
-    timeout.tv_usec = timeout_ms > 0 ? (timeout_ms % 1000) * 1000 : 0;
-
-    for (address = addresses; address; address = address->ai_next) {
-        fd = socket(address->ai_family, address->ai_socktype, address->ai_protocol);
-        if (fd < 0) continue;
-        (void)setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-        (void)setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
-        if (connect(fd, address->ai_addr, (socklen_t)address->ai_addrlen) == 0) break;
-        close(fd);
-        fd = -1;
-    }
-    freeaddrinfo(addresses);
-    if (fd < 0) return -1;
-
-    if (send_all(fd, request, (size_t)request_length) != 0) goto cleanup;
+    if (cb_tls_connect(&tls, host, port, timeout_ms) != 0) goto cleanup;
+    if (cb_tls_send_all(tls, request, (size_t)request_length, timeout_ms) != 0) goto cleanup;
 
     memset(response, 0, sizeof(response));
     while (received < CB_HTTP_RESPONSE_MAX) {
-        ssize_t count = recv(fd, response + received, CB_HTTP_RESPONSE_MAX - received, 0);
+        ssize_t count = cb_tls_recv(tls, response + received,
+                                    CB_HTTP_RESPONSE_MAX - received,
+                                    timeout_ms);
         if (count < 0) goto cleanup;
         if (count == 0) break;
         received += (size_t)count;
@@ -370,9 +336,10 @@ static int request_room_ticket(CbRelayClient *client, const char *host, unsigned
     result = 0;
 
 cleanup:
-    close(fd);
+    cb_tls_close(tls);
     return result;
 }
+
 static uint64_t monotonic_ms(void)
 {
 #if defined(__powerpc64__)
@@ -397,7 +364,7 @@ static int connect_relay_ticket(CbRelayClient *client, const char *host,
     length = snprintf(path, sizeof(path), "/v1/rooms/%s/transport", room_code);
     if (length < 0 || (size_t)length >= sizeof(path)) return -1;
 
-    if (cb_ws_connect(&client->websocket, host, port, path, protocols, timeout_ms) != 0) {
+    if (cb_wss_connect(&client->websocket, host, port, path, protocols, timeout_ms) != 0) {
         return -1;
     }
     if (strlen(host) >= sizeof(client->host)) {

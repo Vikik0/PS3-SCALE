@@ -73,7 +73,7 @@ jobs:
       - name: Install host dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xz-utils libgmp10 libssl3 zlib1g
+          sudo apt-get install -y --no-install-recommends xz-utils libgmp10 libssl3 zlib1g ca-certificates
       - uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/crashbash-ps3-stage/ps3dev/ppu
@@ -185,6 +185,18 @@ jobs:
           for stub in io net netctl lv2 sysmodule fs c; do
             test -f "$PS3DK/ppu/lib/lib${stub}_stub.a"
           done
+      - name: Build pinned mbedTLS 2.28.10 for PS3
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch v2.28.10 https://github.com/Mbed-TLS/mbedtls.git "$RUNNER_TEMP/crashbash-mbedtls"
+          CC="$PS3DEV/ppu/bin/powerpc64-ps3-elf-gcc" \
+          AR="$PS3DEV/ppu/bin/powerpc64-ps3-elf-ar" \
+          RANLIB="$PS3DEV/ppu/bin/powerpc64-ps3-elf-ranlib" \
+          CFLAGS="-O2 -mcpu=cell -mhard-float -ffunction-sections -fdata-sections -fno-stack-protector -fno-builtin" \
+            bash Crash-Bash-Enhanced/ps3/build-mbedtls.sh \
+            "$RUNNER_TEMP/crashbash-mbedtls" \
+            Crash-Bash-Enhanced/ps3/build/mbedtls
       - name: Build Crash Bash PS3 input bridge
         run: make -C Crash-Bash-Enhanced/ps3 PS3DEV="$PS3DEV" PS3DK="$PS3DK"
       - uses: actions/upload-artifact@v6

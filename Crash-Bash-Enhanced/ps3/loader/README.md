@@ -24,4 +24,7 @@ This helper requires the Cobra/Mamba PS3MAPI syscall8 interface (`0x7777`). On f
 
 - The loader has not been tested on a physical PS3 yet.
 - It detects PS1 emulator process names, not the Crash Bash disc serial. The input bridge remains inactive until a user opens its in-game menu, but the menu hook is present in any PS1 emulator process into which it is injected.
-- The current PS3 relay transport is still plain HTTP/WS prototype code. Secure TLS/WSS and public Worker deployment are separate outstanding tasks.
+- The input bridge now uses TLS 1.2 and certificate-verified WSS for the relay, with the system CA bundle embedded at build time.
+- The PS3 transport has host integration coverage against a local HTTPS/WSS server, but has not been tested on a physical PS3.
+- Public Worker deployment remains blocked until the Cloudflare Actions credentials are configured.
+- The current build produces PRX/Sprx modules; an installable PKG wrapper is still outstanding.

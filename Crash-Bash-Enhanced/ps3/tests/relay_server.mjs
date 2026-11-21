@@ -1,10 +1,14 @@
 import crypto from "node:crypto";
-import http from "node:http";
+import fs from "node:fs";
+import https from "node:https";
 
 const TICKET = "a".repeat(64);
 const SESSION_ID = "00112233445566778899aabbccddeeff";
 const GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-const server = http.createServer((request, response) => {
+const server = https.createServer({
+  key: fs.readFileSync(process.env.CB_TEST_TLS_KEY),
+  cert: fs.readFileSync(process.env.CB_TEST_TLS_CERT)
+}, (request, response) => {
   const isHost = request.method === "POST" && request.url === "/v1/rooms/host-guest";
   const isJoin = request.method === "POST" && request.url === "/v1/rooms/ABC123/join-guest";
   if (!isHost && !isJoin) {
