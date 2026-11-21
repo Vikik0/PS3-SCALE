@@ -14,7 +14,10 @@ powershell -ExecutionPolicy Bypass -File .\experiments\ghosts-campaign-coop\tool
 
 This compiles and runs the portable C tests and Python suite, including the 10,025-check Ghosts host runtime contract simulator. It does not build a PS3 PRX, boot RPCS3, write to a console, or create a PKG.
 
-## 2. Identify the local game and RPCS3 installation
+## 2. Optional: identify an RPCS3 installation
+
+**Skip this entire section if you do not want RPCS3.** It is only an optional analysis route for a decrypted PPU dump. You do not need RPCS3 to use the final PS3 mod, and static FastFile/GSC work can continue without it.
+
 
 For a disc dump folder containing PS3_GAME:
 
