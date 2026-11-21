@@ -8,16 +8,19 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "../mission_rules.h"
 
 #define SYS_PRX_RESIDENT 0
 
 static volatile uint32_t g_module_state = 0;
+static GhcMission g_mission;
 static volatile uint32_t g_start_count = 0;
 
 int module_start(size_t args, void *argp)
 {
     (void)args;
     (void)argp;
+    ghc_mission_init(&g_mission, 0);
     g_start_count++;
     g_module_state = 1;
     return SYS_PRX_RESIDENT;
@@ -40,4 +43,15 @@ uint32_t ghc_module_state(void)
 uint32_t ghc_module_start_count(void)
 {
     return g_start_count;
+}
+
+/* Local rules-state diagnostic only; no Campaign hooks are installed yet. */
+uint32_t ghc_mission_revision(void)
+{
+    return g_mission.revision;
+}
+
+uint32_t ghc_mission_phase(void)
+{
+    return g_mission.phase;
 }
