@@ -7,6 +7,7 @@ const app = document.querySelector("#app");
 const state = {
   session: readSession(),
   room: null,
+  publicRooms: [],
   loading: false,
   error: "",
   health: "checking",
@@ -113,6 +114,31 @@ function roomCard() {
     </div>`;
 }
 
+function publicRoomsCard() {
+  const connected = state.health === "online";
+  const rooms = state.publicRooms || [];
+  const items = rooms.map(room => `
+    <article class="public-room-item">
+      <div class="public-room-main">
+        <strong>${escapeHtml(room.host_name)}'S ROOM</strong>
+        <small>${escapeHtml(room.mode || "party").toUpperCase()} · ${room.player_count}/${room.max_players} PLAYERS</small>
+      </div>
+      <div class="public-room-actions">
+        <span class="public-room-code">${escapeHtml(room.room_code)}</span>
+        <button class="button button-outline" data-action="join-public" data-room-code="${escapeHtml(room.room_code)}" ${!connected || state.loading || state.room ? "disabled" : ""}>JOIN</button>
+      </div>
+    </article>`).join("");
+
+  return `
+    <section class="public-rooms-panel">
+      <div class="public-rooms-heading">
+        <div><p class="eyebrow">OPEN MATCHMAKING</p><h3>PUBLIC ROOMS</h3></div>
+        <button class="button button-secondary" data-action="refresh-public" ${!connected || state.loading ? "disabled" : ""}>REFRESH</button>
+      </div>
+      ${items || `<p class="public-rooms-empty">${connected ? "No public rooms are open. Create one and let other players join." : "Public rooms will appear when the service is online."}</p>`}
+    </section>`;
+}
+
 function render() {
   const connected = state.health === "online";
   app.innerHTML = `
@@ -167,7 +193,8 @@ function render() {
               <input id="display-name" maxlength="16" placeholder="Enter your name" value="${escapeHtml(state.session?.display_name || "")}" />
               <label for="player-limit">PLAYER SLOTS</label>
               <select id="player-limit"><option value="4">4 PLAYERS — FULL PARTY</option><option value="3">3 PLAYERS</option><option value="2">2 PLAYERS — DUEL</option></select>
-              <button class="button button-primary full-button" data-action="create" ${!connected || state.loading ? "disabled" : ""}>CREATE PRIVATE ROOM <span>→</span></button>
+              <button class="button button-primary full-button" data-action="create" ${!connected || state.loading || state.room ? "disabled" : ""}>CREATE PRIVATE ROOM <span>→</span></button>
+              <button class="button button-outline full-button" data-action="create-public" ${!connected || state.loading || state.room ? "disabled" : ""}>CREATE PUBLIC ROOM <span>↗</span></button>
               <div class="panel-divider"><span>OR JOIN A FRIEND</span></div>
               <label for="room-code-input">ROOM CODE</label>
               <div class="join-code-row"><input id="room-code-input" maxlength="6" placeholder="ABC123" autocomplete="off" /><button class="button button-outline" data-action="join" ${!connected || state.loading ? "disabled" : ""}>JOIN</button></div>
@@ -178,6 +205,7 @@ function render() {
               ${roomCard()}
             </div>
           </div>
+          ${publicRoomsCard()}
           ${state.error ? `<div class="error-banner" role="alert"><span>!</span>${escapeHtml(state.error)}<button data-action="dismiss-error" aria-label="Dismiss error">×</button></div>` : ""}
         </section>
 
@@ -205,6 +233,16 @@ function render() {
   }
 }
 
+async function refreshPublicRooms({ quiet = true } = {}) {
+  if (!API_BASE || state.health !== "online") return;
+  try {
+    const response = await api("/v1/rooms/public");
+    state.publicRooms = Array.isArray(response.rooms) ? response.rooms : [];
+  } catch (error) {
+    if (!quiet) state.error = error.message || "Could not refresh public rooms.";
+  }
+}
+
 async function ensureSession(displayName = "") {
   if (state.session?.token) return state.session;
   const name = displayName || document.querySelector("#display-name")?.value?.trim() || "Player";
@@ -216,7 +254,7 @@ async function ensureSession(displayName = "") {
   return session;
 }
 
-async function runAction(action) {
+async function runAction(action, selectedRoomCode = "") {
   if (state.loading) return;
   const displayName = document.querySelector("#display-name")?.value?.trim() || "";
   const selectedLimit = document.querySelector("#player-limit")?.value || "4";
@@ -225,13 +263,16 @@ async function runAction(action) {
   state.error = "";
   render();
   try {
-    if (action === "create") {
+    if (action === "create" || action === "create-public") {
       await ensureSession(displayName);
       const maxPlayers = Number(selectedLimit || 4);
-      state.room = await api("/v1/rooms", { method: "POST", body: { max_players: maxPlayers, is_private: true, mode: "party" } });
-    } else if (action === "join") {
+      state.room = await api("/v1/rooms", {
+        method: "POST",
+        body: { max_players: maxPlayers, is_private: action === "create", mode: "party" }
+      });
+    } else if (action === "join" || action === "join-public") {
       await ensureSession(displayName);
-      const code = enteredCode;
+      const code = (action === "join-public" ? selectedRoomCode : enteredCode).trim().toUpperCase();
       if (!/^[A-Z0-9]{6}$/.test(code)) throw new Error("Enter a valid six-character room code.");
       state.room = await api(`/v1/rooms/${code}/join`, { method: "POST", body: {} });
     } else if (action === "ready") {
@@ -243,6 +284,9 @@ async function runAction(action) {
       await api(`/v1/rooms/${state.room.room_code}/leave`, { method: "POST", body: {} });
       state.room = null;
       closeRelay();
+    } else if (action === "refresh-public") {
+      await refreshPublicRooms({ quiet: false });
+      state.error = "Public rooms refreshed.";
     } else if (action === "copy-code") {
       await navigator.clipboard.writeText(state.room.room_code);
       state.error = "Room code copied.";
@@ -261,6 +305,7 @@ async function runAction(action) {
     state.error = error.message || "Something went wrong.";
   } finally {
     state.loading = false;
+    await refreshPublicRooms({ quiet: true });
     render();
     syncRelayConnection();
   }
@@ -390,7 +435,7 @@ function syncRelayConnection() {
 app.addEventListener("click", event => {
   const button = event.target.closest("[data-action]");
   if (!button) return;
-  runAction(button.dataset.action);
+  runAction(button.dataset.action, button.dataset.roomCode || "");
 });
 
 app.addEventListener("input", event => {
@@ -415,6 +460,7 @@ async function init() {
   } catch {
     state.health = "offline";
   }
+  if (state.health === "online") await refreshPublicRooms({ quiet: true });
   render();
   if (state.session?.token) {
     try {
