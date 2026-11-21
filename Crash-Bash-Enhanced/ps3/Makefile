@@ -66,6 +66,9 @@ $(BUILD)/crash_bash_input.prx: $(BUILD)/crash_bash_input.elf
 		echo "PRX relocation diagnostics:"; \
 		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-readelf -lW $<; \
 		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-readelf -SW $<; \
+		echo "TLS relocation diagnostics:"; \
+		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-readelf -rW $< | grep -E "R_PPC64_.*(TLS|TPREL|DTPREL)" || true; \
+		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-readelf -sW $< | grep -E "TLS|__tls|errno" || true; \
 		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-readelf -rW $< | grep -B3 -A3 "0000000000003212" || true; \
 		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-nm -n $< | grep -B4 -A4 -i "195ce8" || true; \
 		exit 1; \
