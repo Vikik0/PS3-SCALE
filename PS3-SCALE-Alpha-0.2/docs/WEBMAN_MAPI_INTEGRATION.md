@@ -7,7 +7,7 @@ PS3 SCALE uses webMAN MOD as an optional bridge for title-specific, in-memory PS
 ## Stage 1 — read-only connection check
 
 - Detect whether the local webMAN MOD HTTP endpoint responds.
-- Check the PS3MAPI server-version endpoint.
+- Check the PS3MAPI server-version endpoint and read its JSON response body before deciding MAPI is unavailable. The probe must not treat a headers-only TCP packet as a failed MAPI check.
 - Do not read console identifiers (IDPS/PSID), alter syscalls, change clocks or write memory during connection detection.
 
 ## Stage 2 — exact profile discovery
