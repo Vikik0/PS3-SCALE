@@ -5,6 +5,7 @@ This Worker provides the first online-service layer for the Crash Bash Enhanced 
 ## Included now
 
 - Guest sessions; no PSN account or PSN login is requested.
+- PS3 room-code join endpoint that issues a short-lived, single-use WebSocket ticket instead of exposing a long-lived guest token to the PS3 client.
 - Private room codes and up to four player slots.
 - Host handoff when the host leaves.
 - Ready state and host-controlled match start.
