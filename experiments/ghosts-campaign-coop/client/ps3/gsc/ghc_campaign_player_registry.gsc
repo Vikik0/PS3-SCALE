@@ -8,6 +8,9 @@
 
 main()
 {
+    if ( !isdefined( level.playerpiggyback ) )
+        level waittill( "level.players initialized" );
+
     return ghc_campaign_player_registry_init();
 }
 
