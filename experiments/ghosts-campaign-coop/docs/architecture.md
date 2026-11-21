@@ -10,13 +10,13 @@
 
 ## Components
 
-1. **PS3 client plugin (partially scaffolded):** the PRX bootstrap, GHC2 codec, RFC 6455 frame codec, PS3 libhttp/libssl lobby client, peer polling, candidate publishing, RFC 5389 STUN codec, libnet UDP socket primitives and authenticated direct-P2P send/receive layer are implemented in source. The client can request a guest session and operate room create/join/ready/start/leave through HTTPS when a Worker URL is configured. The STUN parser and socket code compile; TLS compatibility and live NAT traversal need real-console testing. WebSocket upgrade/socket lifecycle and game-specific Campaign hooks are still not implemented.
+1. **PS3 client plugin (partially scaffolded):** the PRX bootstrap, GHC2 codec, RFC 6455 frame codec, PS3 libhttp/libssl lobby client, peer polling, candidate publishing, RFC 5389 STUN codec, libnet UDP socket primitives, authenticated direct-P2P send/receive layer and GCP1 gameplay payload codec are implemented in source. The client can request a guest session and operate room create/join/ready/start/leave through HTTPS when a Worker URL is configured. The STUN parser and socket code compile; TLS compatibility and live NAT traversal need real-console testing. WebSocket upgrade/socket lifecycle and game-specific Campaign hooks are still not implemented.
 2. **Lobby API (implemented prototype):** guest session creation, six-character room codes, join/leave, ready state, two-player cap and host start.
 3. **UDP relay (implemented reference prototype):** forwards authenticated opaque packets only between the two members of a running room. The Python reference relay is locally integration-tested; it is not the Cloudflare deployment.
 4. **Cloudflare WebSocket relay fallback (implemented in Worker source):** an authenticated WSS route forwards binary GHC2 frames between the two room members when direct UDP cannot connect. It checks HMAC, replay window, frame size and per-session rate. Deployment and PS3 client integration are still pending.
 5. **Compatibility registry (implemented): maps known title IDs and reports the first target profile (CEX 4.93 + TU 1.16). It intentionally does not report a profile as supported until hardware validation.
-6. **Campaign downed/revive rules (implemented as a standalone C state machine):** one player can be downed while the mission continues; the living partner can revive them; both downed or bleedout expiry fails the mission. A versioned 24-byte snapshot is ready to travel inside GHC2 payloads. The game-specific hooks are not implemented yet.
-7. **Game replication layer (not implemented):** movement, animation, weapon, damage, AI, checkpoint and mission-event replication.
+6. **Campaign downed/revive rules (implemented as a standalone C state machine):** one player can be downed while the mission continues; the living partner can revive them; both downed or bleedout expiry fails the mission. GCP1 defines revive progress and completion events. The game-specific hooks are not implemented yet.
+7. **Game replication integration (not implemented):** GCP1 defines player state, movement flags, weapon/action, damage, revive, mission/checkpoint and heartbeat payloads. Reading/writing actual Ghosts actor state, animations, AI and checkpoint hooks remains unimplemented.
 8. **PSN identity adapter (not implemented):** requires a legitimate supported platform identity mechanism. No fake PSN tokens or ban evasion are provided.
 
 ## Authority model to test
@@ -33,7 +33,7 @@ Client -> relay:
 Relay -> peer:
 `GHC2 | uint8 sender slot | uint32 sequence (big-endian) | payload | 16-byte HMAC-SHA256 tag`
 
-The bearer session token is used only in HTTPS/WSS Authorization headers. The relay key is issued by the HTTPS guest-session endpoint. The relay validates the HMAC, rejects duplicate/stale sequence numbers with a wrap-safe 64-packet window, caps frames at 1200 bytes and rate-limits each session. The gameplay payload remains opaque until game-state fields are reverse-engineered and validated.
+The bearer session token is used only in HTTPS/WSS Authorization headers. The relay key is issued by the HTTPS guest-session endpoint. The relay validates the HMAC, rejects duplicate/stale sequence numbers with a wrap-safe 64-packet window, caps frames at 1200 bytes and rate-limits each session. The inner payload uses the versioned GCP1 codec. It defines player transforms (centimeters), velocity, angles, movement flags, stance, weapon/ammo, health/armor, player actions, damage, revive, mission/checkpoint and heartbeat messages. The codec is tested independently; mapping these fields to actual Ghosts Campaign memory and engine functions is not implemented.
 
 For direct UDP peer traffic, the sender signs the GHC2 packet with the recipient's relay key while retaining the sender's relay ID in the packet header. The recipient verifies with its own relay key, checks that the sender relay ID matches the paired peer and applies its replay window. After authentication it learns the sender's observed source endpoint and prefers that endpoint on subsequent sends, allowing the peer path to adapt when NAT changes the mapped source port. The WebSocket relay path is different: the sender signs with its own key and the Worker re-signs with the recipient's key before forwarding.
 
@@ -45,6 +45,7 @@ If direct UDP hole-punching fails, both PS3 clients can use the WSS relay path `
 - Guest sessions expire after 12 hours.
 - STUN candidate discovery, UDP socket primitives and authenticated direct-P2P packet transport are implemented in source but live NAT traversal / hole punching is not yet integrated or verified. Relay region selection, persistence, payload encryption, DDoS protection and production deployment configuration are also pending.
 - UDP relay is a transport experiment, not a complete netcode implementation.
+- GCP1 is a transport-level data contract only; it does not yet read real actor state or drive game animations, damage, AI or mission events.
 - PSN mode is explicitly unconfigured.
 - Title ID registry is metadata only; no EBOOT/SPRX is built.
 

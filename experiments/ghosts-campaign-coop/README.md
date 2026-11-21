@@ -21,7 +21,7 @@ This is an isolated research experiment for a two-player cooperative mode in the
 - PS3 HTTP/HTTPS lobby client scaffold: implemented for guest session creation, room creation/join, ready/start/leave, peer polling and candidate publishing; PPU build and lobby JSON contract tests pass in CI. Live hardware/TLS compatibility is not yet verified.
 - RFC 5389 STUN request/response codec, PS3 libnet UDP socket helpers and authenticated direct-P2P GHC2 send/receive layer: implemented and included in the PRX build. Direct packets are signed with the recipient's relay key, validate the peer relay ID and reject replayed sequences. The key-direction rule is unit-tested; live NAT discovery and two-console UDP traffic are not yet verified.
 - Cloudflare Durable Object WebSocket relay fallback: implemented and covered by Worker smoke tests; deployment and PS3 WebSocket client integration remain pending.
-- PS3 lobby REST client: guest session, room create/join, ready/start/leave, peer polling and candidate publishing are implemented and PPU-build tested. No live console TLS/API test has been performed.
+- No live console TLS/API test has been performed.
 - Regional title-ID registry: implemented as metadata; profiles are untested.
 - Candidate TU 1.16 spawn primitives documented for offline research only.
 - Campaign-specific damage/downed hooks, crawl/sidearm animations, revive interaction, checkpoint restart hook, second actor spawn and live game-state replication: not implemented.
@@ -33,7 +33,7 @@ The project will not claim one universal EBOOT/SPRX. It selects profiles by titl
 
 ## Verification
 
-Prototype 0.2 contains 16 passing Python unit/UDP integration tests plus portable C tests for GHC2, WebSocket frames, mission revive rules, lobby JSON parsing, STUN, direct peer-key direction and GCP1 gameplay payloads. GitHub Actions also builds and validates the PPU PRX. These checks do not validate a second player in Campaign or live networking on a console.
+Prototype 0.2 contains 16 passing Python unit/UDP integration tests plus portable C tests for GHC2, WebSocket frames, mission revive rules, lobby JSON parsing, STUN, direct peer-key direction and GCP1 gameplay payloads. GitHub Actions also builds and validates the PPU PRX. These checks validate the standalone GCP1 payload contract, not the extraction of real player state from Ghosts or a second player in Campaign.
 
 ## Important
 
