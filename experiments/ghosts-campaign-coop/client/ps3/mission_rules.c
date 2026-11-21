@@ -177,9 +177,13 @@ GhcMissionRuleResult ghc_mission_update_revive(
 
 void ghc_mission_reset(GhcMission *mission) {
     GhcMissionConfig config;
+    uint32_t next_revision;
     if (!mission) return;
     config = mission->config;
+    next_revision = mission->revision + 1u;
+    if (next_revision == 0u) next_revision = 1u;
     ghc_mission_init(mission, &config);
+    mission->revision = next_revision;
 }
 
 int ghc_mission_get_view(const GhcMission *mission, uint32_t now_ms, GhcMissionView *view) {
