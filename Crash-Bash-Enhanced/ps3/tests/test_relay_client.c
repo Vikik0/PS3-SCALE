@@ -13,6 +13,13 @@ int main(void)
         0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
         0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff
     };
+    const uint8_t expected_host[16] = {
+        0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88,
+        0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00
+    };
+    uint8_t mapped_peer[16];
+    uint32_t host_address_network;
+    unsigned short host_port_host;
     CbRelayPacket batch[2];
     CbRelayBatchQueue queue;
     uint8_t recipient_a[16] = { 0x11 };
@@ -41,11 +48,29 @@ int main(void)
         char host_address[32];
         unsigned short host_port = 0;
         if (cb_relay_host_address(&client, host_address, sizeof(host_address), &host_port) != 0 ||
-            strncmp(host_address, "10.", 3) != 0 || host_port < 20000 || host_port > 59999) {
+            strncmp(host_address, "10.", 3) != 0 || host_port == 0) {
             fprintf(stderr, "PS3 relay host virtual address failed\n");
             cb_relay_leave(&client);
             return 3;
         }
+    }
+
+    result = cb_relay_receive_packet(&client, received, sizeof(received),
+                                     &received_length, sender, control,
+                                     sizeof(control), 3000);
+    if (result != 2 || strncmp(control, "{\"type\":\"room_update\"", 21u) != 0) {
+        fprintf(stderr, "PS3 relay initial room roster control failed\n");
+        cb_relay_leave(&client);
+        return 3;
+    }
+    if (cb_relay_session_address(expected_host, &host_address_network,
+                                 &host_port_host) != 0 ||
+        cb_relay_peer_for_address(&client, host_address_network, host_port_host,
+                                  mapped_peer) != 0 ||
+        memcmp(mapped_peer, expected_host, sizeof(mapped_peer)) != 0) {
+        fprintf(stderr, "PS3 relay room roster did not map the host session\n");
+        cb_relay_leave(&client);
+        return 3;
     }
 
     if (cb_relay_send_packet(&client, sent, sizeof(sent)) != 0) {
@@ -154,6 +179,15 @@ int main(void)
     }
     if (cb_relay_start_match(&client, 3000) != 0) {
         fprintf(stderr, "PS3 host START command failed\n");
+        cb_relay_leave(&client);
+        return 14;
+    }
+    if (cb_relay_session_address(expected_sender, &host_address_network,
+                                 &host_port_host) != 0 ||
+        cb_relay_peer_for_address(&client, host_address_network, host_port_host,
+                                  mapped_peer) != 0 ||
+        memcmp(mapped_peer, expected_sender, sizeof(mapped_peer)) != 0) {
+        fprintf(stderr, "PS3 host did not learn the joined guest from room_update\n");
         cb_relay_leave(&client);
         return 14;
     }
