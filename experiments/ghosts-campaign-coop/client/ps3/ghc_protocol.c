@@ -284,3 +284,46 @@ int ghc_decode_server_packet(
     decoded->payload_length = packet_length - GHC_SERVER_OVERHEAD;
     return 0;
 }
+
+
+void ghc_replay_window_reset(GhcReplayWindow *window) {
+    if (!window) return;
+    window->highest_sequence = 0u;
+    window->bitmap = 0u;
+    window->initialized = 0u;
+}
+
+int ghc_replay_window_accept(GhcReplayWindow *window, uint32_t sequence) {
+    uint32_t forward;
+    uint32_t behind;
+    uint64_t bit;
+
+    if (!window) return 0;
+
+    if (!window->initialized) {
+        window->highest_sequence = sequence;
+        window->bitmap = 1u;
+        window->initialized = 1u;
+        return 1;
+    }
+
+    forward = sequence - window->highest_sequence;
+    if (forward == 0u) return 0;
+
+    if (forward < 0x80000000u) {
+        if (forward >= 64u) {
+            window->bitmap = 1u;
+        } else {
+            window->bitmap = (window->bitmap << forward) | 1u;
+        }
+        window->highest_sequence = sequence;
+        return 1;
+    }
+
+    behind = window->highest_sequence - sequence;
+    if (behind >= 64u) return 0;
+    bit = ((uint64_t)1u) << behind;
+    if ((window->bitmap & bit) != 0u) return 0;
+    window->bitmap |= bit;
+    return 1;
+}
