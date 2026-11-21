@@ -17,8 +17,8 @@ This folder builds the first native PS3 PRX for Crash Bash Enhanced.
 
 ## Still incomplete / not verified
 
-- There is no user-facing PS3 host/join menu or on-screen keyboard yet. The native relay APIs are exposed for a future menu/configuration layer; they are not yet invoked by a user-facing in-game flow.
-- The relay shim is now connected to the upstream lockstep socket calls, but it has only host-side integration coverage. It has not been verified on physical PS3 hardware, and public Worker access remains blocked by the missing TLS/WSS implementation and Cloudflare deployment credentials.
+- A development host/join menu and on-screen keyboard are now wired into the pad hook. Press SELECT + L3 + R3 to open it, then choose host or join, enter the Worker hostname/port, and share or enter a six-character room code. This flow is not yet verified on a physical PS3.
+- The relay shim and in-game menu are connected to the upstream lockstep path in code, but they have only host-side integration coverage. The PS3 transport is still plain HTTP/WS, so it cannot connect securely to a public Cloudflare Worker yet. TLS/WSS and physical PS3 testing remain outstanding.
 - No TURN server is included. Relay mode is intended to avoid direct UDP/NAT traversal; packet loss, latency, reconnect behavior, and long-session stability still need real-network testing.
 - Memory-card save synchronization is stubbed as empty data. The first target should be same-build Battle/minigame sessions, not Adventure progression.
 - The PS1 RAM fingerprint uses a community-documented `ps1_netemu` 4.86 memory map. The page-attribute probe confirms that the range is mapped and readable, but it does not prove that the same offset is correct on every firmware/emulator revision. The exact 4.93 (or other target firmware) memory layout still needs hardware verification.
