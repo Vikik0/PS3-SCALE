@@ -53,6 +53,16 @@ jobs:
       - name: Validate Cloudflare Worker bundle without deployment
         run: npx wrangler deploy --dry-run --outdir "$RUNNER_TEMP/crash-bash-worker-dist"
 
+  websocket-client-host-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Compile and test the WebSocket client against a local RFC 6455 server
+        run: bash Crash-Bash-Enhanced/ps3/tests/run_ws_client_test.sh
+
   ps3-input-bridge:
     runs-on: ubuntu-latest
     timeout-minutes: 45
