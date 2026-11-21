@@ -191,7 +191,7 @@ assert "draw_rounded_rect(414.0f, 182.0f, 404.0f, 4.0f" in online_footer
 assert "g_catalog_sync_total > 0" in online_footer
 assert "g_community_download_running" in online_footer
 assert "COMMUNITY FILE: %u%%" in online_footer
-assert "g_community_downloaded /" in online_footer
+assert "g_community_downloaded * 100u" in online_footer
 assert "draw_text(24.0f, PS3SCALE_UI_FOOTER_PRIMARY_Y" in online_footer
 assert "draw_text(24.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y" in online_footer
 
