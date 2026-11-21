@@ -86,6 +86,14 @@ function record(step, hostInput = 0x4000) {
   return bytes;
 }
 
+
+async function connectWithWelcome(transport, client) {
+  const pending = client.connect();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  transport.fromHost(welcome());
+  await pending;
+}
+
 function setupClient() {
   const transport = new FakeTransport();
   const capture = { snapshot: () => new Uint8Array([0x03, 0x01, 0, 0x80, 0x80, 0x80, 0x80]) };
@@ -119,7 +127,8 @@ test("captures EmulatorJS player-one controls as the seven-byte PS1 pad layout",
 
 test("joins the PS3 CBN1 lobby, answers pings, acknowledges empty saves, and accepts START", async () => {
   const { transport, client } = setupClient();
-  await client.connect();
+  const pending = client.connect();
+  await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(client.phase, "joining");
   const join = decodeCBN1(transport.sent[0].payload);
   assert.equal(join.type, CBN1_TYPES.JOIN);
@@ -127,6 +136,7 @@ test("joins the PS3 CBN1 lobby, answers pings, acknowledges empty saves, and acc
   assert.equal(new DataView(join.body.buffer, join.body.byteOffset).getUint32(11, true), NONCE);
 
   transport.fromHost(welcome());
+  await pending;
   assert.equal(client.phase, "lobby");
   assert.equal(client.session, SESSION);
   assert.equal(client.me, 1);
@@ -153,8 +163,7 @@ test("joins the PS3 CBN1 lobby, answers pings, acknowledges empty saves, and acc
 
 test("plays authoritative host records two emulator frames at a time and sends delayed browser input", async () => {
   const { transport, client, applied, advanced } = setupClient();
-  await client.connect();
-  transport.fromHost(welcome());
+  await connectWithWelcome(transport, client);
   for (let slot = 0; slot < 4; slot++) transport.fromHost(save(slot));
   transport.fromHost(start());
   transport.fromHost(record(0));
@@ -174,15 +183,17 @@ test("plays authoritative host records two emulator frames at a time and sends d
 
 test("ignores packets from non-host room members", async () => {
   const { transport, client } = setupClient();
-  await client.connect();
+  const pending = client.connect();
+  await new Promise(resolve => setTimeout(resolve, 0));
   transport.emit("packet", { senderId: "ffeeddccbbaa99887766554433221100", payload: welcome() });
   assert.equal(client.phase, "joining");
+  transport.fromHost(welcome());
+  await pending;
   client.stop();
 });
 test("pauses the browser match when the PS3 host leaves the room", async () => {
   const { transport, client } = setupClient();
-  await client.connect();
-  transport.fromHost(welcome());
+  await connectWithWelcome(transport, client);
   for (let slot = 0; slot < 4; slot++) transport.fromHost(save(slot));
   transport.fromHost(start());
   transport.emit("control", JSON.stringify({ type: "room_update", room: { status: "waiting", host_session_id: HOST } }));
@@ -191,8 +202,7 @@ test("pauses the browser match when the PS3 host leaves the room", async () => {
 });
 test("sends CBN1 BYE when leaving before the host starts the match", async () => {
   const { transport, client } = setupClient();
-  await client.connect();
-  transport.fromHost(welcome());
+  await connectWithWelcome(transport, client);
   client.stop();
   assert.equal(decodeCBN1(transport.sent.at(-1).payload).type, CBN1_TYPES.BYE);
   assert.equal(transport.closed, true);
