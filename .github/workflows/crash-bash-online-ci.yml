@@ -159,7 +159,7 @@ jobs:
           nidgen="$src/tools/target/release/nidgen"
           test -x "$nidgen"
           mkdir -p "$RUNNER_TEMP/crashbash-ps3-stubs"
-          for stub in io net netctl lv2 sysmodule fs c; do
+          for stub in io net netctl lv2 sysmodule sysutil fs c; do
             out="$RUNNER_TEMP/crashbash-ps3-stubs/$stub"
             mkdir -p "$out"
             "$nidgen" archive \
