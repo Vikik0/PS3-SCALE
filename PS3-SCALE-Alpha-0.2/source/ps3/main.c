@@ -6138,8 +6138,8 @@ int main(int argc, char *argv[])
                     rebuild_online_results();
                     if (g_community_ready) {
                         snprintf(g_online_message, sizeof(g_online_message),
-                                 "SEARCHED %u PS3 GAMES; FOUND %u GITHUB FILES.",
-                                 (unsigned)g_online_games_searched,
+                                 "LOADED %u PROFILES + %u GITHUB FILES. TRIANGLE TO REFRESH.",
+                                 (unsigned)g_online_profile_result_count,
                                  (unsigned)g_online_community_result_count);
                     } else {
                         snprintf(g_online_message, sizeof(g_online_message),
