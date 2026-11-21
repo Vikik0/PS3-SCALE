@@ -717,14 +717,19 @@ assert "scripts/generate_xmb_assets.py" in makefile
 assert "PIC1.PNG" in makefile and "ICON0.PNG" in makefile and "PIC0.PNG" in makefile
 xmb_generator = (project_root / "scripts/generate_xmb_assets.py").read_text(encoding="utf-8")
 assert 'source, (1280, 720)' in xmb_generator
-assert 'source, (310, 176)' in xmb_generator
+assert 'Image.new("RGB", (310, 176)' in xmb_generator
 assert 'Image.open(ICON0_SOURCE)' in xmb_generator
 assert 'icon_canvas.paste(square_icon, (72, 0))' in xmb_generator
+assert 'pic0_canvas.paste(square_icon, (67, 0))' in xmb_generator
+assert 'pic0_canvas.save(PKG / "PIC0.PNG"' in xmb_generator
+assert "draw.rectangle(" not in xmb_generator
 assert (project_root / "assets/xmb/icon0_source.png").is_file()
 assert 'PIC1.PNG' in xmb_generator and 'PIC0.PNG' in xmb_generator and 'ICON0.PNG' in xmb_generator
 assert 'PIC1_SOURCE = ROOT / "assets/xmb/pic1_source.jpg"' in xmb_generator
 assert "Image.open(PIC1_SOURCE)" in xmb_generator
+assert "pic0_canvas.paste(square_icon, (67, 0))" in xmb_generator
 assert "ImageOps.fit(" in xmb_generator
+assert "image != expected_path.read_bytes()" in (project_root / "scripts/verify_pkg_theme.py").read_text(encoding="utf-8")
 assert "(1280, 720)" in xmb_generator
 assert "(310, 176)" in xmb_generator
 assert "Image.LANCZOS" in xmb_generator
@@ -737,8 +742,8 @@ assert '"/dev_usb000/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3"' in src
 assert "rename(temp_path, PS3SCALE_MUSIC1_PATH)" in src
 assert "MUSIC 1 IMPORTED FROM USB" in settings
 sfo = (project_root / "sfo.xml").read_text(encoding="utf-8")
-assert '<value name="APP_VER" type="string">00.24</value>' in sfo
-assert '<value name="VERSION" type="string">00.24</value>' in sfo
+assert '<value name="APP_VER" type="string">00.25</value>' in sfo
+assert '<value name="VERSION" type="string">00.25</value>' in sfo
 
 # Startup failure and package-integrity regression checks.
 startup = section("int main(int argc, char *argv[])", "while (!g_exit_requested)")
@@ -847,7 +852,7 @@ assert "actions/upload-artifact@v4" not in build_workflow
 assert "actions/setup-python@v5" not in index_workflow
 
 # Keep the visible app, support payload and local report on one version.
-assert '#define PS3SCALE_APP_VERSION "ALPHA 0.24"' in src
+assert '#define PS3SCALE_APP_VERSION "ALPHA 0.25"' in src
 assert '#define SETTINGS_COUNT 10' in src
 assert 'fprintf(fp, "settings_version=3\\n");' in src
 assert 'enhancement_persistent=%d' in src

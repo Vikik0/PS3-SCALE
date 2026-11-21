@@ -1,11 +1,11 @@
-# Build status — PS3 SCALE Alpha 0.23
+# Build status — PS3 SCALE Alpha 0.25
 
 ## Current development head
 
 - Branch: `design/splash-transitions-ui-v6`
 - Pull request: Draft PR #16, targeting `design/settings-support-ui-v5`
-- Application version shown in the UI: `ALPHA 0.23`
-- Package metadata: `APP_VER=00.23`, `VERSION=00.23`
+- Application version shown in the UI: `ALPHA 0.25`
+- Package metadata: `APP_VER=00.25`, `VERSION=00.25`
 - Package title ID: `PS3SCALE1`
 
 ## Latest code/package CI validation
@@ -62,6 +62,14 @@ SHA-256:
 - Online DB defaults to All Files + Any Region/Version and lists unmatched community entries as browse-only immediately on first open. Triangle still forces a live refresh.
 - CROSS/START in Game Details now arms an exact one-write B_COMMUNITY memory profile and launches the game. No exact profile means the original game starts unmodified; manual and multi-write profiles remain blocked.
 - Kept the real Before/After screenshot loader: no synthetic green preview is shown. Genuine captures are still required per Title ID + APP_VER.
+
+## Alpha 0.25 XMB correction
+
+- Alpha 0.24 updated `ICON0.PNG`, but the large selected-item artwork could still show the older staircase-and-text `PIC0.PNG`, making the main image look unchanged on the console.
+- Alpha 0.25 now generates both `ICON0.PNG` and `PIC0.PNG` from the same approved Neon Glass square logo. The old generated staircase/text panel is removed from `PIC0.PNG`.
+- `PIC1.PNG` remains the separate full-screen pearl/lavender wallpaper with one staircase.
+- Package verification compares every embedded XMB PNG byte-for-byte against the freshly generated file, as well as checking PNG dimensions.
+- Package version is bumped to `00.25` to ensure the PS3 receives a distinct update build.
 
 ## Remaining verification
 

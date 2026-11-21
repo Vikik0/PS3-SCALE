@@ -71,6 +71,7 @@ def main() -> int:
     ca_bundle_found = False
     music1_found = False
     xmb_found = set()
+    expected_xmb_dir = Path(__file__).resolve().parents[1] / "pkgfiles"
     for index in range(item_count):
         record_offset = index * 0x20
         if record_offset + 0x20 > len(payload):
@@ -129,7 +130,12 @@ def main() -> int:
                 raise SystemExit(
                     f"ERROR: {name} dimensions {(width, height)}; expected {expected}"
                 )
-            print(f"PASS: {name} is embedded ({width}x{height}, {len(image):,} bytes)")
+            expected_path = expected_xmb_dir / name
+            if not expected_path.is_file():
+                raise SystemExit(f"ERROR: generated XMB asset is missing: {expected_path}")
+            if image != expected_path.read_bytes():
+                raise SystemExit(f"ERROR: packaged {name} does not match the freshly generated XMB artwork")
+            print(f"PASS: {name} is embedded and byte-matches the freshly generated artwork ({width}x{height}, {len(image):,} bytes)")
             xmb_found.add(name)
 
     if not found:

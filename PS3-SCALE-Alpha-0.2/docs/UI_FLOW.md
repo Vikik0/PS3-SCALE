@@ -1,4 +1,4 @@
-# PS3 SCALE UI flow — Alpha 0.24
+# PS3 SCALE UI flow — Alpha 0.25
 
 ## First launch and language
 
@@ -110,7 +110,7 @@ The USB update check is offline and only looks for a package file with a PKG hea
 
 ## XMB identity
 
-- The PKG build uses the approved square neon-glass icon for `ICON0.PNG` and regenerates `PIC1.PNG` / `PIC0.PNG` from the single-staircase pearl/lavender source.
+- `ICON0.PNG` and the large selected-item preview `PIC0.PNG` are both generated from the same approved square Neon Glass logo. `PIC1.PNG` remains the full-screen single-staircase pearl/lavender wallpaper.
 - The splash screen uses the new green Apollo Save logo asset supplied by the user.
 - The in-app moving staircase is a real-time Tiny3D scene; XMB artwork remains static because XMB background support is handled separately.
 
