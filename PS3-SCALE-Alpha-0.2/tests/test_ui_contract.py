@@ -133,8 +133,8 @@ assert "profile_arm_worker" in src
 assert "service_profile_arm();" in main
 assert "sysThreadCreate(&g_profile_arm_thread" in src
 assert "find_installed_game(game)" in src
-assert "NO PROFILE FOR THIS TITLE. GAME WILL START UNMODIFIED." in src
-assert "START UNMODIFIED" in src
+assert "NO EXACT PROFILE. STARTING GAME UNMODIFIED." in src
+assert "STARTING GAME UNMODIFIED" in src
 assert "APP VERSION:" in src
 assert "if (g_music_enabled) {" in main
 assert "g_music_start_track = g_music_next_track;" in main
