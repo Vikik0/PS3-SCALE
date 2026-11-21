@@ -26,7 +26,7 @@ mkdir -p "$WORK" "$ROOT/build-artifacts"
 
 clone_at_commit() {
     local url="$1" destination="$2" commit="$3"
-    git clone --filter=blob:none --no-checkout "$url" "$destination"
+    git clone --depth 1 --filter=blob:none --no-checkout "$url" "$destination"
     git -C "$destination" fetch --depth 1 origin "$commit"
     git -C "$destination" checkout --detach "$commit"
 }
@@ -50,7 +50,11 @@ echo "== Fetch pinned RetroArch Netplay frontend"
 clone_at_commit "https://github.com/libretro/RetroArch.git" "$RA" "$RA_COMMIT"
 git -C "$RA" submodule update --init --recursive
 echo "== Fetch official RetroArch menu assets"
-clone_at_commit "https://github.com/libretro/retroarch-assets.git" "$ASSETS" "$ASSETS_COMMIT"
+git clone --depth 1 --filter=blob:none --no-checkout "https://github.com/libretro/retroarch-assets.git" "$ASSETS"
+git -C "$ASSETS" fetch --depth 1 origin "$ASSETS_COMMIT"
+git -C "$ASSETS" sparse-checkout init --cone
+git -C "$ASSETS" sparse-checkout set fonts rgui xmb ozone wallpapers
+git -C "$ASSETS" checkout --detach "$ASSETS_COMMIT"
 
 python3 - "$RA" "$APP_ID" "$CONTENT_ID" "$APP_TITLE" <<'PY'
 from pathlib import Path
@@ -151,6 +155,10 @@ menu_show_load_content = "true"
 config_save_on_exit = "false"
 EOF
 
+cat > "$USRDIR/retroarch-core-options.cfg" <<'EOF'
+pcsx_rearmed_multitap = "port 1"
+EOF
+
 cat > "$USRDIR/README-Crash-Bash-Online.txt" <<'EOF'
 CRASH BASH ONLINE — PLAYSTATION 3
 
@@ -167,11 +175,12 @@ GETTING THE GAME
 
 ONLINE PLAY
 1. Both players install this same PKG and use the same Crash Bash disc dump.
-2. Open the game from Load Content.
+2. The PCSX-ReARMed core is included; select Load Content and open the CUE file.
 3. Open the RetroArch Quick Menu, then Netplay.
 4. One player selects Start Hosting; the other selects Refresh Netplay
    Host List and joins the matching room.
-5. Use the same core version, game image, BIOS choice and core options.
+5. Up to four players are enabled through the virtual Multitap on Port 1.
+6. Use the same core version, game image, BIOS choice and core options.
 
 The build enables public room announcements, NAT traversal and the Madrid
 relay endpoint by default. Network conditions and the relay service still
