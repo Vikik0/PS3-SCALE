@@ -7,7 +7,9 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#if defined(__powerpc64__)
 #include <sys/time_util.h>
+#endif
 #include <unistd.h>
 
 #define CB_HTTP_RESPONSE_MAX 4096
@@ -373,7 +375,13 @@ cleanup:
 }
 static uint64_t monotonic_ms(void)
 {
+#if defined(__powerpc64__)
     return sys_time_get_system_time() / 1000u;
+#else
+    struct timeval now;
+    if (gettimeofday(&now, NULL) != 0) return 0;
+    return (uint64_t)now.tv_sec * 1000u + (uint64_t)now.tv_usec / 1000u;
+#endif
 }
 
 static int connect_relay_ticket(CbRelayClient *client, const char *host,
