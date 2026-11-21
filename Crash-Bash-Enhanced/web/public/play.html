@@ -41,11 +41,11 @@
     </header>
     <section class="panel">
       <h1>BROWSER <em>PLAYER</em></h1>
-      <p>Run your own Crash Bash disc image locally in the browser. This is the first browser-runtime test path; cross-platform online input synchronization is still being integrated.</p>
+      <p>Run your own Crash Bash disc image locally in the browser. The experimental CBN1 client can join a PS3-hosted room; use the same disc region and revision as the PS3 host.</p>
       <div class="notice">
         Your disc image and BIOS are read in this browser only. They are not uploaded to the matchmaking Worker or stored on the project server. Use a game image and BIOS dump you are legally entitled to use. Desktop Chrome or Edge is recommended for large disc images.
       </div>
-      <div class="notice" id="network-status" role="status" aria-live="polite">LOCAL MODE · Open this page from an active room to connect to a PS3 host. Online input sync is experimental.</div>
+      <div class="notice" id="network-status" role="status" aria-live="polite">LOCAL MODE · Load the game, then connect from a PS3-hosted room. Cross-platform synchronization is experimental and not yet hardware-verified.</div>
       <div class="fields">
         <div>
           <label for="game-files">PLAYSTATION DISC FILES</label>
@@ -59,7 +59,9 @@
         </div>
       </div>
       <div class="actions">
-        <button id="start" disabled>START LOCAL GAME</button>
+        <button id="start" disabled>LOAD GAME</button>
+        <button id="connect-room" disabled>CONNECT TO PS3 ROOM</button>
+        <button id="leave-room" hidden>LEAVE MATCH</button>
         <span id="status" role="status">Select your disc image to continue.</span>
       </div>
       <div id="game-wrap" hidden><div id="game"></div></div>
