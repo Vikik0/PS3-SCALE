@@ -441,10 +441,12 @@ export class CrashBashLobby {
 
   async prune(state) {
     const now = Date.now();
+    let changed = false;
     for (const [hash, session] of Object.entries(state.sessions)) {
       if (session.expiresAt <= now) {
         this.removePlayer(state, session);
         delete state.sessions[hash];
+        changed = true;
       }
     }
     for (const [hash, ticket] of Object.entries(state.transportTickets || {})) {
@@ -455,6 +457,7 @@ export class CrashBashLobby {
           delete state.sessions[ticket.sessionHash];
         }
         delete state.transportTickets[hash];
+        changed = true;
       }
     }
     for (const [code, room] of Object.entries(state.rooms)) {
@@ -465,8 +468,10 @@ export class CrashBashLobby {
           if (session) session.roomCode = null;
         }
         delete state.rooms[code];
+        changed = true;
       }
     }
+    return changed;
   }
 
   newCode(state) {
@@ -485,10 +490,10 @@ export class CrashBashLobby {
     const state = await this.load();
 
     try {
-      await this.prune(state);
+      const pruned = await this.prune(state);
+      if (pruned) await this.save(state);
 
       if (method === "GET" && path === "/health") {
-        await this.save(state);
         return response(200, {
           ok: true,
           service: "crash-bash-online-lobby",
