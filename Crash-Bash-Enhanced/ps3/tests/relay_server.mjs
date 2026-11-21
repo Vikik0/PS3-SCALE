@@ -5,7 +5,9 @@ const TICKET = "a".repeat(64);
 const SESSION_ID = "00112233445566778899aabbccddeeff";
 const GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const server = http.createServer((request, response) => {
-  if (request.method !== "POST" || request.url !== "/v1/rooms/ABC123/join-guest") {
+  const isHost = request.method === "POST" && request.url === "/v1/rooms/host-guest";
+  const isJoin = request.method === "POST" && request.url === "/v1/rooms/ABC123/join-guest";
+  if (!isHost && !isJoin) {
     response.writeHead(404, { "Content-Type": "application/json" });
     response.end(JSON.stringify({ error: "NOT_FOUND" }));
     return;
@@ -16,12 +18,20 @@ const server = http.createServer((request, response) => {
   request.on("data", chunk => { body += chunk; });
   request.on("end", () => {
     const parsed = JSON.parse(body);
-    if (parsed.display_name !== "PS3 Player") {
+    const expectedName = isHost ? "PS3 Host" : "PS3 Player";
+    if (parsed.display_name !== expectedName) {
       response.writeHead(400, { "Content-Type": "application/json" });
       response.end(JSON.stringify({ error: "BAD_NAME" }));
       return;
     }
-    const payload = JSON.stringify({ ticket: TICKET, session_id: SESSION_ID, host_session_id: "ffeeddccbbaa99887766554433221100", psn_required: false });
+    const hostId = "ffeeddccbbaa99887766554433221100";
+    const payload = JSON.stringify({
+      ticket: TICKET,
+      session_id: isHost ? hostId : SESSION_ID,
+      host_session_id: hostId,
+      room_code: isHost ? "HOST42" : undefined,
+      psn_required: false
+    });
     response.writeHead(201, {
       "Content-Type": "application/json",
       "Content-Length": Buffer.byteLength(payload),
@@ -49,7 +59,7 @@ server.on("upgrade", (request, socket) => {
   const key = request.headers["sec-websocket-key"];
   const protocols = String(request.headers["sec-websocket-protocol"] || "")
     .split(",").map(value => value.trim());
-  if (request.url !== "/v1/rooms/ABC123/transport" ||
+  if (!["/v1/rooms/ABC123/transport", "/v1/rooms/HOST42/transport"].includes(request.url) ||
       !protocols.includes("cbash-v1") ||
       !protocols.includes("cbash-ticket." + TICKET)) {
     socket.destroy();
