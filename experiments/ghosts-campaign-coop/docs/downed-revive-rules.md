@@ -22,7 +22,7 @@ This module implements the co-op failure and revive policy requested for the Cam
 | Health after revive | 40% |
 | Revives per mission | Unlimited; no custom cap is imposed |
 
-These are initial project defaults, not a claim that the original Extinction mode uses identical timings. They can be changed in the build profile after playtesting.
+These are initial Campaign prototype defaults. A public IW6 Extinction script reference uses 35 seconds of normal bleedout, a 5-second teammate revive hold, and a 6-second spectator/dogtag revive hold. Its cooperative game-over rule checks whether every other player is already in last stand, and its revive hold requires the reviver to remain alive, keep the use button held, and avoid entering last stand. See `docs/iw6-native-splitscreen-reference.md`. The Campaign defaults remain 30/5/40 until the game adapter is tested; Extinction values are not silently substituted.
 
 ## Host authority and network payload
 
