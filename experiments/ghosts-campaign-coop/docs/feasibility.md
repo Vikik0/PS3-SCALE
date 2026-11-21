@@ -1,54 +1,61 @@
-# Feasibility assessment — Call of Duty: Ghosts PS3 Campaign Co-op
+
+# Feasibility — Call of Duty: Ghosts PS3 local Campaign co-op
 
 ## Current verdict
 
-**The online lobby/relay layer is feasible to prototype. Full two-player Campaign co-op remains unproven and high-risk.** The existence of a working room server does not prove the game can safely create and replicate a second human-controlled actor in Campaign.
+**Local two-player Campaign co-op is an unproven but better-scoped first milestone.** Ghosts has existing offline local-play modes reported to support two players, which gives us a native local-player path to investigate. The Campaign itself remains single-player, so the challenge is adapting Campaign initialization and scripts to accept the second local player without breaking story logic.
+
+Online networking is not the current blocker because it is deferred until the local mode works.
 
 ## Initial target
 
-- Console: PS3 CEX CFW 4.93.
-- Game update: Title Update 1.16.
-- Initial target IDs: see compatibility-matrix.md.
-- Player 1: original Logan player and story authority.
-- Player 2: separate Multiplayer-style soldier actor.
+- PS3 CEX CFW 4.93.
+- Ghosts Title Update 1.16.
+- Two local controllers on one console.
+- Player 1 remains Logan.
+- Player 2 is a separate Multiplayer-style soldier actor.
 - Hesh and all story NPCs remain untouched.
 
-The regional title IDs are registered for future build selection, but no region has been hardware-validated for this mod.
+## Public research findings
 
-## What public research establishes
+1. PS3 community reports list Multiplayer, Squads and Extinction as offline local modes with one or two players. Treat this as a lead to verify on the exact PS3 build, not as proof of Campaign support.
+2. The original Campaign is single-player. No public source located in this research demonstrates an existing two-player Campaign mode.
+3. Ghosts uses the IW6 engine. GSC Tool documents IW6 script compile/decompile support for PS3.
+4. Public PS3 IW6 FastFile research documents the retail container as signed. It can be decompressed and inspected, but cannot be rebuilt/re-signed without the publisher's private key. GSC compilation alone does not solve this.
+5. Public TU 1.16 offset lists contain entity/player script routines, but the list is multiplayer-context research and does not prove Campaign compatibility.
+6. Ghosts modding guides describe SPRX/modified-EBOOT/RTM workflows and warn that CEX/DEX executable variants must not be mixed.
 
-- Ghosts PS3 modding primarily uses SPRX plugins, modified/debug EBOOTs and RTM/RPC tools; it does not have the public patch_mp.ff/GSC workflow common in some older Call of Duty games.
-- The final game update is identified as 1.16 in the community research consulted for this project.
-- Known regional/distribution IDs are listed in compatibility-matrix.md.
-- CEX and DEX use different executable/plugin variants in the Ghosts modding ecosystem; DEX-only EBOOTs must not be used on CEX.
-- Extinction is the game's existing co-op mode. Campaign is not documented as a two-player mode.
+## Preferred technical strategy
 
-## Candidate technical lead discovered
+Reuse the game's existing two-local-player initialization path from an offline mode. Compare the working local two-player mode with Campaign to identify which local-player structures, input routing, viewports, player entities and HUD state are absent in Campaign.
 
-A public TU 1.16 multiplayer offset collection lists candidate routines for entity allocation, model spawning/linking and player script commands, including G_Spawn, G_CallSpawnEntity, SP_Script_Model, PlayerCMD_Spawn and PlayerCMD_ClonePlayer. This is a useful lead for an offline actor-spawn experiment, but it does not prove that the same functions work in Campaign or that they create a controllable second player. See candidate-spawn-primitives.md for the safe test sequence and limitations.
+Only if the native path cannot be reused should we consider a lower-level second actor implementation. A spawned model/entity is not automatically a controllable player.
 
-## What is not established
+Because the retail FastFiles are signed, the project must not depend on an unverified extract-edit-repack workflow. Investigate safe runtime hooks in the exact user-owned executable and PRX environment instead.
 
-No public source located in this initial research demonstrates:
+## Main risks
 
-- A Campaign player-spawn hook that can create a second network-controlled actor.
-- A safe method to keep Logan's original story logic intact while adding a second player actor.
-- A complete authoritative replication path for player movement, weapons, damage, AI targeting, vehicles, scripted sequences, checkpoints and mission transitions.
-- Compatibility across all Campaign missions or all regional game builds.
-- A PSN authentication integration for a third-party private lobby service.
+- Campaign code may hard-code a single local player.
+- Story triggers, cinematics, camera transitions and checkpoints may assume Logan is the only player.
+- AI may target only the original Campaign player.
+- The local split-screen setup from Multiplayer/Extinction may not be compatible with Campaign initialization.
+- Candidate offsets may differ by Title ID, update, executable and CEX/DEX profile.
+- An incorrect hook can freeze the game or corrupt mission state.
 
-## Main technical risk
+## Phase 1 proof gate
 
-Campaign scripts may assume exactly one local player and bind mission triggers, camera logic, HUD, cinematics, checkpoints, weapon state and scripted actions to that player. Adding a second actor is not equivalent to adding a second lobby member. Reusing an Extinction/Multiplayer player model alone would not solve Campaign logic or network replication.
+A one-mission local proof of concept must demonstrate:
+1. Two local player slots initialize on one PS3 without network access.
+2. Logan remains the original Campaign player and story progression owner.
+3. Player 2 is a separate soldier controlled by controller 2.
+4. Camera, input, HUD, weapons and health are independent.
+5. AI can engage both players and core mission triggers continue to work.
+6. One player can be downed while the other continues and revives them.
+7. Checkpoint reload and mission restart restore both players correctly.
+8. A 20-minute test completes without crash or softlock.
 
-## Gate before full development
+Only after this gate should the project expand to all Campaign missions.
 
-A local, offline proof of concept must show all of the following in one selected Campaign mission before investing in all missions:
+## Phase 2 gate
 
-1. Logan remains the original player and retains original Campaign progression.
-2. A separate Multiplayer-style soldier actor is created without replacing Hesh or another story NPC.
-3. The second actor can move and animate without corrupting Logan's camera/input.
-4. The actor survives a checkpoint/reload and mission transition test, or is cleanly despawned/recreated.
-5. No crash occurs during a defined 20-minute test and the game's original mission triggers still complete.
-
-Only after this gate should online state replication be connected to the second actor.
+Online networking begins only after Phase 1 is proven on real hardware. The current lobby, Worker, UDP/STUN and WebSocket components remain parked and are not part of the local prototype.

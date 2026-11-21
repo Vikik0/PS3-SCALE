@@ -1,25 +1,28 @@
+
 # PS3 PRX bootstrap
 
-This folder builds the first PS3-loadable PRX artifact for the project.
+This folder builds the first PS3 PRX artifact for the project.
 
-## Current purpose
+## Phase 1 purpose
 
-- Compile the shared GHC2 packet codec for the PPU.
-- Compile the RFC 6455 client binary-frame encoder and server frame parser for the PPU.
-- Compile the PS3 libhttp/libssl guest lobby client and JSON response parser.
-- Compile RFC 5389 STUN binding request/response handling, PS3 libnet UDP socket helpers, authenticated direct-P2P GHC2 send/receive logic and the GCP1 gameplay payload codec.
-- Validate direct peer-key authentication direction and peer identity/replay checks in portable C tests.
-- Link the PS3 net/http/http-util/ssl/sysmodule import stubs required by the lobby client.
-- Link a valid Lv-2 PRX with the PS3DK PRX CRT/linker script.
-- Run `prx-gen check` on the result.
-- Produce a fake-signed `ghosts_coop.fake.sprx` for the CFW development target.
+The first playable target is local Campaign co-op on one PS3. The PRX must eventually:
+- identify the exact Ghosts Title ID and TU profile;
+- install only verified runtime hooks for the matching executable;
+- preserve the original Logan Campaign flow;
+- enable/reuse the second local-player slot and controller path;
+- keep player input, camera and HUD state independent;
+- connect Campaign health, revive and checkpoint behavior only after the player-two path is proven.
+
+## Parked online components
+
+The current build also compiles GHC2, GCP1, WebSocket, HTTPS lobby, STUN, UDP and direct-P2P components. They are retained for Phase 2 but are not part of the Phase 1 runtime design. Do not start the lobby or network transport in the local build.
 
 ## Explicit limitation
 
-The current module is a **passive bootstrap only**. The GHC2 and WebSocket frame codecs, HTTPS REST lobby client, STUN codec, PS3 libnet UDP socket helpers, authenticated direct-P2P packet layer and GCP1 gameplay payload codec are compiled into it. The lobby client is not started automatically and has not been verified on a console. Live STUN/NAT discovery and peer-to-peer socket traffic remain untested on console; the current P2P layer is source/CI validated only. WebSocket socket lifecycle, Call of Duty: Ghosts hooks, Player 2 spawn, Campaign memory modification and gameplay replication hooks are not active. GCP1 message serialization is implemented, but it is not populated from actual Ghosts actor state. Do not install it as a gameplay mod and do not treat the build as proof that Campaign co-op works.
+The current module is a **passive bootstrap only**. It does not enable a second local player, install Campaign hooks, change the camera, read controller 2 or modify game memory. The existing network and game payload code is source/CI validated only. Do not install it as a playable Campaign co-op mod and do not treat the build as proof that local co-op works.
 
-The next game-specific step requires the exact user-owned Ghosts executable and update identity, followed by offline validation of the candidate spawn functions in that exact build. The public TU 1.16 offsets are not safe to call blindly.
+The next game-specific step is to compare the exact TU 1.16 local two-player mode runtime with Campaign, then verify candidate local-player initialization functions against the exact title ID and CEX executable. Public multiplayer offsets are not safe to call blindly.
 
 ## Build
 
-The GitHub Actions job downloads the pinned PS3DK PPU toolchain and host tools, compiles the PRX runtime CRT, then runs this Makefile. The unsigned PRX and fake-signed SPRX are CI artifacts, not committed binaries.
+GitHub Actions downloads the pinned PS3DK PPU toolchain and host tools, compiles the PRX runtime CRT, then runs the Makefile. The unsigned PRX and fake-signed SPRX are CI artifacts, not committed binaries.

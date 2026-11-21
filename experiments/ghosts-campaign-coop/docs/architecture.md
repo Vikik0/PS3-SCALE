@@ -1,66 +1,102 @@
-# Architecture
+
+# Architecture — local-first Campaign co-op
 
 ## Target experience
 
-- Two players maximum.
-- Player 1 remains Logan and drives the original Campaign story flow.
-- Player 2 is a separate Multiplayer-style soldier actor; story NPCs such as Hesh remain untouched.
-- Both players share mission state, combat encounters and checkpoints.
-- PSN and Guest access are separate connection modes. Guest mode uses the private service and does not require PSN. This prototype does not bypass PSN bans or authenticate PSN.
+- Two players on one PS3, using two DualShock 3 controllers.
+- No internet, PSN, lobby or external server in Phase 1.
+- Player 1 remains Logan and owns the original Campaign story progression.
+- Player 2 is a separate Multiplayer-style soldier/player actor.
+- Hesh and all other story NPCs remain untouched.
+- Both players share mission objectives, combat encounters and checkpoints.
 
-## Components
+## Phase 1 architecture: one console, two local players
 
-1. **PS3 client plugin (partially scaffolded):** the PRX bootstrap, GHC2 codec, RFC 6455 frame codec, PS3 libhttp/libssl lobby client, peer polling, candidate publishing, RFC 5389 STUN codec, libnet UDP socket primitives, authenticated direct-P2P send/receive layer and GCP1 gameplay payload codec are implemented in source. The client can request a guest session and operate room create/join/ready/start/leave through HTTPS when a Worker URL is configured. The STUN parser and socket code compile; TLS compatibility and live NAT traversal need real-console testing. WebSocket upgrade/socket lifecycle and game-specific Campaign hooks are still not implemented.
-2. **Lobby API (implemented prototype):** guest session creation, six-character room codes, join/leave, ready state, two-player cap and host start.
-3. **UDP relay (implemented reference prototype):** forwards authenticated opaque packets only between the two members of a running room. The Python reference relay is locally integration-tested; it is not the Cloudflare deployment.
-4. **Cloudflare WebSocket relay fallback (implemented in Worker source):** an authenticated WSS route forwards binary GHC2 frames between the two room members when direct UDP cannot connect. It checks HMAC, replay window, frame size and per-session rate. Deployment and PS3 client integration are still pending.
-5. **Compatibility registry (implemented): maps known title IDs and reports the first target profile (CEX 4.93 + TU 1.16). It intentionally does not report a profile as supported until hardware validation.
-6. **Campaign downed/revive rules (implemented as a standalone C state machine):** one player can be downed while the mission continues; the living partner can revive them; both downed or bleedout expiry fails the mission. GCP1 defines revive progress and completion events. The game-specific hooks are not implemented yet.
-7. **Game replication integration (not implemented):** GCP1 defines player state, movement flags, weapon/action, damage, revive, mission/checkpoint and heartbeat payloads. Reading/writing actual Ghosts actor state, animations, AI and checkpoint hooks remains unimplemented.
-8. **PSN identity adapter (not implemented):** requires a legitimate supported platform identity mechanism. No fake PSN tokens or ban evasion are provided.
+### 1. Reuse the engine's local-player system first
 
-## Authority model to test
+Ghosts already has offline local-play modes reported to support two players. The first reverse-engineering task is to identify how those modes initialize the second local player:
+- local player/client count and slot allocation;
+- controller-to-local-player mapping;
+- player entity/player-state initialization;
+- split-screen viewport and camera setup;
+- per-player HUD, weapon and input state;
+- teardown and checkpoint/restart behavior.
 
-Initially Player 1/Logan's console is the mission authority. Player 2 sends input/state; host sends authoritative mission events and AI state. This is only a starting design. It must be validated against Ghosts' actual Campaign code and can be changed if the engine's existing networking model requires a different authority model.
+The preferred path is to reuse this native local-player machinery. Do not begin by cloning a random entity or by adding a custom controller polling layer. A generic spawned entity is not equivalent to a fully initialized local player.
 
-## Network envelope
+### 2. Campaign bootstrap
 
-The authenticated GHC2 envelope is shared by the direct UDP path and the WebSocket relay fallback:
+Compare a known-working two-player offline mode with a one-player Campaign session. Identify the minimum state and initialization differences needed to retain local player slot 1 while loading a Campaign mission.
 
-Client -> relay:
-`GHC2 | 16-byte relay ID | uint32 sequence (big-endian) | payload | 16-byte HMAC-SHA256 tag`
+The Campaign adapter must preserve Logan's original story flow. Player 2 should occupy the second local player slot and use a separate soldier actor. The implementation must not repurpose Hesh, Elias, Merrick or another scripted NPC.
 
-Relay -> peer:
-`GHC2 | uint8 sender slot | uint32 sequence (big-endian) | payload | 16-byte HMAC-SHA256 tag`
+### 3. Camera, input and HUD
 
-The bearer session token is used only in HTTPS/WSS Authorization headers. The relay key is issued by the HTTPS guest-session endpoint. The relay validates the HMAC, rejects duplicate/stale sequence numbers with a wrap-safe 64-packet window, caps frames at 1200 bytes and rate-limits each session. The inner payload uses the versioned GCP1 codec. It defines player transforms (centimeters), velocity, angles, movement flags, stance, weapon/ammo, health/armor, player actions, damage, revive, mission/checkpoint and heartbeat messages. The codec is tested independently; mapping these fields to actual Ghosts Campaign memory and engine functions is not implemented.
+Use the game's own local-player viewport/input paths wherever possible. Verify:
+- controller 1 controls only Logan;
+- controller 2 controls only Player 2;
+- each player has an independent view/camera;
+- aim, fire, reload, movement and weapon switching remain independent;
+- HUD elements and prompts are associated with the correct local player;
+- scripted camera sequences do not steal or merge both players' input.
 
-For direct UDP peer traffic, the sender signs the GHC2 packet with the recipient's relay key while retaining the sender's relay ID in the packet header. The recipient verifies with its own relay key, checks that the sender relay ID matches the paired peer and applies its replay window. After authentication it learns the sender's observed source endpoint and prefers that endpoint on subsequent sends, allowing the peer path to adapt when NAT changes the mapped source port. The WebSocket relay path is different: the sender signs with its own key and the Worker re-signs with the recipient's key before forwarding.
+### 4. Campaign systems
 
-If direct UDP hole-punching fails, both PS3 clients can use the WSS relay path `/v1/rooms/{code}/relay`. The Worker forwards binary GHC2 frames only; the PS3 WSS client is not implemented yet.
+Campaign code may assume one player for triggers, objective ownership, cinematics, camera transitions, checkpoints, AI targeting, vehicles, scripted sequences, health and mission state. Each assumption must be tested and adapted only where required.
 
-## Prototype limitations
+### 5. Downed/revive
 
-- In-memory rooms; server restart clears all rooms.
-- Guest sessions expire after 12 hours.
-- STUN candidate discovery, UDP socket primitives and authenticated direct-P2P packet transport are implemented in source but live NAT traversal / hole punching is not yet integrated or verified. Relay region selection, persistence, payload encryption, DDoS protection and production deployment configuration are also pending.
-- UDP relay is a transport experiment, not a complete netcode implementation.
-- GCP1 is a transport-level data contract only; it does not yet read real actor state or drive game animations, damage, AI or mission events.
-- PSN mode is explicitly unconfigured.
-- Title ID registry is metadata only; no EBOOT/SPRX is built.
+The existing C state machine is a standalone rules component. In local mode one console is authoritative:
+1. One player becomes downed; the other remains active.
+2. The active player can continue combat and revive the downed player.
+3. Releasing the revive input, leaving range or losing line of sight cancels progress.
+4. Both players down or bleedout expiry triggers the Campaign's restart/fail path.
+5. Checkpoint reset must restore both local player slots without duplicating or losing story actors.
 
+Initial tuning remains 30-second bleedout, 5-second hold-to-revive and 40% revive health. These are project defaults, not verified game timings.
 
-## Downed / revive flow
+## Phase 1 implementation gates
 
-The host is authoritative for the mission rules:
+1. **Baseline:** verify two-controller local play in an existing Ghosts local mode on the PS3 target.
+2. **Initialization:** identify and document the second local-player/client initialization path and relevant state structures.
+3. **Campaign entry:** start one selected Campaign mission with two local slots without modifying Logan's story identity.
+4. **Control isolation:** both controllers independently control their own player and camera.
+5. **Gameplay:** movement, weapons, damage, AI targeting and basic objective triggers work for both players.
+6. **Recovery:** downed/revive, checkpoint reload and mission restart work.
+7. **Stability:** complete a 20-minute test with no crash, softlock or broken story trigger.
+8. **Coverage:** expand one-mission proof to the remaining Campaign missions, cinematics and scripted set pieces.
 
-1. Player health reaches the Campaign downed threshold; that player enters DOWNED.
-2. The other player remains active and may keep fighting.
-3. The living player holds the revive input while in range and with line of sight.
-4. Releasing the input or breaking range/line-of-sight cancels progress.
-5. A completed revive returns the downed player at the configured revive health.
-6. If both players are down, the host marks the mission failed immediately.
-7. If the bleedout timer expires before revival, the host marks the mission failed.
-8. The Campaign adapter must call the real checkpoint restart path once and then replicate the checkpoint reset.
+Do not call Phase 1 complete until the above gates pass on real hardware.
 
-Initial tuning: 30-second bleedout, 5-second hold-to-revive, 40% health on revive. These are project defaults, not claimed exact Extinction timings. The downed crawl/sidearm behavior and all animation/HUD hooks remain dependent on Campaign integration.
+## Reverse-engineering constraints
+
+### Signed FastFiles
+
+The public PS3 IW6 research describes Ghosts FastFiles as signed containers that can be decompressed and inspected, but not rebuilt/re-signed without Infinity Ward's private signing key. Therefore, do not assume that editing an extracted GSC and repacking the retail FastFile will work.
+
+GSC Tool supports IW6 PS3 script compile/decompile operations, but that only handles the script bytecode format. It does not grant the ability to produce a valid signed retail FastFile. The likely research path is executable/PRX runtime hooks or another verified runtime-loading mechanism, not a casual patch_mp.ff replacement.
+
+### Candidate offsets
+
+The public TU 1.16 offset list is multiplayer-oriented. Addresses for G_Spawn, G_CallSpawnEntity, PlayerCMD_Spawn and PlayerCMD_ClonePlayer are research leads only. Their Campaign safety, call signatures, local-client behavior and CEX 4.93 mapping are unknown. Never call them blindly.
+
+## Phase 2 architecture: online (deferred)
+
+Only after local co-op is stable:
+- connect the two local-player state streams to a remote peer;
+- choose host authority and conflict resolution;
+- reuse GCP1 message contracts where suitable;
+- enable the existing GHC2 authentication and replay protection;
+- integrate direct UDP/STUN and WebSocket relay fallback;
+- add remote session/lobby handling.
+
+The current lobby, Worker, STUN, UDP and WebSocket source is parked. None of it is required to prove local Campaign co-op.
+
+## Current limitations
+
+- No Campaign player-two spawn hook is implemented.
+- No local second-player initialization hook is implemented.
+- No independent Campaign camera/HUD setup is implemented.
+- No Campaign movement, damage, AI or checkpoint replication is connected.
+- No live PS3 hardware test has been performed.
+- The current PRX is a passive bootstrap only.

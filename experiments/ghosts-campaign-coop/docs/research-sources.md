@@ -1,9 +1,31 @@
+
 # Research sources
 
-- Ghosts PS3 TU 1.16 offsets/functions collection (candidate entity/player spawn routines): https://nextgenupdate.com/forums/ghosts-mods-cheats-glitches/901435-ghosts-offsets-addresses-collection-116updating-1.html
-- Ghosts PS3 modding guide and title-ID/TU notes: https://github.com/richard1222/ghosts-ps3-mod-menus
-- PS3 game modding overview (CEX/DEX distinction and EBOOT/SPRX handling): https://consolemods.org/wiki/PS3:Modding_PS3_Games
-- PSL1GHT SDK (PS3 homebrew toolchain and Berkeley socket support): https://github.com/ps3dev/PSL1GHT
-- PS3 title/update database reference: https://ps3.aldostools.org/codelist.html
+## Game version and regional identity
 
-Research notes are used to select an initial target only. Community guides and archived releases are not hardware validation of this project.
+- PS3 title/update listing with Ghosts TU 1.16 and regional Title IDs: https://ps3.aldostools.org/updates.html
+- Ghosts PS3 modding guide with TU 1.16, title-ID and CEX/DEX compatibility notes: https://github.com/richard1222/ghosts-ps3-mod-menus
+- Official PS3 instruction manual: https://www.callofduty.com/content/dam/atvi/callofduty/ghosts/manuals/Ghosts-Manual-PS3-en.pdf
+
+## Local multiplayer behavior
+
+- PS3 GameFAQs Q&A reports Multiplayer, Squads and Extinction available offline with one or two local players: https://gamefaqs.gamespot.com/ps3/703505-call-of-duty-ghosts/answers/361457-can-the-multiplayer-played-offline
+- MobyGames PS3 technical specs list DualShock 3, same/split-screen and 1–2 offline players: https://www.mobygames.com/game/64165/call-of-duty-ghosts/specs/ps3/
+- Campaign single-player status and distinction from Extinction co-op: https://codghost.net/faq/
+
+These are research leads; local-player behavior must be verified against the exact PS3 release and update.
+
+## IW6 script and FastFile research
+
+- GSC Tool — documents IW6 (Ghosts) script compile/decompile support for PS3: https://github.com/xensik/gsc-tool
+- CoD Research — Ghosts PS3 FastFile format and signed-container limitations: https://github.com/primetime43/CoD-Research/blob/main/Ghosts-COD10/FastFiles/FastFiles.md
+- CoD Research — Ghosts PS3 zone layout and scriptfile asset extraction notes: https://github.com/primetime43/CoD-Research/blob/main/Ghosts-COD10/FastFiles/Zone.md
+- IW6 FastFile research hub: https://codresearch.dev/index.php/FastFiles_and_Zone_files_%28Ghosts%29
+
+## PS3 runtime and candidate functions
+
+- Ghosts PS3 TU 1.16 offsets/functions collection: https://nextgenupdate.com/forums/ghosts-mods-cheats-glitches/901435-ghosts-offsets-addresses-collection-116updating-1.html
+- PS3 homebrew SDK/toolchain: https://github.com/ps3dev/PSL1GHT
+- PS3 game modding overview: https://consolemods.org/wiki/PS3:Modding_PS3_Games
+
+Research notes do not establish that any offset is valid for Campaign or that a candidate hook is safe. The exact executable identity and runtime behavior must be verified before use.

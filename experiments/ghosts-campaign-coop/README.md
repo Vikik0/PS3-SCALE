@@ -1,40 +1,77 @@
-# Ghosts Campaign Co-op — Prototype 0.2
 
-This is an isolated research experiment for a two-player cooperative mode in the original PS3 Campaign of Call of Duty: Ghosts.
+# Ghosts Campaign Co-op — Local-first Prototype 0.3
 
-## Target profile
+An isolated research experiment to add two-player co-op to the original PS3 Campaign of Call of Duty: Ghosts.
 
-- Console: PS3 CEX CFW 4.93
-- Game update: Title Update 1.16
-- Maximum players: 2
-- Player 1 remains Logan and controls the original story flow.
-- Player 2 is intended to be an additional Multiplayer-style soldier actor.
-- Story NPCs such as Hesh must remain untouched.
+## Agreed development order
 
-## Prototype status
+1. **Phase 1 — Local Campaign co-op:** two controllers on one PS3, offline, no PSN, no lobby and no internet connection.
+2. **Phase 2 — Online co-op:** only after the local Campaign build is proven playable. Reuse the game-state contract and parked network modules where practical.
 
-- Guest lobby/session prototype: implemented and host-tested.
-- Host-authoritative downed/revive rules: implemented in portable C, unit-tested, and linked into the PS3 PRX bootstrap. One downed player does not restart the mission; the living partner can revive them. Both downed or bleedout expiry fails the mission.
-- Six-character room codes, two-player cap and ready/start flow: implemented and tested.
-- UDP peer relay reference server: implemented; local two-client UDP integration test passes.
-- PS3-side RFC 6455 binary-frame encoder/parser: implemented, linked into the PRX build and CI-tested.
-- PS3 HTTP/HTTPS lobby client scaffold: implemented for guest session creation, room creation/join, ready/start/leave, peer polling and candidate publishing; PPU build and lobby JSON contract tests pass in CI. Live hardware/TLS compatibility is not yet verified.
-- RFC 5389 STUN request/response codec, PS3 libnet UDP socket helpers and authenticated direct-P2P GHC2 send/receive layer: implemented and included in the PRX build. Direct packets are signed with the recipient's relay key, validate the peer relay ID and reject replayed sequences. The key-direction rule is unit-tested; live NAT discovery and two-console UDP traffic are not yet verified.
-- Cloudflare Durable Object WebSocket relay fallback: implemented and covered by Worker smoke tests; deployment and PS3 WebSocket client integration remain pending.
-- No live console TLS/API test has been performed.
-- Regional title-ID registry: implemented as metadata; profiles are untested.
-- Candidate TU 1.16 spawn primitives documented for offline research only.
-- Campaign-specific damage/downed hooks, crawl/sidearm animations, revive interaction, checkpoint restart hook, second actor spawn and live game-state replication: not implemented.
-- PSN identity and installable PKG/EBOOT/SPRX: not implemented.
+Do not spend Phase 1 effort deploying online services or implementing NAT traversal.
+
+## Phase 1 target
+
+- Console: PS3 CEX CFW 4.93 (initial development target only; not hardware-verified).
+- Game update: Title Update 1.16.
+- Maximum players: 2 local players.
+- Player 1 remains Logan and preserves the original Campaign flow.
+- Player 2 is a separate Multiplayer-style soldier/player actor, not Hesh or another story NPC.
+- Each player uses a separate DualShock 3 controller.
+- The game runs offline on one console.
+
+## Research findings
+
+- Community reports for the PS3 release describe two-player offline local play in Multiplayer, Squads and Extinction. This is a lead for reusing Ghosts' existing local-player initialization; it is not proof that Campaign can accept a second player.
+- The original Campaign is documented as single-player. Adding a second Campaign participant requires engine/gameplay integration.
+- Ghosts PS3 IW6 FastFiles can be decompressed and inspected, but the documented retail container is signed and cannot be rebuilt/re-signed without the publisher's private signing key. A simple extract-edit-repack GSC workflow is therefore not a viable assumption.
+- GSC Tool supports IW6 scripts on PS3 for compile/decompile work. This does not itself solve signed FastFile repackaging.
+- Public TU 1.16 spawn offsets are multiplayer-context leads only. They are not approved Campaign addresses.
+
+See docs/local-coop-first.md for the implementation plan and research constraints.
+
+## Current implementation status
+
+### Implemented as standalone components (not yet connected to Campaign)
+
+- Downed/revive state machine and portable tests.
+- GHC2 authenticated packet codec and replay-window tests.
+- GCP1 versioned gameplay-message codec and tests.
+- UDP/STUN helpers and direct-P2P packet layer.
+- Lobby/Worker prototype and WebSocket frame codec.
+- PS3 PRX bootstrap build and CI validation.
+
+### Phase 1 Campaign integration — not implemented
+
+- Discover and verify the game's existing local second-player initialization path.
+- Keep two local player slots active while starting a Campaign mission.
+- Bind controller 1 to Logan and controller 2 to the new player slot.
+- Establish independent camera/view/HUD state.
+- Create or reuse the second soldier actor without replacing story NPCs.
+- Connect Campaign movement, weapons, damage, AI targeting, mission triggers and checkpoints.
+- Connect downed/revive rules to real Campaign health and animations.
+- Test mission transitions and all Campaign-specific one-player assumptions.
+
+The current PRX is passive. It does not spawn a player or patch Campaign state. No build is currently playable.
+
+## Phase 2 — parked until Phase 1 passes
+
+The following work remains in source but is intentionally deferred:
+- Guest lobby and room codes.
+- Cloudflare Durable Object Worker.
+- HTTPS lobby client.
+- STUN and UDP hole punching.
+- WebSocket relay fallback.
+- Network replication and PSN identity research.
 
 ## Compatibility policy
 
-The project will not claim one universal EBOOT/SPRX. It selects profiles by title ID, title update, firmware family and firmware version. Known regional IDs are registered in docs/compatibility-matrix.md. The first target is CEX 4.93 + TU 1.16; DEX, HEN, other CEX versions and all title-ID variants require separate validation.
+The first target is CEX 4.93 + TU 1.16. The project must select builds by exact game Title ID, update and firmware family. Do not install a DEX EBOOT on CEX or mix regional executable profiles. Known regional IDs are listed in docs/compatibility-matrix.md; none is hardware-validated for this mod yet.
 
 ## Verification
 
-Prototype 0.2 contains 16 passing Python unit/UDP integration tests plus portable C tests for GHC2, WebSocket frames, mission revive rules, lobby JSON parsing, STUN, direct peer-key direction and GCP1 gameplay payloads. GitHub Actions also builds and validates the PPU PRX. These checks validate the standalone GCP1 payload contract, not the extraction of real player state from Ghosts or a second player in Campaign.
+Existing CI validates standalone networking/gameplay codecs and builds a passive PS3 PRX bootstrap. These tests do not prove that a second local player can join Campaign. The Phase 1 success gate is defined in docs/local-coop-first.md.
 
 ## Important
 
-No retail game files, copyrighted game assets, EBOOT, SPRX or installable PKG are included. The Campaign co-op feasibility gate remains open until a second actor can be spawned safely in a user-owned game build and tested on real hardware. The revive rules are currently a tested standalone gameplay-state component; they are not yet connected to the retail Campaign health or animation systems. The source tree is maintained on this isolated branch, separate from PS3-SCALE main.
+No retail game files, copyrighted game assets, original EBOOT or installable game PKG are included. The project uses public technical research and will require exact executable identity and runtime validation before enabling any game-memory hooks.
