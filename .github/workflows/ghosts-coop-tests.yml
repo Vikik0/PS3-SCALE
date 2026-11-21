@@ -79,6 +79,11 @@ jobs:
         run: |
           cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/ghc_game_protocol.c tests/game_protocol_test.c -o /tmp/ghc-game-protocol-test
           /tmp/ghc-game-protocol-test
+      - name: Build and run the host-only Ghosts runtime contract simulator
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/local_input.c client/ps3/local_player_gate.c client/ps3/mission_rules.c tests/ghosts_runtime_sim_test.c -o /tmp/ghosts-runtime-sim-test
+          /tmp/ghosts-runtime-sim-test
 
   ps3-prx-bootstrap:
     runs-on: ubuntu-latest
