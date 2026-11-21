@@ -16,16 +16,16 @@ This Worker provides the first online-service layer for the Crash Bash Enhanced 
 - Room state is pushed over the WebSocket relay; the browser does not poll every few seconds.
 - Room snapshot and peer roster endpoints for recovery.
 - Prototype binary WebSocket room relay at /v1/rooms/:code/transport.
-- Authenticated CBR1 sender envelope, 1200-byte per-datagram cap, CBU1 batches of up to 32 targeted datagrams (24,576 bytes total), and five inbound binary relay messages/second per connected player; authenticated text controls and keepalives are excluded.
+- Authenticated CBR1 sender envelope, 1200-byte per-datagram cap, CBU1 batches of up to 32 targeted datagrams (24,576 bytes total), and a five-inbound-WebSocket-message-per-second cap per connected player. The cap includes text controls and keepalives.
 - SQLite-backed Durable Object storage with WebSocket hibernation.
 
 ## Not included yet
 
-The relay is a transport prototype only. The PS3 guest-ticket/CBR1 client now has host-side integration tests, but it is not yet connected to the upstream UDP lockstep adapter. A future browser WebAssembly game runtime is also not connected. The CBR1 envelope is documented in ../docs/CROSSPLAY-ARCHITECTURE.md. Do not describe the game as playable online until the PS3 and browser clients exchange real lockstep packets and pass hardware/browser match tests.
+The relay is a transport prototype. The PS3 adapter now intercepts the upstream lockstep UDP socket calls and routes CBU1/CBR1 packets with per-peer addressing and a 220 ms batch cadence. Host-side tests cover ticket flows, roster mapping, start control, batching, and envelope decoding. A future browser WebAssembly game runtime is not connected yet. TLS/WSS is also not implemented in the PS3 client, and public Worker deployment is waiting for Cloudflare credentials. Do not describe the game as playable online until secure transport, browser runtime, and real PS3/browser match tests pass.
 
 ## Free-tier note
 
-Cloudflare Workers Free supports SQLite-backed Durable Objects with strict daily limits. The prototype caps usage at 16 guest sessions, four open rooms, one active match at a time, and five inbound WebSocket messages per second per client (including keepalive pings). The CBU1 protocol and a seven-frame PS3 batching queue now exist, but the queue is not yet connected to the upstream netcode's per-frame socket calls. Do not enable gameplay traffic until the adapter integration is complete. This is not an unlimited relay. See ../docs/CROSSPLAY-ARCHITECTURE.md for the current quota calculation.
+Cloudflare Workers Free supports SQLite-backed Durable Objects with strict daily limits. The prototype caps usage at 16 guest sessions, four open rooms, one active match at a time, and five inbound WebSocket messages per second per client, including controls and keepalive pings. The PS3 adapter batches upstream packets every 220 ms and uses a 12-step input delay, but real-world latency and billing still need validation. This is not an unlimited relay. See ../docs/CROSSPLAY-ARCHITECTURE.md for the current quota calculation.
 
 ## Local checks
 
