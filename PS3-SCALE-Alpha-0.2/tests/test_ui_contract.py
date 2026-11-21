@@ -461,6 +461,9 @@ assert "PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT" in src
 assert "community_component_is_safe" in src
 assert "community_extension_is" in src
 assert "memchr(header, 0, got)" in src
+assert "g_community_download_expected_size = entry->file_size;" in src
+assert "(unsigned long)file_size !=" in src
+assert "SOURCE SIZE MISMATCH. REFRESH ONLINE DB AND RETRY." in src
 assert "ONLY VERIFIED NCL GRAPHICS PATCHES CAN BE INSTALLED." in src
 assert "CROSS INSTALL/DETAILS" in src
 assert "SQUARE FILTER" in src
