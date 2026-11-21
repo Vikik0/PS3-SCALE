@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { CBN1_BUILD_HASH, CBN1_DATA_HASH, decodeCBN1, decodePing, decodeRecord, decodeStart, decodeWelcome, encodeBye, encodeInput, encodeJoin, encodePong, encodeReady } from "../public/cbn1.js";
+import { CBN1_BUILD_HASH, CBN1_DATA_HASH, decodeCBN1, decodePing, decodeRecord, decodeStart, decodeWelcome, encodeBye, encodeInput, encodeJoin, encodePong, encodeReady, encodeRelayBatch, decodeRelayEnvelope } from "../public/cbn1.js";
 
 test("encodes the pinned PS3-compatible CBN1 JOIN header", () => {
   const packet = encodeJoin(0x11223344, 1);
@@ -47,4 +47,19 @@ test("rejects malformed CBN1 frames", () => {
   assert.throws(() => decodeCBN1(new Uint8Array([1,2,3,4,5])), /header/);
   const bad = new Uint8Array([0x43,0x42,0x4e,0x31,9]);
   assert.throws(() => decodeRecord(bad), /RECORD/);
+});
+test("encodes CBU1 recipient batches and decodes CBR1 sender envelopes", () => {
+  const payload = encodeJoin(0x01020304);
+  const recipient = "00112233445566778899aabbccddeeff";
+  const batch = encodeRelayBatch([{ recipientId: recipient, payload }]);
+  assert.equal(Buffer.from(batch.subarray(0, 5)).toString("hex"), "4342553101");
+  assert.equal(Buffer.from(batch.subarray(5, 21)).toString("hex"), recipient);
+  const envelope = new Uint8Array(22 + payload.byteLength);
+  envelope.set([0x43,0x42,0x52,0x31]);
+  envelope.set(Buffer.from(recipient, "hex"), 4);
+  envelope[20] = (payload.byteLength >>> 8) & 0xff; envelope[21] = payload.byteLength & 0xff;
+  envelope.set(payload, 22);
+  const decoded = decodeRelayEnvelope(envelope);
+  assert.equal(decoded.senderId, recipient);
+  assert.deepEqual(decoded.payload, payload);
 });
