@@ -265,6 +265,9 @@ static int g_keyboard_online_mode = 0;
 static int g_profile_confirm_pending = 0;
 static int g_fps_control_selection = 0;
 static char g_catalog_status[96] = "LOCAL PROFILE + GITHUB INDEX NOT LOADED";
+static volatile size_t g_catalog_sync_downloaded = 0;
+static volatile size_t g_catalog_sync_total = 0;
+static volatile int g_catalog_sync_stage = 0;
 static char g_online_message[128] = "SELECT A GAME RESULT OR PRESS START TO REFRESH GITHUB.";
 static void rebuild_online_results(void);
 static volatile int g_game_launch_running = 0;
@@ -2067,10 +2070,14 @@ static void catalog_sync_worker(void *arg)
     int result = 0;
     (void)arg;
     g_catalog_sync_result = 0;
+    g_catalog_sync_stage = 1;
+    g_catalog_sync_downloaded = 0;
+    g_catalog_sync_total = 0;
     ps3scale_community_index_free(&g_downloaded_community_index);
 
-    if (ps3scale_online_download(PS3SCALE_CATALOG_URL,
-                                 PS3SCALE_CATALOG_DOWNLOAD_PATH) == 0 &&
+    if (ps3scale_online_download_progress(
+            PS3SCALE_CATALOG_URL, PS3SCALE_CATALOG_DOWNLOAD_PATH,
+            &g_catalog_sync_downloaded, &g_catalog_sync_total) == 0 &&
         ps3scale_catalog_load(PS3SCALE_CATALOG_DOWNLOAD_PATH,
                               &g_downloaded_catalog) > 0 &&
         rename(PS3SCALE_CATALOG_DOWNLOAD_PATH,
@@ -2080,10 +2087,14 @@ static void catalog_sync_worker(void *arg)
         unlink(PS3SCALE_CATALOG_DOWNLOAD_PATH);
     }
 
-    if (ps3scale_online_download_limited(
+    g_catalog_sync_stage = 2;
+    g_catalog_sync_downloaded = 0;
+    g_catalog_sync_total = 0;
+    if (ps3scale_online_download_limited_progress(
             PS3SCALE_COMMUNITY_INDEX_URL,
             PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH,
-            PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT) == 0 &&
+            PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT,
+            &g_catalog_sync_downloaded, &g_catalog_sync_total) == 0 &&
         ps3scale_community_index_load(
             PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH,
             &g_downloaded_community_index) > 0 &&
@@ -2096,6 +2107,7 @@ static void catalog_sync_worker(void *arg)
     }
 
     g_catalog_sync_result = result;
+    g_catalog_sync_stage = 0;
 
     /* Publish completion before clearing running so UI actions never
      * overlap the final network teardown window. */
@@ -2122,6 +2134,9 @@ static void start_catalog_sync_worker(int force)
 
     g_catalog_sync_done = 0;
     g_catalog_sync_result = 0;
+    g_catalog_sync_stage = 1;
+    g_catalog_sync_downloaded = 0;
+    g_catalog_sync_total = 0;
     g_catalog_sync_running = 1;
     g_network_task_running = 1;
     snprintf(g_catalog_status, sizeof(g_catalog_status),
@@ -2136,6 +2151,9 @@ static void start_catalog_sync_worker(int force)
     } else {
         g_catalog_sync_running = 0;
         g_catalog_sync_done = 0;
+        g_catalog_sync_stage = 0;
+        g_catalog_sync_downloaded = 0;
+        g_catalog_sync_total = 0;
         g_network_task_running = 0;
         snprintf(g_catalog_status, sizeof(g_catalog_status),
                  "ONLINE THREAD COULD NOT START");
@@ -2195,6 +2213,9 @@ static void service_catalog_sync(void)
                  "CONNECT THE PS3 TO THE INTERNET AND PRESS START TO RETRY.");
     }
     g_catalog_sync_done = 0;
+    g_catalog_sync_stage = 0;
+    g_catalog_sync_downloaded = 0;
+    g_catalog_sync_total = 0;
 }
 
 static const ps3scale_profile_t *profile_for_game(const ps3scale_game_t *game)
@@ -4251,9 +4272,28 @@ static void draw_online_database(void)
     set_ui_font_size(10, 15);
     draw_text(414.0f, 102.0f, 0x29243fff, "Selected Result");
     set_ui_font_size(7, 11);
-    draw_text(414.0f, 127.0f, 0x77718fff,
-              g_catalog_sync_running ? "Syncing online metadata..." :
-                                       "Review source, match and file type.");
+    if (g_catalog_sync_running) {
+        unsigned long downloaded_kb =
+            (unsigned long)((g_catalog_sync_downloaded + 1023u) / 1024u);
+        unsigned long total_kb =
+            (unsigned long)((g_catalog_sync_total + 1023u) / 1024u);
+        if (g_catalog_sync_total > 0) {
+            unsigned int percent = (unsigned int)(
+                (g_catalog_sync_downloaded >= g_catalog_sync_total) ? 100u :
+                (g_catalog_sync_downloaded * 100u) / g_catalog_sync_total);
+            snprintf(line, sizeof(line), "SYNC %s: %u%%  %lu/%lu KB",
+                     g_catalog_sync_stage == 2 ? "GAME INDEX 2/2" : "PROFILE DB 1/2",
+                     percent, downloaded_kb, total_kb);
+        } else {
+            snprintf(line, sizeof(line), "SYNC %s: %lu KB RECEIVED",
+                     g_catalog_sync_stage == 2 ? "GAME INDEX 2/2" : "PROFILE DB 1/2",
+                     downloaded_kb);
+        }
+        draw_text(414.0f, 127.0f, 0x875be8ff, line);
+    } else {
+        draw_text(414.0f, 127.0f, 0x77718fff,
+                  "Review source, match and file type.");
+    }
     draw_rounded_rect(412.0f, 153.0f, 197.0f, 25.0f, 7.0f,
                       g_catalog_ready ? 0xe8f5eced : 0xf3effbed);
     draw_rounded_rect(616.0f, 153.0f, 202.0f, 25.0f, 7.0f,
@@ -4267,6 +4307,24 @@ static void draw_online_database(void)
               g_community_ready ? 0x26794bff : 0x77718fff,
               g_community_ready ? "GITHUB INDEX: LOADED" :
                                   "GITHUB INDEX: EMPTY");
+    if (g_catalog_sync_running) {
+        float progress = 0.0f;
+        draw_rounded_rect(414.0f, 182.0f, 404.0f, 4.0f, 2.0f,
+                          0xe4deefff);
+        if (g_catalog_sync_total > 0) {
+            progress = (float)g_catalog_sync_downloaded /
+                       (float)g_catalog_sync_total;
+            if (progress > 1.0f) progress = 1.0f;
+        } else if (g_animation_enabled) {
+            progress = 0.12f + 0.22f *
+                       (0.5f + 0.5f * sinf((float)g_frame_counter * 0.12f));
+        } else {
+            progress = 0.18f;
+        }
+        if (progress > 0.0f)
+            draw_rounded_rect(414.0f, 182.0f, 404.0f * progress, 4.0f, 2.0f,
+                              0x9568edff);
+    }
 
     set_ui_font_size(7, 11);
     if (selected_profile && selected) {
