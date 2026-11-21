@@ -142,6 +142,8 @@ server.on("upgrade", (request, socket) => {
         if (count > 2) sendFrame(socket, 1, Buffer.from("BATCH:" + count));
       } else if (opcode === 1 && payload.toString() === "PING") {
         sendFrame(socket, 1, Buffer.from("PONG"));
+      } else if (opcode === 1 && payload.toString() === "START") {
+        sendFrame(socket, 1, Buffer.from("STARTED"));
       } else if (opcode === 8) {
         sendFrame(socket, 8, payload);
         socket.end();
