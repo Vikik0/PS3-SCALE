@@ -8,6 +8,7 @@ This Worker provides the first online-service layer for the Crash Bash Enhanced 
 - Private room codes and up to four player slots.
 - Host handoff when the host leaves.
 - Ready state and host-controlled match start.
+- Authenticated WebSocket room relay for opaque binary packets, with sender IDs, packet-size/rate limits, keepalive handling, and pushed room-state updates.
 - Room state is pushed over the WebSocket relay; the browser does not poll every few seconds.
 - Room snapshot and peer roster endpoints for recovery.
 - Prototype binary WebSocket room relay at /v1/rooms/:code/transport.
