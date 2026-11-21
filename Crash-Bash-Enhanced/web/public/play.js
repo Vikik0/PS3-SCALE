@@ -27,8 +27,7 @@ let activeBlobUrls = [];
 let loadTimeout = null;
 let lockstepClient = null;
 let lockstepActive = false;
-let inputCaptureInstalled = false;
-const localPadCapture = createLocalPadCapture();
+let localPadCapture = null;
 
 if (!ROOM_CODE) {
   connectButton.hidden = true;
@@ -161,16 +160,11 @@ function exposeBrowserInputBridge() {
 }
 
 function installLocalInputCapture() {
-  if (inputCaptureInstalled) return;
+  if (localPadCapture) return true;
   const manager = gameManager();
-  if (!manager || typeof manager.simulateInput !== "function") return;
-  const original = manager.simulateInput.bind(manager);
-  manager.simulateInput = (player, index, value) => {
-    localPadCapture.handle(player, index, value);
-    if (lockstepActive && player === 0) return;
-    return original(player, index, value);
-  };
-  inputCaptureInstalled = true;
+  if (!manager || typeof manager.simulateInput !== "function") return false;
+  localPadCapture = createLocalPadCapture(manager, () => lockstepActive);
+  return true;
 }
 
 function advanceEmulatorFrames(count) {
@@ -214,7 +208,7 @@ function stopLockstep(message = "Disconnected from the PS3 room.") {
 }
 
 async function connectToRoom() {
-  if (!emulatorStarted || !window.CBASH_EMULATOR_READY) {
+  if (!emulatorStarted || !window.CBASH_EMULATOR_READY || !localPadCapture) {
     setNetworkStatus("Load the PlayStation game before connecting to a room.", true);
     return;
   }
@@ -266,6 +260,7 @@ function startEmulator(primary, bios, externalFiles, blobUrls) {
   activeBlobUrls = blobUrls;
   emulatorStarted = false;
   emulatorLoading = true;
+  localPadCapture = null;
   gameWrap.hidden = false;
   document.querySelector("#game").replaceChildren();
 
@@ -317,7 +312,8 @@ function startEmulator(primary, bios, externalFiles, blobUrls) {
       connectButton.disabled = true;
       releaseLocalObjectUrls();
       window.CBASH_EMULATOR_READY = false;
-      localPadCapture.reset();
+      localPadCapture?.reset();
+      localPadCapture = null;
       setStatus("Emulator closed. Your disc image and BIOS remain on this device.");
     });
   };
