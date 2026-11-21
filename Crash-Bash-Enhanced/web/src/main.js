@@ -294,7 +294,14 @@ function syncRelayConnection() {
   }
 
   const socketUrl = API_BASE.replace(/^http/, "ws") + `/v1/rooms/${state.room.room_code}/transport`;
-  const socket = new WebSocket(socketUrl, ["cbash-v1", `cbash-auth.${state.session.token}`]);
+  let socket;
+  try {
+    socket = new WebSocket(socketUrl, ["cbash-v1", `cbash-auth.${state.session.token}`]);
+  } catch {
+    state.relayStatus = "error";
+    render();
+    return;
+  }
   relaySocket = socket;
   state.relayStatus = "connecting";
   socket.binaryType = "arraybuffer";
