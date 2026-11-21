@@ -36,7 +36,8 @@ The report contains:
 - each \`PT_LOAD\` segment, permissions, file offset and virtual-address range;
 - the section containing the ELF entry point, used as the OPD candidate range;
 - PS3 PPU OPD entries (\`u32 code\`, \`u32 TOC\`), the entry descriptor and the most common module TOC (\`r2\`);
-- whether each public TU 1.16 candidate address maps into a file-backed executable segment;
+- whether each public TU 1.16 candidate address maps into a `PT_LOAD` memory segment, including zero-filled BSS (with no fabricated file bytes);
+- reported `G_Client`, `G_Entity` and `scrVmPub_t` data-address leads plus the reported client/entity strides;
 - a small byte window for each mapped candidate and nearby OPD navigation hints.
 
 A mapped address is not proof that the candidate is the named function, that its calling convention is correct, or that it is safe in Campaign. OPD entries are address-taken function descriptors, not a complete list of every function.
