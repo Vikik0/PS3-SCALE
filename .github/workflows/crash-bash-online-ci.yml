@@ -33,6 +33,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Check browser player script syntax
         run: node --check public/play.js
+      - name: Test PS1-to-libretro controller mapping
+        run: npm test
       - name: Build production web lobby
         run: npm run build
       - name: Verify browser player files are included in the production bundle
