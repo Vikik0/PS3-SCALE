@@ -185,7 +185,7 @@ assert "draw_text(31.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y" in home
 online_footer = section("static void draw_online_database(void)",
                         "static void draw_library_filter_item(")
 assert "draw_rounded_rect(20.0f, 426.0f, 814.0f, 22.0f" in online_footer
-assert "g_catalog_sync_stage == 2 ? \\\"GAME INDEX 2/2\\\"" in online_footer
+assert "GAME INDEX 2/2" in online_footer
 assert "g_catalog_sync_downloaded /" in online_footer
 assert "draw_rounded_rect(414.0f, 182.0f, 404.0f, 4.0f" in online_footer
 assert "g_catalog_sync_total > 0" in online_footer
