@@ -15,6 +15,7 @@ Crash Bash Enhanced is a community project to add a modern online layer around t
 - Two-to-four player lobbies.
 - Ready state and host-controlled match start.
 - Host transfer if the host leaves.
+- Authenticated host UDP endpoint publishing and peer discovery.
 - Responsive web lobby.
 - CI tests for the Worker and web build.
 
