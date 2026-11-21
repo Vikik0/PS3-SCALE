@@ -38,7 +38,7 @@ A public IW6 Multiplayer/Extinction GSC dump contains mode-level `isSplitScreen(
 
 ### PS3 executable identity and OPD analysis groundwork
 
-A read-only inspector now accepts a user-supplied decrypted ELF64 big-endian PPU image. It records SHA-256, ELF/load-segment metadata, the entry descriptor, the PS3 PPU OPD table and TOC, and whether the public TU 1.16 candidate addresses map into executable segments. It does not decrypt SELF, infer an image base, patch the binary or prove a function is safe. See `docs/ps3-elf-analysis.md`.
+A read-only inspector now accepts a user-supplied decrypted ELF64 big-endian PPU image. It records SHA-256, ELF/load-segment metadata, the entry descriptor, the PS3 PPU OPD table and TOC, and whether the public TU 1.16 function/data candidates map into executable, data or zero-filled BSS segments. It does not decrypt SELF, infer an image base, patch the binary or prove a function is safe. See `docs/ps3-elf-analysis.md`.
 
 A Ghidra script can seed functions from the OPD descriptor table once the same local ELF has been imported as `PowerPC:BE:64:default`. The local-player capture matrix in `docs/local-player-capture-matrix.md` defines what must be compared between an existing offline two-player mode and Campaign.
 
