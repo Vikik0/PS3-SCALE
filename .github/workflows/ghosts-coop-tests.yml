@@ -86,7 +86,7 @@ jobs:
           /tmp/ghosts-runtime-sim-test
 
   ps3-prx-bootstrap:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -97,7 +97,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/ps3-stage/ps3dev/ppu
-          key: ps3dk-ppu-v0.27.0-${{ runner.os }}-x86_64
+          key: ps3dk-ppu-v0.28.0-${{ runner.os }}-x86_64
       - name: Download pinned PS3DK PPU toolchain
         shell: bash
         run: |
@@ -107,8 +107,9 @@ jobs:
           mkdir -p "$ps3dev"
           if [ ! -x "$ps3dev/ppu/bin/powerpc64-ps3-elf-gcc" ]; then
             curl -fL --retry 3 \
-              https://github.com/FirebirdTA01/PS3DK/releases/download/v0.27.0/ps3dev-ppu.tar.xz \
+              https://github.com/FirebirdTA01/PS3DK/releases/download/v0.28.0/ps3dev-ppu.tar.xz \
               -o "$RUNNER_TEMP/ps3dev-ppu.tar.xz"
+            echo "0d1335730489f6c5e44cbaae9c23a08a34b76ec59bae6106b96b335093401e61  $RUNNER_TEMP/ps3dev-ppu.tar.xz" | sha256sum -c -
             tar -xJf "$RUNNER_TEMP/ps3dev-ppu.tar.xz" -C "$stage"
           fi
           test -x "$ps3dev/ppu/bin/powerpc64-ps3-elf-gcc"
@@ -120,8 +121,9 @@ jobs:
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/ps3-host-tools"
           curl -fL --retry 3 \
-            https://github.com/FirebirdTA01/PS3DK/releases/download/v0.27.0/ps3-sdk-tools-v0.27.0-linux-x86_64.tar.xz \
+            https://github.com/FirebirdTA01/PS3DK/releases/download/v0.28.0/ps3-sdk-tools-v0.28.0-linux-x86_64.tar.xz \
             -o "$RUNNER_TEMP/ps3-host-tools.tar.xz"
+          echo "8708f219b4cb504e4fa345d4fe85dc6d2de8b0270a7a4cf5b147dc91fe260b84  $RUNNER_TEMP/ps3-host-tools.tar.xz" | sha256sum -c -
           tar -xJf "$RUNNER_TEMP/ps3-host-tools.tar.xz" -C "$RUNNER_TEMP/ps3-host-tools"
           tool_bin="$(find "$RUNNER_TEMP/ps3-host-tools" -type f -name prx-gen -printf '%h\n' -quit)"
           test -n "$tool_bin"
@@ -133,7 +135,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git clone --depth 1 --branch v0.27.0 https://github.com/FirebirdTA01/PS3DK.git "$RUNNER_TEMP/PS3DK-src"
+          git clone --depth 1 --branch v0.28.0 https://github.com/FirebirdTA01/PS3DK.git "$RUNNER_TEMP/PS3DK-src"
           mkdir -p "$PS3DK/ppu/lib"
           mkdir -p "$PS3DK/ppu/include"
           cp -a "$RUNNER_TEMP/PS3DK-src/sdk/include/." "$PS3DK/ppu/include/"
