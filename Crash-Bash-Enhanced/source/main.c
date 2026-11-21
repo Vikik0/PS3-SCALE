@@ -201,5 +201,6 @@ int main(int argc, char **argv)
     }
     if (g_network_state == 1) netDeinitialize();
     sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
+    ya2d_deinit();
     return 0;
 }
