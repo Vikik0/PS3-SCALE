@@ -11,13 +11,14 @@ This folder builds the first native PS3 PRX for Crash Bash Enhanced.
 - Adapts the upstream SDL timing/file calls to PS3 APIs.
 - Uses STUN Binding requests on the same UDP socket as the game transport to discover the external IPv4/port. A second STUN destination is used to detect some symmetric-NAT mappings.
 - Provides native host/join/lobby functions through `net_adapter.h`; the game-input hook polls the lobby and feeds synchronized pad records into the emulator.
+- Includes a small RFC 6455 WebSocket client with host-side handshake/frame tests; it is not yet connected to the game's UDP lockstep adapter.
 - Computes a guarded FNV-1a fingerprint over the PS1 RAM window documented for `ps1_netemu` 4.86 (base `0x770780`, size 2 MiB). A page-attribute probe disables the fingerprint if the address range is not readable.
 
 ## Still incomplete / not verified
 
 - There is no user-facing PS3 host/join menu yet. The native host/join APIs are compiled, but they are not yet connected to the web lobby or an on-screen keyboard/configuration flow.
-- The Cloudflare Worker and web lobby are not yet connected to this PRX. The Worker currently handles guest sessions, room codes, ready state and endpoint metadata; it does not relay game traffic.
-- No TURN or gameplay relay is included. Direct UDP connectivity can fail behind symmetric NAT, carrier-grade NAT, or networks that block peer UDP. STUN discovers mappings but does not create router port-forwarding rules.
+- The Cloudflare Worker and web lobby are not yet connected to this PRX. The Worker now supports guest rooms, pushed room updates, one-time PS3 join tickets, and a prototype room-scoped WebSocket relay; this PRX still uses direct UDP and does not yet call the Worker API or relay.
+- No TURN server is included. The Worker has a WebSocket packet relay, but the PS3 PRX is not wired to it yet. Until that integration is complete, direct UDP can still fail behind symmetric NAT, carrier-grade NAT, or networks that block peer UDP.
 - Memory-card save synchronization is stubbed as empty data. The first target should be same-build Battle/minigame sessions, not Adventure progression.
 - The PS1 RAM fingerprint uses a community-documented `ps1_netemu` 4.86 memory map. The page-attribute probe confirms that the range is mapped and readable, but it does not prove that the same offset is correct on every firmware/emulator revision. The exact 4.93 (or other target firmware) memory layout still needs hardware verification.
 - The exact PS1 emulator process, multitap behavior, title-region identity and controller-port mapping have not been verified on physical PS3 hardware.
