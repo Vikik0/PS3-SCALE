@@ -697,7 +697,10 @@ const char *platform_data_path(void)
 
 const char *saves_folder(void)
 {
-    return platform_data_path();
+    /* The relay prototype keeps no native save files. Upstream net_record()
+     * expects an empty string here, not NULL, when deciding whether to
+     * create its optional replay log. */
+    return "";
 }
 
 int platform_local_pad(int port)
