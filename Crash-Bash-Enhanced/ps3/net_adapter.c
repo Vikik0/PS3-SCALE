@@ -689,7 +689,10 @@ int card_check(const void *data, int size, char *why, size_t room)
 
 const char *platform_data_path(void)
 {
-    return "/dev_hdd0/tmp/";
+    /* The PS1-emulator adapter has no upstream CRASHBSH.DAT archive.
+     * NULL makes the shared netcode's data_hash() deterministically zero,
+     * which the browser CBN1 client can match without receiving game files. */
+    return NULL;
 }
 
 const char *saves_folder(void)
