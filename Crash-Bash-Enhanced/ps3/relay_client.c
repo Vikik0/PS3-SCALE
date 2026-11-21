@@ -137,6 +137,100 @@ static int json_string_field(const char *json, const char *field,
     return 0;
 }
 
+static int json_uint_field(const char *json, const char *field, unsigned int *output)
+{
+    char needle[48];
+    const char *p;
+    char *end;
+    unsigned long value;
+
+    if (!json || !output ||
+        snprintf(needle, sizeof(needle), "\"%s\"", field) >= (int)sizeof(needle)) return -1;
+    p = strstr(json, needle);
+    if (!p) return -1;
+    p += strlen(needle);
+    while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') p++;
+    if (*p++ != ':') return -1;
+    while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') p++;
+    value = strtoul(p, &end, 10);
+    if (end == p || value > 0xfffffffful) return -1;
+    *output = (unsigned int)value;
+    return 0;
+}
+
+static int parse_session_id(const char hex[33], uint8_t output[16])
+{
+    size_t i;
+    for (i = 0; i < 16u; ++i) {
+        char pair[3];
+        char *end;
+        unsigned long value;
+        pair[0] = hex[i * 2u];
+        pair[1] = hex[i * 2u + 1u];
+        pair[2] = '\0';
+        value = strtoul(pair, &end, 16);
+        if (*end != '\0') return -1;
+        output[i] = (uint8_t)value;
+    }
+    return 0;
+}
+
+static void parse_room_roster(CbRelayClient *client, const char *json)
+{
+    const char *players;
+    const char *cursor;
+    const char *array_end;
+    CbRelayPeer next[CB_RELAY_MAX_PEERS];
+    size_t count = 0;
+
+    if (!client || !json) return;
+    players = strstr(json, "\"players\"");
+    if (!players) return;
+    players = strchr(players, '[');
+    if (!players) return;
+    array_end = strchr(players, ']');
+    if (!array_end) return;
+
+    memset(next, 0, sizeof(next));
+    cursor = players + 1;
+    while (cursor < array_end && count < CB_RELAY_MAX_PEERS) {
+        const char *object = strchr(cursor, '{');
+        const char *object_end;
+        char buffer[256];
+        size_t length;
+        char id_hex[33];
+        unsigned int slot;
+        CbRelayPeer *peer;
+
+        if (!object || object >= array_end) break;
+        object_end = strchr(object, '}');
+        if (!object_end || object_end > array_end) break;
+        length = (size_t)(object_end - object + 1);
+        if (length >= sizeof(buffer)) {
+            cursor = object_end + 1;
+            continue;
+        }
+        memcpy(buffer, object, length);
+        buffer[length] = '\0';
+        if (json_hex_field(buffer, "player_id", id_hex, sizeof(id_hex), 32u) == 0 &&
+            json_uint_field(buffer, "slot", &slot) == 0 &&
+            slot >= 1u && slot <= CB_RELAY_MAX_PEERS) {
+            peer = &next[slot - 1u];
+            if (parse_session_id(id_hex, peer->session_id) == 0 &&
+                cb_relay_session_address(peer->session_id, &peer->address_network,
+                                         &peer->port_host) == 0) {
+                peer->slot = (uint8_t)(slot - 1u);
+                peer->valid = 1;
+                count++;
+            }
+        }
+        cursor = object_end + 1;
+    }
+
+    memcpy(client->peers, next, sizeof(next));
+    client->peer_count = count;
+}
+
 static int clean_display_name(const char *input, char output[17])
 {
     size_t i;
@@ -159,7 +253,7 @@ static int clean_display_name(const char *input, char output[17])
     return 0;
 }
 
-static int request_room_ticket(const char *host, unsigned short port,
+static int request_room_ticket(CbRelayClient *client, const char *host, unsigned short port,
                                 const char *join_room_code, int create_room,
                                 const char *display_name, int timeout_ms,
                                 char ticket[65], char session_id[33],
@@ -272,6 +366,7 @@ static int request_room_ticket(const char *host, unsigned short port,
         memcpy(room_code_out, join_room_code, 6u);
         room_code_out[6] = '\0';
     }
+    parse_room_roster(client, response + header_end);
     result = 0;
 
 cleanup:
@@ -323,7 +418,7 @@ int cb_relay_join(CbRelayClient *client, const char *host, unsigned short port,
     memset(client, 0, sizeof(*client));
     client->websocket.fd = -1;
 
-    if (request_room_ticket(host, port, room_code, 0, display_name, timeout_ms,
+    if (request_room_ticket(client, host, port, room_code, 0, display_name, timeout_ms,
                             ticket, client->session_id, client->host_session_id,
                             room_code_out) != 0) return -1;
     return connect_relay_ticket(client, host, port, room_code_out, ticket, timeout_ms);
@@ -338,7 +433,7 @@ int cb_relay_host(CbRelayClient *client, const char *host, unsigned short port,
     memset(client, 0, sizeof(*client));
     client->websocket.fd = -1;
 
-    if (request_room_ticket(host, port, NULL, 1, display_name, timeout_ms,
+    if (request_room_ticket(client, host, port, NULL, 1, display_name, timeout_ms,
                             ticket, client->session_id, client->host_session_id,
                             room_code) != 0) return -1;
     return connect_relay_ticket(client, host, port, room_code, ticket, timeout_ms);
@@ -438,6 +533,26 @@ int cb_relay_queue_packet(CbRelayBatchQueue *queue, const uint8_t recipient_id[1
     if (!queue || !packet || length == 0 || length > CB_RELAY_MAX_PACKET ||
         queue->count >= CB_RELAY_MAX_BATCH_PACKETS) return -1;
 
+    {
+        size_t i;
+        const uint8_t *bytes = (const uint8_t *)packet;
+        for (i = 0; i < queue->count; ++i) {
+            CbRelayPacket *queued = &queue->packets[i];
+            int same_recipient = recipient_id
+                ? memcmp(queued->recipient_id, recipient_id, 16u) == 0
+                : memcmp(queued->recipient_id, (uint8_t[16]){0}, 16u) == 0;
+            /* Lockstep retransmissions contain all still-unacknowledged records.
+             * Keep only the newest packet of a given type for each destination. */
+            if (same_recipient && queued->length >= 5u && length >= 5u &&
+                memcmp(queued->payload, bytes, 5u) == 0) {
+                memmove(queue->payloads[i], packet, length);
+                queued->payload = queue->payloads[i];
+                queued->length = length;
+                return 0;
+            }
+        }
+    }
+
     entry = &queue->packets[queue->count];
     memset(entry->recipient_id, 0, sizeof(entry->recipient_id));
     if (recipient_id) memcpy(entry->recipient_id, recipient_id, 16u);
@@ -482,7 +597,7 @@ int cb_relay_receive_packet(CbRelayClient *client, void *packet, size_t capacity
                             char *control, size_t control_capacity,
                             int timeout_ms)
 {
-    uint8_t frame[CB_RELAY_ENVELOPE_SIZE + CB_RELAY_MAX_PACKET];
+    uint8_t frame[CB_WS_MAX_FRAME + 1u];
     size_t frame_length = 0;
     int opcode = 0;
     int result;
@@ -495,12 +610,14 @@ int cb_relay_receive_packet(CbRelayClient *client, void *packet, size_t capacity
         client->last_ping_ms = now;
     }
 
-    result = cb_ws_receive(&client->websocket, frame, sizeof(frame),
+    result = cb_ws_receive(&client->websocket, frame, CB_WS_MAX_FRAME,
                            &frame_length, &opcode, timeout_ms);
     if (result <= 0) return result;
     client->last_ping_ms = monotonic_ms();
+    frame[frame_length] = '\0';
 
     if (opcode == CB_WS_OPCODE_TEXT) {
+        parse_room_roster(client, (const char *)frame);
         if (control && control_capacity) {
             size_t copy = frame_length < control_capacity - 1u
                 ? frame_length : control_capacity - 1u;
@@ -526,39 +643,56 @@ int cb_relay_receive_packet(CbRelayClient *client, void *packet, size_t capacity
     return 1;
 }
 
+int cb_relay_session_address(const uint8_t session_id[16],
+                             uint32_t *address_network, unsigned short *port_host)
+{
+    uint8_t octets[4];
+    unsigned int port_value;
+    if (!session_id || !address_network || !port_host) return -1;
+
+    /* Reserve 10/8 for virtual relay peers. The first five random session
+     * bytes provide a stable 24-bit address plus a 16-bit UDP-style port. */
+    octets[0] = 10u;
+    octets[1] = session_id[0];
+    octets[2] = session_id[1];
+    octets[3] = session_id[2];
+    memcpy(address_network, octets, sizeof(octets));
+    port_value = ((unsigned int)session_id[3] << 8) | session_id[4];
+    *port_host = (unsigned short)(port_value == 0u ? 1u : port_value);
+    return 0;
+}
+
 int cb_relay_host_address(const CbRelayClient *client, char *address,
                           size_t address_capacity, unsigned short *port)
 {
-    unsigned int a;
-    unsigned int b;
-    unsigned int c;
-    unsigned int port_value;
+    uint8_t session_id[16];
+    uint32_t address_network;
+    struct in_addr ip;
 
     if (!client || !client->host_session_id[0] || !address ||
-        address_capacity == 0 || !port) return -1;
+        address_capacity == 0 || !port ||
+        parse_session_id(client->host_session_id, session_id) != 0 ||
+        cb_relay_session_address(session_id, &address_network, port) != 0) return -1;
 
-    {
-        unsigned int bytes[5];
-        size_t i;
-        for (i = 0; i < 5u; ++i) {
-            char pair[3];
-            char *end;
-            pair[0] = client->host_session_id[i * 2u];
-            pair[1] = client->host_session_id[i * 2u + 1u];
-            pair[2] = '\0';
-            bytes[i] = (unsigned int)strtoul(pair, &end, 16);
-            if (*end != '\0') return -1;
-        }
-        a = 1u + (bytes[0] % 250u);
-        b = 1u + (bytes[1] % 250u);
-        c = 1u + (bytes[2] % 250u);
-        port_value = 20000u + (((bytes[3] << 8) | bytes[4]) % 40000u);
-    }
-
-    if (snprintf(address, address_capacity, "10.%u.%u.%u", a, b, c) >=
-        (int)address_capacity) return -1;
-    *port = (unsigned short)port_value;
+    ip.s_addr = address_network;
+    if (!inet_ntop(AF_INET, &ip, address, (socklen_t)address_capacity)) return -1;
     return 0;
+}
+
+int cb_relay_peer_for_address(const CbRelayClient *client, uint32_t address_network,
+                              unsigned short port_host, uint8_t session_id[16])
+{
+    size_t i;
+    if (!client || !session_id) return -1;
+    for (i = 0; i < CB_RELAY_MAX_PEERS; ++i) {
+        const CbRelayPeer *peer = &client->peers[i];
+        if (peer->valid && peer->address_network == address_network &&
+            peer->port_host == port_host) {
+            memcpy(session_id, peer->session_id, 16u);
+            return 0;
+        }
+    }
+    return -1;
 }
 
 void cb_relay_leave(CbRelayClient *client)
