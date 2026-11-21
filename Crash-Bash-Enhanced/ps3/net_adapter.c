@@ -20,6 +20,7 @@
 #include <string.h>
 #include <sys/select.h>
 #include <sys/socket.h>
+#include <sys/memory.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <wchar.h>
@@ -54,6 +55,49 @@ static volatile int have_previous_step;
 static uint64_t last_frame_step_ns;
 static int finish_code;
 static NetOptions ps3_net_options;
+
+#define CB_PS1_NETEMU_RAM_BASE 0x00770780u
+#define CB_PS1_NETEMU_RAM_SIZE 0x00200000u
+static int ps1_ram_probe_done;
+static int ps1_ram_probe_ok;
+
+static int ps1_ram_is_readable(void)
+{
+    sys_page_attr_t first_page;
+    sys_page_attr_t last_page;
+    sys_addr_t first = (sys_addr_t)CB_PS1_NETEMU_RAM_BASE;
+    sys_addr_t last = (sys_addr_t)(CB_PS1_NETEMU_RAM_BASE + CB_PS1_NETEMU_RAM_SIZE - 1u);
+
+    if (sys_memory_get_page_attribute(first, &first_page) != 0 ||
+        sys_memory_get_page_attribute(last, &last_page) != 0) {
+        return 0;
+    }
+    if ((first_page.access_right & SYS_MEMORY_ACCESS_RIGHT_PPU_THR) == 0 ||
+        (last_page.access_right & SYS_MEMORY_ACCESS_RIGHT_PPU_THR) == 0) {
+        return 0;
+    }
+    return 1;
+}
+
+static uint32_t ps1_ram_fingerprint(void)
+{
+    const volatile uint8_t *ram;
+    uint32_t hash = 2166136261u;
+    uint32_t i;
+
+    if (!ps1_ram_probe_done) {
+        ps1_ram_probe_ok = ps1_ram_is_readable();
+        ps1_ram_probe_done = 1;
+    }
+    if (!ps1_ram_probe_ok) return 0;
+
+    ram = (const volatile uint8_t *)(uintptr_t)CB_PS1_NETEMU_RAM_BASE;
+    for (i = 0; i < CB_PS1_NETEMU_RAM_SIZE; ++i) {
+        hash ^= ram[i];
+        hash *= 16777619u;
+    }
+    return hash;
+}
 
 static uint16_t read_be16(const uint8_t *p)
 {
@@ -666,7 +710,7 @@ void cb_net_frame(void)
     last_frame_step_ns = now;
 
     if (have_previous_step) {
-        net_step_done(0); /* No PS1 RAM fingerprint hook is available yet. */
+        net_step_done(ps1_ram_fingerprint());
     }
 
     net_vblank();
