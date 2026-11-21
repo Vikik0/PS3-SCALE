@@ -433,6 +433,15 @@ assert "refresh_companion_tool_status" in src
 assert "shutdown_audio_backend();" in main
 assert "PS3SCALE_MUSIC_PATH" in src
 
+# The PS3MAPI probe must consume the JSON body, not just the HTTP headers.
+webman_control_path = source_path.with_name("webman_control.c")
+webman_control_src = webman_control_path.read_text(encoding="utf-8")
+assert "size_t response_size, int read_response_body" in webman_control_src
+assert "if (!read_response_body)" in webman_control_src
+assert 'strstr(body, "\\"response\\"")' in webman_control_src
+assert 'response, sizeof(response), 1)' in webman_control_src
+assert 'response, sizeof(response), 0)' in webman_control_src
+
 # Online graphics database: HTTPS sync, exact version matching, and a dedicated UI.
 assert "ONLINE GAME DATABASE" in src
 assert "SCREEN_ONLINE_DB" in src
