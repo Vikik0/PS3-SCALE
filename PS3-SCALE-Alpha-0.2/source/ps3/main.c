@@ -2881,7 +2881,9 @@ static void start_selected_game(void)
     int script_state = 0;
     int rc;
     int is_ps2_iso = game && game->kind == PS3SCALE_GAME_PS2_ISO;
+    int skip_auto_apply = g_skip_auto_apply_once;
 
+    g_skip_auto_apply_once = 0;
     if (!game || (!game_is_ps3(game) && !is_ps2_iso)) {
         set_details_message("PS2 CLASSICS MUST BE STARTED WITH THEIR COMPATIBLE LAUNCHER.");
         return;
@@ -2906,11 +2908,15 @@ static void start_selected_game(void)
         profile = profile_for_game(game);
         script_state = profile_script_state_for_game(game, profile);
         if (script_state == -2) {
-            set_details_message("STALE PROFILE SCRIPT. REMOVE IT BEFORE STARTING.");
-            return;
+            if (profile && ps3scale_profile_script_remove(game->title_id) == 0)
+                script_state = 0;
+            else {
+                set_details_message("STALE PROFILE SCRIPT COULD NOT BE REMOVED.");
+                return;
+            }
         }
 
-        /* A one-launch patch must still target the exact selected game revision. */
+        /* A previously armed one-launch patch must still match this exact revision. */
         if (script_state == 1) {
             if (game->kind == PS3SCALE_GAME_PS3_HDD) {
                 if (!find_installed_game(game)) {
@@ -2919,6 +2925,44 @@ static void start_selected_game(void)
                 }
             } else if (!find_mounted_game(game, &mounted)) {
                 set_details_message("MOUNT THE EXACT GAME VERSION BEFORE STARTING PROFILE.");
+                return;
+            }
+        } else if (profile && g_auto_apply_profiles && !skip_auto_apply) {
+            if (strcmp(profile->trust, "B_COMMUNITY") != 0 ||
+                profile->patch_count != 1) {
+                set_details_message("PROFILE REQUIRES MANUAL REVIEW. STARTING GAME UNMODIFIED.");
+            } else {
+                if (game->kind == PS3SCALE_GAME_PS3_HDD) {
+                    if (!find_installed_game(game)) {
+                        set_details_message("GAME UPDATE CHANGED. RESCAN BEFORE APPLYING PROFILE.");
+                        return;
+                    }
+                } else if (!find_mounted_game(game, &mounted)) {
+                    set_details_message("MOUNT THE EXACT GAME VERSION BEFORE APPLYING PROFILE.");
+                    return;
+                }
+
+                g_profile_arm_target = *profile;
+                g_profile_arm_result = -1;
+                g_profile_arm_done = 0;
+                g_profile_arm_running = 1;
+                g_network_task_running = 1;
+                g_profile_confirm_pending = 0;
+                g_launch_after_profile_arm = 1;
+                set_details_message("EXACT PROFILE FOUND. PREPARING PATCH THEN STARTING GAME.");
+
+                rc = sysThreadCreate(&g_profile_arm_thread, profile_arm_worker, NULL,
+                                     1500, 0x8000, THREAD_JOINABLE,
+                                     "PS3 SCALE Auto Profile Arm");
+                if (rc == 0) {
+                    g_profile_arm_thread_started = 1;
+                    return;
+                }
+                g_profile_arm_running = 0;
+                g_profile_arm_done = 0;
+                g_network_task_running = 0;
+                g_launch_after_profile_arm = 0;
+                set_details_message("COULD NOT START PROFILE WORKER. GAME NOT STARTED.");
                 return;
             }
         }
@@ -2935,6 +2979,10 @@ static void start_selected_game(void)
         set_details_message("MOUNTING PS2 ISO VIA WEBMAN. WAIT FOR THE RESPONSE.");
     else if (script_state == 1)
         set_details_message("STARTING GAME WITH ONE-LAUNCH PROFILE.");
+    else if (profile && skip_auto_apply)
+        set_details_message("PROFILE NOT APPLIED. STARTING GAME UNMODIFIED.");
+    else if (profile && !g_auto_apply_profiles)
+        set_details_message("AUTO APPLY OFF. STARTING GAME UNMODIFIED.");
     else if (profile)
         set_details_message("PROFILE NOT ARMED. STARTING GAME UNMODIFIED.");
     else
