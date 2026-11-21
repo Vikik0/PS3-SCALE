@@ -110,7 +110,8 @@ function roomCard() {
         <button class="button button-secondary" data-action="leave">LEAVE ROOM</button>
         <button class="button button-primary" data-action="ready" ${room.status !== "waiting" ? "disabled" : ""}>${me?.ready ? "CANCEL READY" : "I'M READY"}</button>
         <a class="button button-secondary" href="/play.html?room=${encodeURIComponent(room.room_code)}" target="_blank" rel="noopener">OPEN BROWSER PLAYER ↗</a>
-        ${isHost ? `<button class="button button-start" data-action="start" ${!allReady || room.status !== "waiting" ? "disabled" : ""}>START MATCH <span>→</span></button>` : ""}
+        ${isHost && me?.platform === "ps3" ? `<button class="button button-start" data-action="start" ${!allReady || room.status !== "waiting" ? "disabled" : ""}>START MATCH <span>→</span></button>` : ""}
+        ${isHost && me?.platform !== "ps3" ? `<p class="room-footnote">Browser-created rooms cannot host this match. Create the room from the PS3 in-game menu.</p>` : ""}
       </div>
       <p class="room-footnote">${state.relayStatus === "connected" ? (state.relayPackets > 0 ? "ROOM RELAY CONNECTED · " + state.relayPackets + " GAME PACKETS RECEIVED" : "ROOM RELAY CONNECTED · WAITING FOR GAME INPUTS") : state.relayStatus === "connecting" ? "CONNECTING TO ROOM RELAY..." : state.relayStatus === "error" ? "ROOM RELAY CONNECTION FAILED" : "CONNECT TO ROOM RELAY TO JOIN THE PARTY."}</p>
     </div>`;
@@ -118,7 +119,7 @@ function roomCard() {
 
 function publicRoomsCard() {
   const connected = state.health === "online";
-  const rooms = state.publicRooms || [];
+  const rooms = (state.publicRooms || []).filter(room => room.host_platform === "ps3");
   const items = rooms.map(room => `
     <article class="public-room-item">
       <div class="public-room-main">
