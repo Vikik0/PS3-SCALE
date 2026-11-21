@@ -210,7 +210,14 @@ export class CrashBashLobby {
           online_mode: "community matchmaking prototype",
           psn_required: false,
           local_player_capacity: 4,
-          network_gameplay: "not yet implemented"
+          ps3_emulator_target: "PS1 emulator process; exact firmware/process revision pending hardware verification",
+          supported_disc_serials: [
+            { serial: "SCUS-94570", region: "NTSC-U" },
+            { serial: "SCES-02834", region: "PAL" },
+            { serial: "SCPS-10140", region: "NTSC-J" },
+            { serial: "SCPS-91319", region: "NTSC-J PSone Books" }
+          ],
+          network_gameplay: "direct UDP lockstep prototype; end-to-end hardware test pending"
         });
       }
 
