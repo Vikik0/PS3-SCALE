@@ -14,12 +14,12 @@ from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-FUNCTION_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\\s*\\((.*)\\)\\s*$")
-PLAYER_RE = re.compile(r"\\blevel\\.player\\b")
-PIGGYBACK_RE = re.compile(r"\\blevel\\.playerpiggyback\\b")
-SPLIT_RE = re.compile(r"\\b(?:issplitscreen|issplitscreenplayer|issplitscreenplayerprimary)\\s*\\(", re.I)
-COOP_RE = re.compile(r"\\bcoop\\b", re.I)
-METHOD_RE = re.compile(r"\\blevel\\.player\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(")
+FUNCTION_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*\((.*)\)\s*$")
+PLAYER_RE = re.compile(r"\blevel\.player\b")
+PIGGYBACK_RE = re.compile(r"\blevel\.playerpiggyback\b")
+SPLIT_RE = re.compile(r"\b(?:issplitscreen|issplitscreenplayer|issplitscreenplayerprimary)\s*\(", re.I)
+COOP_RE = re.compile(r"\bcoop\b", re.I)
+METHOD_RE = re.compile(r"\blevel\.player\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(")
 
 GROUPS = {
     "input": {"buttonpressed", "attackbuttonpressed", "adsbuttonpressed", "usebuttonpressed", "meleebuttonpressed", "jumpbuttonpressed", "reloadbuttonpressed"},
@@ -42,7 +42,7 @@ def strip_comments_and_strings(line: str) -> str:
             out[i] = " "
             if escaped:
                 escaped = False
-            elif ch == "\\\\":
+            elif ch == "\\":
                 escaped = True
             elif ch == quote:
                 quote = None
@@ -127,7 +127,7 @@ def audit_file(path: Path, root: Path):
     for name, start, end in function_ranges(lines):
         body_lines = lines[start - 1:end]
         clean_lines = [strip_comments_and_strings(line) for line in body_lines]
-        body = "\\n".join(clean_lines)
+        body = "\n".join(clean_lines)
         player_count = len(PLAYER_RE.findall(body))
         piggy_count = len(PIGGYBACK_RE.findall(body))
         split_count = len(SPLIT_RE.findall(body))
@@ -152,7 +152,7 @@ def audit_file(path: Path, root: Path):
                 "categories": ";".join(categories(set(line_methods)) if lp else []),
             })
             covered.add(line_no)
-    all_clean = "\\n".join(strip_comments_and_strings(line) for line in lines)
+    all_clean = "\n".join(strip_comments_and_strings(line) for line in lines)
     summary = {
         "file": rel, "line_count": len(lines), "function_count": len(function_ranges(lines)),
         "level_player_refs": len(PLAYER_RE.findall(all_clean)),
@@ -237,7 +237,7 @@ def main(argv=None):
         return 1
     out = args.output_dir
     out.mkdir(parents=True, exist_ok=True)
-    (out / "campaign_player_dependency_audit.json").write_text(json.dumps(report, indent=2) + "\\n", encoding="utf-8")
+    (out / "campaign_player_dependency_audit.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     write_csv(out / "campaign_file_summary.csv", report["files"])
     write_csv(out / "campaign_function_hotspots.csv", report["functions"])
     write_csv(out / "campaign_player_reference_lines.csv", report["line_hits"])
