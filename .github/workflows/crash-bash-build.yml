@@ -52,6 +52,12 @@ jobs:
       image: ghcr.io/02900/ps3-toolchain-tiny3d:latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install NVIDIA Cg compiler for the PS3 RSX shaders
+        run: |
+          set -eu
+          apt-get update
+          apt-get install -y nvidia-cg-toolkit
+          command -v cgc
       - name: Verify PS3 emulator toolchain
         run: |
           set -eu
@@ -60,7 +66,7 @@ jobs:
           command -v spu-gcc
           command -v spu-strip
           command -v cgc
-          command -v cgcomp
+          test -x "$PS3DEV/bin/cgcomp"
           command -v sprxlinker
           command -v make_self_npdrm
           command -v pkg
