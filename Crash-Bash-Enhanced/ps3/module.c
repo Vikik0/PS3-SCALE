@@ -13,10 +13,18 @@
 
 #define SYS_PRX_RESIDENT 0
 
+extern void __libc_init_array(void);
+extern void __libc_fini_array(void);
+static int runtime_initialized;
+
 int module_start(size_t args, void *argp)
 {
     (void)args;
     (void)argp;
+    if (!runtime_initialized) {
+        __libc_init_array();
+        runtime_initialized = 1;
+    }
     if (cb_input_install() != 0) return -1;
     (void)cb_net_init();
     return SYS_PRX_RESIDENT;
@@ -28,5 +36,9 @@ int module_stop(size_t args, void *argp)
     (void)argp;
     cb_net_leave();
     cb_input_remove();
+    if (runtime_initialized) {
+        __libc_fini_array();
+        runtime_initialized = 0;
+    }
     return SYS_PRX_RESIDENT;
 }
