@@ -170,6 +170,34 @@ export class CrashBashLobby {
     }
   }
 
+  closePlayerSockets(sessionId, reason = "PLAYER_LEFT") {
+    if (typeof this.ctx.getWebSockets !== "function") return;
+    for (const socket of this.ctx.getWebSockets()) {
+      try {
+        const attachment = socket.deserializeAttachment();
+        if (attachment?.sessionId === sessionId) socket.close(1008, reason);
+      } catch {
+        // A socket may already be closing; it must not block room cleanup.
+      }
+    }
+  }
+
+  broadcastRoomUpdate(room) {
+    if (!room || typeof this.ctx.getWebSockets !== "function") return;
+    const message = JSON.stringify({ type: "room_update", room: roomView(room) });
+    for (const socket of this.ctx.getWebSockets()) {
+      try {
+        const attachment = socket.deserializeAttachment();
+        if (attachment?.roomCode !== room.code) continue;
+        attachment.matchStarted = room.status === "running";
+        socket.serializeAttachment(attachment);
+        socket.send(message);
+      } catch {
+        // Ignore peers that have already disconnected.
+      }
+    }
+  }
+
   webSocketMessage(socket, message) {
     let attachment;
     try {
@@ -182,6 +210,20 @@ export class CrashBashLobby {
     if (!attachment || !/^[A-Z0-9]{6}$/.test(attachment.roomCode || "") ||
         !/^[0-9a-f]{32}$/i.test(attachment.sessionId || "")) {
       socket.close(1008, "INVALID_SESSION");
+      return;
+    }
+
+    if (typeof message === "string") {
+      if (message === "PING") {
+        socket.send("PONG");
+        return;
+      }
+      socket.close(1003, "BINARY_PACKETS_REQUIRED");
+      return;
+    }
+
+    if (!attachment.matchStarted) {
+      socket.close(1008, "MATCH_NOT_STARTED");
       return;
     }
 
@@ -231,15 +273,17 @@ export class CrashBashLobby {
   removePlayer(state, session) {
     const current = this.roomForSession(state, session);
     if (!current) {
+      this.closePlayerSockets(session.sessionId, "PLAYER_LEFT");
       session.roomCode = null;
       return;
     }
     const { room, player } = current;
-    this.closeRoomSockets(room.code, "PLAYER_LEFT");
+    this.closePlayerSockets(session.sessionId, "PLAYER_LEFT");
     room.players = room.players.filter(p => p.sessionId !== session.sessionId);
     session.roomCode = null;
 
     if (room.players.length === 0) {
+      this.closeRoomSockets(room.code, "ROOM_EMPTY");
       delete state.rooms[room.code];
       return;
     }
@@ -255,6 +299,7 @@ export class CrashBashLobby {
       remaining.ready = false;
       remaining.candidate = null;
     }
+    this.broadcastRoomUpdate(room);
   }
 
   async prune(state) {
@@ -374,20 +419,18 @@ export class CrashBashLobby {
             !room.players.some(player => player.sessionId === session.sessionId)) {
           throw fail(403, "NOT_IN_ROOM", "Join this room before opening its game transport.");
         }
-        if (room.status !== "running") {
-          throw fail(409, "MATCH_NOT_STARTED", "The host must start the match before game transport opens.");
-        }
-
         const pair = new WebSocketPair();
         const client = pair[0];
         const server = pair[1];
         server.serializeAttachment({
           roomCode: code,
           sessionId: session.sessionId,
+          matchStarted: room.status === "running",
           rateWindowStartedAt: 0,
           rateCount: 0
         });
         this.ctx.acceptWebSocket(server);
+        server.send(JSON.stringify({ type: "room_update", room: roomView(room) }));
         return new Response(null, {
           status: 101,
           webSocket: client,
@@ -431,6 +474,7 @@ export class CrashBashLobby {
         state.rooms[code] = room;
         session.roomCode = code;
         await this.save(state);
+        this.broadcastRoomUpdate(room);
         return response(201, roomView(room));
       }
 
@@ -457,6 +501,7 @@ export class CrashBashLobby {
         });
         session.roomCode = code;
         await this.save(state);
+        this.broadcastRoomUpdate(room);
         return response(200, roomView(room));
       }
 
@@ -477,6 +522,7 @@ export class CrashBashLobby {
         if (!player) throw fail(403, "NOT_IN_ROOM", "You are not a member of this room.");
         player.ready = body.ready;
         await this.save(state);
+        this.broadcastRoomUpdate(room);
         return response(200, roomView(room));
       }
 
@@ -488,6 +534,7 @@ export class CrashBashLobby {
         room.status = "running";
         room.startedAt = Date.now();
         await this.save(state);
+        this.broadcastRoomUpdate(room);
         return response(200, roomView(room));
       }
 
