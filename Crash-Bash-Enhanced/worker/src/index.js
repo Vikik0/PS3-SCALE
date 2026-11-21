@@ -498,7 +498,7 @@ export class CrashBashLobby {
         const occupied = new Set(room.players.map(player => player.slot));
         let slot = 1;
         while (occupied.has(slot)) slot++;
-        room.players.push({ sessionId, name, slot, ready: false, candidate: null });
+        room.players.push({ sessionId, name, slot, ready: true, candidate: null });
 
         const ticket = randomHex(32);
         const ticketHash = await sha256(ticket);
