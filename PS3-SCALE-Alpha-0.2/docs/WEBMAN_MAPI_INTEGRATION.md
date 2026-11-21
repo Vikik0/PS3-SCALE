@@ -2,38 +2,43 @@
 
 ## Purpose
 
-PS3 SCALE uses webMAN MOD as an optional bridge for title-specific, in-memory PS3 enhancements. This is not a universal upscaler. The library scanner and the rest of the app continue to work without webMAN.
+PS3 SCALE uses webMAN MOD as an optional bridge for title-specific, in-memory PS3 enhancements and normal game launching. This is not a universal upscaler. Library scanning and catalogue browsing continue to work without webMAN.
 
-## Implemented stages
-
-### Stage 1 — read-only connection check
+## Stage 1 — read-only connection check
 
 - Detect whether the local webMAN MOD HTTP endpoint responds.
 - Check the PS3MAPI server-version endpoint.
 - Do not read console identifiers (IDPS/PSID), alter syscalls, change clocks or write memory during connection detection.
 
-### Stage 2 — exact profile discovery
+## Stage 2 — exact profile discovery
 
 - Load the bundled or HTTPS-synchronized catalogue.
 - Match exact Title ID and APP_VER.
 - Display the community trust level, reported effect, source and patch count.
-- For installed PS3 HDD/NPDRM titles, re-scan /dev_hdd0 and require the same installed path, Title ID and APP_VER from PARAM.SFO. For disc/folder titles, require the exact mounted /dev_bdvd Title ID and APP_VER. Explicit controller confirmation is still required.
-- Multi-write profiles remain disabled for automatic application in this build. Profiles tagged B_COMMUNITY_MANUAL are also refused by the installer when the source requires an in-game timing/reapply step.
-- Profile arming (webMAN/PS3MAPI checks) and Start Game both run in worker threads with bounded webMAN HTTP connect/read timeouts, so delayed local services do not freeze controller input. HDD titles use /play.ps3?<TITLE_ID>; PS3 folder/ISO entries use /play.ps3<URL-encoded-path>. A missing enhancement profile does not block a normal unmodified game launch.
+- For installed PS3 HDD/NPDRM titles, re-scan `/dev_hdd0` and require the same installed path, Title ID and APP_VER from PARAM.SFO. For disc/folder titles, require the exact mounted `/dev_bdvd` Title ID and APP_VER. Explicit controller confirmation is still required.
+- Multi-write profiles remain disabled for automatic application in this build. Profiles tagged `B_COMMUNITY_MANUAL` are also refused by the installer when the source requires an in-game timing/reapply step.
+- Profile arming (webMAN/PS3MAPI checks) and Start Game run in worker threads with bounded webMAN HTTP connect/read timeouts, so delayed local services do not freeze controller input.
+- HDD titles use `/play.ps3?<TITLE_ID>`; PS3 folder/ISO entries use `/play.ps3<URL-encoded-path>`. A missing enhancement profile does not block a normal unmodified game launch.
 
-### Stage 3 — one-launch guarded memory profile
+## Stage 3 — one-launch guarded memory profile
 
-- PS3 SCALE creates /dev_hdd0/tmp/wm_ingame/<TITLE_ID>.bat only after confirmation.
+- PS3 SCALE creates `/dev_hdd0/tmp/wm_ingame/<TITLE_ID>.bat` only after confirmation.
 - The script is tagged with a PS3 SCALE V2 header containing Title ID, APP_VER and exact patch data. Before allowing Start Game, PS3 SCALE compares the complete script file with the deterministic expected content; edited/appended commands are stale even if the header remains unchanged. Legacy V1 scripts are detected as stale and can be removed/replaced.
 - On game start, webMAN checks the Title ID and in-game state.
-- /patch.ps3 is called with addr=<address>, stop=<address+0x20>, step=64, find=<expected bytes>, rep=1 and val=<replacement bytes>. With the current 1-16-byte signature limit, this leaves only the requested address as a candidate despite webMAN's 16-byte upper-bound rounding, and requires the original bytes to match.
+- `/patch.ps3` is called with `addr=<address>`, `stop=<address+0x20>`, `step=64`, `find=<expected bytes>`, `rep=1` and `val=<replacement bytes>`. With the current 1–16-byte signature limit, this leaves only the requested address as a candidate despite webMAN's 16-byte upper-bound rounding, and requires the original bytes to match.
 - The script deletes itself after the launch attempt. It does not persist as a permanent per-title auto-run patch.
+- If PS3MAPI is unavailable when an armed profile is about to launch, PS3 SCALE removes only its own one-launch script, marks the profile as skipped and still asks webMAN to start the game unmodified. A PS3MAPI failure therefore does not block normal game launch.
+- If webMAN's local HTTP service itself is unreachable or rejects the game route, PS3 SCALE reports the specific network/HTTP error and remains responsive.
 - No beep or success popup is shown. The current batch-script route cannot verify the post-write memory value back to PS3 SCALE, so no success message is fabricated.
 - The memory change belongs to the running game process and is cleared when that game process exits. Original game files remain unchanged.
 
+## Local HTTP transport
+
+Before opening a socket, PS3 SCALE loads the PS3 NET and NETCTL modules, calls `netInitialize()` and `netCtlInit()`, and releases them after the bounded request. The request targets webMAN MOD on `127.0.0.1:80`. Failure states distinguish network initialization, socket creation, connection, send, missing response and rejected HTTP status.
+
 ## Known limitation
 
-The webMAN batch command language exposes Title ID and in-game conditions, but not a direct game APP_VER condition. PS3 SCALE checks APP_VER before arming and checks the mounted APP_VER again when Start Game is used. The script also checks the exact expected bytes at the exact address and is one-launch only. Do not update the game between arming and launching. A CFW PRX or another runtime verifier would be required for a stronger in-game version check and verified success notification.
+The webMAN batch command language exposes Title ID and in-game conditions, but not a direct game APP_VER condition. PS3 SCALE checks APP_VER before arming and checks the mounted APP_VER again when Start Game is used. Do not update the game between arming and launching. A CFW PRX or another runtime verifier would be required for a stronger in-game version check and verified success notification.
 
 ## Security rules
 
@@ -41,17 +46,19 @@ The webMAN batch command language exposes Title ID and in-game conditions, but n
 - webMAN MOD remains optional for scanning and catalogue browsing.
 - Never use PS3 SCALE to fetch, display, store or modify IDPS/PSID.
 - Never disable syscalls, spoof console identity, change fan settings, or change CPU/RSX clocks as part of a graphics profile.
-- Community reports are not hardware verification. The starter catalogue is Tier B only; B_COMMUNITY_MANUAL entries remain manual-only and cannot be armed by the one-launch installer.
+- Community reports are not hardware verification. The starter catalogue is Tier B only; `B_COMMUNITY_MANUAL` entries remain manual-only and cannot be armed by the one-launch installer.
 - Do not apply a profile with a Title ID, APP_VER, address or expected-byte mismatch.
 
 ## Test requirements
 
-1. Confirm the user's webMAN MOD version and that PS3MAPI is enabled.
-2. Test read-only connection on the target PS3 Slim / CFW 4.92.
+1. Confirm the user's webMAN MOD version and whether PS3MAPI is enabled.
+2. Test the read-only connection on the target PS3 Slim / CFW.
 3. Verify the current process/title identity while at XMB and while a game is running.
-4. Test one harmless, reversible, single-write profile with a known expected byte at the exact address.
-5. Confirm that closing the game clears the process-memory change.
-6. Record the before/after behavior and stability on the physical console.
+4. Test a normal game launch with no profile armed.
+5. Test a game launch with a profile armed while PS3MAPI is unavailable; it must launch unmodified and remove the PS3 SCALE-owned script.
+6. Test one harmless, reversible, single-write profile with a known expected byte at the exact address.
+7. Confirm that closing the game clears the process-memory change.
+8. Record before/after behavior and stability on the physical console.
 
 ## References
 
