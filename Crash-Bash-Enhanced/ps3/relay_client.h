@@ -39,6 +39,10 @@ typedef struct CbRelayClient {
 int cb_relay_join(CbRelayClient *client, const char *host, unsigned short port,
                   const char *room_code, const char *display_name, int timeout_ms);
 
+/* Creates a private PS3-hosted room and connects its one-time relay ticket. */
+int cb_relay_host(CbRelayClient *client, const char *host, unsigned short port,
+                  const char *display_name, int timeout_ms);
+
 /* Broadcasts one CBN1 datagram to every other room member. */
 int cb_relay_send_packet(CbRelayClient *client, const void *packet, size_t length);
 
