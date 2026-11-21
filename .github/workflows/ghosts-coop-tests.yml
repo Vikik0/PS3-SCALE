@@ -32,6 +32,30 @@ jobs:
         working-directory: experiments/ghosts-campaign-coop
         run: python -m unittest discover -s tests -v
 
+  gsc-script-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned GSC Tool
+        uses: xensik/setup-gsc-tool@0bf1f42d7a1fe13dc8af7cdf6b89757e250a255d
+        with:
+          version: "1.6.2"
+          path: ".gsc-tool"
+      - name: Compile and round-trip the IW6 PS3 Campaign registry shim
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          gsc-tool --mode comp --game iw6 --system ps3 client/ps3/gsc/ghc_campaign_player_registry.gsc
+          test -s compiled/iw6/ghc_campaign_player_registry.gscbin
+          gsc-tool --mode decomp --game iw6 --system ps3 compiled/iw6/ghc_campaign_player_registry.gscbin
+          test -s decompiled/iw6/ghc_campaign_player_registry.gsc
+          grep -q 'issplitscreenplayerprimary' decompiled/iw6/ghc_campaign_player_registry.gsc
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ghosts-campaign-gsc-registry
+          path: |
+            experiments/ghosts-campaign-coop/compiled/iw6/ghc_campaign_player_registry.gscbin
+            experiments/ghosts-campaign-coop/client/ps3/gsc/ghc_campaign_player_registry.manifest.json
+
   protocol-header:
     runs-on: ubuntu-latest
     steps:
