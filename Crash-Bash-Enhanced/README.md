@@ -51,6 +51,10 @@ npm run dev
 
 The Worker is designed for Cloudflare Workers Free with SQLite-backed Durable Objects. Free-plan limits apply; the service is designed for small lobby/signalling messages, not gameplay packet relaying. No home PC or PSN account is required for matchmaking.
 
+## Automated checks
+
+GitHub Actions builds the Vite lobby and runs the matchmaking Worker integration suite plus a Cloudflare dry-run bundle check on changes under this project directory.
+
 ## Release gates
 
 1. Worker and web CI pass.
