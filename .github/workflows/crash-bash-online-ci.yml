@@ -1,0 +1,54 @@
+name: Crash Bash Enhanced CI
+
+on:
+  push:
+    branches:
+      - feature/crash-bash-online-enhanced-0.1
+    paths:
+      - "Crash-Bash-Enhanced/**"
+      - ".github/workflows/crash-bash-online-ci.yml"
+  pull_request:
+    paths:
+      - "Crash-Bash-Enhanced/**"
+      - ".github/workflows/crash-bash-online-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Crash-Bash-Enhanced/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: Crash-Bash-Enhanced/web/package.json
+      - name: Install web dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build production web lobby
+        run: npm run build
+
+  lobby-worker:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Crash-Bash-Enhanced/worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: Crash-Bash-Enhanced/worker/package.json
+      - name: Install Worker dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run matchmaking integration tests
+        run: npm test
+      - name: Validate Cloudflare Worker bundle without deployment
+        run: npx wrangler deploy --dry-run --outdir "$RUNNER_TEMP/crash-bash-worker-dist"
