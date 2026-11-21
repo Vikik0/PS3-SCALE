@@ -191,9 +191,9 @@ const otherRoom = new FakeSocket({
   rateCount: 0
 });
 sockets.push(relayA, relayB, relayC, otherRoom);
-lobby.webSocketMessage(relayA, "PING");
+await lobby.webSocketMessage(relayA, "PING");
 assert.equal(relayA.sent[0], "PONG");
-lobby.webSocketMessage(relayA, new Uint8Array([0x10, 0x20, 0x30]).buffer);
+await lobby.webSocketMessage(relayA, new Uint8Array([0x10, 0x20, 0x30]).buffer);
 assert.equal(relayB.sent.length, 1);
 assert.equal(relayC.sent.length, 1);
 assert.equal(otherRoom.sent.length, 0);
@@ -207,7 +207,7 @@ const targetedBatch = makeUplinkBatch([{
   recipientId: players[1].session_id,
   payload: [0xaa, 0xbb]
 }]);
-lobby.webSocketMessage(relayA, targetedBatch);
+await lobby.webSocketMessage(relayA, targetedBatch);
 assert.equal(relayB.sent.length, 2);
 assert.equal(relayC.sent.length, 1);
 const targetedEnvelope = new Uint8Array(relayB.sent[1]);
@@ -217,7 +217,7 @@ const multiTargetBatch = makeUplinkBatch([
   { recipientId: players[1].session_id, payload: [0x31] },
   { recipientId: players[2].session_id, payload: [0x32, 0x33] }
 ]);
-lobby.webSocketMessage(relayA, multiTargetBatch);
+await lobby.webSocketMessage(relayA, multiTargetBatch);
 assert.equal(relayB.sent.length, 3);
 assert.equal(relayC.sent.length, 2);
 assert.deepEqual(Array.from(new Uint8Array(relayB.sent[2]).slice(22)), [0x31]);
@@ -231,7 +231,7 @@ const textSocket = new FakeSocket({
   rateWindowStartedAt: 0,
   rateCount: 0
 });
-lobby.webSocketMessage(textSocket, "not a binary game packet");
+await lobby.webSocketMessage(textSocket, "not a binary game packet");
 assert.equal(textSocket.closed.code, 1003);
 
 const largeSocket = new FakeSocket({
@@ -241,7 +241,7 @@ const largeSocket = new FakeSocket({
   rateWindowStartedAt: 0,
   rateCount: 0
 });
-lobby.webSocketMessage(largeSocket, new Uint8Array(1201).buffer);
+await lobby.webSocketMessage(largeSocket, new Uint8Array(1201).buffer);
 assert.equal(largeSocket.closed.code, 1009);
 
 const rateSocket = new FakeSocket({
@@ -252,7 +252,7 @@ const rateSocket = new FakeSocket({
   rateCount: 0
 });
 for (let i = 0; i < 6; i++) {
-  lobby.webSocketMessage(rateSocket, new Uint8Array([i]).buffer);
+  await lobby.webSocketMessage(rateSocket, new Uint8Array([i]).buffer);
 }
 assert.equal(rateSocket.closed.code, 1008);
 assert.equal(rateSocket.closed.reason, "RATE_LIMITED");
@@ -265,7 +265,7 @@ const pingRateSocket = new FakeSocket({
   rateCount: 0
 });
 for (let i = 0; i < 6; i++) {
-  lobby.webSocketMessage(pingRateSocket, "PING");
+  await lobby.webSocketMessage(pingRateSocket, "PING");
 }
 assert.equal(pingRateSocket.closed.code, 1008);
 assert.equal(pingRateSocket.closed.reason, "RATE_LIMITED");
@@ -437,5 +437,56 @@ assert.equal(mismatch.status, 404);
 
 const unauthorized = await call("/v1/rooms/" + code, "GET");
 assert.equal(unauthorized.status, 401);
+
+// Isolated PS3 host-control test: create a console-owned room and start it over its authenticated socket.
+const startData = new Map();
+const startSockets = [];
+const startCtx = {
+  storage: {
+    async get(key) { return startData.get(key); },
+    async put(key, value) { startData.set(key, structuredClone(value)); }
+  },
+  getWebSockets() { return startSockets; }
+};
+const startLobby = new CrashBashLobby(startCtx, {});
+async function startCall(path, method = "GET", body) {
+  const response = await startLobby.fetch(new Request("https://crash-bash.test" + path, {
+    method,
+    headers: body === undefined ? {} : { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body)
+  }));
+  return { status: response.status, body: await response.json() };
+}
+const startHost = await startCall("/v1/rooms/host-guest", "POST", { display_name: "PS3 Host" });
+assert.equal(startHost.status, 201);
+const startGuest = await startCall(
+  "/v1/rooms/" + startHost.body.room_code + "/join-guest",
+  "POST",
+  { display_name: "PS3 Guest" }
+);
+assert.equal(startGuest.status, 201);
+const hostSocket = new FakeSocket({
+  roomCode: startHost.body.room_code,
+  sessionId: startHost.body.session_id,
+  matchStarted: false,
+  rateWindowStartedAt: 0,
+  rateCount: 0
+});
+const guestSocket = new FakeSocket({
+  roomCode: startHost.body.room_code,
+  sessionId: startGuest.body.session_id,
+  matchStarted: false,
+  rateWindowStartedAt: 0,
+  rateCount: 0
+});
+startSockets.push(hostSocket, guestSocket);
+await startLobby.webSocketMessage(guestSocket, "START");
+assert.equal(guestSocket.sent.at(-1), "ERROR:NOT_HOST");
+await startLobby.webSocketMessage(hostSocket, "START");
+const startedByConsole = await startLobby.load();
+assert.equal(startedByConsole.rooms[startHost.body.room_code].status, "running");
+assert.equal(hostSocket.attachment.matchStarted, true);
+assert.equal(guestSocket.attachment.matchStarted, true);
+assert.equal(hostSocket.sent.at(-1), "STARTED");
 
 console.log("Crash Bash Online lobby tests: PASS");
