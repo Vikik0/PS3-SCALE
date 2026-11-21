@@ -28,7 +28,7 @@ Do not spend Phase 1 effort deploying online services or implementing NAT traver
 - GSC Tool supports IW6 scripts on PS3 for compile/decompile work. This does not itself solve signed FastFile repackaging.
 - Public TU 1.16 spawn offsets are multiplayer-context leads only. They are not approved Campaign addresses.
 
-See docs/testing-strategy.md for the researched test pyramid and the rule for when a real PS3 is needed. See docs/local-coop-first.md for the implementation plan and research constraints. The exact free user-owned input checklist is in docs/user-owned-inputs.md. The first executable profile is now selected as BLUS31270 US disc + TU 1.16 + CEX 4.93 (not hardware-verified); see docs/compatibility-matrix.md. PS3 FastFile/GSC extraction findings and the new read-only tools are documented in docs/ps3-fastfile-research.md. The cross-project IW-engine prior-art audit is in docs/coop-anything-prior-art.md. Newer IW6 script-level split-screen, per-player connect lifecycle, client-ID assignment, HUD scaling and Extinction revive findings are in docs/iw6-native-splitscreen-reference.md. The read-only executable workflow is in docs/ps3-elf-analysis.md, with the comparison checklist in docs/local-player-capture-matrix.md.
+See docs/testing-strategy.md for the researched test pyramid and the rule for when a real PS3 is needed. The new docs/pc-first-test-loop.md explains the Windows host test runner and the read-only RPCS3 preflight workflow. See docs/local-coop-first.md for the implementation plan and research constraints. The exact free user-owned input checklist is in docs/user-owned-inputs.md. The first executable profile is now selected as BLUS31270 US disc + TU 1.16 + CEX 4.93 (not hardware-verified); see docs/compatibility-matrix.md. PS3 FastFile/GSC extraction findings and the new read-only tools are documented in docs/ps3-fastfile-research.md. The cross-project IW-engine prior-art audit is in docs/coop-anything-prior-art.md. Newer IW6 script-level split-screen, per-player connect lifecycle, client-ID assignment, HUD scaling and Extinction revive findings are in docs/iw6-native-splitscreen-reference.md. The read-only executable workflow is in docs/ps3-elf-analysis.md, with the comparison checklist in docs/local-player-capture-matrix.md.
 
 ## Current implementation status
 
@@ -44,6 +44,8 @@ See docs/testing-strategy.md for the researched test pyramid and the rule for wh
 - Diagnostic PRX polling/getter functions for raw and per-frame input, pending a verified Campaign frame adapter.
 - Reverse-engineering notes rule out treating `PlayerCMD_ClonePlayer` as a full second-player spawn path.
 - Read-only PS3 PARAM.SFO inspector: validates PSF metadata and reports Title ID/title/app-version plus SHA-256; it does not infer TU 1.16 from APP_VER.
+- Read-only RPCS3 preflight: fingerprints the local PARAM.SFO and EBOOT, checks the expected Title ID, locates the emulator/log, and extracts candidate PPU hashes without modifying or uploading game files.
+- Windows host-test runner: compiles and executes the portable C/Python suites and the Ghosts runtime simulator without a PS3.
 - Read-only PS3 PPU ELF inspector: validates ELF64 big-endian EM_PPC64, hashes the input, maps reported TU 1.16 function/data candidates including BSS, and extracts the PPU OPD/TOC when present.
 - Read-only Ghosts PS3 FastFile inspector: expands IW6 raw-deflate blocks and validated inline zlib assets, with SHA-256 reporting and bounded decompression.
 - Ghosts PS3 GSC/CSC asset exporter for already inflated zones, with short/long header recognition, compiled GSC detection, and safe output paths.
@@ -81,7 +83,7 @@ The first target is CEX 4.93 + TU 1.16. The project must select builds by exact 
 
 ## Verification
 
-CI validates the standalone codecs, controller-input decoder, local-player readiness gate, read-only ELF/OPD, Ghosts FastFile/GSC parser and GSC audit tests, host-only Ghosts runtime contract simulator, and PRX build including `sys_io` imports. The host simulator composes the portable modules against a deterministic fake engine boundary and currently runs 10,025 checks plus deliberate test-only fault mutants. This is MODELLED contract coverage, not proof that the real game runtime can spawn or render a second Campaign player. The researched test pyramid and real-device gates are in docs/testing-strategy.md; the Phase 1 success gate is defined in docs/local-coop-first.md.
+CI validates the standalone codecs, controller-input decoder, local-player readiness gate, read-only ELF/OPD, Ghosts FastFile/GSC parser and GSC audit tests, RPCS3 preflight tests, host-only Ghosts runtime contract simulator, and PRX build including `sys_io` imports. The host simulator composes the portable modules against a deterministic fake engine boundary and currently runs 10,025 checks plus deliberate test-only fault mutants. This is MODELLED contract coverage, not proof that the real game runtime can spawn or render a second Campaign player. The researched test pyramid and real-device gates are in docs/testing-strategy.md; the Phase 1 success gate is defined in docs/local-coop-first.md.
 
 ## Important
 
