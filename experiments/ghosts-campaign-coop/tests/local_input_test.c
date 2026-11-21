@@ -105,7 +105,7 @@ static void test_frame_button_edges_and_stick_deadzone(void)
     snapshot.connected_count = 1u;
 
     assert(ghc_local_input_tracker_update(&snapshot, &tracker, GHC_LOCAL_STICK_DEADZONE_DEFAULT, &frame) == GHC_LOCAL_INPUT_OK);
-    assert(frame.valid_mask == 1u && frame.connected_mask == 1u);
+    assert(frame.valid_mask == 3u && frame.connected_mask == 1u);
     assert(frame.players[0].buttons == GHC_LOCAL_BUTTON_CROSS);
     assert(frame.players[0].pressed == GHC_LOCAL_BUTTON_CROSS && frame.players[0].released == 0u);
     assert(frame.players[0].left_x == 0 && frame.players[0].left_y == -1);

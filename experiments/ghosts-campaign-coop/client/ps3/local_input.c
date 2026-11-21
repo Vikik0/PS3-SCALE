@@ -190,6 +190,7 @@ int ghc_local_input_tracker_update(
 
         if ((snapshot->read_error_mask & bit) != 0u) {
             *output = *previous;
+            if (output->connected) frame->connected_mask |= bit;
             continue;
         }
 
