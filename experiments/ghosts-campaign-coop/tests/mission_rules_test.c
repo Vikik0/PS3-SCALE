@@ -64,6 +64,16 @@ static void test_bleedout_fails_mission(void) {
     assert(mission.failure_reason == GHC_MISSION_FAIL_BLEEDOUT);
 }
 
+static void test_bleedout_fails_even_if_revive_is_in_progress(void) {
+    GhcMission mission = make_mission();
+
+    assert(ghc_mission_player_downed(&mission, 2u, 1000u) == GHC_RULE_PLAYER_DOWNED);
+    assert(ghc_mission_update_revive(&mission, 1u, 2u, 1u, 1u, 1u, 2000u) == GHC_RULE_NO_CHANGE);
+    assert(ghc_mission_tick(&mission, 30999u) == GHC_RULE_NO_CHANGE);
+    assert(ghc_mission_tick(&mission, 31000u) == GHC_RULE_MISSION_FAILED);
+    assert(mission.failure_reason == GHC_MISSION_FAIL_BLEEDOUT);
+}
+
 static void test_both_players_downed_fails_immediately(void) {
     GhcMission mission = make_mission();
 
@@ -120,6 +130,11 @@ static void test_snapshot_roundtrip(void) {
     assert(after.revive_progress_percent[1] == 40u);
     assert(after.bleedout_remaining_ms[1] == 27000u);
 
+    assert(ghc_mission_revision_is_newer(2u, 1u) == 1);
+    assert(ghc_mission_revision_is_newer(1u, 2u) == 0);
+    assert(ghc_mission_revision_is_newer(0u, 0xffffffffu) == 1);
+    assert(ghc_mission_revision_is_newer(7u, 7u) == 0);
+
     packet[0] = 99u;
     assert(ghc_mission_decode_snapshot(packet, packet_length, &after) != 0);
 }
@@ -147,6 +162,7 @@ int main(void) {
     test_single_down_and_successful_revive();
     test_revive_requires_range_and_line_of_sight();
     test_bleedout_fails_mission();
+    test_bleedout_fails_even_if_revive_is_in_progress();
     test_both_players_downed_fails_immediately();
     test_revive_is_cancelled_when_reviver_is_down();
     test_self_revive_is_not_allowed();
