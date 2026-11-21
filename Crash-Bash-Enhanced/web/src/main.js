@@ -73,7 +73,7 @@ function roomCard() {
         <div class="empty-emblem"><span>?</span></div>
         <p class="eyebrow">YOUR PARTY</p>
         <h3>No room yet</h3>
-        <p>Join a room created by the PS3 host. Enter the six-character code or choose an open public room.</p>
+        <p>Join a room created by the PS3 host with its six-character code. Public PS3 room discovery is not enabled yet.</p>
         <div class="empty-lines"><i></i><i></i><i></i><i></i></div>
       </div>`;
   }
