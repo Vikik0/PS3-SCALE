@@ -245,6 +245,7 @@ static int read_http_headers(CbWsClient *client, size_t *header_length,
 {
     for (;;) {
         size_t i;
+        size_t previous_end = client->rx_end;
         if (client->rx_end >= WS_HEADER_LIMIT) return -1;
 
         {
@@ -258,7 +259,8 @@ static int read_http_headers(CbWsClient *client, size_t *header_length,
         }
 
         if (client->rx_end < 4u) continue;
-        for (i = client->rx_end - 4u; i + 4u <= client->rx_end; ++i) {
+        i = previous_end > 3u ? previous_end - 3u : 0u;
+        for (; i + 4u <= client->rx_end; ++i) {
             if (client->rx_buffer[i] == '\r' &&
                 client->rx_buffer[i + 1u] == '\n' &&
                 client->rx_buffer[i + 2u] == '\r' &&
