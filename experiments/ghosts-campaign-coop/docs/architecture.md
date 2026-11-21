@@ -14,8 +14,9 @@
 2. **Lobby API (implemented prototype):** guest session creation, six-character room codes, join/leave, ready state, two-player cap and host start.
 3. **UDP relay (implemented prototype):** forwards opaque packets only between the two members of a running room. It does not simulate or validate game state.
 4. **Compatibility registry (implemented):** maps known title IDs and reports the first target profile (CEX 4.93 + TU 1.16). It intentionally does not report a profile as supported until hardware validation.
-5. **Game replication layer (not implemented):** movement, animation, weapon, damage, AI, checkpoint and mission-event replication.
-6. **PSN identity adapter (not implemented):** requires a legitimate supported platform identity mechanism. No fake PSN tokens or ban evasion are provided.
+5. **Campaign downed/revive rules (implemented as a standalone C state machine):** one player can be downed while the mission continues; the living partner can revive them; both downed or bleedout expiry fails the mission. A versioned 24-byte snapshot is ready to travel inside GHC2 payloads. The game-specific hooks are not implemented yet.
+6. **Game replication layer (not implemented):** movement, animation, weapon, damage, AI, checkpoint and mission-event replication.
+7. **PSN identity adapter (not implemented):** requires a legitimate supported platform identity mechanism. No fake PSN tokens or ban evasion are provided.
 
 ## Authority model to test
 
@@ -41,3 +42,19 @@ Server caps datagrams at 1200 bytes and rate-limits each session. The client pay
 - UDP relay is a transport experiment, not a complete netcode implementation.
 - PSN mode is explicitly unconfigured.
 - Title ID registry is metadata only; no EBOOT/SPRX is built.
+
+
+## Downed / revive flow
+
+The host is authoritative for the mission rules:
+
+1. Player health reaches the Campaign downed threshold; that player enters DOWNED.
+2. The other player remains active and may keep fighting.
+3. The living player holds the revive input while in range and with line of sight.
+4. Releasing the input or breaking range/line-of-sight cancels progress.
+5. A completed revive returns the downed player at the configured revive health.
+6. If both players are down, the host marks the mission failed immediately.
+7. If the bleedout timer expires before revival, the host marks the mission failed.
+8. The Campaign adapter must call the real checkpoint restart path once and then replicate the checkpoint reset.
+
+Initial tuning: 30-second bleedout, 5-second hold-to-revive, 40% health on revive. These are project defaults, not claimed exact Extinction timings. The downed crawl/sidearm behavior and all animation/HUD hooks remain dependent on Campaign integration.
