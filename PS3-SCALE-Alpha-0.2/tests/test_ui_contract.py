@@ -901,6 +901,9 @@ assert "g_details_cache_valid = 1;" in details_cache
 assert "ps2_config_target_exists(game, ps2_config)" not in details_ui
 assert "profile_script_state_for_game(game, profile)" not in details_ui
 assert "CIRCLE / SELECT / LEFT: BACK" in details_ui
+assert "g_ps2_config_download_running" in details_ui
+assert "PS2 CONFIG: %u%%" in details_ui
+assert "draw_rounded_rect(544.0f, 376.0f, 272.0f, 4.0f" in details_ui
 tools_ui = section("static void draw_tools(void)",
                    "static void draw_help(void)")
 keyboard_ui = section("static void draw_keyboard(void)",
