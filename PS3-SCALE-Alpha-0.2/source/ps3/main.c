@@ -116,6 +116,8 @@ static char g_ps2_config_download_temp_path[PS3SCALE_PATH_MAX];
 static char g_ps2_config_download_type[PS3SCALE_PS2_CONFIG_TYPE_MAX];
 static volatile int g_network_task_running = 0;
 static volatile int g_community_download_running = 0;
+static volatile size_t g_community_downloaded = 0;
+static volatile size_t g_community_download_total = 0;
 static volatile int g_community_download_done = 0;
 static volatile int g_community_download_result = -1;
 static int g_community_download_thread_started = 0;
@@ -3193,10 +3195,11 @@ static void community_download_worker(void *arg)
     struct stat st;
     (void)arg;
 
-    if (ps3scale_online_download_limited(
+    if (ps3scale_online_download_limited_progress(
             g_community_download_url,
             g_community_download_temp_path,
-            PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT) == 0) {
+            PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT,
+            &g_community_downloaded, &g_community_download_total) == 0) {
         fp = fopen(g_community_download_temp_path, "rb");
         if (!fp) {
             result = -3;
@@ -3351,6 +3354,8 @@ static void start_community_file_download(const ps3scale_community_file_t *entry
     }
 
     g_community_download_result = -1;
+    g_community_downloaded = 0;
+    g_community_download_total = 0;
     g_community_download_done = 0;
     g_community_download_running = 1;
     g_network_task_running = 1;
@@ -3359,6 +3364,8 @@ static void start_community_file_download(const ps3scale_community_file_t *entry
                         1001, 64 * 1024, THREAD_JOINABLE,
                         "ps3scale_community") != 0) {
         g_community_download_running = 0;
+        g_community_downloaded = 0;
+        g_community_download_total = 0;
         g_network_task_running = 0;
         snprintf(g_online_message, sizeof(g_online_message),
                  "COULD NOT START COMMUNITY DOWNLOAD WORKER.");
@@ -3396,6 +3403,8 @@ static void service_community_download(void)
                  "COMMUNITY DOWNLOAD FAILED. CHECK NETWORK AND SOURCE.");
     }
     g_community_download_done = 0;
+    g_community_downloaded = 0;
+    g_community_download_total = 0;
 }
 
 static void service_ps2_config_download(void)
@@ -4290,6 +4299,22 @@ static void draw_online_database(void)
                      downloaded_kb);
         }
         draw_text(414.0f, 127.0f, 0x875be8ff, line);
+    } else if (g_community_download_running) {
+        unsigned long downloaded_kb =
+            (unsigned long)((g_community_downloaded + 1023u) / 1024u);
+        unsigned long total_kb =
+            (unsigned long)((g_community_download_total + 1023u) / 1024u);
+        if (g_community_download_total > 0) {
+            unsigned int percent = (unsigned int)(
+                (g_community_downloaded >= g_community_download_total) ? 100u :
+                (g_community_downloaded * 100u) / g_community_download_total);
+            snprintf(line, sizeof(line), "COMMUNITY FILE: %u%%  %lu/%lu KB",
+                     percent, downloaded_kb, total_kb);
+        } else {
+            snprintf(line, sizeof(line), "COMMUNITY FILE: %lu KB RECEIVED",
+                     downloaded_kb);
+        }
+        draw_text(414.0f, 127.0f, 0x875be8ff, line);
     } else {
         draw_text(414.0f, 127.0f, 0x77718fff,
                   "Review source, match and file type.");
@@ -4307,13 +4332,16 @@ static void draw_online_database(void)
               g_community_ready ? 0x26794bff : 0x77718fff,
               g_community_ready ? "GITHUB INDEX: LOADED" :
                                   "GITHUB INDEX: EMPTY");
-    if (g_catalog_sync_running) {
+    if (g_catalog_sync_running || g_community_download_running) {
         float progress = 0.0f;
+        size_t downloaded = g_catalog_sync_running ?
+                            g_catalog_sync_downloaded : g_community_downloaded;
+        size_t total = g_catalog_sync_running ?
+                       g_catalog_sync_total : g_community_download_total;
         draw_rounded_rect(414.0f, 182.0f, 404.0f, 4.0f, 2.0f,
                           0xe4deefff);
-        if (g_catalog_sync_total > 0) {
-            progress = (float)g_catalog_sync_downloaded /
-                       (float)g_catalog_sync_total;
+        if (total > 0) {
+            progress = (float)downloaded / (float)total;
             if (progress > 1.0f) progress = 1.0f;
         } else if (g_animation_enabled) {
             progress = 0.12f + 0.22f *
