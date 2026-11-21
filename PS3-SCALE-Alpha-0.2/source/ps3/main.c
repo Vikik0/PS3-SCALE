@@ -6420,7 +6420,7 @@ int main(int argc, char *argv[])
                          online_filter_label(), (unsigned)g_online_result_count);
             }
             if (triangle && !old_triangle)
-                (void)open_online_search_keyboard();
+                start_catalog_sync_worker(1);
             if (cross && !old_cross) {
                 const ps3scale_profile_t *profile = NULL;
                 const ps3scale_community_file_t *community = NULL;
@@ -6432,18 +6432,8 @@ int main(int argc, char *argv[])
                 else
                     open_selected_online_match();
             }
-            /* An installed-game community match uses CROSS for Game
-               Details. SELECT safely saves the linked NCL/TXT as inert
-               data, without altering any game file or applying a patch. */
-            if (select && !old_select && matches) {
-                const ps3scale_profile_t *profile = NULL;
-                const ps3scale_community_file_t *community = NULL;
-                const ps3scale_ps2_config_entry_t *ps2_config = NULL;
-                (void)online_result_at((size_t)g_online_selected,
-                                       &profile, &community, &ps2_config);
-                if (community)
-                    start_community_file_download(community);
-            }
+            if (select && !old_select)
+                (void)open_online_search_keyboard();
             if (start && !old_start)
                 start_catalog_sync_worker(1);
             if (circle && !old_circle)
