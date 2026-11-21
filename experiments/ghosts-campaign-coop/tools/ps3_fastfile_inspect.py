@@ -181,6 +181,13 @@ def inspect_bytes(data: bytes, *, max_blocks: int = DEFAULT_MAX_BLOCKS) -> tuple
                 break
 
             compressed_size = struct.unpack_from(">H", data, position)[0]
+            if compressed_size == 1 and data[position + 2:position + 6] == b"\x00" * 4:
+                # Retail PS3 writer terminates the block stream with 00 01
+                # followed by exactly four zero padding bytes.
+                position += 2
+                stop_reason = "end_marker_0x0001"
+                trailing_bytes = len(data) - position
+                break
             if compressed_size == 0:
                 position += 2
                 stop_reason = "zero_terminator"
@@ -212,11 +219,12 @@ def inspect_bytes(data: bytes, *, max_blocks: int = DEFAULT_MAX_BLOCKS) -> tuple
         if not zone_parts:
             continue
 
-        # Retail samples document small slack after the last valid block.
+        # The known retail terminator is 0x0001 followed by four zero bytes.
+        # Do not silently accept truncated blocks or arbitrary trailing data.
         complete = (
             stop_reason == "eof"
+            or (stop_reason == "end_marker_0x0001" and trailing_bytes == 4)
             or (stop_reason == "zero_terminator" and trailing_bytes == 0)
-            or (stop_reason in ("invalid_or_non_deflate_trailing_data", "truncated_block_payload") and 0 < trailing_bytes <= 64)
         )
         raw_zone = b"".join(zone_parts)
         zone, inner_streams = _inflate_zone_assets(raw_zone)
