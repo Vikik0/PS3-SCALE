@@ -61,11 +61,22 @@ class Ps3FastFileInspectTests(unittest.TestCase):
         self.assertEqual(report.trailing_bytes, 128)
         self.assertEqual(expanded, zone)
 
-    def test_small_retail_trailing_slack_is_reported_and_tolerated(self):
+    def test_retail_end_marker_and_four_zero_padding_bytes(self):
         zone = b"F" * ZONE_BLOCK_SIZE
-        report, expanded = inspect_bytes(make_fastfile(zone, trailing=b"X" * 18))
+        report, expanded = inspect_bytes(
+            make_fastfile(zone, trailing=b"\x00\x01\x00\x00\x00\x00")
+        )
         self.assertTrue(report.complete)
-        self.assertEqual(report.trailing_bytes, 18)
+        self.assertEqual(report.stop_reason, "end_marker_0x0001")
+        self.assertEqual(report.trailing_bytes, 4)
+        self.assertEqual(expanded, zone)
+
+    def test_malformed_end_marker_padding_is_not_tolerated(self):
+        zone = b"G" * ZONE_BLOCK_SIZE
+        report, expanded = inspect_bytes(
+            make_fastfile(zone, trailing=b"\x00\x01\x00\x00\x00X")
+        )
+        self.assertFalse(report.complete)
         self.assertEqual(expanded, zone)
 
     def test_wrong_outer_magic_is_rejected(self):
