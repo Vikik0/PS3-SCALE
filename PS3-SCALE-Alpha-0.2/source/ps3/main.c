@@ -2771,8 +2771,24 @@ static void service_game_launch(void)
         g_exit_requested = 1;
     } else if (g_game_launch_result == -2) {
         set_details_message("PS3MAPI NOT ACTIVE. PROFILE WAS NOT APPLIED.");
+    } else if (g_game_launch_result == PS3SCALE_WEBMAN_ERROR_NETWORK_INIT) {
+        set_details_message("PS3 NETWORK MODULES FAILED TO INITIALIZE.");
+    } else if (g_game_launch_result == PS3SCALE_WEBMAN_ERROR_SOCKET) {
+        set_details_message("PS3 NETWORK SOCKET COULD NOT BE OPENED.");
+    } else if (g_game_launch_result == PS3SCALE_WEBMAN_ERROR_CONNECT) {
+        set_details_message("WEBMAN MOD NOT RESPONDING ON LOCAL HTTP PORT 80.");
+    } else if (g_game_launch_result == PS3SCALE_WEBMAN_ERROR_SEND) {
+        set_details_message("WEBMAN LAUNCH REQUEST COULD NOT BE SENT.");
+    } else if (g_game_launch_result == PS3SCALE_WEBMAN_ERROR_RESPONSE) {
+        set_details_message("WEBMAN DID NOT RETURN AN HTTP RESPONSE.");
+    } else if (g_game_launch_result == PS3SCALE_WEBMAN_ERROR_HTTP_STATUS) {
+        set_details_message("WEBMAN REJECTED THE GAME TITLE OR PATH.");
+    } else if (g_game_launch_result == PS3SCALE_WEBMAN_ERROR_INVALID_REQUEST) {
+        set_details_message("GAME TITLE ID OR PATH IS INVALID. RESCAN.");
     } else {
-        set_details_message("WEBMAN START FAILED. APP STILL RESPONSIVE.");
+        snprintf(g_details_message, sizeof(g_details_message),
+                 "WEBMAN START FAILED (ERROR %d).",
+                 (int)g_game_launch_result);
     }
 }
 
