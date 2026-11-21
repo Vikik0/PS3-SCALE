@@ -91,3 +91,12 @@ A single Campaign mission must run for at least 20 minutes with:
 ## Explicitly not done
 
 No Campaign second-player slot, local input hook, split-screen camera hook or mission adapter is implemented yet. The current PRX is a passive build scaffold. This plan does not claim a playable mod exists.
+
+
+### Deeper public-script and bytecode cross-check (2026-11-21)
+
+The Extinction reference has now been traced through the actual player-connect path: Callback_PlayerConnect emits the connected event, assigns a clientid and entity number, yields to mode-specific listeners, then registers the player in level.players. Extinction initializes each connected player independently and stores isSplitscreenPlayer() under that client's match-data entry. Its downed logic branches between solo self-revive and teammate revive. The shared spawnPlayer routine is a respawn routine for an already existing player object, not a Player 2 creation API.
+
+GSC Tool's IW6 PS3 symbol table maps isSplitScreen, isSplitscreenPlayer, isSplitscreenPlayerPrimary and getEntityNumber to VM builtin identifiers. Those are bytecode identifiers, not PPU addresses. This gives us exact script-level names to search for in decompiled assets, but the EBOOT-side implementations still need to be mapped from the exact BLUS31270 TU 1.16 executable.
+
+See docs/iw6-native-splitscreen-reference.md and docs/ps3-fastfile-research.md for source links and the updated extraction workflow.
