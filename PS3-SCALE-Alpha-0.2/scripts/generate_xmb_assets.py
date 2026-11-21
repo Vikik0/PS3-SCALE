@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate matching PS3 SCALE logo tiles and the approved pearl-white XMB wallpaper."""
+"""Generate matching PS3 SCALE logo tiles from the approved pearl-white staircase source."""
 from __future__ import annotations
 from pathlib import Path
 import struct, zlib
