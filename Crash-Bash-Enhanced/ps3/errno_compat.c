@@ -1,14 +1,13 @@
 /*
- * The PS3 LV2 PRX loader does not support the PPU TLS relocations used by
- * newlib's per-thread errno implementation. This module's networking and
- * lobby calls are serialized on the game thread, so give this PRX its own
- * errno slot rather than importing newlib's TLS-backed __errno().
+ * Pair with reent_compat.c so the PRX uses the process-global newlib errno
+ * slot rather than newlib's pthread/TLS-backed errno accessor.
  */
-#include <errno.h>
+#include <sys/reent.h>
 
-static int cb_ps3_errno;
+static int cb_errno_fallback;
 
 int *__errno(void)
 {
-    return &cb_ps3_errno;
+    struct _reent *reent = __getreent();
+    return reent ? &reent->_errno : &cb_errno_fallback;
 }
