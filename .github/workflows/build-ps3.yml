@@ -98,18 +98,14 @@ jobs:
           test "$(wc -c < "$THEME_FILE" | tr -d ' ')" = "5182732"
           printf '%s  %s\n' "b8a7b1c2573ea8a397c2fbc3a6c731b25dcb71f572aedf5af8568785620d1b64" "$THEME_FILE" | sha256sum -c -
 
-      - name: Verify optional BIOS source
+      - name: Verify required BIOS source
         run: |
           set -eu
           ROOT="PS3-SCALE-Alpha-0.2"
-          if [ -s "$ROOT/audio-source/music1.mp3" ] || find "$ROOT/audio-source" -maxdepth 1 -type f -name 'music1.mp3.part-*' -print -quit | grep -q .; then
-            python3 "$ROOT/scripts/prepare_theme.py" --check-only
-            echo "PS3SCALE_REQUIRE_MUSIC1=1" >> "$GITHUB_ENV"
-            echo "Verified BIOS source; finalized PKG must contain Music 1."
-          else
-            echo "PS3SCALE_REQUIRE_MUSIC1=0" >> "$GITHUB_ENV"
-            echo "BIOS source absent; runtime USB import and GTA V fallback remain available."
-          fi
+          test -s "$ROOT/audio-source/music1.mp3"
+          python3 "$ROOT/scripts/prepare_theme.py" --check-only
+          echo "PS3SCALE_REQUIRE_MUSIC1=1" >> "$GITHUB_ENV"
+          echo "Verified BIOS source; finalized PKG must contain Music 1."
 
       - name: Check bundled theme asset
         run: |
@@ -134,11 +130,7 @@ jobs:
           test "$PKG_MAGIC" = "7f504b47"
           test "$PKG_REVISION" = "8000"
           test "$(stat -c %s ps3scale.gnpdrm.pkg)" -gt 5000000
-          if [ "${PS3SCALE_REQUIRE_MUSIC1:-0}" = "1" ]; then
-            python3 scripts/verify_pkg_theme.py ps3scale.gnpdrm.pkg --require-music1
-          else
-            python3 scripts/verify_pkg_theme.py ps3scale.gnpdrm.pkg
-          fi
+          python3 scripts/verify_pkg_theme.py ps3scale.gnpdrm.pkg --require-music1
 
           echo "Build outputs:"
           ls -lah ps3scale.elf ps3scale.self ps3scale.pkg ps3scale.gnpdrm.pkg
