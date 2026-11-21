@@ -8,5 +8,8 @@
 #ifndef IFF_BROADCAST
 #define IFF_BROADCAST 0x2
 #endif
+#ifndef IFF_LOOPBACK
+#define IFF_LOOPBACK 0x8
+#endif
 
 #endif
