@@ -4,13 +4,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define CB_WS_MAX_FRAME 2048
+#define CB_WS_MAX_FRAME 24576
 #define CB_WS_OPCODE_TEXT 1
 #define CB_WS_OPCODE_BINARY 2
 
 typedef struct CbWsClient {
     int fd;
-    uint8_t rx_buffer[4096];
+    uint8_t rx_buffer[32768];
     size_t rx_start;
     size_t rx_end;
     uint32_t rng_state;
