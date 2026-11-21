@@ -1,4 +1,7 @@
+import json
 import struct
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -105,6 +108,27 @@ class Rpcs3PreflightTests(unittest.TestCase):
             root = Path(tmp)
             game_root, emulator = self.make_layout(root)
             report = inspect_installation(game_root / "PS3_GAME", rpcs3_root=emulator)
+        self.assertEqual(report["overall"], "READY_FOR_BASELINE_BOOT")
+
+    def test_cli_runs_directly_from_project_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            game_root, emulator = self.make_layout(root)
+            project_root = Path(__file__).resolve().parents[1]
+            script = project_root / "tools" / "rpcs3_preflight.py"
+            result = subprocess.run(
+                [
+                    sys.executable, str(script),
+                    "--game-root", str(game_root),
+                    "--rpcs3-root", str(emulator),
+                ],
+                cwd=project_root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        report = json.loads(result.stdout)
         self.assertEqual(report["overall"], "READY_FOR_BASELINE_BOOT")
 
     def test_malformed_sfo_fails_closed(self):
