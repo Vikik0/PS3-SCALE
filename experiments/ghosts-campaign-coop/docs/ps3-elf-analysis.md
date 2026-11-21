@@ -96,3 +96,23 @@ Stop before any hook or patch if:
 - the candidate's function boundary, call convention or runtime context is unknown.
 
 No EBOOT, SPRX or PKG should be built for installation until a candidate is verified against the exact target executable and the hook can be tested safely.
+
+## Exact TU 1.16 SELF audit result
+
+The installed update's own PARAM.SFO reports TITLE_ID=BLUS31270, APP_VER=01.16, CATEGORY=GD, and VERSION=01.00. The base-disc SFO remains a separate CATEGORY=DG, APP_VER=01.00 record. Use the installed-update SFO as the TU identity evidence.
+
+The uploaded TU files differ from the disc samples:
+
+| File | TU size | Disc size | TU ELF entry | Disc ELF entry |
+|---|---:|---:|---:|---:|
+| EBOOT.BIN | 41,488 | 73,704 | 0x20080 | 0x20080 |
+| default.self | 4,291,568 | 8,072,104 | 0x7E9508 | 0x7A8F28 |
+| default_mp.self | 6,265,632 | 9,195,256 | 0xA75E38 | 0x8B9738 |
+
+Each TU file is SELF v2, key revision 28, ELF64 big-endian PowerPC64, with eight program headers. The primary executable segments (0–4) are marked encrypted. No function offsets, OPD ranges, or hooks may be inferred from these metadata alone.
+
+### Decrypted ELF acquisition
+
+RPCS3's debug option can save a decrypted PPU executable as exec.elf in its cache under ppu_progs/<TITLE_ID>-<hash>-<filename>/. The RPCS3 source implements this dump path and logs the saved path. For this project, retain the exact build identity and use the dump associated with the loaded TU 1.16 default.self; a dump from the disc 1.00 file is not interchangeable. The corresponding default_mp.self dump is the comparison target for an existing local split-screen path.
+
+This is the next engineering gate. Until the decrypted TU ELF is available, continue only with metadata, FastFile, GSC, simulator and toolchain work; do not invent executable offsets or build an installable game hook.
