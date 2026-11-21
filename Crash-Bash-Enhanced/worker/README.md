@@ -8,9 +8,10 @@ This Worker provides the first online-service layer for the Crash Bash Enhanced 
 - Private room codes and up to four player slots.
 - Host handoff when the host leaves.
 - Ready state and host-controlled match start.
+- Room state is pushed over the WebSocket relay; the browser does not poll every few seconds.
 - Room polling and peer roster endpoint.
 - Prototype binary WebSocket room relay at /v1/rooms/:code/transport.
-- Authenticated CBR1 sender envelope, 1200-byte payload cap, and five inbound messages/second per connected player.
+- Authenticated CBR1 sender envelope, 1200-byte payload cap, and five inbound messages/second per connected player, including keepalive pings.
 - SQLite-backed Durable Object storage with WebSocket hibernation.
 
 ## Not included yet
