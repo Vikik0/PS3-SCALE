@@ -2371,8 +2371,35 @@ static void rebuild_online_results(void)
         }
     }
 
+    /* ANY filters expose cached profiles even when the matching game is not
+       installed. Applying still requires an exact local Title ID + APP_VER. */
+    if (!exact_only && g_catalog_ready) {
+        for (j = 0; j < g_catalog.count; j++) {
+            const ps3scale_profile_t *profile = &g_catalog.items[j];
+            int exact_local_match = 0;
+            for (i = 0; i < g_games.count; i++) {
+                const ps3scale_game_t *game = &g_games.items[i];
+                if (game_is_ps3(game) &&
+                    strcmp(game->title_id, profile->title_id) == 0 &&
+                    strcmp(game->app_ver, profile->app_ver) == 0) {
+                    exact_local_match = 1;
+                    break;
+                }
+            }
+            if (exact_local_match ||
+                !online_result_matches_query(NULL, profile, NULL) ||
+                g_online_result_count >= PS3SCALE_MAX_ONLINE_RESULTS)
+                continue;
+            g_online_results[g_online_result_count].game_index = 0xffffu;
+            g_online_results[g_online_result_count].file_index = (unsigned short)j;
+            g_online_results[g_online_result_count].kind = ONLINE_RESULT_PROFILE;
+            g_online_result_count++;
+            g_online_profile_result_count++;
+        }
+    }
+
     if (g_community_ready && g_community_index.items) {
-        /* Installed-game matches are preferred; search-only matches are still shown. */
+        /* Installed-game matches are first; ANY filters also browse the full index. */
         for (j = 0; j < g_community_index.count; j++) {
             const ps3scale_community_file_t *file = &g_community_index.items[j];
             int matched_installed_game = 0;
@@ -2401,7 +2428,7 @@ static void rebuild_online_results(void)
                 break;
             }
 
-            if (!matched_installed_game && g_online_query[0] &&
+            if (!matched_installed_game && !exact_only &&
                 online_result_matches_query(NULL, NULL, file)) {
                 int duplicate = 0;
                 for (k = 0; k < g_online_result_count; k++) {
@@ -2489,6 +2516,13 @@ static const ps3scale_game_t *online_result_at(
         return NULL;
 
     result = &g_online_results[target];
+    if (result->kind == ONLINE_RESULT_PROFILE &&
+        result->game_index == 0xffffu) {
+        if (profile_out &&
+            (size_t)result->file_index < g_catalog.count)
+            *profile_out = &g_catalog.items[result->file_index];
+        return NULL;
+    }
     if (result->kind == ONLINE_RESULT_COMMUNITY) {
         if (community_out &&
             (size_t)result->file_index < g_community_index.count)
@@ -2567,13 +2601,17 @@ static void open_selected_online_match(void)
     }
 
     if (!match) {
-        if (community)
+        if (profile)
+            snprintf(g_online_message, sizeof(g_online_message),
+                     "PROFILE FOR %.26s (%s). INSTALL OR MOUNT THE EXACT VERSION TO APPLY.",
+                     profile->title, profile->app_ver);
+        else if (community)
             snprintf(g_online_message, sizeof(g_online_message),
                      "GITHUB FILE FOUND FOR %.32s. LOCAL GAME NOT SCANNED.",
                      community->title);
         else
             snprintf(g_online_message, sizeof(g_online_message),
-                     "NO GITHUB RESULT IS SELECTED.");
+                     "NO ONLINE RESULT IS SELECTED.");
         return;
     }
 
@@ -2594,9 +2632,9 @@ static void open_selected_online_match(void)
     }
     g_profile_confirm_pending = 0;
     if (profile)
-        set_details_message("EXACT GRAPHICS PROFILE FOUND. REVIEW BEFORE INSTALL.");
+        set_details_message("EXACT PROFILE FOUND. PRESS CROSS TO APPLY AND START.");
     else if (community && profile_for_game(match))
-        set_details_message("EXACT GRAPHICS PROFILE AVAILABLE. REVIEW BEFORE INSTALL.");
+        set_details_message("EXACT PROFILE AVAILABLE. PRESS CROSS TO APPLY AND START.");
     else if (community && strcmp(community->category, "GRAPHICS_FPS") == 0)
         set_details_message("FPS NCL REFERENCE ONLY. NO SAFE AUTO-APPLY PROFILE.");
     else if (community)
