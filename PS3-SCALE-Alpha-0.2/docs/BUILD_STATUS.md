@@ -1,38 +1,61 @@
-# PS3 SCALE Alpha 0.22 — visible staircase and XMB redesign
+# Build status — PS3 SCALE Alpha 0.23
 
-Date: 2026-11-12
+## Current development head
 
-## Why the previous console build did not match the reference
-The previous build contained a Tiny3D staircase routine, but the console screenshot showed that the 3D pass was not visible. The UI therefore displayed only the flat gradient, orbital rings and particles. The Home card descriptions also overflowed their card widths, and an older saved settings file could keep the playlist on a single track.
+- Branch: `design/splash-transitions-ui-v6`
+- Pull request: Draft PR #16, targeting `design/settings-support-ui-v5`
+- Application version shown in the UI: `ALPHA 0.23`
+- Package metadata: `APP_VER=00.23`, `VERSION=00.23`
+- Package title ID: `PS3SCALE1`
 
-## Corrections in Alpha 0.22
-- Replaced the invisible 3D draw pass with a perspective-projected spiral staircase rendered in the regular 2D UI pass. Its 24 wedge-shaped treads, shaded risers, central support and handrail move in a slow, periodic loop.
-- Removed the depth-buffer clear dependency that hid the earlier staircase.
-- Kept the staircase behind every screen, not only Home, while preserving the animation ON/OFF setting.
-- Shortened Home card descriptions so they fit without running into neighboring cards.
-- Rebuilt the external XMB PIC1 wallpaper with a perspective spiral staircase; ICON0 and PIC0 remain generated in the same lavender visual identity.
-- Added a Settings control for track fade duration (500 / 1000 / 1500 / 2000 ms).
-- Added settings version migration: older settings files are moved to the requested AUTO playlist (BIOS - Zorrovian, then GTA V; the first track alternates on the next app launch) rather than remaining pinned to BIOS ONLY.
-- Preserved Music ON/OFF, volume, animation toggle, language, Help, About and in-app issue reporting.
-- Updated the displayed and package version to 00.22.
+## Latest CI validation
 
-## Music assets
-- Music 2 (GTA V pause-menu theme) is embedded in the PKG.
-- Music 1 (BIOS - Zorrovian) is still imported from USB to the internal HDD; it is not embedded in the repository build inputs. The runtime supports the supplied original filename and the normalized `music1.mp3` name.
-- AUTO playlist and configurable fade are available once Music 1 has been imported.
+GitHub Actions run **#534** completed successfully on 2026-11-21.
 
-## Validation
-- Latest GitHub Actions host-side tests: PASS.
-- PS3 ELF / SELF / standard PKG / GNPDRM PKG build: PASS.
-- XMB asset generation and package content checks: PASS (ICON0 320x176, PIC1 1280x720, PIC0 310x176; Apollo Save logo and Music 2 embedded).
-- Physical PS3 Slim / CFW 4.92 verification: required. CI cannot prove the actual RSX appearance or audio playback on the console.
+- Host-side regression tests: **PASS**
+- Arabic bitmap preview render: **PASS**
+- Staircase material/motion preview render: **PASS**
+- PS3 ELF link: **PASS**
+- CEX SELF generation: **PASS**
+- Standard PKG generation: **PASS**
+- GNPDRM PKG generation and package checks: **PASS**
+- Embedded Apollo Save logo, Music 1 source and Music 2 theme: **PASS**
 
-## Existing safety boundaries
-- Scanning remains read-only; original game files are not replaced.
-- Community NCL/TXT entries are downloaded as inert data only (HTTPS, 2 MB maximum, text-only extensions, no overwrite). They are never executed or auto-applied.
-- Exact Title ID + APP_VER matching remains required for graphics profiles.
-- Multi-write profiles remain disabled for automatic application.
-- No universal AI upscaler, frame generation or guaranteed 60 FPS is claimed.
+Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/44941356426
 
-## Console verification order
-Install the Alpha 0.22 GNPDRM package over the previous build, then check: splash, visible moving staircase, Home card text fit, Scan Games, Details, Online DB, Settings (AUTO playlist and fade duration), Help, About, and the external XMB preview. Confirm both music tracks play in the selected order after Music 1 is imported.
+## Build artifact
+
+Artifact name: `PS3-SCALE-Alpha-0.23-build-with-embedded-theme`
+
+Contains:
+- `ps3scale.elf` — 3,503,492 bytes
+- `ps3scale.self` — 777,232 bytes
+- `ps3scale.pkg` — 11,395,872 bytes
+- `ps3scale.gnpdrm.pkg` — 11,395,872 bytes
+
+SHA-256:
+- ELF: `17c56decbccc664ba745c87bca10d90431a1c20ffb8b3fc9cf540b01cf4de6ef`
+- SELF: `c94b672412f2391b041ca33da2a2cbbdc755ecd31fdfd15ffdf2887d3e75e672`
+- Standard PKG: `b5e9068cb82d4d9e7543a40453433e83f2bbab74da513f14ecb0970e6445214a`
+- GNPDRM PKG: `de39abea7efaaafa5454c240f96134cc18321bd4d48f675f0a0a7bf1da01b516`
+
+## Alpha 0.23 changes in this continuation
+
+- Removed the FEATURES heading from Home and removed the duplicate image panel from About. The XMB `ICON0.PNG`, `PIC0.PNG` and `PIC1.PNG` use the approved pearl/lavender staircase identity.
+- Renamed the visible playlist entries to Music 1 and Music 2.
+- Added the Enhancement Storage setting: Temporary by default or Permanent for new Artemis NCL files.
+- Online DB now refreshes automatically on first open, uses Triangle for manual refresh and Select for search, and defaults to Graphics + Any Region/Version.
+- Added exact-match `GRAPHICS_FPS` NCL installation to the detected Artemis USERLIST directory. Both upstream `ARTPS3001` and Artemis R5 `ARTZ00001` package IDs are supported. The app validates the source path, exact Title ID + APP_VER, text format and size, and never overwrites an existing file.
+- Temporary NCL files are tracked and removed on the next PS3 SCALE start. Permanent files remain until manually removed. PS3 SCALE does not execute or auto-apply NCL files; the user selects them in Artemis.
+- Replaced the synthetic Game Details comparison illustration with an exact-version local before/after PNG loader. No genuine game screenshot pairs are bundled yet; the UI reports a missing pair instead of showing a concept image.
+- Fixed webMAN local HTTP initialization by loading NET/NETCTL and calling `netCtlInit()`. Added distinct launch error messages. If PS3MAPI is unavailable after a PS3 SCALE profile was armed, the app removes its own one-launch script and still attempts an unmodified game launch.
+- Updated package SFO metadata to 00.23 and aligned GitHub Actions artifact names.
+
+## Remaining verification
+
+- **No physical PS3 installation or game launch was performed by CI.** Install the GNPDRM PKG on the target CFW console and test controller navigation, scan, Online DB refresh, Artemis USERLIST loading, temporary/permanent cleanup, webMAN launch, and one safe memory profile.
+- Real before/after screenshots still need to be captured and supplied for each supported Title ID + APP_VER. The loader is implemented, but screenshot coverage is not complete.
+- Community NCL files and memory profiles remain community-supplied. Exact matching and text validation do not prove that a patch is safe or hardware-tested.
+- Remaining compiler/configure warnings are from bundled third-party mpg123 / PS3 network dependency sources (for example, unused parameters, signedness and optional libpsl/IDN/manual support). The PS3 application source builds successfully.
+
+Do not merge Draft PR #16 until the physical-console smoke test and review are complete.
