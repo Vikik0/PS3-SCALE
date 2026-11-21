@@ -2,11 +2,79 @@
 """Generate PS3 SCALE XMB artwork from the approved pearl-white staircase source and neon-glass icon."""
 from __future__ import annotations
 from pathlib import Path
+import struct, zlib
 
 ROOT = Path(__file__).resolve().parents[1]
 PKG = ROOT / "pkgfiles"
 PIC1_SOURCE = ROOT / "assets/xmb/pic1_source.jpg"
 ICON0_SOURCE = ROOT / "assets/xmb/icon0_source.png"
+
+class Canvas:
+    """Small RGB raster canvas retained for the host-side staircase QA renderer."""
+    def __init__(self, w, h, top, bottom):
+        self.w, self.h = w, h
+        self.p = bytearray(w * h * 3)
+        for y in range(h):
+            t = y / max(1, h - 1)
+            c = tuple(int(top[k] * (1 - t) + bottom[k] * t) for k in range(3))
+            row = bytes(c) * w
+            self.p[y * w * 3:(y + 1) * w * 3] = row
+
+    def rect(self, x, y, w, h, c):
+        x0, y0 = max(0, int(x)), max(0, int(y))
+        x1, y1 = min(self.w, int(x + w)), min(self.h, int(y + h))
+        if x1 <= x0 or y1 <= y0:
+            return
+        row = bytes(c) * (x1 - x0)
+        for yy in range(y0, y1):
+            i = (yy * self.w + x0) * 3
+            self.p[i:i + len(row)] = row
+
+    def line(self, x0, y0, x1, y1, c, width=1):
+        x0, y0, x1, y1 = map(int, (x0, y0, x1, y1))
+        dx, sx = abs(x1 - x0), 1 if x0 < x1 else -1
+        dy, sy = -abs(y1 - y0), 1 if y0 < y1 else -1
+        err = dx + dy
+        while True:
+            self.rect(x0 - width // 2, y0 - width // 2, width, width, c)
+            if x0 == x1 and y0 == y1:
+                break
+            e = 2 * err
+            if e >= dy:
+                err += dy
+                x0 += sx
+            if e <= dx:
+                err += dx
+                y0 += sy
+
+    def poly(self, pts, c):
+        ymin = max(0, int(min(y for x, y in pts)))
+        ymax = min(self.h - 1, int(max(y for x, y in pts)))
+        for y in range(ymin, ymax + 1):
+            xs = []
+            for i, (x1, y1) in enumerate(pts):
+                x2, y2 = pts[(i + 1) % len(pts)]
+                if y1 != y2 and min(y1, y2) <= y < max(y1, y2):
+                    xs.append(int(x1 + (y - y1) * (x2 - x1) / (y2 - y1)))
+            xs.sort()
+            for i in range(0, len(xs) - 1, 2):
+                self.rect(xs[i], y, xs[i + 1] - xs[i] + 1, 1, c)
+
+    def save(self, path):
+        raw = b"".join(
+            b"\x00" + self.p[y * self.w * 3:(y + 1) * self.w * 3]
+            for y in range(self.h)
+        )
+        def chunk(kind, data):
+            return (struct.pack(">I", len(data)) + kind + data +
+                    struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff))
+        png = (
+            b"\x89PNG\r\n\x1a\n" +
+            chunk(b"IHDR", struct.pack(">IIBBBBB", self.w, self.h, 8, 2, 0, 0, 0)) +
+            chunk(b"IDAT", zlib.compress(raw, 9)) +
+            chunk(b"IEND", b"")
+        )
+        Path(path).write_bytes(png)
 
 
 def load_display_font(size, bold=False):
