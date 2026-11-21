@@ -152,6 +152,11 @@ int main(void)
         cb_relay_leave(&client);
         return 13;
     }
+    if (cb_relay_start_match(&client, 3000) != 0) {
+        fprintf(stderr, "PS3 host START command failed\n");
+        cb_relay_leave(&client);
+        return 14;
+    }
 
     cb_relay_leave(&client);
     if (client.connected) {
