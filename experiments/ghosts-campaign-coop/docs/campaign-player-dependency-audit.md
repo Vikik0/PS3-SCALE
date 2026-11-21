@@ -96,9 +96,10 @@ A first IW6/PS3 GSC shim now exists at `client/ps3/gsc/ghc_campaign_player_regis
 
 The shim:
 - waits for the existing `level.playerpiggyback` list;
-- requires `issplitscreen()` and at least two already-registered players;
-- validates `issplitscreenplayer()` for both slots;
-- validates primary identity on slot 0 and non-primary identity on slot 1;
+- requires `issplitscreen()` and exactly two already-registered split-screen players;
+- scans the list and ignores entities that are not native split-screen players;
+- assigns slot 0 from `issplitscreenplayerprimary()` and slot 1 from the non-primary local player, without assuming array order;
+- rejects missing, duplicate-primary, duplicate-secondary or extra local split-screen players;
 - exposes a read-only slot accessor after validation.
 
 It deliberately does **not** spawn, clone, respawn, move, or equip a player. Its 339-byte compiled GSC binary has SHA-256 `102ec770fe31a7016697d4714fee2e8731dbfc84f987cd4941470c5830e1e099`; the source hash and compiler command are recorded in `client/ps3/gsc/ghc_campaign_player_registry.manifest.json`.
