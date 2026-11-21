@@ -10,7 +10,6 @@ const state = {
   loading: false,
   error: "",
   health: "checking",
-  polling: false,
   relayStatus: "idle",
   relayPackets: 0
 };
@@ -110,7 +109,7 @@ function roomCard() {
         <button class="button button-primary" data-action="ready" ${room.status !== "waiting" ? "disabled" : ""}>${me?.ready ? "CANCEL READY" : "I'M READY"}</button>
         ${isHost ? `<button class="button button-start" data-action="start" ${!allReady || room.status !== "waiting" ? "disabled" : ""}>START MATCH <span>→</span></button>` : ""}
       </div>
-      <p class="room-footnote">${state.relayStatus === "connected" ? "ROOM RELAY CONNECTED · " + state.relayPackets + " PACKETS RECEIVED" : state.relayStatus === "connecting" ? "CONNECTING TO ROOM RELAY..." : state.relayStatus === "error" ? "ROOM RELAY CONNECTION FAILED" : room.status === "running" ? "MATCH STARTED · WAITING FOR RELAY CONNECTION" : "Room relay opens after the host starts the match."}</p>
+      <p class="room-footnote">${state.relayStatus === "connected" ? (state.relayPackets > 0 ? "ROOM RELAY CONNECTED · " + state.relayPackets + " GAME PACKETS RECEIVED" : "ROOM RELAY CONNECTED · WAITING FOR GAME INPUTS") : state.relayStatus === "connecting" ? "CONNECTING TO ROOM RELAY..." : state.relayStatus === "error" ? "ROOM RELAY CONNECTION FAILED" : "CONNECT TO ROOM RELAY TO JOIN THE PARTY."}</p>
     </div>`;
 }
 
@@ -230,13 +229,11 @@ async function runAction(action) {
       await ensureSession(displayName);
       const maxPlayers = Number(selectedLimit || 4);
       state.room = await api("/v1/rooms", { method: "POST", body: { max_players: maxPlayers, is_private: true, mode: "party" } });
-      beginPolling();
     } else if (action === "join") {
       await ensureSession(displayName);
       const code = enteredCode;
       if (!/^[A-Z0-9]{6}$/.test(code)) throw new Error("Enter a valid six-character room code.");
       state.room = await api(`/v1/rooms/${code}/join`, { method: "POST", body: {} });
-      beginPolling();
     } else if (action === "ready") {
       const me = state.room?.players?.find(p => p.player_id === state.session?.session_id);
       state.room = await api(`/v1/rooms/${state.room.room_code}/ready`, { method: "POST", body: { ready: !me?.ready } });
@@ -245,7 +242,6 @@ async function runAction(action) {
     } else if (action === "leave") {
       await api(`/v1/rooms/${state.room.room_code}/leave`, { method: "POST", body: {} });
       state.room = null;
-      stopPolling();
       closeRelay();
     } else if (action === "copy-code") {
       await navigator.clipboard.writeText(state.room.room_code);
@@ -254,7 +250,6 @@ async function runAction(action) {
       if (state.session) {
         clearSession();
         state.room = null;
-        stopPolling();
         closeRelay();
       } else {
         await ensureSession(displayName);
@@ -271,12 +266,17 @@ async function runAction(action) {
   }
 }
 
-let pollTimer = null;
 let relaySocket = null;
+let relayHeartbeatTimer = null;
+let relayReconnectTimer = null;
 
 function closeRelay() {
   const socket = relaySocket;
   relaySocket = null;
+  if (relayHeartbeatTimer) clearInterval(relayHeartbeatTimer);
+  if (relayReconnectTimer) clearTimeout(relayReconnectTimer);
+  relayHeartbeatTimer = null;
+  relayReconnectTimer = null;
   if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
     socket.close(1000, "Leaving room");
   }
@@ -285,7 +285,7 @@ function closeRelay() {
 }
 
 function syncRelayConnection() {
-  if (!state.room || state.room.status !== "running" || !state.session?.token || !API_BASE) {
+  if (!state.room || !state.session?.token || !API_BASE) {
     if (relaySocket) closeRelay();
     return;
   }
@@ -310,11 +310,29 @@ function syncRelayConnection() {
   socket.addEventListener("open", () => {
     if (relaySocket !== socket) return;
     state.relayStatus = "connected";
+    relayHeartbeatTimer = setInterval(() => {
+      if (relaySocket === socket && socket.readyState === WebSocket.OPEN) socket.send("PING");
+    }, 20000);
     render();
   });
 
   socket.addEventListener("message", event => {
-    if (relaySocket !== socket || !(event.data instanceof ArrayBuffer)) return;
+    if (relaySocket !== socket) return;
+    if (typeof event.data === "string") {
+      if (event.data === "PONG") return;
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === "room_update" && message.room) {
+          state.room = message.room;
+          render();
+          syncRelayConnection();
+        }
+      } catch {
+        // Ignore unknown relay control messages.
+      }
+      return;
+    }
+    if (!(event.data instanceof ArrayBuffer)) return;
     const packet = new Uint8Array(event.data);
     if (packet.length < 23 || packet[0] !== 0x43 || packet[1] !== 0x42 ||
         packet[2] !== 0x52 || packet[3] !== 0x31) return;
@@ -322,11 +340,19 @@ function syncRelayConnection() {
     render();
   });
 
-  socket.addEventListener("close", () => {
+  socket.addEventListener("close", event => {
     if (relaySocket !== socket) return;
     relaySocket = null;
+    if (relayHeartbeatTimer) clearInterval(relayHeartbeatTimer);
+    relayHeartbeatTimer = null;
     state.relayStatus = "disconnected";
     render();
+    if (state.room && event.code !== 1008) {
+      relayReconnectTimer = setTimeout(() => {
+        relayReconnectTimer = null;
+        syncRelayConnection();
+      }, 3000);
+    }
   });
 
   socket.addEventListener("error", () => {
@@ -335,29 +361,6 @@ function syncRelayConnection() {
     render();
   });
 }
-function beginPolling() {
-  stopPolling();
-  pollTimer = setInterval(async () => {
-    if (!state.room || state.polling) return;
-    state.polling = true;
-    try {
-      state.room = await api(`/v1/rooms/${state.room.room_code}`);
-      render();
-      syncRelayConnection();
-    } catch (error) {
-      state.error = error.message;
-      render();
-    } finally {
-      state.polling = false;
-    }
-  }, 2200);
-}
-
-function stopPolling() {
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = null;
-}
-
 app.addEventListener("click", event => {
   const button = event.target.closest("[data-action]");
   if (!button) return;
@@ -394,10 +397,7 @@ async function init() {
     } catch {
       // An expired or roomless guest session is harmless; create a new one on demand.
     }
-    if (state.room) {
-      beginPolling();
-      syncRelayConnection();
-    }
+    if (state.room) syncRelayConnection();
   }
 }
 
