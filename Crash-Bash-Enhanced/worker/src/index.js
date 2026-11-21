@@ -304,7 +304,11 @@ export class CrashBashLobby {
       socket.close(1003, 'BINARY_PACKETS_REQUIRED');
       return;
     }
-    if (payload.byteLength > RELAY_MAX_MESSAGE) {
+    const isBatch = payload.byteLength >= 4 &&
+      payload[0] === 0x43 && payload[1] === 0x42 &&
+      payload[2] === 0x55 && payload[3] === 0x31;
+    if (payload.byteLength > RELAY_MAX_MESSAGE ||
+        (!isBatch && payload.byteLength > RELAY_MAX_PAYLOAD)) {
       socket.close(1009, 'PACKET_SIZE_INVALID');
       return;
     }
