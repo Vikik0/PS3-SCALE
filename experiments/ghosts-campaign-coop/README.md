@@ -43,6 +43,7 @@ See docs/local-coop-first.md for the implementation plan and research constraint
 - Host-tested DualShock 3 input decoder, PS3 `sys_io` polling adapter for controller ports 0 and 1, and portable per-frame input tracker (button edges, normalized sticks and read-error preservation).
 - Diagnostic PRX polling/getter functions for raw and per-frame input, pending a verified Campaign frame adapter.
 - Reverse-engineering notes rule out treating `PlayerCMD_ClonePlayer` as a full second-player spawn path.
+- Read-only PS3 PARAM.SFO inspector: validates PSF metadata and reports Title ID/title/app-version plus SHA-256; it does not infer TU 1.16 from APP_VER.
 - Read-only PS3 PPU ELF inspector: validates ELF64 big-endian EM_PPC64, hashes the input, maps reported TU 1.16 function/data candidates including BSS, and extracts the PPU OPD/TOC when present.
 - Read-only Ghosts PS3 FastFile inspector: expands IW6 raw-deflate blocks and validated inline zlib assets, with SHA-256 reporting and bounded decompression.
 - Ghosts PS3 GSC/CSC asset exporter for already inflated zones, with short/long header recognition, compiled GSC detection, and safe output paths.
