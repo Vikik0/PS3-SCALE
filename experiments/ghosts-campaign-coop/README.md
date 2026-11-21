@@ -43,7 +43,8 @@ See docs/local-coop-first.md for the implementation plan and research constraint
 - Host-tested DualShock 3 input decoder, PS3 `sys_io` polling adapter for controller ports 0 and 1, and portable per-frame input tracker (button edges, normalized sticks and read-error preservation).
 - Diagnostic PRX polling/getter functions for raw and per-frame input, pending a verified Campaign frame adapter.
 - Reverse-engineering notes rule out treating `PlayerCMD_ClonePlayer` as a full second-player spawn path.
-- Read-only PS3 PPU ELF inspector: validates ELF64 big-endian EM_PPC64, hashes the input, maps reported TU 1.16 candidate addresses, and extracts the PPU OPD/TOC when present.
+- Read-only PS3 PPU ELF inspector: validates ELF64 big-endian EM_PPC64, hashes the input, maps reported TU 1.16 function/data candidates including BSS, and extracts the PPU OPD/TOC when present.
+- Fail-closed local-player readiness gate: requires two distinct native split-screen players, correct primary/secondary identity, controller ports, local-client/client/entity IDs, Logan/guest roles and independent state addresses before a future adapter can enable controls.
 - Ghidra OPD function-seeding and split-screen builtin cross-reference helpers, plus a local-player state comparison matrix for the next static/runtime analysis stage.
 
 ### Phase 1 Campaign integration — not implemented
@@ -75,7 +76,7 @@ The first target is CEX 4.93 + TU 1.16. The project must select builds by exact 
 
 ## Verification
 
-CI validates the standalone codecs, controller-input decoder, read-only ELF/OPD inspector tests, and PRX build including `sys_io` imports. These tests do not prove that the game runtime can use a second player in Campaign. The Phase 1 success gate is defined in docs/local-coop-first.md.
+CI validates the standalone codecs, controller-input decoder, local-player readiness gate, read-only ELF/OPD inspector tests, and PRX build including `sys_io` imports. These tests do not prove that the game runtime can use a second player in Campaign. The Phase 1 success gate is defined in docs/local-coop-first.md.
 
 ## Important
 
