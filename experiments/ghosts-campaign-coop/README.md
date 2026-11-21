@@ -19,7 +19,7 @@ This is an isolated research experiment for a two-player cooperative mode in the
 - UDP peer relay reference server: implemented; local two-client UDP integration test passes.
 - PS3-side RFC 6455 binary-frame encoder/parser: implemented, linked into the PRX build and CI-tested.
 - PS3 HTTP/HTTPS lobby client scaffold: implemented for guest session creation, room creation/join, ready/start/leave, peer polling and candidate publishing; PPU build and lobby JSON contract tests pass in CI. Live hardware/TLS compatibility is not yet verified.
-- RFC 5389 STUN request/response codec and PS3 libnet UDP socket helpers: implemented and included in the PRX build. STUN packet parsing is unit-tested; live NAT discovery and two-console UDP traffic are not yet verified.
+- RFC 5389 STUN request/response codec, PS3 libnet UDP socket helpers and authenticated direct-P2P GHC2 send/receive layer: implemented and included in the PRX build. STUN packet parsing is unit-tested; live NAT discovery and two-console UDP traffic are not yet verified.
 - Cloudflare Durable Object WebSocket relay fallback: implemented and covered by Worker smoke tests; deployment and PS3 WebSocket client integration remain pending.
 - PS3 lobby REST client: guest session, room create/join, ready/start/leave, peer polling and candidate publishing are implemented and PPU-build tested. No live console TLS/API test has been performed.
 - Regional title-ID registry: implemented as metadata; profiles are untested.

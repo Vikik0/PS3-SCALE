@@ -10,7 +10,7 @@
 
 ## Components
 
-1. **PS3 client plugin (partially scaffolded):** the PRX bootstrap, GHC2 codec, RFC 6455 frame codec, PS3 libhttp/libssl lobby client, peer polling, candidate publishing, RFC 5389 STUN codec and libnet UDP socket primitives are implemented in source. The client can request a guest session and operate room create/join/ready/start/leave through HTTPS when a Worker URL is configured. The STUN parser and socket code compile; TLS compatibility and live NAT traversal need real-console testing. WebSocket upgrade/socket lifecycle and game-specific Campaign hooks are still not implemented.
+1. **PS3 client plugin (partially scaffolded):** the PRX bootstrap, GHC2 codec, RFC 6455 frame codec, PS3 libhttp/libssl lobby client, peer polling, candidate publishing, RFC 5389 STUN codec, libnet UDP socket primitives and authenticated direct-P2P send/receive layer are implemented in source. The client can request a guest session and operate room create/join/ready/start/leave through HTTPS when a Worker URL is configured. The STUN parser and socket code compile; TLS compatibility and live NAT traversal need real-console testing. WebSocket upgrade/socket lifecycle and game-specific Campaign hooks are still not implemented.
 2. **Lobby API (implemented prototype):** guest session creation, six-character room codes, join/leave, ready state, two-player cap and host start.
 3. **UDP relay (implemented reference prototype):** forwards authenticated opaque packets only between the two members of a running room. The Python reference relay is locally integration-tested; it is not the Cloudflare deployment.
 4. **Cloudflare WebSocket relay fallback (implemented in Worker source):** an authenticated WSS route forwards binary GHC2 frames between the two room members when direct UDP cannot connect. It checks HMAC, replay window, frame size and per-session rate. Deployment and PS3 client integration are still pending.
@@ -41,7 +41,7 @@ If direct UDP hole-punching fails, both PS3 clients can use the WSS relay path `
 
 - In-memory rooms; server restart clears all rooms.
 - Guest sessions expire after 12 hours.
-- STUN candidate discovery and UDP socket primitives are implemented but live NAT traversal / hole punching is not yet integrated or verified. Relay region selection, persistence, payload encryption, DDoS protection and production deployment configuration are also pending.
+- STUN candidate discovery, UDP socket primitives and authenticated direct-P2P packet transport are implemented in source but live NAT traversal / hole punching is not yet integrated or verified. Relay region selection, persistence, payload encryption, DDoS protection and production deployment configuration are also pending.
 - UDP relay is a transport experiment, not a complete netcode implementation.
 - PSN mode is explicitly unconfigured.
 - Title ID registry is metadata only; no EBOOT/SPRX is built.
