@@ -246,8 +246,6 @@ static int cb_relay_select_shim(int nfds, fd_set *read_set, fd_set *write_set,
     return result < 0 ? -1 : 0;
 }
 
-static void cb_time_pings_dispatch(void);
-
 /* Only net.c's UDP send/receive/select calls are redirected. STUN and the
  * non-relay direct-UDP path continue to use the native socket functions. */
 #define sendto cb_relay_sendto_shim
@@ -260,10 +258,7 @@ static void cb_time_pings_dispatch(void);
 #undef recvfrom
 #undef sendto
 
-static void cb_time_pings_dispatch(void)
-{
-    if (!relay_client.connected) time_pings();
-}
+void net_lobby_start_original(void);
 
 void net_lobby_start(void)
 {
