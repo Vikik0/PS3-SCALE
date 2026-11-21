@@ -108,6 +108,8 @@ static ps3scale_ps2_config_db_t g_ps2_config_db;
 static sys_ppu_thread_t g_ps2_config_download_thread;
 static int g_ps2_config_download_thread_started = 0;
 static volatile int g_ps2_config_download_running = 0;
+static volatile size_t g_ps2_config_downloaded = 0;
+static volatile size_t g_ps2_config_download_total = 0;
 static volatile int g_ps2_config_download_done = 0;
 static volatile int g_ps2_config_download_result = 0;
 static char g_ps2_config_download_url[512];
@@ -2998,10 +3000,11 @@ static void ps2_config_download_worker(void *arg)
     struct stat st;
 
     (void)arg;
-    if (ps3scale_online_download_limited(
+    if (ps3scale_online_download_limited_progress(
             g_ps2_config_download_url,
             g_ps2_config_download_temp_path,
-            PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT) == 0) {
+            PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT,
+            &g_ps2_config_downloaded, &g_ps2_config_download_total) == 0) {
         fp = fopen(g_ps2_config_download_temp_path, "rb");
         if (!fp) {
             result = -3;
@@ -3114,6 +3117,8 @@ static void start_ps2_config_download(void)
     snprintf(g_ps2_config_download_type, sizeof(g_ps2_config_download_type),
              "%s", entry->type);
     g_ps2_config_download_result = -1;
+    g_ps2_config_downloaded = 0;
+    g_ps2_config_download_total = 0;
     g_ps2_config_download_done = 0;
     g_ps2_config_download_running = 1;
     g_network_task_running = 1;
@@ -3123,6 +3128,8 @@ static void start_ps2_config_download(void)
                         1001, 64 * 1024, THREAD_JOINABLE,
                         "ps3scale_ps2cfg") != 0) {
         g_ps2_config_download_running = 0;
+        g_ps2_config_downloaded = 0;
+        g_ps2_config_download_total = 0;
         g_network_task_running = 0;
         set_details_message("COULD NOT START PS2 CONFIG DOWNLOAD WORKER.");
         return;
@@ -3430,6 +3437,8 @@ static void service_ps2_config_download(void)
         set_details_message("PS2 CONFIG DOWNLOAD FAILED. GAME FILES WERE NOT CHANGED.");
 
     g_ps2_config_download_done = 0;
+    g_ps2_config_downloaded = 0;
+    g_ps2_config_download_total = 0;
     g_details_cache_valid = 0;
 }
 
@@ -4735,6 +4744,36 @@ static void draw_details(void)
     }
 
     draw_soft_card(526.0f, 92.0f, 308.0f, 292.0f, 0);
+    if (g_ps2_config_download_running) {
+        unsigned long downloaded_kb =
+            (unsigned long)((g_ps2_config_downloaded + 1023u) / 1024u);
+        unsigned long total_kb =
+            (unsigned long)((g_ps2_config_download_total + 1023u) / 1024u);
+        float progress = 0.0f;
+        if (g_ps2_config_download_total > 0) {
+            unsigned int percent = (unsigned int)(
+                (g_ps2_config_downloaded >= g_ps2_config_download_total) ? 100u :
+                (g_ps2_config_downloaded * 100u) / g_ps2_config_download_total);
+            snprintf(line, sizeof(line), "PS2 CONFIG: %u%%  %lu/%lu KB",
+                     percent, downloaded_kb, total_kb);
+            progress = (float)g_ps2_config_downloaded /
+                       (float)g_ps2_config_download_total;
+            if (progress > 1.0f) progress = 1.0f;
+        } else {
+            snprintf(line, sizeof(line), "PS2 CONFIG: %lu KB RECEIVED",
+                     downloaded_kb);
+            progress = g_animation_enabled ?
+                0.12f + 0.22f * (0.5f + 0.5f *
+                    sinf((float)g_frame_counter * 0.12f)) : 0.18f;
+        }
+        set_ui_font_size(6, 9);
+        draw_text(544.0f, 362.0f, 0x875be8ff, line);
+        draw_rounded_rect(544.0f, 376.0f, 272.0f, 4.0f, 2.0f,
+                          0xe4deefff);
+        if (progress > 0.0f)
+            draw_rounded_rect(544.0f, 376.0f, 272.0f * progress, 4.0f, 2.0f,
+                              0x9568edff);
+    }
     set_ui_font_size(9, 14);
     draw_text(544.0f, 108.0f, 0x29243fff, "Original vs Enhanced");
     set_ui_font_size(6, 9);
