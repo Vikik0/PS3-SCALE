@@ -10,7 +10,7 @@
 
 ## Components
 
-1. **PS3 client plugin (not implemented):** game-specific hooks plus HTTP session/lobby calls and UDP relay client.
+1. **PS3 client plugin (partially scaffolded):** the PRX bootstrap, GHC2 codec and RFC 6455 binary-frame encoder/parser compile for PPU and are CI-tested. HTTPS guest-session creation, TLS, WebSocket upgrade/socket lifecycle and game-specific Campaign hooks are not implemented.
 2. **Lobby API (implemented prototype):** guest session creation, six-character room codes, join/leave, ready state, two-player cap and host start.
 3. **UDP relay (implemented reference prototype):** forwards authenticated opaque packets only between the two members of a running room. The Python reference relay is locally integration-tested; it is not the Cloudflare deployment.
 4. **Cloudflare WebSocket relay fallback (implemented in Worker source):** an authenticated WSS route forwards binary GHC2 frames between the two room members when direct UDP cannot connect. It checks HMAC, replay window, frame size and per-session rate. Deployment and PS3 client integration are still pending.

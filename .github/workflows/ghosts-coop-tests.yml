@@ -44,6 +44,11 @@ jobs:
         run: |
           cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/ghc_protocol.c tests/protocol_c_test.c -o /tmp/ghc-protocol-test
           /tmp/ghc-protocol-test
+      - name: Build and run PS3 WebSocket frame codec tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/ghc_websocket.c tests/websocket_frame_test.c -o /tmp/ghc-websocket-test
+          /tmp/ghc-websocket-test
       - name: Build and run downed/revive rules tests
         working-directory: experiments/ghosts-campaign-coop
         run: |

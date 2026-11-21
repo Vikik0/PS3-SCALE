@@ -26,13 +26,16 @@ $(BUILD)/module.o: module.c | $(BUILD)
 $(BUILD)/ghc_protocol.o: ../ghc_protocol.c ../ghc_protocol.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c ../ghc_protocol.c -o $@
 
+$(BUILD)/ghc_websocket.o: ../ghc_websocket.c ../ghc_websocket.h | $(BUILD)
+	$(PPU_CC) $(CFLAGS) -c ../ghc_websocket.c -o $@
+
 $(BUILD)/mission_rules.o: ../mission_rules.c ../mission_rules.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c ../mission_rules.c -o $@
 
-$(BUILD)/ghosts_coop.elf: $(BUILD)/module.o $(BUILD)/ghc_protocol.o $(BUILD)/mission_rules.o $(CRT) $(PRX_LD) $(PRX_SPECS)
+$(BUILD)/ghosts_coop.elf: $(BUILD)/module.o $(BUILD)/ghc_protocol.o $(BUILD)/ghc_websocket.o $(BUILD)/mission_rules.o $(CRT) $(PRX_LD) $(PRX_SPECS)
 	$(PPU_CC) -nostdlib -nostartfiles -specs=$(PRX_SPECS) \
 		-Wl,-q -Wl,--no-warn-rwx-segments -Wl,-T,$(PRX_LD) \
-		$(BUILD)/module.o $(BUILD)/ghc_protocol.o $(BUILD)/mission_rules.o $(CRT) -o $@
+		$(BUILD)/module.o $(BUILD)/ghc_protocol.o $(BUILD)/ghc_websocket.o $(BUILD)/mission_rules.o $(CRT) -o $@
 
 $(BUILD)/ghosts_coop.prx: $(BUILD)/ghosts_coop.elf
 	$(PRX_GEN) build $< -o $@ --name ghosts_coop --version 0.1
