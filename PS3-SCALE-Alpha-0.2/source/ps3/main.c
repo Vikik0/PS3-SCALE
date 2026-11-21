@@ -5037,7 +5037,7 @@ static void draw_details(void)
         draw_rounded_outline(542.0f, 136.0f, 274.0f, 84.0f, 7.0f,
                              0xd9d1eaff);
         draw_text(558.0f, 158.0f, 0xb27b35ff,
-                  "NO VERIFIED SCREENSHOTS");
+                  "NO MATCHED SCREENSHOTS");
         draw_text(558.0f, 178.0f, 0x514b69ff,
                   "FOR THIS GAME VERSION");
         draw_text(558.0f, 198.0f, 0x77718fff,
@@ -5057,8 +5057,8 @@ static void draw_details(void)
                   "Results depend on the exact game version.");
         draw_text(544.0f, 342.0f, 0x875be8ff,
                   g_preview_before_texture && g_preview_after_texture ?
-                  "Verified before/after pair loaded." :
-                  "No verified before/after images are available.");
+                  "Before/after pair loaded." :
+                  "No matched before/after images are available.");
     } else if (!game_is_ps3(game) && ps2_config) {
         draw_text(544.0f, 285.0f, 0x26794bff,
                   "PS2 CONFIGURATION AVAILABLE");
@@ -5067,14 +5067,14 @@ static void draw_details(void)
         draw_text(544.0f, 323.0f, 0x514b69ff,
                   "This is NOT an HD texture replacement.");
         draw_text(544.0f, 342.0f, 0x875be8ff,
-                  "No verified before/after images are available.");
+                  "No matched before/after images are available.");
     } else {
         draw_text(544.0f, 290.0f, 0xb27b35ff,
                   "NO VERIFIED ENHANCEMENT AVAILABLE");
         draw_text(544.0f, 311.0f, 0x514b69ff,
                   "The game will start without changes.");
         draw_text(544.0f, 334.0f, 0x875be8ff,
-                  "No verified comparison images are available.");
+                  "No matched comparison images are available.");
     }
 
     draw_soft_button(20.0f, 400.0f, 250.0f, 44.0f,
