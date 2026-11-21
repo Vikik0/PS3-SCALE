@@ -194,6 +194,7 @@ lobby.webSocketMessage(relayA, "PING");
 assert.equal(relayA.sent[0], "PONG");
 lobby.webSocketMessage(relayA, new Uint8Array([0x10, 0x20, 0x30]).buffer);
 assert.equal(relayB.sent.length, 1);
+assert.equal(relayC.sent.length, 1);
 assert.equal(otherRoom.sent.length, 0);
 const relayed = new Uint8Array(relayB.sent[0]);
 assert.deepEqual(Array.from(relayed.slice(0, 4)), [0x43, 0x42, 0x52, 0x31]);
@@ -207,7 +208,7 @@ const targetedBatch = makeUplinkBatch([{
 }]);
 lobby.webSocketMessage(relayA, targetedBatch);
 assert.equal(relayB.sent.length, 2);
-assert.equal(relayC.sent.length, 0);
+assert.equal(relayC.sent.length, 1);
 const targetedEnvelope = new Uint8Array(relayB.sent[1]);
 assert.deepEqual(Array.from(targetedEnvelope.slice(22)), [0xaa, 0xbb]);
 
@@ -217,9 +218,9 @@ const multiTargetBatch = makeUplinkBatch([
 ]);
 lobby.webSocketMessage(relayA, multiTargetBatch);
 assert.equal(relayB.sent.length, 3);
-assert.equal(relayC.sent.length, 1);
+assert.equal(relayC.sent.length, 2);
 assert.deepEqual(Array.from(new Uint8Array(relayB.sent[2]).slice(22)), [0x31]);
-assert.deepEqual(Array.from(new Uint8Array(relayC.sent[0]).slice(22)), [0x32, 0x33]);
+assert.deepEqual(Array.from(new Uint8Array(relayC.sent[1]).slice(22)), [0x32, 0x33]);
 assert.equal(otherRoom.sent.length, 0);
 
 const textSocket = new FakeSocket({
