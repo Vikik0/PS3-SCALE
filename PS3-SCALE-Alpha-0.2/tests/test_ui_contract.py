@@ -145,6 +145,8 @@ for token in ("Scan Games", "Online DB", "Settings", "Help", "About",
     assert token in home
 assert "static const char *items[5]" in home
 assert "for (i = 0; i < 5; i++)" in home
+assert "float x = 96.0f + (float)i * 134.0f;" in home
+assert "float y = 148.0f;" in home
 assert "g_home_selected = (g_home_selected + 1) % 5;" in main
 home_animation = section("static void draw_home_animated_card(",
                            "static void draw_home(void)")
@@ -162,6 +164,8 @@ assert "alpha_a" in ui_color_blend and "alpha_b" in ui_color_blend
 assert "g_home_card_focus[i] += difference * 0.24f;" in home_animation_update
 assert "if (!g_animation_enabled)" in home_animation_update
 assert "update_home_card_animations();" in main
+assert "refresh_details_cache();" in main
+assert "app_screen_t screen_at_frame_start = g_screen;" in main
 assert "FW %s" in home and "PS3 %s" in home
 assert "g_hardware_info_valid" in home
 
@@ -338,8 +342,16 @@ for token in ("ORIGINAL", "NO EXACT FPS PROFILE",
               "60 FPS is not guaranteed", "CROSS: PREPARE PROFILE",
               "TRIANGLE: CONFIRM APPLY", "SQUARE: REMOVE PROFILE"):
     assert token in fps_ui, f"Missing FPS control UI token: {token}"
+details_input = section("} else if (g_screen == SCREEN_DETAILS) {",
+                       "} else if (g_screen == SCREEN_FPS_CONTROL) {")
+assert "circle && !old_circle" in details_input
+assert "select && !old_select" in details_input
+assert "left && !old_left" in details_input
 fps_input = section("} else if (g_screen == SCREEN_FPS_CONTROL) {",
                     "} else if (g_screen == SCREEN_ONLINE_DB) {")
+assert "circle && !old_circle" in fps_input
+assert "select && !old_select" in fps_input
+assert "left && !old_left" in fps_input
 for token in ("g_fps_control_selection", "confirm_profile_install()",
               "ps3scale_profile_script_remove", "FPS PROFILE APPLY CANCELLED"):
     assert token in fps_input, f"Missing FPS control input behavior: {token}"
@@ -861,6 +873,14 @@ home_ui = section("static void draw_home(void)",
                   "static void draw_online_database(void)")
 details_ui = section("static void draw_details(void)",
                      "static void draw_settings(void)")
+details_cache = section("static void refresh_details_cache(void)",
+                        "static int file_contains_text_readonly")
+assert "ps2_config_target_exists(game, ps2_config)" in details_cache
+assert "profile_script_state_for_game(game, profile)" in details_cache
+assert "g_details_cache_valid = 1;" in details_cache
+assert "ps2_config_target_exists(game, ps2_config)" not in details_ui
+assert "profile_script_state_for_game(game, profile)" not in details_ui
+assert "CIRCLE / SELECT / LEFT: BACK" in details_ui
 tools_ui = section("static void draw_tools(void)",
                    "static void draw_help(void)")
 keyboard_ui = section("static void draw_keyboard(void)",
@@ -880,6 +900,7 @@ assert "draw_solid_rect(" not in background_ui
 assert "draw_icon_line(" not in background_ui
 assert "for (i = 0; i < 24; i++)" in background_ui
 assert "for (wave = 0; wave < 3; wave++)" in background_ui
+assert "draw_circle_outline(738.0f" not in background_ui
 assert "segment <= 28" in background_ui
 assert "for (i = 0; i < 22; i++)" in background_ui
 assert "for (i = 0; i < 14; i++)" in background_ui
