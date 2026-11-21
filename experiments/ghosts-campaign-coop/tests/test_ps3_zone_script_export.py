@@ -17,6 +17,17 @@ def make_asset(name: str, body: bytes, *, long_header: bool) -> bytes:
     return header + name.encode("ascii") + b"\x00" + body
 
 
+def make_gscbin(stack: bytes, bytecode: bytes, *, compressed: bool = True) -> bytes:
+    buffer = zlib.compress(stack) if compressed else stack
+    compressed_len = len(buffer) if compressed else 0
+    return (
+        b"GSC\x00"
+        + struct.pack("<III", compressed_len, len(stack), len(bytecode))
+        + buffer
+        + bytecode
+    )
+
+
 class Ps3ZoneScriptExportTests(unittest.TestCase):
     def test_exports_short_gsc_source(self):
         body = b"main() {\n    level endon(\"disconnect\");\n}\n"
@@ -27,13 +38,28 @@ class Ps3ZoneScriptExportTests(unittest.TestCase):
         self.assertEqual(assets[0][1], body)
 
     def test_exports_long_compiled_gsc_as_gscbin(self):
-        body = b"GSC\x00" + struct.pack("<III", 4, 4, 0) + b"TEST"
+        body = make_gscbin(b"stack buffer", b"\x01\x02\x03")
         zone = bytes(0x40) + make_asset("maps/mp/test.gsc", body, long_header=True)
         assets = scan_zone(zone)
         self.assertEqual(len(assets), 1)
         self.assertEqual(assets[0][0].kind, "compiled_gsc")
         self.assertEqual(assets[0][0].output_name, "maps/mp/test.gscbin")
+        self.assertEqual(assets[0][0].gsc_stack_len, len(b"stack buffer"))
+        self.assertEqual(assets[0][0].gsc_bytecode_len, 3)
         self.assertEqual(assets[0][1], body)
+
+    def test_exports_uncompressed_gsc_stack_buffer(self):
+        body = make_gscbin(b"stack buffer", b"\x04\x05", compressed=False)
+        zone = bytes(0x40) + make_asset("maps/mp/test.gsc", body, long_header=True)
+        assets = scan_zone(zone)
+        self.assertEqual(len(assets), 1)
+        self.assertEqual(assets[0][0].kind, "compiled_gsc")
+        self.assertEqual(assets[0][0].gsc_compressed_len, 0)
+
+    def test_ignores_invalid_gsc_length_header(self):
+        body = b"GSC\x00" + struct.pack("<III", 50, 100, 20) + b"not-a-valid-buffer"
+        zone = bytes(0x40) + make_asset("assets/script_blob.bin", body, long_header=True)
+        self.assertEqual(scan_zone(zone), [])
 
     def test_ignores_non_script_assets(self):
         body = b"plain vision data"
@@ -41,12 +67,12 @@ class Ps3ZoneScriptExportTests(unittest.TestCase):
         self.assertEqual(scan_zone(zone), [])
 
     def test_rejects_path_traversal(self):
-        body = b"GSC\x00script"
+        body = make_gscbin(b"stack", b"\x01")
         zone = bytes(0x40) + make_asset("../escape.gsc", body, long_header=True)
         self.assertEqual(scan_zone(zone), [])
 
     def test_export_creates_manifestable_output(self):
-        body = b"GSC\x00compiled script"
+        body = make_gscbin(b"stack", b"\x01\x02")
         zone = bytes(0x40) + make_asset("maps/mp/example.gsc", body, long_header=True)
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
