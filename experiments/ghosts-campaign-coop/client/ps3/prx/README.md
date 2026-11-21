@@ -1,28 +1,29 @@
-
 # PS3 PRX bootstrap
-
-This folder builds the first PS3 PRX artifact for the project.
 
 ## Phase 1 purpose
 
-The first playable target is local Campaign co-op on one PS3. The PRX must eventually:
-- identify the exact Ghosts Title ID and TU profile;
-- install only verified runtime hooks for the matching executable;
-- preserve the original Logan Campaign flow;
-- enable/reuse the second local-player slot and controller path;
-- keep player input, camera and HUD state independent;
-- connect Campaign health, revive and checkpoint behavior only after the player-two path is proven.
+The first playable target is local Campaign co-op on one PS3:
+- two local DualShock 3 controllers;
+- Player 1 remains Logan;
+- Player 2 is a separate Multiplayer-style soldier;
+- no internet, PSN, lobby or server dependency.
 
-## Parked online components
+## Implemented groundwork
 
-The current build also compiles GHC2, GCP1, WebSocket, HTTPS lobby, STUN, UDP and direct-P2P components. They are retained for Phase 2 but are not part of the Phase 1 runtime design. Do not start the lobby or network transport in the local build.
+- Passive PRX lifecycle/bootstrap.
+- Standalone downed/revive state machine.
+- Host-tested controller-data decoder.
+- PS3 `sys_io` adapter for controller ports 0 and 1 using `cellPadGetInfo2` and `cellPadGetData`.
+- Diagnostic PRX functions expose a fresh input snapshot, connected-port mask, read-error mask, button bitset and packed stick axes for a future debug/frame adapter.
+
+The PRX does not call `cellPadInit` or `cellPadEnd`; the running game owns that subsystem lifecycle. It does not change the game's controller routing.
 
 ## Explicit limitation
 
-The current module is a **passive bootstrap only**. It does not enable a second local player, install Campaign hooks, change the camera, read controller 2 or modify game memory. The existing network and game payload code is source/CI validated only. Do not install it as a playable Campaign co-op mod and do not treat the build as proof that local co-op works.
+The current PRX is not a playable Campaign co-op mod. No Campaign player-two slot, actor spawn, input hook, split-screen camera, HUD integration or mission adapter is implemented. The input poll function is a diagnostic building block; it is not yet called from a game frame hook. No live PS3 hardware test has been performed.
 
-The next game-specific step is to compare the exact TU 1.16 local two-player mode runtime with Campaign, then verify candidate local-player initialization functions against the exact title ID and CEX executable. Public multiplayer offsets are not safe to call blindly.
+The PS3 adapter imports `sys_io` functions through the PS3DK `libio_stub` archive. Successful linking validates import metadata only; it does not prove that the in-game module can read both ports on every Ghosts executable.
 
 ## Build
 
-GitHub Actions downloads the pinned PS3DK PPU toolchain and host tools, compiles the PRX runtime CRT, then runs the Makefile. The unsigned PRX and fake-signed SPRX are CI artifacts, not committed binaries.
+GitHub Actions downloads the pinned PS3DK PPU toolchain and host tools, builds the required system import stubs including `libio_stub`, then compiles and validates the PRX. The unsigned PRX and fake-signed SPRX are CI artifacts, not committed binaries.

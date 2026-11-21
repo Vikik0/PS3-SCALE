@@ -16,6 +16,14 @@
 
 These are research leads; local-player behavior must be verified against the exact PS3 release and update.
 
+## PS3 controller input API
+
+- PS3DK `cell/pad.h` declarations and controller data layout: https://github.com/FirebirdTA01/PS3DK/blob/v0.27.0/sdk/include/cell/pad.h
+- PS3DK `libio_stub.yaml` system import list for `cellPadGetInfo2` and `cellPadGetData`: https://github.com/FirebirdTA01/PS3DK/blob/v0.27.0/tools/nidgen/nids/extracted/libio_stub.yaml
+- PS3 Developer Wiki sys_io export list: https://playstationdev.wiki/ps3/VSH_Exports
+
+The adapter reads ports 0 and 1 only and does not call `cellPadInit`/`cellPadEnd`, because it is intended to run inside an already active game process. Runtime behavior remains unverified until tested on the target console.
+
 ## IW6 script and FastFile research
 
 - GSC Tool — documents IW6 (Ghosts) script compile/decompile support for PS3: https://github.com/xensik/gsc-tool

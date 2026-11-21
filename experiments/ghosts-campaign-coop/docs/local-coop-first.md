@@ -36,9 +36,15 @@ The public PS3 update catalogue lists Ghosts Title Update 1.16 for the US and EU
 
 A public TU 1.16 offsets thread lists G_Spawn, G_CallSpawnEntity, PlayerCMD_Spawn and PlayerCMD_ClonePlayer. These addresses are Multiplayer-context leads only. No candidate is approved for Campaign until verified against the exact executable and calling convention.
 
+## Controller input groundwork completed
+
+A host-testable decoder and PS3 `sys_io` adapter have been added for controller ports 0 and 1. The adapter reads `cellPadGetInfo2` and `cellPadGetData`, keeps each port in a separate player snapshot, and maps digital buttons, analog sticks and trigger pressure. It does not initialize or shut down the pad subsystem and does not replace the game's own input path.
+
+Host tests cover button mapping, analog axes, two-port independence, disconnected ports and invalid data lengths. The PRX has diagnostic polling/getter functions for a future frame hook or debugger. These functions are not yet called by a Campaign hook and have not been tested on physical hardware.
+
 ## Work sequence
 
-1. **Baseline local mode:** establish which Ghosts offline mode initializes two local players on the exact PS3 release. Record controller mapping, player slots, camera/viewports, HUD and restart behavior.
+1. **Baseline local mode:** establish which Ghosts offline mode initializes two local players on the exact PS3 release. Verify the new controller poll on ports 0 and 1, then record controller mapping, player slots, camera/viewports, HUD and restart behavior.
 2. **Campaign comparison:** compare one-player Campaign runtime state with the two-player local-mode state. Identify which player/client initialization and split-screen components are missing.
 3. **Campaign second slot:** find a safe way to retain or initialize local player slot 2 during Campaign startup.
 4. **Player identity:** keep Logan as Player 1 and assign a separate soldier actor to Player 2. Do not substitute a story NPC.

@@ -40,6 +40,8 @@ See docs/local-coop-first.md for the implementation plan and research constraint
 - UDP/STUN helpers and direct-P2P packet layer.
 - Lobby/Worker prototype and WebSocket frame codec.
 - PS3 PRX bootstrap build and CI validation.
+- Host-tested DualShock 3 input decoder and PS3 `sys_io` polling adapter for controller ports 0 and 1.
+- Diagnostic PRX polling/getter functions for a future verified Campaign frame adapter.
 
 ### Phase 1 Campaign integration — not implemented
 
@@ -52,7 +54,7 @@ See docs/local-coop-first.md for the implementation plan and research constraint
 - Connect downed/revive rules to real Campaign health and animations.
 - Test mission transitions and all Campaign-specific one-player assumptions.
 
-The current PRX is passive. It does not spawn a player or patch Campaign state. No build is currently playable.
+The PRX still does not spawn a player or patch Campaign state. It includes an unhooked controller-input diagnostic adapter; no live Campaign frame hook or second-player runtime integration exists. No build is currently playable.
 
 ## Phase 2 — parked until Phase 1 passes
 
@@ -70,7 +72,7 @@ The first target is CEX 4.93 + TU 1.16. The project must select builds by exact 
 
 ## Verification
 
-Existing CI validates standalone networking/gameplay codecs and builds a passive PS3 PRX bootstrap. These tests do not prove that a second local player can join Campaign. The Phase 1 success gate is defined in docs/local-coop-first.md.
+CI validates the standalone codecs, controller-input decoder, and PRX build including `sys_io` imports. These tests do not prove that the game runtime can use a second player in Campaign. The Phase 1 success gate is defined in docs/local-coop-first.md.
 
 ## Important
 
