@@ -24,27 +24,37 @@ ghc_campaign_player_registry_init()
     if ( !isdefined( level.playerpiggyback ) )
         return 0;
 
-    level.ghc_campaign_player_count = level.playerpiggyback.size;
-
-    if ( !issplitscreen() || level.ghc_campaign_player_count < 2 )
+    if ( !issplitscreen() )
         return 0;
 
-    level.ghc_campaign_player_0 = level.playerpiggyback[0];
-    level.ghc_campaign_player_1 = level.playerpiggyback[1];
+    for ( var_0 = 0; var_0 < level.playerpiggyback.size; var_0++ )
+    {
+        var_1 = level.playerpiggyback[var_0];
 
-    if ( !isdefined( level.ghc_campaign_player_0 ) || !isdefined( level.ghc_campaign_player_1 ) )
-        return 0;
+        if ( !isdefined( var_1 ) || !var_1 issplitscreenplayer() )
+            continue;
 
-    if ( !level.ghc_campaign_player_0 issplitscreenplayer() )
-        return 0;
+        level.ghc_campaign_player_count++;
 
-    if ( !level.ghc_campaign_player_1 issplitscreenplayer() )
-        return 0;
+        if ( var_1 issplitscreenplayerprimary() )
+        {
+            if ( isdefined( level.ghc_campaign_player_0 ) )
+                return 0;
 
-    if ( !level.ghc_campaign_player_0 issplitscreenplayerprimary() )
-        return 0;
+            level.ghc_campaign_player_0 = var_1;
+        }
+        else
+        {
+            if ( isdefined( level.ghc_campaign_player_1 ) )
+                return 0;
 
-    if ( level.ghc_campaign_player_1 issplitscreenplayerprimary() )
+            level.ghc_campaign_player_1 = var_1;
+        }
+    }
+
+    if ( level.ghc_campaign_player_count != 2
+        || !isdefined( level.ghc_campaign_player_0 )
+        || !isdefined( level.ghc_campaign_player_1 ) )
         return 0;
 
     level.ghc_campaign_coop_ready = 1;
