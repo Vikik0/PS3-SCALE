@@ -25,7 +25,7 @@ The relay is a transport prototype only. The PS3 guest-ticket/CBR1 client now ha
 
 ## Free-tier note
 
-Cloudflare Workers Free supports SQLite-backed Durable Objects with strict daily limits. The prototype caps usage at 16 guest sessions, four open rooms, one active match at a time, and five inbound WebSocket messages per second per client (including keepalive pings). The CBU1 protocol and a six-frame PS3 batching queue now exist, but the queue is not yet connected to the upstream netcode's per-frame socket calls. Do not enable gameplay traffic until the adapter integration is complete. This is not an unlimited relay. See ../docs/CROSSPLAY-ARCHITECTURE.md for the current quota calculation.
+Cloudflare Workers Free supports SQLite-backed Durable Objects with strict daily limits. The prototype caps usage at 16 guest sessions, four open rooms, one active match at a time, and five inbound WebSocket messages per second per client (including keepalive pings). The CBU1 protocol and a seven-frame PS3 batching queue now exist, but the queue is not yet connected to the upstream netcode's per-frame socket calls. Do not enable gameplay traffic until the adapter integration is complete. This is not an unlimited relay. See ../docs/CROSSPLAY-ARCHITECTURE.md for the current quota calculation.
 
 ## Local checks
 
