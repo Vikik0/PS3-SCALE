@@ -8,7 +8,8 @@ This Worker provides the first online-service layer for the Crash Bash Enhanced 
 - PS3 room-code join endpoint that issues a short-lived, single-use WebSocket ticket instead of exposing a long-lived guest token to the PS3 client; a successful PS3 join is marked ready automatically.
 - PS3 host-room creation endpoint with a private room code and one-time WebSocket ticket.
 - Authenticated `START` WebSocket control; only the room host can activate a waiting match after all players are ready.
-- Private room codes and up to four player slots.
+- Private and public room codes with up to four player slots.
+- Read-only public room discovery at `GET /v1/rooms/public`; it exposes only waiting, non-full public rooms and does not require a guest session.
 - Host handoff when the host leaves.
 - Disconnect cleanup and idempotent browser rejoin.
 - Ready state and host-controlled match start.
@@ -21,7 +22,7 @@ This Worker provides the first online-service layer for the Crash Bash Enhanced 
 
 ## Not included yet
 
-The relay is a transport prototype. The PS3 adapter now intercepts the upstream lockstep UDP socket calls and routes CBU1/CBR1 packets with per-peer addressing and a 220 ms batch cadence. Host-side tests cover ticket flows, roster mapping, start control, batching, and envelope decoding. A future browser WebAssembly game runtime is not connected yet. TLS/WSS is also not implemented in the PS3 client, and public Worker deployment is waiting for Cloudflare credentials. Do not describe the game as playable online until secure transport, browser runtime, and real PS3/browser match tests pass.
+The relay is a transport prototype. The PS3 adapter now intercepts the upstream lockstep UDP socket calls and routes CBU1/CBR1 packets with per-peer addressing and a 220 ms batch cadence. Host-side tests cover ticket flows, roster mapping, start control, batching, and envelope decoding. A future browser WebAssembly game runtime is not connected yet. The PS3 client now has certificate-verified TLS 1.2/WSS, but the public Worker deployment is still waiting for Cloudflare account credentials. Do not describe the game as playable online until the browser runtime and real PS3/browser match tests pass.
 
 ## Free-tier note
 
