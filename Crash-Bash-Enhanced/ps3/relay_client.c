@@ -341,6 +341,52 @@ int cb_relay_send_packet(CbRelayClient *client, const void *packet, size_t lengt
     return cb_relay_send_to(client, NULL, packet, length);
 }
 
+int cb_relay_queue_packet(CbRelayBatchQueue *queue, const uint8_t recipient_id[16],
+                          const void *packet, size_t length)
+{
+    CbRelayPacket *entry;
+    if (!queue || !packet || length == 0 || length > CB_RELAY_MAX_PACKET ||
+        queue->count >= CB_RELAY_MAX_BATCH_PACKETS) return -1;
+
+    entry = &queue->packets[queue->count];
+    memset(entry->recipient_id, 0, sizeof(entry->recipient_id));
+    if (recipient_id) memcpy(entry->recipient_id, recipient_id, 16u);
+    memcpy(queue->payloads[queue->count], packet, length);
+    entry->payload = queue->payloads[queue->count];
+    entry->length = length;
+    queue->count++;
+    return 0;
+}
+
+int cb_relay_batch_flush(CbRelayClient *client, CbRelayBatchQueue *queue)
+{
+    int result;
+    if (!client || !queue) return -1;
+    if (queue->count == 0) {
+        queue->frame_count = 0;
+        return 0;
+    }
+    result = cb_relay_send_batch(client, queue->packets, queue->count);
+    if (result == 0) {
+        queue->count = 0;
+        queue->frame_count = 0;
+    }
+    return result;
+}
+
+int cb_relay_batch_tick(CbRelayClient *client, CbRelayBatchQueue *queue,
+                        unsigned int frames_per_batch)
+{
+    if (!client || !queue || !client->connected) return -1;
+    if (frames_per_batch == 0) frames_per_batch = 6u;
+    if (queue->frame_count < 0xffffffffu) queue->frame_count++;
+    if (queue->count >= CB_RELAY_MAX_BATCH_PACKETS ||
+        queue->frame_count >= frames_per_batch) {
+        return cb_relay_batch_flush(client, queue);
+    }
+    return 0;
+}
+
 int cb_relay_receive_packet(CbRelayClient *client, void *packet, size_t capacity,
                             size_t *length, uint8_t sender_id[16],
                             char *control, size_t control_capacity,
