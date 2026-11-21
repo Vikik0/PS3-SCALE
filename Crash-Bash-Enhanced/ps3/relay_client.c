@@ -336,7 +336,6 @@ static int request_room_ticket(CbRelayClient *client, const char *host, unsigned
     memset(response, 0, sizeof(response));
     while (received < CB_HTTP_RESPONSE_MAX) {
         ssize_t count = recv(fd, response + received, CB_HTTP_RESPONSE_MAX - received, 0);
-        if (count < 0 && errno == EINTR) continue;
         if (count < 0) goto cleanup;
         if (count == 0) break;
         received += (size_t)count;
