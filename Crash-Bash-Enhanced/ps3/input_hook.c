@@ -268,6 +268,28 @@ void cb_input_set_active(int active, int local_slot)
     bridge_active = active ? 1 : 0;
 }
 
+
+int cb_input_read_physical(CbPadState *state)
+{
+    CellPadData data;
+
+    if (!state || !hooks_installed) {
+        return -1;
+    }
+
+    if (original_get_data(0, &data) != CELL_PAD_OK || data.len < 8) {
+        return -1;
+    }
+
+    state->digital1 = data.button[2];
+    state->digital2 = data.button[3];
+    state->right_x = (uint8_t)data.button[4];
+    state->right_y = (uint8_t)data.button[5];
+    state->left_x = (uint8_t)data.button[6];
+    state->left_y = (uint8_t)data.button[7];
+    return 0;
+}
+
 void cb_input_set_remote_state(int slot, const CbPadState *state)
 {
     CbRemoteSlot *target;
