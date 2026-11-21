@@ -6,6 +6,18 @@
 int main(void)
 {
     CbRelayClient client;
+    CbRelayBatchQueue coalesce_queue;
+    const uint8_t recipient_a[16] = {
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10
+    };
+    const uint8_t recipient_b[16] = {
+        0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+        0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20
+    };
+    const uint8_t input_old[] = { 0x43, 0x42, 0x4e, 0x31, 0x08, 0x01 };
+    const uint8_t input_new[] = { 0x43, 0x42, 0x4e, 0x31, 0x08, 0x02, 0x03 };
+    const uint8_t record[] = { 0x43, 0x42, 0x4e, 0x31, 0x09, 0x04 };
     const uint8_t sent[] = { 0x43, 0x42, 0x01, 0x02, 0x03, 0x04 };
     const uint8_t batch_a[] = { 0x10, 0x11, 0x12 };
     const uint8_t batch_b[] = { 0x20, 0x21 };
@@ -31,6 +43,19 @@ int main(void)
     int result;
 
     memset(&client, 0, sizeof(client));
+    memset(&coalesce_queue, 0, sizeof(coalesce_queue));
+    if (cb_relay_queue_packet(&coalesce_queue, recipient_a, input_old, sizeof(input_old)) != 0 ||
+        cb_relay_queue_packet(&coalesce_queue, recipient_a, input_new, sizeof(input_new)) != 0 ||
+        coalesce_queue.count != 1u ||
+        coalesce_queue.packets[0].length != sizeof(input_new) ||
+        memcmp(coalesce_queue.packets[0].payload, input_new, sizeof(input_new)) != 0 ||
+        cb_relay_queue_packet(&coalesce_queue, recipient_b, input_new, sizeof(input_new)) != 0 ||
+        cb_relay_queue_packet(&coalesce_queue, recipient_a, record, sizeof(record)) != 0 ||
+        coalesce_queue.count != 3u) {
+        fprintf(stderr, "PS3 relay retransmission coalescing failed\n");
+        return 1;
+    }
+
     if (cb_relay_join(&client, "127.0.0.1", 8766, "ABC123",
                       "PS3 Player", 3000) != 0) {
         fprintf(stderr, "PS3 relay join/ticket handshake failed\n");
