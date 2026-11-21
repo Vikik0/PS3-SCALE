@@ -33,6 +33,10 @@ make PS3DEV=/path/to/ps3dev PS3DK=/path/to/ps3dev/ps3dk
 
 The CI build uses the pinned PS3DK PPU toolchain and produces an unsigned PRX plus a fake-signed SPRX for CFW development. The fake-signed artifact is not a retail-signed package.
 
+## Continuous integration
+
+GitHub Actions compiles this PRX with the pinned PS3DK PPU toolchain and uploads the unsigned PRX plus fake-signed CFW development artifact. A successful build proves only that the module links; it does not prove the PS1 emulator accepts four injected pads on real hardware.
+
 ## Safety and compatibility
 
 - The module patches only the current process's imported function descriptors.
