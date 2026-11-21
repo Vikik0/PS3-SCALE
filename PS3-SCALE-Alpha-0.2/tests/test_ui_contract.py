@@ -631,6 +631,22 @@ assert "ya2d_drawTextureEx(g_scan_cover_textures[i], cover_x, cover_y," in scan_
 assert "draw_library_animated_card(card_x, card_y, card_w, card_h, focus);" in scan_ui
 assert "update_scan_card_animations();" in main
 
+# Online result focus is animated, reduced-motion aware and input-independent.
+assert "static int g_online_focus_selection = 0;" in src
+online_animation = section("static void update_online_row_animation(void)",
+                           "static void draw_home(void)")
+assert "g_screen == SCREEN_ONLINE_DB" in online_animation
+assert "g_online_focus_selection != g_online_selected" in online_animation
+assert "g_online_row_focus = 0.0f;" in online_animation
+assert "g_online_row_focus += difference * 0.28f;" in online_animation
+assert "if (!g_animation_enabled)" in online_animation
+online_ui = section("static void draw_online_database(void)",
+                    "static void draw_library_filter_item(")
+assert "float scale = 1.0f + focus * 0.02f;" in online_ui
+assert "ui_blend_color(0xfaf9ffed, 0xf2eafff4, focus)" in online_ui
+assert "row_x + 266.0f * scale" in online_ui
+assert "update_online_row_animation();" in main
+
 # Stage 6: cohesive splash, first-run language, boot and global transitions.
 assert "#define PS3SCALE_TRANSITION_FRAMES 16u" in src
 assert "g_transition_screen = SCREEN_SPLASH" in src
