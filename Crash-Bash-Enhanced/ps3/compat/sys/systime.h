@@ -16,7 +16,25 @@ LV2_INLINE u64 sysGetTimebaseFrequency(void)
 
 LV2_SYSCALL sysGetCurrentTime(u64 *sec, u64 *nsec)
 {
-    lv2syscall2(145, (u64)(uintptr_t)sec, (u64)(uintptr_t)nsec);
+    lv2syscall2(145, (u64)sec, (u64)nsec);
+    return_to_user_prog(s32);
+}
+
+LV2_SYSCALL sysSetCurrentTime(u64 sec, u64 nsec)
+{
+    lv2syscall2(146, sec, nsec);
+    return_to_user_prog(s32);
+}
+
+LV2_SYSCALL sysSleep(u32 seconds)
+{
+    lv2syscall1(142, seconds);
+    return_to_user_prog(s32);
+}
+
+LV2_SYSCALL sysUsleep(u32 useconds)
+{
+    lv2syscall1(141, useconds);
     return_to_user_prog(s32);
 }
 
