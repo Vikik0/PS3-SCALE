@@ -235,11 +235,13 @@ int ghc_mission_encode_snapshot(
     if (!view || !output || !output_length || output_capacity < GHC_MISSION_SNAPSHOT_SIZE) return -1;
     if (view->phase > GHC_MISSION_FAILED || view->failure_reason > GHC_MISSION_FAIL_BLEEDOUT) return -1;
 
-    output[0] = GHC_MISSION_SNAPSHOT_VERSION;
-    output[1] = view->phase;
-    output[2] = view->failure_reason;
-    output[3] = 0u;
-    gh_write_u32_be(output + 4, view->revision);
+    output[0] = (uint8_t)'G';
+    output[1] = (uint8_t)'M';
+    output[2] = (uint8_t)'S';
+    output[3] = GHC_MISSION_SNAPSHOT_VERSION;
+    output[4] = view->phase;
+    output[5] = view->failure_reason;
+    gh_write_u32_be(output + 6, view->revision);
 
     for (i = 0; i < 2; ++i) {
         if (view->player_state[i] > GHC_PLAYER_DOWNED
@@ -247,14 +249,12 @@ int ghc_mission_encode_snapshot(
             || view->revive_progress_percent[i] > 100u) return -1;
     }
 
-    output[8] = view->player_state[0];
-    output[9] = view->health_percent[0];
-    output[10] = view->revive_progress_percent[0];
-    output[11] = 0u;
-    output[12] = view->player_state[1];
-    output[13] = view->health_percent[1];
-    output[14] = view->revive_progress_percent[1];
-    output[15] = 0u;
+    output[10] = view->player_state[0];
+    output[11] = view->health_percent[0];
+    output[12] = view->revive_progress_percent[0];
+    output[13] = view->player_state[1];
+    output[14] = view->health_percent[1];
+    output[15] = view->revive_progress_percent[1];
     gh_write_u32_be(output + 16, view->bleedout_remaining_ms[0]);
     gh_write_u32_be(output + 20, view->bleedout_remaining_ms[1]);
     *output_length = GHC_MISSION_SNAPSHOT_SIZE;
@@ -268,18 +268,19 @@ int ghc_mission_decode_snapshot(
 ) {
     size_t i;
     if (!input || !view || input_length != GHC_MISSION_SNAPSHOT_SIZE) return -1;
-    if (input[0] != GHC_MISSION_SNAPSHOT_VERSION) return -1;
-    if (input[1] > GHC_MISSION_FAILED || input[2] > GHC_MISSION_FAIL_BLEEDOUT) return -1;
+    if (input[0] != (uint8_t)'G' || input[1] != (uint8_t)'M'
+        || input[2] != (uint8_t)'S' || input[3] != GHC_MISSION_SNAPSHOT_VERSION) return -1;
+    if (input[4] > GHC_MISSION_FAILED || input[5] > GHC_MISSION_FAIL_BLEEDOUT) return -1;
 
-    view->phase = input[1];
-    view->failure_reason = input[2];
-    view->revision = gh_read_u32_be(input + 4);
-    view->player_state[0] = input[8];
-    view->health_percent[0] = input[9];
-    view->revive_progress_percent[0] = input[10];
-    view->player_state[1] = input[12];
-    view->health_percent[1] = input[13];
-    view->revive_progress_percent[1] = input[14];
+    view->phase = input[4];
+    view->failure_reason = input[5];
+    view->revision = gh_read_u32_be(input + 6);
+    view->player_state[0] = input[10];
+    view->health_percent[0] = input[11];
+    view->revive_progress_percent[0] = input[12];
+    view->player_state[1] = input[13];
+    view->health_percent[1] = input[14];
+    view->revive_progress_percent[1] = input[15];
     view->bleedout_remaining_ms[0] = gh_read_u32_be(input + 16);
     view->bleedout_remaining_ms[1] = gh_read_u32_be(input + 20);
 
