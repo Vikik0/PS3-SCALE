@@ -9,7 +9,7 @@ A PS3 player and a browser player must run the same Crash Bash match, not merely
 - **PS3 client:** the original Crash Bash disc running in the PS1 emulator on PS3, with the project PRX translating remote controller state into virtual PS1 pad slots.
 - **Browser client:** EmulatorJS with its PlayStation (PCSX-ReARMed) core. The browser player loads the user's disc image and optional BIOS locally, then exposes a four-player input hook for the CBN1 adapter.
 - **Identity and rooms:** guest sessions and room codes. PSN authentication is not used.
-- **Game transport:** a room-scoped WebSocket relay. The browser cannot open arbitrary UDP sockets, so the browser and PS3 clients speak the same relay protocol. The PS3 adapter now intercepts the upstream UDP socket calls and translates them to CBU1/CBR1 relay messages.
+- **Game transport:** a room-scoped WebSocket relay. The browser cannot open arbitrary UDP sockets, so its upcoming CBN1 adapter must use the same relay protocol as PS3. The PS3 adapter already intercepts the upstream UDP socket calls and translates them to CBU1/CBR1 relay messages.
 - **Hosting:** static browser files served by the same Cloudflare Worker origin as the API and SQLite-backed Durable Object. No home PC or paid database is part of the target architecture.
 
 ## Relay packet format — CBR1
