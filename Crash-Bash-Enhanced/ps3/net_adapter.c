@@ -879,6 +879,7 @@ int cb_net_init(void)
 int cb_net_host(void)
 {
     int result;
+    if (relay_client.connected) cb_net_leave();
     configure_options();
     net_active = 0;
     lobby_started = 0;
@@ -890,12 +891,107 @@ int cb_net_host(void)
 int cb_net_join_code(const char *code)
 {
     char address[64];
+    if (relay_client.connected) cb_net_leave();
     if (!code || !net_code_read(code, address, sizeof(address))) return -1;
     configure_options();
     net_active = 0;
     lobby_started = 0;
     if (!net_lobby_join(address)) return -1;
     lobby_started = 1;
+    return 0;
+}
+
+int cb_net_relay_host(const char *worker_host, unsigned short worker_port)
+{
+    int result;
+
+    if (!worker_host || !*worker_host) return -1;
+    cb_net_leave();
+    (void)cb_net_init();
+    configure_options();
+    ps3_net_options.delay = 8;
+    net_configure(&ps3_net_options);
+
+    if (cb_relay_host(&relay_client, worker_host, worker_port, "PS3 Host", 5000) != 0 ||
+        relay_hex_to_bytes(relay_client.host_session_id, relay_host_id) != 0) {
+        cb_relay_leave(&relay_client);
+        return -1;
+    }
+
+    memset(&relay_batch, 0, sizeof(relay_batch));
+    memset(relay_peers, 0, sizeof(relay_peers));
+    relay_rx_valid = 0;
+    relay_peer_add(relay_host_id);
+    net_active = 0;
+    lobby_started = 0;
+    have_previous_step = 0;
+    last_frame_step_ns = 0;
+
+    result = net_lobby_host(NULL);
+    if (!result) {
+        cb_relay_leave(&relay_client);
+        memset(relay_peers, 0, sizeof(relay_peers));
+        return -1;
+    }
+    lobby_started = 1;
+    return 0;
+}
+
+int cb_net_relay_join_code(const char *worker_host, unsigned short worker_port,
+                           const char *code)
+{
+    char host_address[32];
+    char join_address[64];
+    unsigned short host_port = 0;
+
+    if (!worker_host || !*worker_host || !code) return -1;
+    cb_net_leave();
+    (void)cb_net_init();
+    configure_options();
+    ps3_net_options.delay = 8;
+    net_configure(&ps3_net_options);
+
+    if (cb_relay_join(&relay_client, worker_host, worker_port, code,
+                      "PS3 Player", 5000) != 0 ||
+        relay_hex_to_bytes(relay_client.host_session_id, relay_host_id) != 0 ||
+        cb_relay_host_address(&relay_client, host_address, sizeof(host_address),
+                              &host_port) != 0) {
+        cb_relay_leave(&relay_client);
+        return -1;
+    }
+
+    if (snprintf(join_address, sizeof(join_address), "%s:%u",
+                 host_address, (unsigned int)host_port) >= (int)sizeof(join_address)) {
+        cb_relay_leave(&relay_client);
+        return -1;
+    }
+
+    memset(&relay_batch, 0, sizeof(relay_batch));
+    memset(relay_peers, 0, sizeof(relay_peers));
+    relay_rx_valid = 0;
+    relay_peer_add(relay_host_id);
+    net_active = 0;
+    lobby_started = 0;
+    have_previous_step = 0;
+    last_frame_step_ns = 0;
+
+    if (!net_lobby_join(join_address)) {
+        cb_relay_leave(&relay_client);
+        memset(relay_peers, 0, sizeof(relay_peers));
+        return -1;
+    }
+    lobby_started = 1;
+    return 0;
+}
+
+int cb_net_relay_start(void)
+{
+    if (!relay_client.connected || !lobby_started ||
+        strcmp(relay_client.session_id, relay_client.host_session_id) != 0) return -1;
+    if (cb_relay_start_match(&relay_client, 5000) != 0) return -1;
+    ps3_net_options.delay = 8;
+    net_configure(&ps3_net_options);
+    net_lobby_start();
     return 0;
 }
 
@@ -908,6 +1004,12 @@ int cb_net_lobby_poll(void)
     }
 
     status = net_lobby_poll();
+    if (relay_client.connected && !net_active &&
+        cb_relay_batch_tick(&relay_client, &relay_batch, 6u) != 0) {
+        cb_relay_leave(&relay_client);
+        lobby_started = 0;
+        return LOBBY_FAILED;
+    }
     if (status == LOBBY_GO && !net_active && net_on()) {
         lobby_started = 0;
         platform_online_start();
@@ -919,6 +1021,7 @@ int cb_net_lobby_poll(void)
 
 int cb_net_lobby_start(void)
 {
+    if (relay_client.connected) return cb_net_relay_start();
     net_lobby_start();
     return 0;
 }
@@ -929,6 +1032,15 @@ void cb_net_leave(void)
     net_lobby_leave();
     net_end();
     net_lobby_reset();
+    cb_relay_leave(&relay_client);
+    memset(&relay_batch, 0, sizeof(relay_batch));
+    memset(relay_peers, 0, sizeof(relay_peers));
+    memset(relay_host_id, 0, sizeof(relay_host_id));
+    relay_rx_valid = 0;
+    relay_rx_length = 0;
+    net_active = 0;
+    have_previous_step = 0;
+    last_frame_step_ns = 0;
     platform_online_stop(NULL);
     portmap_close();
 }
@@ -940,7 +1052,7 @@ int cb_net_is_active(void)
 
 const char *cb_net_join_code_text(void)
 {
-    return net_lobby_code();
+    return relay_client.connected ? relay_client.room_code : net_lobby_code();
 }
 
 void cb_net_frame(void)
@@ -960,6 +1072,14 @@ void cb_net_frame(void)
     net_vblank();
     net_step();
     have_previous_step = 1;
+    if (relay_client.connected &&
+        cb_relay_batch_tick(&relay_client, &relay_batch, 6u) != 0) {
+        net_active = 0;
+        lobby_started = 0;
+        cb_relay_leave(&relay_client);
+        platform_online_stop(NULL);
+        return;
+    }
 
     for (slot = 0; slot < 4; ++slot) {
         CbPadState state;
