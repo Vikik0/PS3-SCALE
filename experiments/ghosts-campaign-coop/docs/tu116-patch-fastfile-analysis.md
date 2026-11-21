@@ -16,7 +16,7 @@ Inputs inspected: user-supplied patch_common.ff and patch_common_mp.ff.
 
 ## Campaign findings
 
-TU 1.16 maps/_load.gsc has 66 functions. Sixty-five function bodies match the base common 1.00 version; the main entry function differs in two small places: it initializes `hideHudFast` to `0`, and it calls `maps\\_gameskill::setsize()` before `maps\\_art::magicreloadwhenreachenemy()` rather than after it. The player-registration function `init_level_flags` remains unchanged: it collects existing player entities into level.playerpiggyback, assigns level.player to index 0, and assigns level.playengineeffects to index 1 when a second entity already exists. This is player registration, not native client creation.
+TU 1.16 maps/_load.gsc has 66 functions. Sixty-five function bodies match the base common 1.00 version; the main entry function differs in two small places: it initializes `hideHudFast` to `0`, and it calls `maps\_gameskill::setsize()` before `maps\_art::magicreloadwhenreachenemy()` rather than after it. The player-registration function `init_level_flags` remains unchanged: it collects existing player entities into level.playerpiggyback, assigns level.player to index 0, and assigns level.playengineeffects to index 1 when a second entity already exists. This is player registration, not native client creation.
 
 TU 1.16 maps/_intelligence.gsc has 21 functions. Three functions differ from the base version: poker_table_spooked, upload_hint_cleanup, and hold_count. The changes add validity guards and adjust polling; they continue to reference level.player rather than adding a second-player path.
 
