@@ -423,6 +423,11 @@ const char *platform_data_path(void)
     return "/dev_hdd0/tmp/";
 }
 
+const char *saves_folder(void)
+{
+    return platform_data_path();
+}
+
 int platform_local_pad(int port)
 {
     CbPadState state;
