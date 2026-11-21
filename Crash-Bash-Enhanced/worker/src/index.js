@@ -36,17 +36,6 @@ function makeRelayEnvelope(sessionId, payload) {
   envelope.set(payload, 22);
   return envelope;
 }
-function makeRelayEnvelope(sessionId, payload) {
-  const sender = new Uint8Array(16);
-  for (let i = 0; i < 16; i++) sender[i] = Number.parseInt(sessionId.slice(i * 2, i * 2 + 2), 16);
-  const envelope = new Uint8Array(22 + payload.byteLength);
-  envelope.set(RELAY_MAGIC, 0);
-  envelope.set(sender, 4);
-  envelope[20] = (payload.byteLength >>> 8) & 0xff;
-  envelope[21] = payload.byteLength & 0xff;
-  envelope.set(payload, 22);
-  return envelope;
-}
 
 
 // CBU1 uplink: magic, count, then recipient ID, payload length, and CBN1 datagrams.
