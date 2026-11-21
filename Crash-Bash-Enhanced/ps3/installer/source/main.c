@@ -17,7 +17,7 @@ SYS_PROCESS_PARAM(1001, 0x10000);
 static volatile int g_dialog_done;
 static volatile int g_dialog_button;
 
-static void dialog_callback(int button, void *userdata)
+static void dialog_callback(CellMsgDialogCallback button, void *userdata)
 {
     (void)userdata;
     g_dialog_button = (int)button;
