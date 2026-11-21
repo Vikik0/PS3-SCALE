@@ -37,7 +37,9 @@ Useful patterns:
 
 ### PS3 tooling
 
-- RPCS3 is an open-source PS3 emulator and debugger with a GDB server. A third-party 2026 compatibility record reports BLUS31270 Ghosts booting in RPCS3, and a separate campaign video exists, but this is not an official guarantee for our exact TU, settings, or PRX injection path.
+- RPCS3 is an open-source PS3 emulator and debugger with a GDB server. Its official FAQ confirms up to seven simultaneous controller ports, so Player 1 and Player 2 can be driven independently on the PC. A third-party 2026 compatibility record reports BLUS31270 Ghosts reaching L2 BOOTS / exploratory in RPCS3; this is not an official guarantee for our exact TU, settings, or split-screen mode.
+- [PS3 C code injection toolkit (ps3-ckit)](https://github.com/tge-was-taken/ps3-ckit) demonstrates a game-specific RPCS3 patch that calls sys_prx_module_load/start and loads a mod.sprx at game boot. Adding a target requires the exact TOC, a safe entrypoint, PRX import addresses and reserved code/data space. Its public targets are Persona 5, Sonic Unleashed and Ratchet & Clank 1 HD; Ghosts is not supported, and the README pins an old RPCS3 build. It is a useful injection design reference, not a drop-in Ghosts loader. Its AGPL-3.0 code should not be copied into this project without an explicit license decision.
+- RPCS3 patch files are build-specific: the PPU executable hash and Title ID/version must match. A patch that works for another region or TU is not evidence for BLUS31270 TU 1.16.
 - PS3Sharp demonstrates a cross-platform memory-inspection bridge for RPCS3, PS3MAPI (CEX/DEX), TMAPI and CCAPI. Its own README says unit tests are separate from integration tests, which require PS3 or RPCS3.
 - webMAN MOD exposes HTTP/PS3MAPI automation: process and memory inspection, module load/unload, game launch, and a virtual-pad command. The documented virtual pad is one emulated pad; it must not be treated as proof that two independent DS3 ports work.
 
@@ -60,16 +62,16 @@ New `tests/ghosts_runtime_sim_test.c` composes the existing portable input decod
 
 ## RPCS3 lane: decision and limits
 
-Use RPCS3 as the first real-game test environment if the user's own BLUS31270/TU 1.16 dump boots and the exact PRX/hook loading route works. Keep one persistent game installation in RPCS3; do not reinstall or re-extract the ISO for every change. Update only the development PRX/patch artifact and restart/reload the module if safe unload/reload is proven.
+Use RPCS3 as the first real-game test environment if the user's own BLUS31270/TU 1.16 dump boots. Configure two independent controller ports and first verify the existing offline split-screen baseline. Then prove one game-specific PRX load route. The leading candidate is an original, Ghosts-specific RPCS3 patch that invokes sys_prx_module_load/start at boot, following the architectural pattern documented by ps3-ckit; we must derive all addresses and import stubs from the user's exact EBOOT, not copy Persona 5/Sonic/Ratchet values. Keep one persistent game installation in RPCS3; do not reinstall or re-extract the ISO for every change. Update only the development PRX/patch artifact and restart the emulated game. Safe in-process module unload/reload is a later optimization, not assumed.
 
 Before calling RPCS3 a reliable lane, verify in order:
 1. The exact user-owned Title ID and TU boot to Campaign.
 2. The same build boots an existing two-player local mode with two distinct emulated controller ports.
-3. The development PRX can be loaded and unloaded without restarting/reinstalling the whole game, or a documented EBOOT/patch route can be used.
+3. The development PRX can be loaded through a verified Ghosts-specific patch/loader. A full game restart is acceptable at first; safe module unload/reload is optional and must be proven.
 4. The emulator's memory/debugger observations match the expected addresses and per-player identities.
 5. Repeat a short mission, checkpoint and restart scenario; compare logs and screenshots.
 
-RPCS3 is a high-value development proxy, not the final authority. Do not reuse its memory addresses as PS3 physical addresses without validation; do not infer CEX behavior from emulator success.
+RPCS3 is a high-value development proxy and may let us test two local players on the PC, but it is not the final authority. Do not reuse its memory addresses as PS3 physical addresses without validation; do not infer CEX behavior, RSX timing or physical controller behavior from emulator success.
 
 ## Optional remote PS3 automation
 
