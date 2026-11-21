@@ -4,6 +4,10 @@
 
 FPS Control exposes only the game-specific performance profiles already present in the PS3 SCALE catalogue. It is not a universal frame-rate slider and does not synthesize a patch for an unsupported game.
 
+This screen is separate from the Online DB NCL installer:
+- FPS Control arms a PS3 SCALE one-launch webMAN memory profile.
+- Online DB can install an exact-match community NCL text file into Artemis USERLIST for the user to select in Artemis.
+
 ## User flow
 
 1. Open Scan Games and select a PS3 title.
@@ -19,7 +23,9 @@ FPS Control exposes only the game-specific performance profiles already present 
 - The current catalogue uses community-reported entries. These are not hardware-verified by PS3 SCALE.
 - Only one-write `B_COMMUNITY` profiles are eligible for automatic one-launch setup in this build.
 - Multi-write and `B_COMMUNITY_MANUAL` entries remain disabled for automatic application.
-- webMAN MOD and PS3MAPI must respond before a profile can be armed.
+- webMAN MOD and PS3MAPI must respond before a memory profile can be armed.
+- Normal game launch requires webMAN's local HTTP service, not PS3MAPI.
+- If PS3MAPI is unavailable after a profile was armed, PS3 SCALE removes its own one-launch script and still attempts to start the game without the profile. If webMAN itself is unavailable, the app reports the local HTTP/network failure.
 - PS3 SCALE protects foreign webMAN scripts and does not overwrite or delete them.
 - The patch is written to the running game's memory only. It does not modify ISO, EBOOT or installed game files; closing the game ends the patched process.
 
