@@ -72,7 +72,7 @@ function roomCard() {
         <div class="empty-emblem"><span>?</span></div>
         <p class="eyebrow">YOUR PARTY</p>
         <h3>No room yet</h3>
-        <p>Create a private room or enter a friend's code. Up to four players can join.</p>
+        <p>Create a public or private room, or join with a friend's code. Up to four players can join.</p>
         <div class="empty-lines"><i></i><i></i><i></i><i></i></div>
       </div>`;
   }
@@ -177,7 +177,7 @@ function render() {
 
         <section class="feature-strip">
           <div><span class="feature-icon">◎</span><span><strong>GUEST ACCESS</strong><small>No PSN account needed</small></span></div>
-          <div><span class="feature-icon">♧</span><span><strong>PRIVATE ROOMS</strong><small>Invite friends with a code</small></span></div>
+          <div><span class="feature-icon">♧</span><span><strong>PUBLIC + PRIVATE ROOMS</strong><small>Browse or invite with a code</small></span></div>
           <div><span class="feature-icon">✦</span><span><strong>UP TO 4 PLAYERS</strong><small>Bring the whole party</small></span></div>
           <div><span class="feature-icon">⌁</span><span><strong>LIGHTWEIGHT SERVICE</strong><small>Matchmaking, not game streaming</small></span></div>
         </section>
@@ -188,7 +188,7 @@ function render() {
             <div class="join-panel">
               <div class="panel-top"><span class="panel-label">01 — START A PARTY</span><span class="panel-symbol">＋</span></div>
               <h3>MAKE A ROOM</h3>
-              <p>Set up a private lobby and share your room code with friends.</p>
+              <p>Create a public lobby for matchmaking or a private room for friends.</p>
               <label for="display-name">PLAYER NAME</label>
               <input id="display-name" maxlength="16" placeholder="Enter your name" value="${escapeHtml(state.session?.display_name || "")}" />
               <label for="player-limit">PLAYER SLOTS</label>
@@ -212,7 +212,7 @@ function render() {
         <section class="how-section" id="how">
           <div class="section-heading"><div><p class="eyebrow">THREE STEPS. ZERO FUSS.</p><h2>HOW IT <em>WORKS</em></h2></div><span class="section-index">02 / GUIDE</span></div>
           <div class="steps-grid">
-            <article class="step-card"><span class="step-number">01</span><div class="step-icon">◉</div><h3>CREATE OR JOIN</h3><p>Start a guest session and create a private room, or enter your friend's six-character code.</p></article>
+            <article class="step-card"><span class="step-number">01</span><div class="step-icon">◉</div><h3>CREATE OR JOIN</h3><p>Create a public or private room, browse open public rooms, or join a friend with a six-character code.</p></article>
             <article class="step-card"><span class="step-number">02</span><div class="step-icon">♧</div><h3>GET YOUR CREW READY</h3><p>Wait for up to three friends to join. Everyone marks ready before the host starts.</p></article>
             <article class="step-card"><span class="step-number">03</span><div class="step-icon">✦</div><h3>LET THE PARTY BEGIN</h3><p>The room relay prototype is in place. Browser and PS3 gameplay synchronization is still under development.</p></article>
           </div>
