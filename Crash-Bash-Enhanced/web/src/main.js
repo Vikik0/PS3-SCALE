@@ -151,7 +151,7 @@ function render() {
           <span class="brand-mark"><b>C</b><i></i></span>
           <span class="brand-copy"><strong>CRASH BASH</strong><small>ENHANCED ONLINE</small></span>
         </a>
-        <nav class="top-nav"><a href="#play" class="active">PLAY ONLINE</a><a href="#how">HOW IT WORKS</a><a href="#rankings">RANKINGS</a></nav>
+        <nav class="top-nav"><a href="#play" class="active">PLAY ONLINE</a><a href="/play.html">BROWSER PLAYER</a><a href="#how">HOW IT WORKS</a><a href="#rankings">RANKINGS</a></nav>
         <div class="top-actions">
           <span class="connection-chip ${connected ? "online" : ""}"><i></i>${connected ? "SERVICE ONLINE" : "SERVICE OFFLINE"}</span>
           <button class="profile-button" data-action="profile">${state.session ? escapeHtml(initials(state.session.display_name)) : "GUEST"}</button>
@@ -182,7 +182,7 @@ function render() {
           <div><span class="feature-icon">◎</span><span><strong>GUEST ACCESS</strong><small>No PSN account needed</small></span></div>
           <div><span class="feature-icon">♧</span><span><strong>PUBLIC + PRIVATE ROOMS</strong><small>Browse or invite with a code</small></span></div>
           <div><span class="feature-icon">✦</span><span><strong>UP TO 4 PLAYERS</strong><small>Bring the whole party</small></span></div>
-          <div><span class="feature-icon">⌁</span><span><strong>LIGHTWEIGHT SERVICE</strong><small>Matchmaking, not game streaming</small></span></div>
+          <div><span class="feature-icon">⌁</span><span><strong>BROWSER PLAYER BETA</strong><small>Run your own PS1 disc locally</small></span></div>
         </section>
 
         <section class="play-section" id="play">
