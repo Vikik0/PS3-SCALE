@@ -80,7 +80,9 @@ const oversized = await call("/v1/sessions", "POST", { mode: "guest", padding: "
 assert.equal(oversized.status, 413);
 assert.equal(oversized.body.error, "BODY_TOO_LARGE");
 
+const writesBeforeHealth = storageWrites;
 const health = await call("/health");
+assert.equal(storageWrites, writesBeforeHealth, "health GET must not write when no stale state needs pruning");
 assert.equal(health.status, 200);
 assert.equal(health.body.psn_required, false);
 assert.equal(health.body.max_players, 4);
