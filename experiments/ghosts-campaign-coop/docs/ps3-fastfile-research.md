@@ -52,6 +52,12 @@ Scans an already inflated .zone and exports validated .gsc, .csc, and compiled G
 python tools/ps3_zone_script_export.py "C:\Ghosts\analysis\common.zone" "C:\Ghosts\analysis\scripts" --report-json "C:\Ghosts\analysis\scripts.json"
 ~~~
 
+After decompiling compiled assets with GSC Tool, inventory likely player/session and Campaign hooks:
+
+~~~powershell
+python tools/gsc_campaign_audit.py "C:\Ghosts\analysis\scripts" --report-json "C:\Ghosts\analysis\gsc-audit.json"
+~~~
+
 The exporter deliberately does not classify assets by a hard-coded type ID. Public references disagree on some IW6 asset-type IDs, and names plus header shape plus GSC magic are safer for this first-pass script inventory. Embedded rawfiles inside mptype map structures are not yet extracted; that requires a separate MapEnts parser.
 
 ## Test status and limitations
@@ -66,6 +72,7 @@ The known multi-zone DLC files common_alien_dlc_updated_mp.ff and common_core_dl
 2. Extract the base common.ff and all Campaign/SP-related zones first, then patch zones.
 3. Export all .gsc / .csc source assets and compiled GSC magic scriptfiles; decompile compiled files with GSC Tool's IW6 PS3 mode.
 4. Search the resulting Campaign scripts for player-count assumptions, player connect/spawn lifecycle, isSplitScreen() / isSplitscreenPlayer() calls, player entity registration, checkpoints, revive/last-stand and mission transitions.
-5. Compare those findings with the public Extinction/Multiplayer reference, then return to the exact PS3 EBOOT/PRX analysis to verify the engine-side local-client setup.
+5. Run tools/gsc_campaign_audit.py over the decompiled scripts and review its line-numbered leads.
+6. Compare those findings with the public Extinction/Multiplayer reference, then return to the exact PS3 EBOOT/PRX analysis to verify the engine-side local-client setup.
 
 This moves script archaeology ahead without pretending that a second Campaign player has been created. The main blocker remains proving the native second local-client path in the exact PS3 executable.
