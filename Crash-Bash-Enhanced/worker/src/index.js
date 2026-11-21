@@ -523,7 +523,8 @@ export class CrashBashLobby {
             host_name: room.players.find(player => player.sessionId === room.hostSessionId)?.name || "Host",
             created_at: new Date(room.createdAt).toISOString()
           }));
-        await this.save(state);
+        // This endpoint is read-only: avoid a Durable Object storage write for every
+        // public-room refresh. The state was not mutated while building this list.
         return response(200, { rooms });
       }
 
