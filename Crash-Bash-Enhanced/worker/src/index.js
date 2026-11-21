@@ -148,7 +148,20 @@ function roomView(room) {
 
 export default {
   async fetch(request, env) {
-    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+    const url = new URL(request.url);
+    const isApiRequest = request.method === "OPTIONS" ||
+      url.pathname === "/health" ||
+      url.pathname.startsWith("/v1/");
+
+    if (!isApiRequest) {
+      if (env.ASSETS) return env.ASSETS.fetch(request);
+      return new Response("Not Found", { status: 404, headers: CORS });
+    }
+
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: CORS });
+    }
+
     const id = env.LOBBY.idFromName("crash-bash-online-lobby-v1");
     return env.LOBBY.get(id).fetch(request);
   }
