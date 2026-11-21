@@ -18,6 +18,18 @@ This is a reverse-engineering lead list, **not an executable patch**. The addres
 | PlayerCMD_SetVelocity | 0x235958 | Script command for actor movement | Unknown |
 | PlayerCMD_GiveWeapon | 0x233468 | Weapon assignment helper | Unknown |
 
+## Reported data structures (not callable functions)
+
+The same public PS3 TU 1.16 offset collection reports the following data addresses:
+
+| Data | Reported address | Reported stride | Use in this project |
+|---|---:|---:|---|
+| `G_Client` base | `0xF44980` | `0x3700` bytes | Candidate client/player-state array; layout and Campaign validity unknown |
+| `G_Entity` base | `0xE04980` | `0x280` bytes | Candidate entity array; layout and Campaign validity unknown |
+| `scrVmPub_t` global | `0x13C3140` | — | Script VM state; not a safe standalone function-call context |
+
+The ELF inspector now reports these as data candidates and maps addresses across both file-backed and zero-filled `PT_LOAD` memory. A BSS mapping has no file bytes to inspect; the tool will not fabricate them. These reported values remain unverified until matched against the exact EBOOT hash.
+
 ## Important decompilation finding — clone is not a second player
 
 The public IW6 PS4 decompilation of `PlayerCmd_ClonePlayer` shows that the command:
