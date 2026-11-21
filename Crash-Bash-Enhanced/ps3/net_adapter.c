@@ -60,6 +60,7 @@ static uint8_t relay_rx_packet[CB_RELAY_MAX_PACKET];
 static uint8_t relay_rx_sender[16];
 static size_t relay_rx_length;
 static int relay_rx_valid;
+static uint64_t relay_last_flush_ms;
 
 static int relay_hex_to_bytes(const char *hex, uint8_t output[16])
 {
@@ -201,11 +202,6 @@ static ssize_t cb_relay_sendto_shim(int fd, const void *buffer, size_t length,
     if (!buffer || length == 0 || length > CB_RELAY_MAX_PACKET ||
         relay_peer_find(destination, destination_length, recipient) != 0) {
         errno = EHOSTUNREACH;
-        return -1;
-    }
-    if (relay_batch.count >= CB_RELAY_MAX_BATCH_PACKETS &&
-        cb_relay_batch_flush(&relay_client, &relay_batch) != 0) {
-        errno = ENETDOWN;
         return -1;
     }
     if (cb_relay_queue_packet(&relay_batch, recipient, buffer, length) != 0) {
@@ -996,7 +992,7 @@ int cb_net_relay_join_code(const char *worker_host, unsigned short worker_port,
     cb_net_leave();
     (void)cb_net_init();
     configure_options();
-    ps3_net_options.delay = 8;
+    ps3_net_options.delay = 12;
     net_configure(&ps3_net_options);
 
     if (cb_relay_join(&relay_client, worker_host, worker_port, code,
@@ -1024,7 +1020,6 @@ int cb_net_relay_join_code(const char *worker_host, unsigned short worker_port,
     lobby_started = 0;
     have_previous_step = 0;
     last_frame_step_ns = 0;
-    last_relay_batch_tick_ns = 0;
 
     if (!net_lobby_join(join_address)) {
         cb_relay_leave(&relay_client);
