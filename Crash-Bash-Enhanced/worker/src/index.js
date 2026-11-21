@@ -138,6 +138,7 @@ function roomView(room) {
     mode: room.mode,
     max_players: room.maxPlayers,
     player_count: room.players.length,
+    host_session_id: room.hostSessionId,
     is_private: room.isPrivate,
     created_at: new Date(room.createdAt).toISOString(),
     players: [...room.players].sort((a, b) => a.slot - b.slot).map(p => playerView(room, p)),
