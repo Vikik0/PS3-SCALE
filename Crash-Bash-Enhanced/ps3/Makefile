@@ -30,7 +30,7 @@ $(BUILD):
 # The PPC64 TOC anchor is .got + 0x8000. Keep that address inside the
 # single PRX PT_LOAD so prx-gen can drop invariant TOC16_HA/LO relocations.
 $(PRX_LD): $(PRX_LD_SOURCE) | $(BUILD)
-	python3 -c 'from pathlib import Path; import sys; p=Path(sys.argv[1]); s=p.read_text(); needle="\\t_end = .;"; assert s.count(needle) == 1; p=Path(sys.argv[2]); p.write_text(s.replace(needle, "\\t. = MAX(., .TOC. + 0x100);\\n" + needle, 1))' $(PRX_LD_SOURCE) $@
+	python3 -c 'from pathlib import Path; import sys; src=Path(sys.argv[1]); text=src.read_text(); needle=chr(9)+"_end = .;"; assert text.count(needle) == 1; Path(sys.argv[2]).write_text(text.replace(needle, chr(9)+". = MAX(., .TOC. + 0x100);"+chr(10)+needle, 1))' $(PRX_LD_SOURCE) $@
 
 $(BUILD)/module.o: module.c input_hook.h net_adapter.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
