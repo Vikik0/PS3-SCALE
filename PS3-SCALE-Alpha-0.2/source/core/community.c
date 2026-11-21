@@ -545,21 +545,15 @@ int ps3scale_community_file_matches_exact_game(
     const ps3scale_community_file_t *file,
     const ps3scale_game_t *game)
 {
-    int game_region;
-
-    if (!file || !game || !is_ps3_game(game->kind) ||
-        !file->app_ver[0] || !game->app_ver[0] ||
+    if (!file || !game || !game->title_id[0] ||
+        !game->app_ver[0] || !file->app_ver[0] ||
         strcmp(file->app_ver, game->app_ver) != 0)
         return 0;
 
-    if (file_contains_title_id(file, game->title_id))
-        return 1;
-
-    if (!titles_match(game->title, file->title))
-        return 0;
-
-    game_region = title_region(game->title_id);
-    return file_has_region(file, game_region);
+    /* Exact installation must contain the actual Title ID somewhere in the
+       indexed identity/path metadata. Same title + same region is only a
+       discovery hint and must never authorize an install. */
+    return file_contains_title_id(file, game->title_id);
 }
 
 const char *ps3scale_community_category_label(const char *category)
