@@ -50,16 +50,19 @@ $(BUILD)/netdb_compat.o: netdb_compat.c compat/netdb.h | $(BUILD)
 $(BUILD)/thread_compat.o: thread_compat.c | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
 
+$(BUILD)/errno_compat.o: errno_compat.c | $(BUILD)
+	$(PPU_CC) $(CFLAGS) -c $< -o $@
+
 $(BUILD)/ws_client.o: ws_client.c ws_client.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD)/relay_client.o: relay_client.c relay_client.h ws_client.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/crash_bash_input.elf: $(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/relay_ui.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(BUILD)/ws_client.o $(BUILD)/relay_client.o $(CRT_I) $(CRT) $(CRT_INIT) $(PRX_LD) $(PRX_SPECS)
+$(BUILD)/crash_bash_input.elf: $(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/relay_ui.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(BUILD)/errno_compat.o $(BUILD)/ws_client.o $(BUILD)/relay_client.o $(CRT_I) $(CRT) $(CRT_INIT) $(PRX_LD) $(PRX_SPECS)
 	$(PPU_CC) -nostdlib -nostartfiles -specs=$(PRX_SPECS) \
 		-Wl,-q -Wl,--gc-sections -Wl,--no-warn-rwx-segments -Wl,-T,$(PRX_LD) \
-		$(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/relay_ui.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(BUILD)/ws_client.o $(BUILD)/relay_client.o $(CRT_I) $(CRT) $(CRT_INIT) $(NET_LIBS) -o $@
+		$(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/relay_ui.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(BUILD)/errno_compat.o $(BUILD)/ws_client.o $(BUILD)/relay_client.o $(CRT_I) $(CRT) $(CRT_INIT) $(NET_LIBS) -o $@
 
 $(BUILD)/crash_bash_input.prx: $(BUILD)/crash_bash_input.elf
 	$(PRX_GEN) build $< -o $@ --name crash_bash_input --version 0.2 || { \
