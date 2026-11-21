@@ -22,6 +22,12 @@ This code runs inside an already active game process. It must not call `cellPadI
 
 The PRX exposes `ghc_local_input_refresh` and snapshot getters. These functions are compiled into the PRX but are not yet called from a game frame hook. The next integration stage must identify a safe per-frame point and verify that polling does not interfere with the title's own controller reads.
 
+## PRX export surface
+
+The PRX now publishes a named `ghosts_coop` export library. It exposes the manual input refresh function, poll result/count, connected and read-error masks, per-player connected state, button bits, stick axes, trigger pressure, and basic module/mission diagnostics.
+
+The NIDs are recorded in `client/ps3/prx/exports.yml`, emitted in `exports.S`, and checked by the pinned PS3DK `nidgen verify` command. CI also generates `libghosts_coop_stub.a` for future diagnostic/importing PRXs. This validates the export/import metadata pair; it does not execute the functions on a console.
+
 ## Not yet verified
 
 - Physical PS3 controller reads from inside Ghosts.

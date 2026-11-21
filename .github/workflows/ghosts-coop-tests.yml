@@ -142,6 +142,11 @@ jobs:
           cargo build --release --manifest-path "$PS3_TOOLCHAIN_ROOT/tools/nidgen/Cargo.toml"
           nidgen="$PS3_TOOLCHAIN_ROOT/tools/target/release/nidgen"
           "$nidgen" verify "$GITHUB_WORKSPACE/experiments/ghosts-campaign-coop/client/ps3/prx/exports.yml"
+          probe_out="$RUNNER_TEMP/ps3-stubs/ghosts_coop_import"
+          mkdir -p "$probe_out"
+          "$nidgen" archive --input "$GITHUB_WORKSPACE/experiments/ghosts-campaign-coop/client/ps3/prx/exports.yml" --toolchain-bin "$PS3DEV/ppu/bin" --out-dir "$probe_out"
+          mkdir -p "$GITHUB_WORKSPACE/experiments/ghosts-campaign-coop/client/ps3/prx/build"
+          cp "$probe_out/libghosts_coop_stub.a" "$GITHUB_WORKSPACE/experiments/ghosts-campaign-coop/client/ps3/prx/build/"
           for name in libsysmodule_stub libnet_stub libssl_stub libhttp_stub libhttp_util_stub libio_stub; do
             input="$PS3_TOOLCHAIN_ROOT/tools/nidgen/nids/extracted/$name.yaml"
             out="$RUNNER_TEMP/ps3-stubs/$name"
@@ -160,6 +165,7 @@ jobs:
             experiments/ghosts-campaign-coop/client/ps3/prx/build/ghosts_coop.prx
             experiments/ghosts-campaign-coop/client/ps3/prx/build/ghosts_coop.fake.sprx
             experiments/ghosts-campaign-coop/client/ps3/prx/build/ghosts_coop.elf
+            experiments/ghosts-campaign-coop/client/ps3/prx/build/libghosts_coop_stub.a
 
   worker-check:
     runs-on: ubuntu-latest
