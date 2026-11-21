@@ -127,10 +127,14 @@ static void test_snapshot_roundtrip(void) {
 static void test_reset_restores_both_players(void) {
     GhcMission mission = make_mission();
 
+    uint32_t failed_revision;
+
     assert(ghc_mission_player_downed(&mission, 1u, 100u) == GHC_RULE_PLAYER_DOWNED);
     assert(ghc_mission_player_downed(&mission, 2u, 200u) == GHC_RULE_MISSION_FAILED);
+    failed_revision = mission.revision;
     ghc_mission_reset(&mission);
 
+    assert(mission.revision > failed_revision);
     assert(mission.phase == GHC_MISSION_RUNNING);
     assert(mission.failure_reason == GHC_MISSION_FAIL_NONE);
     assert(mission.players[0].life_state == GHC_PLAYER_ALIVE);
