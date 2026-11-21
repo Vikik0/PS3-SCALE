@@ -4548,8 +4548,8 @@ static void draw_online_database(void)
         draw_text(414.0f, 381.0f, 0x514b69ff, line);
         if (can_download) {
             draw_text(414.0f, 393.0f, 0x875be8ff,
-                      selected ? "SELECT: SAVE TO COMMUNITY_DOWNLOADS" :
-                                 "X: DOWNLOAD TO COMMUNITY_DOWNLOADS");
+                      selected ? "CROSS: OPEN GAME DETAILS" :
+                                 "CROSS: DOWNLOAD TO COMMUNITY_DOWNLOADS");
         } else {
             draw_text(414.0f, 393.0f, 0xb27b35ff,
                       "NO DOWNLOAD: ONLY NCL/TXT UP TO 2 MB");
@@ -4560,11 +4560,11 @@ static void draw_online_database(void)
         draw_text(414.0f, 215.0f, 0x77718fff,
                   g_online_result_count ?
                   "Select a result to review its match." :
-                  "No results in this filter.");
+                  "No cached results. Press TRIANGLE to refresh.");
         draw_text(414.0f, 241.0f, 0x514b69ff,
                   "Search by title, disc ID or title ID.");
         draw_text(414.0f, 273.0f, 0x875be8ff,
-                  "START: SYNC ONLINE METADATA");
+                  "TRIANGLE: REFRESH ONLINE METADATA");
         draw_text(414.0f, 301.0f, 0x77718fff,
                   "Offline cache can still be browsed.");
     }
@@ -4581,7 +4581,7 @@ static void draw_online_database(void)
     draw_text(24.0f, PS3SCALE_UI_FOOTER_PRIMARY_Y, 0x514b69ff,
               "D-PAD SELECT | LEFT/RIGHT PAGE | L1/R1 PREV/NEXT | CROSS OPEN/DOWNLOAD");
     draw_text(24.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y, 0x875be8ff,
-              "TRIANGLE SEARCH | SQUARE FILTER | START SYNC | CIRCLE BACK");
+              "TRIANGLE REFRESH | SELECT SEARCH | SQUARE FILTER | START SYNC | CIRCLE BACK");
     set_ui_font_size(14, 22);
 }
 
