@@ -76,8 +76,11 @@ def generate():
     font_small = load_display_font(8, bold=True)
 
     def centered_text(label, y, selected_font, color):
-        bounds = draw.textbbox((0, 0), label, font=selected_font)
-        width = bounds[2] - bounds[0]
+        try:
+            bounds = draw.textbbox((0, 0), label, font=selected_font)
+            width = bounds[2] - bounds[0]
+        except AttributeError:
+            width = draw.textsize(label, font=selected_font)[0]
         x = 221 - width // 2
         draw.text((x, y), label, font=selected_font, fill=color)
 
