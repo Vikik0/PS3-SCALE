@@ -61,9 +61,13 @@ int main(void) {
     assert(ghc_replay_window_accept(&replay_window, 0u) == 1);
     assert(ghc_replay_window_accept(&replay_window, 0xffffffffu) == 0);
 
-    assert(ghc_decode_server_packet(
-        relay_key, server_packet, sizeof(server_packet), &decoded
+    ghc_replay_window_reset(&replay_window);
+    assert(ghc_decode_server_packet_checked(
+        relay_key, server_packet, sizeof(server_packet), &replay_window, &decoded
     ) == 0);
+    assert(ghc_decode_server_packet_checked(
+        relay_key, server_packet, sizeof(server_packet), &replay_window, &decoded
+    ) == -2);
     assert(decoded.sender_slot == GHC_PLAYER_TWO);
     assert(decoded.sequence == 0x01020304u);
     assert(decoded.payload_length == 4);
