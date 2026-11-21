@@ -161,9 +161,13 @@ int ps3scale_online_download_limited_progress(
     curl_easy_setopt(curl, CURLOPT_USERAGENT, PS3SCALE_USER_AGENT);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_download_data);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &download);
-    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-    curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, report_download_progress);
-    curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &download);
+    /* Keep the legacy no-progress path lean for downloads that do not
+       display counters (game data, config files and support payloads). */
+    if (downloaded_bytes || total_bytes) {
+        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+        curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, report_download_progress);
+        curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &download);
+    }
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 12L);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
     curl_easy_setopt(curl, CURLOPT_MAXFILESIZE, (long)max_bytes);
