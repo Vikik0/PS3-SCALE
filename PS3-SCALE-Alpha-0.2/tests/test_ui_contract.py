@@ -166,10 +166,10 @@ assert "if (!g_animation_enabled)" in home_animation_update
 assert "update_home_card_animations();" in main
 assert "refresh_details_cache();" in main
 assert "app_screen_t screen_at_frame_start = g_screen;" in main
-assert "ps3scale_online_download_progress(" in main
-assert "ps3scale_online_download_limited_progress(" in main
-assert "g_catalog_sync_stage = 1;" in main
-assert "g_catalog_sync_stage = 2;" in main
+assert "ps3scale_online_download_progress(" in src
+assert "ps3scale_online_download_limited_progress(" in src
+assert "g_catalog_sync_stage = 1;" in src
+assert "g_catalog_sync_stage = 2;" in src
 assert "FW %s" in home and "PS3 %s" in home
 assert "g_hardware_info_valid" in home
 
