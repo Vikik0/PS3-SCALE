@@ -147,6 +147,7 @@ jobs:
           "$nidgen" archive --input "$GITHUB_WORKSPACE/experiments/ghosts-campaign-coop/client/ps3/prx/exports.yml" --toolchain-bin "$PS3DEV/ppu/bin" --out-dir "$probe_out"
           mkdir -p "$GITHUB_WORKSPACE/experiments/ghosts-campaign-coop/client/ps3/prx/build"
           cp "$probe_out/libghosts_coop_stub.a" "$GITHUB_WORKSPACE/experiments/ghosts-campaign-coop/client/ps3/prx/build/"
+          install -m 0644 "$probe_out/libghosts_coop_stub.a" "$PS3DK/ppu/lib/"
           for name in libsysmodule_stub libnet_stub libssl_stub libhttp_stub libhttp_util_stub libio_stub; do
             input="$PS3_TOOLCHAIN_ROOT/tools/nidgen/nids/extracted/$name.yaml"
             out="$RUNNER_TEMP/ps3-stubs/$name"
@@ -158,6 +159,16 @@ jobs:
           done
       - name: Build and validate CEX-compatible PRX bootstrap
         run: make -C experiments/ghosts-campaign-coop/client/ps3/prx PS3DEV="$PS3DEV" PS3DK="$PS3DK"
+      - name: Link and validate a PRX importer against Ghosts exports
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe="$RUNNER_TEMP/ghosts-input-probe"
+          mkdir -p "$probe"
+          "$PS3DEV/ppu/bin/powerpc64-ps3-elf-gcc" -O2 -Wall -Wextra -Werror -std=gnu11 -mcpu=cell -mhard-float -fno-stack-protector -fno-builtin -I"$PS3DK/ppu/include" -c experiments/ghosts-campaign-coop/tests/prx_import_probe.c -o "$probe/probe.o"
+          "$PS3DEV/ppu/bin/powerpc64-ps3-elf-gcc" -nostdlib -nostartfiles -specs="$PS3DK/ppu/lib/lv2-prx.specs" -Wl,-q -Wl,--no-warn-rwx-segments -Wl,-T,"$PS3DK/ppu/lib/lv2-prx.ld" "$probe/probe.o" "$PS3DK/ppu/lib/lv2-prx-crt.o" -L"$PS3DK/ppu/lib" -lghosts_coop_stub -lgcc -o "$probe/ghosts_input_probe.elf"
+          "$PS3DEV/bin/prx-gen" build "$probe/ghosts_input_probe.elf" -o "$probe/ghosts_input_probe.prx" --name ghosts_input_probe --version 0.1
+          "$PS3DEV/bin/prx-gen" check "$probe/ghosts_input_probe.prx"
       - uses: actions/upload-artifact@v6
         with:
           name: ghosts-coop-prx-bootstrap
