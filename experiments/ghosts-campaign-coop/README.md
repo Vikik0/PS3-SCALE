@@ -53,6 +53,7 @@ See docs/testing-strategy.md for the researched test pyramid and the rule for wh
 - Function-level Clockwork Campaign dependency audit: inventories all 11 available mission GSC files, identifies 205 functions containing 644 direct `level.player` references, confirms no mission-local split-screen/`coop` branches in this sample, and ranks the highest-impact player-interaction functions. This is static analysis, not Campaign integration.
 - Windows PowerShell batch helper to decompile extracted PS3 GSC binaries with GSC Tool's IW6/PS3 backend.
 - Fail-closed local-player readiness gate: requires two distinct native split-screen players, correct primary/secondary identity, controller ports, local-client/client/entity IDs, Logan/guest roles and independent state addresses before a future adapter can enable controls.
+- Read-only IW6/PS3 Campaign player registry GSC shim, compiled and round-trip decompiled with GSC Tool 1.6.2.364. It validates an already-existing native split-screen pair; it does not spawn players and has no verified runtime injection path yet.
 - Ghidra OPD function-seeding and split-screen builtin cross-reference helpers, plus a local-player state comparison matrix for the next static/runtime analysis stage.
 
 ### Phase 1 Campaign integration — not implemented
