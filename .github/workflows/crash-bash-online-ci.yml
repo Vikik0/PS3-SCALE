@@ -113,7 +113,7 @@ jobs:
           cp "$src/tests/sdk/lv2syscall-fixture/legacy-psl1ght/ppu-lv2.h" "$src/sdk/include/ppu-lv2.h"
           cp Crash-Bash-Enhanced/ps3/compat/lv2/sysfs.h "$src/sdk/include/lv2/sysfs.h"
           cp Crash-Bash-Enhanced/ps3/compat/lv2/spinlock.h "$src/sdk/include/lv2/spinlock.h"
-          cp "$src/tests/sdk/lv2errno-fixture/sys/lv2errno.h" "$src/sdk/include/sys/lv2errno.h"
+          cp Crash-Bash-Enhanced/ps3/compat/sys/lv2errno.h "$src/sdk/include/sys/lv2errno.h"
           cp Crash-Bash-Enhanced/ps3/compat/sys/systime.h "$src/sdk/include/sys/systime.h"
           python3 - "$src/scripts/build-runtime-lv2.sh" <<'PY'
           from pathlib import Path
@@ -121,7 +121,7 @@ jobs:
           script = Path(sys.argv[1])
           source = script.read_text()
           needle = 'make -C "$PS3_TOOLCHAIN_ROOT/sdk" install-headers >/dev/null'
-          addition = needle + '\nmkdir -p "$PS3DK/ppu/include/sys"\ncp "$PS3_TOOLCHAIN_ROOT/tests/sdk/lv2errno-fixture/sys/lv2errno.h" "$PS3DK/ppu/include/sys/lv2errno.h"\ncp "$PS3_TOOLCHAIN_ROOT/sdk/include/sys/systime.h" "$PS3DK/ppu/include/sys/systime.h"'
+          addition = needle + '\nmkdir -p "$PS3DK/ppu/include/sys"\ncp "$PS3_TOOLCHAIN_ROOT/sdk/include/sys/lv2errno.h" "$PS3DK/ppu/include/sys/lv2errno.h"\ncp "$PS3_TOOLCHAIN_ROOT/sdk/include/sys/systime.h" "$PS3DK/ppu/include/sys/systime.h"'
           if needle not in source:
               raise SystemExit("Could not locate PS3DK runtime header installation step")
           script.write_text(source.replace(needle, addition, 1))
