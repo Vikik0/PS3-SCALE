@@ -18,6 +18,7 @@ The package contains no Crash Bash ISO, ROM, BIOS, music, textures, or other pro
 - Provides a relay-backed room flow: create or join a Worker room, receive roster updates, and start from the host's `START` control.
 - Intercepts the upstream lockstep `sendto`, `recvfrom`, and `select` calls in relay mode. It maps authenticated sender IDs to deterministic virtual addresses, routes host records to the correct peer, coalesces superseded retransmissions, and flushes CBU1 batches on a 220 ms cadence. A 12-step input delay is currently used to absorb the batching interval.
 - Uses certificate-verified TLS 1.2 for HTTPS/WSS, including SNI and an embedded trusted-CA bundle. The PS3 clock must be set correctly for certificate validation.
+- Shares CBN1 protocol-2 packet layout and the 12-step delay with the browser joiner; the browser sends CBU1 batches through the same Worker relay.
 - Computes a guarded FNV-1a fingerprint over the documented `ps1_netemu` 4.86 RAM window (base `0x770780`, size 2 MiB). A page-attribute probe disables the fingerprint if the range is not readable.
 
 ## Install and open the menu
@@ -39,9 +40,9 @@ To disable the loader, remove that exact line from `/dev_hdd0/boot_plugins.txt` 
 - CI cross-compiles both PRXs, validates their PRX structures, builds the installer SELF, and produces both `.pkg` and finalized `.gnpdrm.pkg` outputs. This proves build/package generation, not successful installation or operation on physical hardware.
 - The in-game menu, process injection, controller mapping, and relay gameplay still require physical PS3 testing. The loader currently detects PS1 emulator process names rather than the Crash Bash disc serial, so it may inject the inactive bridge into another PS1 emulator session.
 - The RAM fingerprint offset is documented for `ps1_netemu` 4.86; the page probe does not prove the same offset on every firmware or emulator revision. Firmware 4.93 and other revisions remain unverified.
-- The relay transport and lockstep adapter have host-side integration tests, but latency, packet loss, disconnect/rejoin, and long-session behavior need real-network testing.
+- The relay transport and browser CBN1 client have host-side integration tests, but latency, packet loss, disconnect/rejoin, PAL timing, and long-session behavior need real-network testing.
 - Memory-card save synchronization is not implemented. The first intended test target is same-build Battle/minigame sessions, not Adventure progression.
-- The website now includes a local EmulatorJS PS1 player that reads user-selected disc and BIOS files in the browser. Its pad-state hook is not yet connected to the CBN1 lockstep relay, so browser-to-PS3 gameplay is still unavailable.
+- The website now includes an EmulatorJS PS1 player and a browser CBN1 joiner. The browser performs the protocol handshake and applies host records in two-frame steps, but the complete PS3/browser session has not been tested on hardware. Browser-side state fingerprints are not sent yet, so deterministic divergence is not detected.
 
 ## Build
 
