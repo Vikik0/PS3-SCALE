@@ -61,6 +61,7 @@ static uint8_t relay_rx_sender[16];
 static size_t relay_rx_length;
 static int relay_rx_valid;
 static uint64_t relay_last_flush_ms;
+static uint64_t relay_last_flush_ms;
 
 static int relay_hex_to_bytes(const char *hex, uint8_t output[16])
 {
@@ -1091,7 +1092,6 @@ void cb_net_leave(void)
     net_active = 0;
     have_previous_step = 0;
     last_frame_step_ns = 0;
-    last_relay_batch_tick_ns = 0;
     platform_online_stop(NULL);
     portmap_close();
 }
