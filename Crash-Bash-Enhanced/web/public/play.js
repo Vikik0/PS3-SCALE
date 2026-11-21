@@ -256,10 +256,10 @@ async function connectToRoom() {
     lockstepClient = client;
     await client.connect();
     if (needsReady) {
+      readyMarked = true;
       const readyRoom = await api(`/v1/rooms/${ROOM_CODE}/ready`, session.token, { method: "POST", body: { ready: true } });
       const readyPlayer = readyRoom.players?.find(player => player.player_id === session.session_id);
       if (!readyPlayer?.ready) throw new Error("The room did not confirm the browser player as ready.");
-      readyMarked = true;
     }
     pendingSession = null;
     leaveButton.hidden = false;
