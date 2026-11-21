@@ -93,13 +93,19 @@ async function prepareRoomConnection() {
   }
   if (!room) room = await api(`/v1/rooms/${ROOM_CODE}/join`, session.token, { method: "POST", body: {} });
   const hostId = room.host_session_id;
-  const host = room.players?.find(player => player.player_id === hostId);
-  const own = room.players?.find(player => player.player_id === session.session_id);
+  let host = room.players?.find(player => player.player_id === hostId);
+  let own = room.players?.find(player => player.player_id === session.session_id);
   if (!own) throw new Error("Your guest session is not listed in this room.");
   if (hostId === session.session_id) throw new Error("Browser-hosted matches are not supported yet. Join a room created by the PS3 host.");
   if (host?.platform !== "ps3") throw new Error("This room is not marked as a PS3-hosted room. Start a room from the PS3 in-game menu.");
   if (room.status !== "waiting") throw new Error("This match has already started. Join before the PS3 host starts the game.");
   if (room.player_count > room.max_players) throw new Error("The room player count is invalid.");
+  if (!own.ready) {
+    room = await api(`/v1/rooms/${ROOM_CODE}/ready`, session.token, { method: "POST", body: { ready: true } });
+    own = room.players?.find(player => player.player_id === session.session_id);
+    host = room.players?.find(player => player.player_id === hostId);
+    if (!own?.ready || !host?.ready) throw new Error("The room did not confirm both players as ready.");
+  }
   return { session, room };
 }
 
