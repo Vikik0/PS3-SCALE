@@ -8,7 +8,7 @@
 
 #define CB_RELAY_MAX_PACKET 1200
 #define CB_RELAY_MAX_BATCH_PACKETS 32
-#define CB_RELAY_MAX_MESSAGE 24576
+#define CB_RELAY_MAX_MESSAGE 28672
 #define CB_RELAY_MAX_PEERS 4
 
 typedef struct CbRelayPeer {
@@ -71,7 +71,7 @@ int cb_relay_queue_packet(CbRelayBatchQueue *queue, const uint8_t recipient_id[1
                           const void *packet, size_t length);
 /* Flushes the queue immediately. A failed send leaves queued data intact. */
 int cb_relay_batch_flush(CbRelayClient *client, CbRelayBatchQueue *queue);
-/* Call once per 30–33 ms game frame; default cadence should be six frames (about 5 sends/sec). */
+/* Call once per 30–33 ms game frame; default cadence should be seven frames (under 5 sends/sec at a 30 ms step). */
 int cb_relay_batch_tick(CbRelayClient *client, CbRelayBatchQueue *queue,
                         unsigned int frames_per_batch);
 
