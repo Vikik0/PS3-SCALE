@@ -45,6 +45,37 @@ jobs:
         working-directory: .
         run: npm test
 
+  ps1-engine-build:
+    name: Build native PS1 emulator package for Crash Bash
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/02900/ps3-toolchain-tiny3d:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify PS3 emulator toolchain
+        run: |
+          set -eu
+          test -n "$PSL1GHT"
+          command -v ppu-gcc
+          command -v spu-gcc
+          command -v spu-strip
+          command -v cgc
+          command -v cgcomp
+          command -v sprxlinker
+          command -v make_self_npdrm
+          command -v pkg
+          command -v sfo
+          command -v git
+          command -v patch
+      - name: Build Crash Bash PS1 emulator package
+        run: bash Crash-Bash-Enhanced/scripts/build_ps1_engine.sh
+      - name: Upload Crash Bash PS3 base package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Crash-Bash-PS3-Base
+          if-no-files-found: error
+          path: Crash-Bash-Enhanced/build-artifacts/CrashBash-PS3-Base.pkg
+
   ps3-build:
     name: Build PS3 ELF, SELF and PKG
     runs-on: ubuntu-latest
