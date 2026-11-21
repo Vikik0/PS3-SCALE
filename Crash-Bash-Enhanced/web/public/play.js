@@ -259,7 +259,10 @@ async function connectToRoom() {
       readyMarked = true;
       const readyRoom = await api(`/v1/rooms/${ROOM_CODE}/ready`, session.token, { method: "POST", body: { ready: true } });
       const readyPlayer = readyRoom.players?.find(player => player.player_id === session.session_id);
-      if (!readyPlayer?.ready) throw new Error("The room did not confirm the browser player as ready.");
+      const readyHost = readyRoom.players?.find(player => player.player_id === readyRoom.host_session_id);
+      if (readyRoom.host_session_id !== room.host_session_id || !readyPlayer?.ready || !readyHost?.ready) {
+        throw new Error("The PS3 host or browser readiness changed while connecting. Rejoin the room and try again.");
+      }
     }
     pendingSession = null;
     leaveButton.hidden = false;
