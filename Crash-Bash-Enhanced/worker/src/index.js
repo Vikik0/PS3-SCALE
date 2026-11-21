@@ -2,7 +2,7 @@ const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
 const ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const MAX_NAME_LENGTH = 16;
-const MAX_SESSIONS = 16;
+const MAX_TOTAL_SESSIONS = 16;
 const MAX_ROOMS = 4;
 const MAX_ACTIVE_MATCHES = 1;
 const TRANSPORT_TICKET_TTL_MS = 60 * 1000;
@@ -483,7 +483,7 @@ export class CrashBashLobby {
           psn_required: false,
           max_players: 4,
           max_open_rooms: MAX_ROOMS,
-          max_guest_sessions: MAX_SESSIONS,
+          max_total_sessions: MAX_TOTAL_SESSIONS,
           max_active_matches: MAX_ACTIVE_MATCHES,
           transport: "websocket-room-relay-prototype",
           gameplay_sync: "client-integration-pending"
@@ -529,7 +529,7 @@ export class CrashBashLobby {
       }
 
       if (method === "POST" && path === "/v1/sessions") {
-        if (Object.keys(state.sessions).length >= MAX_SESSIONS) {
+        if (Object.keys(state.sessions).length >= MAX_TOTAL_SESSIONS) {
           throw fail(503, "FREE_TIER_SESSION_LIMIT", "The free service has reached its guest-session limit. Try again later.");
         }
         const body = await readBody(request);
@@ -558,7 +558,7 @@ export class CrashBashLobby {
       }
 
       if (method === "POST" && path === "/v1/rooms/host-guest") {
-        if (Object.keys(state.sessions).length >= MAX_SESSIONS) {
+        if (Object.keys(state.sessions).length >= MAX_TOTAL_SESSIONS) {
           throw fail(503, "FREE_TIER_SESSION_LIMIT", "The free service has reached its guest-session limit. Try again later.");
         }
         if (Object.keys(state.rooms).length >= MAX_ROOMS) {
@@ -614,7 +614,7 @@ export class CrashBashLobby {
 
       const guestJoinRoute = path.match(/^\/v1\/rooms\/([A-Z0-9]{6})\/join-guest$/);
       if (method === "POST" && guestJoinRoute) {
-        if (Object.keys(state.sessions).length >= MAX_SESSIONS) {
+        if (Object.keys(state.sessions).length >= MAX_TOTAL_SESSIONS) {
           throw fail(503, "FREE_TIER_SESSION_LIMIT", "The free service has reached its guest-session limit. Try again later.");
         }
         const code = guestJoinRoute[1];
