@@ -121,6 +121,8 @@ static void test_snapshot_roundtrip(void) {
     assert(ghc_mission_get_view(&mission, 4000u, &before) == 0);
     assert(ghc_mission_encode_snapshot(&before, packet, sizeof(packet), &packet_length) == 0);
     assert(packet_length == GHC_MISSION_SNAPSHOT_SIZE);
+    assert(memcmp(packet, "GMS", 3u) == 0);
+    assert(packet[3] == GHC_MISSION_SNAPSHOT_VERSION);
     assert(ghc_mission_decode_snapshot(packet, packet_length, &after) == 0);
 
     assert(after.revision == before.revision);
