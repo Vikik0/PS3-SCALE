@@ -108,7 +108,7 @@ function roomCard() {
         <button class="button button-primary" data-action="ready" ${room.status !== "waiting" ? "disabled" : ""}>${me?.ready ? "CANCEL READY" : "I'M READY"}</button>
         ${isHost ? `<button class="button button-start" data-action="start" ${!allReady || room.status !== "waiting" ? "disabled" : ""}>START MATCH <span>→</span></button>` : ""}
       </div>
-      <p class="room-footnote">${isHost ? "You're the host. Start when everyone is ready." : "The host will start the match when the party is ready."}</p>
+      <p class="room-footnote">${room.host_endpoint_ready ? "Host UDP endpoint published. Direct game transport is the next integration step." : "Waiting for the host's UDP endpoint. PS3 transport integration is in progress."}</p>
     </div>`;
 }
 
