@@ -63,6 +63,7 @@ const health = await call("/health");
 assert.equal(health.status, 200);
 assert.equal(health.body.psn_required, false);
 assert.equal(health.body.max_players, 4);
+assert.equal(health.body.transport, "websocket-room-relay-prototype");
 
 const compatibility = await call("/v1/compatibility");
 assert.equal(compatibility.body.game, "Crash Bash");
@@ -83,6 +84,12 @@ for (let i = 1; i <= 5; i++) {
   assert.equal(result.body.token.length, 64);
   players.push(result.body);
 }
+
+const protocolAuthRequest = new Request("https://crash-bash.test/v1/rooms/ABC123/transport", {
+  headers: { "Sec-WebSocket-Protocol": "cbash-v1, cbash-auth." + players[0].token }
+});
+const protocolAuthSession = await lobby.authenticate(protocolAuthRequest, await lobby.load());
+assert.equal(protocolAuthSession.sessionId, players[0].session_id);
 
 const created = await call("/v1/rooms", "POST", { max_players: 4, is_private: true }, players[0].token);
 assert.equal(created.status, 201);
@@ -216,6 +223,9 @@ assert.equal(endpoint.body.host_endpoint.address, "198.51.100.10");
 
 const left = await call("/v1/rooms/" + code + "/leave", "POST", {}, players[0].token);
 assert.equal(left.status, 200);
+assert.equal(relayA.closed.code, 1008);
+assert.equal(relayB.closed.code, 1008);
+assert.equal(otherRoom.closed, null);
 const afterHostLeave = await call("/v1/rooms/" + code, "GET", undefined, players[1].token);
 assert.equal(afterHostLeave.status, 200);
 assert.equal(afterHostLeave.body.status, "waiting");
