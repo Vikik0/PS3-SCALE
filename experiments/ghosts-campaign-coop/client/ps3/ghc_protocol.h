@@ -72,3 +72,14 @@ int ghc_decode_server_packet(
 // Reject duplicate and stale packets with a wrap-safe 64-packet replay window.
 void ghc_replay_window_reset(GhcReplayWindow *window);
 int ghc_replay_window_accept(GhcReplayWindow *window, uint32_t sequence);
+
+
+// Authenticate a relay packet and reject duplicate/stale sequence numbers.
+// Returns 0 when accepted, -1 for malformed/unauthenticated, -2 for replay.
+int ghc_decode_server_packet_checked(
+    const uint8_t relay_key[GHC_RELAY_KEY_SIZE],
+    const uint8_t *packet,
+    size_t packet_length,
+    GhcReplayWindow *window,
+    GhcServerPacket *decoded
+);
