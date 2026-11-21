@@ -17,10 +17,11 @@ const ctx = {
 };
 
 const lobby = new CrashBashLobby(ctx, {});
-async function call(path, method = "GET", body, token) {
+async function call(path, method = "GET", body, token, extraHeaders = {}) {
   const headers = new Headers();
   if (body !== undefined) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", "Bearer " + token);
+  for (const [name, value] of Object.entries(extraHeaders)) headers.set(name, value);
   const request = new Request("https://crash-bash.test" + path, {
     method,
     headers,
@@ -82,9 +83,45 @@ const started = await call("/v1/rooms/" + code + "/start", "POST", {}, players[0
 assert.equal(started.status, 200);
 assert.equal(started.body.status, "running");
 
-const peer = await call("/v1/rooms/" + code + "/peer", "GET", undefined, players[0].token);
+const invalidEndpoint = await call(
+  "/v1/rooms/" + code + "/endpoint",
+  "POST",
+  { public_port: 47000 },
+  players[0].token,
+  { "CF-Connecting-IP": "not-an-ip" }
+);
+assert.equal(invalidEndpoint.status, 400);
+assert.equal(invalidEndpoint.body.error, "INVALID_PUBLIC_IP");
+
+const published = await call(
+  "/v1/rooms/" + code + "/endpoint",
+  "POST",
+  { public_port: 47000 },
+  players[0].token,
+  { "CF-Connecting-IP": "198.51.100.10" }
+);
+assert.equal(published.status, 200);
+assert.equal(published.body.host_endpoint.address, "198.51.100.10");
+assert.equal(published.body.host_endpoint.port, 47000);
+
+const guestPublish = await call(
+  "/v1/rooms/" + code + "/endpoint",
+  "POST",
+  { public_port: 48000 },
+  players[1].token,
+  { "CF-Connecting-IP": "198.51.100.20" }
+);
+assert.equal(guestPublish.status, 403);
+
+const peer = await call("/v1/rooms/" + code + "/peer", "GET", undefined, players[1].token);
 assert.equal(peer.status, 200);
 assert.equal(peer.body.players.length, 3);
+assert.equal(peer.body.host_endpoint.address, "198.51.100.10");
+assert.equal(peer.body.host_endpoint.port, 47000);
+
+const endpoint = await call("/v1/rooms/" + code + "/endpoint", "GET", undefined, players[2].token);
+assert.equal(endpoint.status, 200);
+assert.equal(endpoint.body.host_endpoint.address, "198.51.100.10");
 
 const left = await call("/v1/rooms/" + code + "/leave", "POST", {}, players[0].token);
 assert.equal(left.status, 200);
@@ -93,6 +130,7 @@ assert.equal(afterHostLeave.status, 200);
 assert.equal(afterHostLeave.body.status, "waiting");
 assert.equal(afterHostLeave.body.players.length, 3);
 assert.equal(afterHostLeave.body.players.find(p => p.player_id === players[1].session_id).is_host, true);
+assert.equal(afterHostLeave.body.host_endpoint_ready, false);
 
 const wrongCode = (code[0] === "A" ? "B" : "A") + code.slice(1);
 const mismatch = await call("/v1/rooms/" + wrongCode + "/ready", "POST", { ready: true }, players[1].token);
