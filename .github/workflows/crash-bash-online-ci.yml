@@ -109,6 +109,8 @@ jobs:
           mkdir -p "$PS3DK/ppu/lib" "$PS3DK/ppu/include"
           cp -a "$PS3DEV/ppu/include/." "$PS3DK/ppu/include/"
           cp -a "$src/sdk/include/." "$PS3DK/ppu/include/"
+          mkdir -p "$PS3DK/ppu/include/lv2"
+          cp Crash-Bash-Enhanced/ps3/compat/lv2/sysfs.h "$PS3DK/ppu/include/lv2/sysfs.h"
           mkdir -p "$PS3DK/ppu/include/sys"
           cp "$src/tests/sdk/lv2errno-fixture/sys/lv2errno.h" "$PS3DK/ppu/include/sys/lv2errno.h"
           PS3DEV="$PS3DEV" PS3DK="$PS3DK" PS3_TOOLCHAIN_ROOT="$src" \
