@@ -6,7 +6,9 @@
 
 #define GHC_UDP_MAX_DATAGRAM_BYTES 1200u
 
-/* Uses the PS3 BSD socket family (never raw netSocket descriptors). */
+/* Uses the PS3 libnet socket imports consistently with raw libnet descriptors.
+ * Do not pass these descriptors to libc close() or mix them with tagged
+ * descriptors from a separate librt socket layer. */
 int ghc_udp_open(uint16_t local_port, int *socket_fd, uint16_t *bound_port);
 int ghc_udp_close(int socket_fd);
 int ghc_udp_set_nonblocking(int socket_fd, int enabled);
