@@ -22,6 +22,7 @@ int main(void) {
     };
     GhcClientPacket decoded_client;
     GhcServerPacket decoded;
+    GhcReplayWindow replay_window;
     uint8_t tampered_server_packet[sizeof(server_packet)];
     size_t i;
 
@@ -45,6 +46,20 @@ int main(void) {
 
     output[output_length - 1] ^= 0x01;
     assert(ghc_decode_client_packet(relay_key, output, output_length, &decoded_client) != 0);
+
+    ghc_replay_window_reset(&replay_window);
+    assert(ghc_replay_window_accept(&replay_window, 100u) == 1);
+    assert(ghc_replay_window_accept(&replay_window, 100u) == 0);
+    assert(ghc_replay_window_accept(&replay_window, 99u) == 1);
+    assert(ghc_replay_window_accept(&replay_window, 99u) == 0);
+    assert(ghc_replay_window_accept(&replay_window, 164u) == 1);
+    assert(ghc_replay_window_accept(&replay_window, 100u) == 0);
+
+    ghc_replay_window_reset(&replay_window);
+    assert(ghc_replay_window_accept(&replay_window, 0xfffffffeu) == 1);
+    assert(ghc_replay_window_accept(&replay_window, 0xffffffffu) == 1);
+    assert(ghc_replay_window_accept(&replay_window, 0u) == 1);
+    assert(ghc_replay_window_accept(&replay_window, 0xffffffffu) == 0);
 
     assert(ghc_decode_server_packet(
         relay_key, server_packet, sizeof(server_packet), &decoded
