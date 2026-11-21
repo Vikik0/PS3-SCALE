@@ -2,8 +2,8 @@ import {
   CBN1_TYPES, CBN1_BYE_REASONS,
   decodeCBN1, decodeWelcome, decodePing, decodeSave, decodeStart, decodeRecord, decodeBye,
   encodeJoin, encodePong, encodeReady, encodeInput, encodeBye
-} from "/cbn1.js";
-import { decodePadRecord } from "/pad-bridge.js";
+} from "./cbn1.js";
+import { decodePadRecord } from "./pad-bridge.js";
 
 const READY_SAVES = 0x0f;
 const READY_START = 0x10;
