@@ -51,13 +51,14 @@ References:
 - A prototype binary WebSocket room relay with authenticated sender envelopes, packet-size checks, and per-client rate limits.
 - CI coverage for lobby behavior, relay framing/rate limits, a certificate-verified TLS 1.2/WSS PS3 client, and PRX builds.
 - A development PS3 host/join/start menu wired to the relay APIs.
+- An installable PS3 homebrew PKG wrapper for the input PRX and VSH loader; CI validates its PKG header and content ID. Hardware installation and runtime behavior are not yet verified.
 
 ### Still required before cross-platform play
 1. Add the WebGL 2 browser renderer and an Emscripten build of the game runtime.
 2. Add browser-side disc-image selection and local-only loading; no disc image is uploaded to the server.
 3. Validate the PS3 lockstep-to-CBU1/CBR1 shim under packet loss, high RTT, disconnects, and reconnects; tune the fixed relay input delay from measured results.
 4. Configure Cloudflare deployment credentials, deploy the Worker, and publish the lobby. The PS3 client now uses certificate-verified HTTPS/WSS; local TLS integration tests cover its handshake and relay protocol.
-5. Build an installable PKG wrapper for the PRX and VSH loader, then verify the in-game host/join menu (SELECT + L3 + R3) on physical PS3 hardware.
+5. Install the generated PKG on physical PS3 hardware and verify the VSH loader, process injection, and in-game host/join menu (SELECT + L3 + R3).
 6. Test matching builds, input delay, disconnect/rejoin, and deterministic frame fingerprints on a real PS3 and a real browser.
 
-**Status:** the PS3 adapter routes upstream lockstep datagrams through the relay in code, and its client now uses TLS 1.2/WSS with certificate verification. The browser game runtime, an installable PS3 PKG, Cloudflare deployment credentials, and physical hardware/browser match tests are still missing. This branch is not yet cross-platform playable.
+**Status:** the PS3 adapter routes upstream lockstep datagrams through the relay in code, and its client now uses TLS 1.2/WSS with certificate verification. The installable PS3 PKG now builds in CI and its package header/content ID are validated. The browser game runtime, Cloudflare deployment credentials, and physical hardware/browser match tests are still missing. This branch is not yet cross-platform playable.
