@@ -21,12 +21,19 @@ on:
 permissions:
   contents: read
 
+# Avoid spending runner time building obsolete commits of this branch.
+concurrency:
+  group: crash-bash-enhanced-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   host-tests:
-    name: Host protocol and JSON tests
+    name: Host protocol and build-script tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check PS3 package build script syntax
+        run: bash -n Crash-Bash-Enhanced/scripts/build_online_pkg.sh
       - name: Run protocol tests
         run: sh Crash-Bash-Enhanced/scripts/test_host.sh
 
@@ -48,6 +55,7 @@ jobs:
   online-package-build:
     name: Build Crash Bash Online PS3 package (RetroArch Netplay + PCSX-ReARMed)
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     container:
       image: ghcr.io/02900/ps3-toolchain-tiny3d:latest
     steps:
@@ -60,18 +68,24 @@ jobs:
           command -v ppu-gcc
           command -v ppu-g++
           command -v spu-gcc
+          command -v make_self
           command -v make_self_npdrm
           command -v pkg
           command -v sfo
           command -v git
           command -v wget
           command -v patch
+          test -s "$PS3DEV/bin/sfo.xml"
           test -s "$PS3DEV/portlibs/ppu/lib/libz.a"
       - name: Build the online Crash Bash package
         run: bash Crash-Bash-Enhanced/scripts/build_online_pkg.sh
-      - name: Upload installable PS3 package
+      - name: Upload installable PS3 package and build manifest
         uses: actions/upload-artifact@v4
         with:
           name: Crash-Bash-Online-PS3-PKG
           if-no-files-found: error
-          path: Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-PS3.pkg
+          compression-level: 0
+          path: |
+            Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-PS3.pkg
+            Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-PS3.pkg.sha256
+            Crash-Bash-Enhanced/build-artifacts/BUILD-MANIFEST.txt
