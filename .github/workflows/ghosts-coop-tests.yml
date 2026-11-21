@@ -44,6 +44,11 @@ jobs:
         run: |
           cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/ghc_protocol.c tests/protocol_c_test.c -o /tmp/ghc-protocol-test
           /tmp/ghc-protocol-test
+      - name: Build and run downed/revive rules tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/mission_rules.c tests/mission_rules_test.c -o /tmp/mission-rules-test
+          /tmp/mission-rules-test
 
   ps3-prx-bootstrap:
     runs-on: ubuntu-latest
