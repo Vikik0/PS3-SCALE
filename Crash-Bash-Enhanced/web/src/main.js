@@ -10,7 +10,9 @@ const state = {
   loading: false,
   error: "",
   health: "checking",
-  polling: false
+  polling: false,
+  relayStatus: "idle",
+  relayPackets: 0
 };
 
 function readSession() {
@@ -108,7 +110,7 @@ function roomCard() {
         <button class="button button-primary" data-action="ready" ${room.status !== "waiting" ? "disabled" : ""}>${me?.ready ? "CANCEL READY" : "I'M READY"}</button>
         ${isHost ? `<button class="button button-start" data-action="start" ${!allReady || room.status !== "waiting" ? "disabled" : ""}>START MATCH <span>→</span></button>` : ""}
       </div>
-      <p class="room-footnote">Room relay prototype is available for transport testing. PS3 and browser gameplay clients are still being connected.</p>
+      <p class="room-footnote">${state.relayStatus === "connected" ? `ROOM RELAY CONNECTED · ${state.relayPackets} PACKETS RECEIVED` : state.relayStatus === "connecting" ? "CONNECTING TO ROOM RELAY..." : state.relayStatus === "error" ? "ROOM RELAY CONNECTION FAILED" : room.status === "running" ? "MATCH STARTED · WAITING FOR RELAY CONNECTION" : "Room relay opens after the host starts the match."}</p>
     </div>`;
 }
 
@@ -244,6 +246,7 @@ async function runAction(action) {
       await api(`/v1/rooms/${state.room.room_code}/leave`, { method: "POST", body: {} });
       state.room = null;
       stopPolling();
+      closeRelay();
     } else if (action === "copy-code") {
       await navigator.clipboard.writeText(state.room.room_code);
       state.error = "Room code copied.";
@@ -252,6 +255,7 @@ async function runAction(action) {
         clearSession();
         state.room = null;
         stopPolling();
+        closeRelay();
       } else {
         await ensureSession(displayName);
       }
@@ -263,10 +267,67 @@ async function runAction(action) {
   } finally {
     state.loading = false;
     render();
+    syncRelayConnection();
   }
 }
 
 let pollTimer = null;
+let relaySocket = null;
+
+function closeRelay() {
+  const socket = relaySocket;
+  relaySocket = null;
+  if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+    socket.close(1000, "Leaving room");
+  }
+  state.relayStatus = "idle";
+  state.relayPackets = 0;
+}
+
+function syncRelayConnection() {
+  if (!state.room || state.room.status !== "running" || !state.session?.token || !API_BASE) {
+    if (relaySocket) closeRelay();
+    return;
+  }
+  if (relaySocket && (relaySocket.readyState === WebSocket.OPEN || relaySocket.readyState === WebSocket.CONNECTING)) {
+    return;
+  }
+
+  const socketUrl = API_BASE.replace(/^http/, "ws") + `/v1/rooms/${state.room.room_code}/transport`;
+  const socket = new WebSocket(socketUrl, ["cbash-v1", `cbash-auth.${state.session.token}`]);
+  relaySocket = socket;
+  state.relayStatus = "connecting";
+  socket.binaryType = "arraybuffer";
+  render();
+
+  socket.addEventListener("open", () => {
+    if (relaySocket !== socket) return;
+    state.relayStatus = "connected";
+    render();
+  });
+
+  socket.addEventListener("message", event => {
+    if (relaySocket !== socket || !(event.data instanceof ArrayBuffer)) return;
+    const packet = new Uint8Array(event.data);
+    if (packet.length < 23 || packet[0] !== 0x43 || packet[1] !== 0x42 ||
+        packet[2] !== 0x52 || packet[3] !== 0x31) return;
+    state.relayPackets += 1;
+    render();
+  });
+
+  socket.addEventListener("close", () => {
+    if (relaySocket !== socket) return;
+    relaySocket = null;
+    state.relayStatus = "disconnected";
+    render();
+  });
+
+  socket.addEventListener("error", () => {
+    if (relaySocket !== socket) return;
+    state.relayStatus = "error";
+    render();
+  });
+}
 function beginPolling() {
   stopPolling();
   pollTimer = setInterval(async () => {
@@ -275,6 +336,7 @@ function beginPolling() {
     try {
       state.room = await api(`/v1/rooms/${state.room.room_code}`);
       render();
+      syncRelayConnection();
     } catch (error) {
       state.error = error.message;
       render();
@@ -325,7 +387,10 @@ async function init() {
     } catch {
       // An expired or roomless guest session is harmless; create a new one on demand.
     }
-    if (state.room) beginPolling();
+    if (state.room) {
+      beginPolling();
+      syncRelayConnection();
+    }
   }
 }
 
