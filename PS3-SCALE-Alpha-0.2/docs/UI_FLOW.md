@@ -1,4 +1,4 @@
-# PS3 SCALE UI flow — Alpha 0.23
+# PS3 SCALE UI flow — Alpha 0.24
 
 ## First launch and language
 
@@ -83,7 +83,7 @@ The USB update check is offline and only looks for a package file with a PKG hea
 
 - First open in an app session starts a real HTTPS refresh automatically while the last valid local cache remains available.
 - Triangle forces a profile + community index refresh; Start remains an alternate refresh shortcut.
-- Select opens search; Square cycles the result filter. The default is Graphics + Any Region/Version so candidates appear without cycling Square first.
+- Select opens search; Square cycles the result filter. The default is All Files + Any Region/Version. Every indexed community entry is visible on first open, including unmatched entries; unmatched entries are browse-only until the exact local game is scanned.
 - Cross installs an eligible NCL file into the detected Artemis USERLIST directory. It is available only for a scanned HDD game with an exact Title ID + APP_VER match, a `GRAPHICS_FPS` category and an installed Artemis app.
 - The app supports the upstream Artemis `ARTPS3001` package ID and the Artemis R5 `ARTZ00001` package ID.
 - Downloads are limited to small plain-text NCL files. Existing files are not overwritten.
@@ -93,7 +93,8 @@ The USB update check is offline and only looks for a package file with a PKG hea
 ## FPS profiles and webMAN
 
 - The FPS Control screen uses only existing exact Title ID + APP_VER memory profiles.
-- Arming a memory profile requires explicit confirmation, webMAN MOD and PS3MAPI.
+- CROSS or START in Game Details is explicit confirmation: an exact one-write B_COMMUNITY profile is armed automatically, then the game launches. If no exact profile exists, the original game launches unmodified.
+- Triangle in Game Details and the separate FPS Control workflow can still arm a profile without launching immediately; webMAN MOD and PS3MAPI are required.
 - Normal game launch requires webMAN's local HTTP endpoint, not PS3MAPI.
 - If PS3MAPI is unavailable after a profile is armed, PS3 SCALE removes its own one-launch script and still attempts to launch the game unmodified.
 - If webMAN itself is unavailable, the app displays a specific network/HTTP error and remains responsive.
@@ -109,7 +110,7 @@ The USB update check is offline and only looks for a package file with a PKG hea
 
 ## XMB identity
 
-- The PKG build regenerates `ICON0.PNG`, `PIC1.PNG` and `PIC0.PNG` in the approved bright staircase / lavender identity.
+- The PKG build uses the approved square neon-glass icon for `ICON0.PNG` and regenerates `PIC1.PNG` / `PIC0.PNG` from the single-staircase pearl/lavender source.
 - The splash screen uses the new green Apollo Save logo asset supplied by the user.
 - The in-app moving staircase is a real-time Tiny3D scene; XMB artwork remains static because XMB background support is handled separately.
 

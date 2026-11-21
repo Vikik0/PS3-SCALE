@@ -116,6 +116,15 @@ assert "MUSIC 1: BIOS - ZORROVIAN (USB IMPORT)" in settings
 assert "MUSIC 2: GTA V (BUILT IN)" in settings
 assert "START GAME" in src
 assert "start_selected_game()" in main
+assert "g_auto_launch_after_profile_arm" in src
+assert "g_auto_launch_target" in src
+auto_start = section("static void start_selected_game(void)\n{", "static void load_app_settings(void)")
+assert "confirm_profile_install();" in auto_start
+assert "B_COMMUNITY" in auto_start
+assert "profile->patch_count != 1" in auto_start
+auto_service = section("static void service_profile_arm(void)\n{", "static void confirm_profile_install(void)")
+assert "start_selected_game();" in auto_service
+assert "ps3scale_profile_script_remove" in auto_service
 assert "ps3scale_webman_start_game(&g_game_launch_target)" in src
 assert "game_launch_worker" in src
 assert "service_game_launch();" in main
@@ -318,7 +327,7 @@ assert 'sscanf(line, "animation_v2=%d"' in src
 assert 'fprintf(fp, "animation_v2=%d\\n"' in src
 draw_ui_impl = section("static void draw_ui(void)", "static int compare_game_titles")
 assert "if (g_animation_enabled)" in draw_ui_impl
-assert "draw_home_ambient();" in draw_ui_impl
+assert draw_ui_impl.count("draw_home_ambient();") == 1
 assert "tiny3d_AlphaTest(1, 0x10, TINY3D_ALPHA_FUNC_GEQUAL);" in draw_ui_impl
 assert "tiny3d_BlendFunc(1," in draw_ui_impl
 assert "TINY3D_CLEAR_ZBUFFER" not in draw_ui_impl
@@ -331,7 +340,8 @@ assert "draw_rounded_rect(card_x + 107.0f * scale" in library_ui
 assert "game_is_ps3(game) ? \"PS3\" : \"PS2\"" in library_ui
 assert "PAGE %u / %u" in library_ui
 assert "PS3SCALE_SCAN_GRID_COUNT" in library_ui
-assert "MATCHED PROFILE - REVIEW FIRST" in library_ui
+assert "MATCHED PROFILE - AUTO APPLY ON CROSS" in library_ui
+assert "CROSS: APPLY + START" in library_ui
 assert "MATCHED PS2 CONFIG - REVIEW FIRST" in library_ui
 assert "NO MATCHED FILE - PLAY UNMODIFIED" in library_ui
 assert "REAL GAME COMPARISON" in library_ui
@@ -347,7 +357,7 @@ assert "Illustration only; not real game footage." not in src
 assert "Higher Resolution (profile-dependent)" not in library_ui
 assert "Improved Texture Sharpness" not in library_ui
 assert "Smoother Performance (game-specific)" not in library_ui
-assert "TRIANGLE: APPLY PROFILE" in library_ui
+assert "TRIANGLE: ARM PROFILE" in library_ui
 assert "TRIANGLE: DOWNLOAD CONFIG" in library_ui
 assert "CROSS: START GAME" in library_ui
 assert "SQUARE: FPS CONTROL" in library_ui
@@ -404,7 +414,7 @@ assert "draw_soft_card(x, 112.0f, 154.0f, 202.0f, 0)" in help_ui
 assert "draw_rounded_rect(x + 12.0f, 126.0f, 28.0f, 24.0f" in help_ui
 about_ui = section("static void draw_about(void)", "static void draw_profile_toast(void)")
 for token in ("READ-ONLY SCANNING", "VERSION-MATCHED DATA",
-              "NO AUTO-APPLY", "Hardware Information",
+              "EXACT-VERSION AUTO APPLY", "Hardware Information",
               "CONSOLE DETECTED", "NOT AVAILABLE",
               "No universal upscaler or guaranteed 60 FPS is claimed.",
               "draw_soft_card(20.0f, 88.0f, 814.0f, 356.0f, 0)"):
@@ -485,6 +495,8 @@ assert "TRIANGLE REFRESH" in src
 assert "SELECT SEARCH" in src
 assert "L1/R1 PREV/NEXT" in src
 assert "g_online_first_opened" in src
+assert "static int g_online_filter_mode = ONLINE_FILTER_ALL_ANY;" in src
+assert "if (!matched_installed_game && !exact_only &&" in src
 assert "g_online_filter_mode = ONLINE_FILTER_GRAPHICS_ANY" in src
 assert "GRAPHICS + EXACT" in src
 assert "online_filter_exact_only" in src
@@ -683,7 +695,7 @@ assert "draw_scene_background();" in draw_ui_impl
 assert "daylight" in src and "night" in src
 assert "tiny3d_AlphaTest(1, 0x10, TINY3D_ALPHA_FUNC_GEQUAL);" in draw_ui_impl
 assert "TINY3D_CLEAR_ZBUFFER" not in draw_ui_impl
-assert "draw_home_ambient();" in draw_ui_impl
+assert draw_ui_impl.count("draw_home_ambient();") == 1
 assert "draw_app_icon_preview" not in src
 assert "XMB APP ICON" not in src
 assert "scene_camera_space_point" in src
@@ -697,7 +709,8 @@ project_root = source_path.parents[2]
 makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 xmb_assets = (project_root / "scripts/generate_xmb_assets.py").read_text(encoding="utf-8")
 assert "approved pearl-white staircase source" in xmb_assets
-assert 'icon.save(PKG/"ICON0.PNG")' in xmb_assets
+assert 'ICON0_SOURCE = ROOT / "assets/xmb/icon0_source.png"' in xmb_assets
+assert 'icon_canvas.save(PKG / "ICON0.PNG"' in xmb_assets
 assert 'PKG / "PIC1.PNG"' in xmb_assets
 assert 'PKG / "PIC0.PNG"' in xmb_assets
 assert "scripts/generate_xmb_assets.py" in makefile
@@ -705,7 +718,9 @@ assert "PIC1.PNG" in makefile and "ICON0.PNG" in makefile and "PIC0.PNG" in make
 xmb_generator = (project_root / "scripts/generate_xmb_assets.py").read_text(encoding="utf-8")
 assert 'source, (1280, 720)' in xmb_generator
 assert 'source, (310, 176)' in xmb_generator
-assert 'Canvas(320,176' in xmb_generator
+assert 'Image.open(ICON0_SOURCE)' in xmb_generator
+assert 'icon_canvas.paste(square_icon, (72, 0))' in xmb_generator
+assert (project_root / "assets/xmb/icon0_source.png").is_file()
 assert 'PIC1.PNG' in xmb_generator and 'PIC0.PNG' in xmb_generator and 'ICON0.PNG' in xmb_generator
 assert 'PIC1_SOURCE = ROOT / "assets/xmb/pic1_source.jpg"' in xmb_generator
 assert "Image.open(PIC1_SOURCE)" in xmb_generator
@@ -722,8 +737,8 @@ assert '"/dev_usb000/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3"' in src
 assert "rename(temp_path, PS3SCALE_MUSIC1_PATH)" in src
 assert "MUSIC 1 IMPORTED FROM USB" in settings
 sfo = (project_root / "sfo.xml").read_text(encoding="utf-8")
-assert '<value name="APP_VER" type="string">00.23</value>' in sfo
-assert '<value name="VERSION" type="string">00.23</value>' in sfo
+assert '<value name="APP_VER" type="string">00.24</value>' in sfo
+assert '<value name="VERSION" type="string">00.24</value>' in sfo
 
 # Startup failure and package-integrity regression checks.
 startup = section("int main(int argc, char *argv[])", "while (!g_exit_requested)")
@@ -832,7 +847,7 @@ assert "actions/upload-artifact@v4" not in build_workflow
 assert "actions/setup-python@v5" not in index_workflow
 
 # Keep the visible app, support payload and local report on one version.
-assert '#define PS3SCALE_APP_VERSION "ALPHA 0.23"' in src
+assert '#define PS3SCALE_APP_VERSION "ALPHA 0.24"' in src
 assert '#define SETTINGS_COUNT 10' in src
 assert 'fprintf(fp, "settings_version=3\\n");' in src
 assert 'enhancement_persistent=%d' in src
@@ -926,6 +941,7 @@ staircase = section("static void draw_home_ambient(void)",
 assert "float camera_steps = phase / tau * 18.0f;" in staircase
 assert "float camera_y = camera_steps * rise_per_tread;" in staircase
 assert "center_y = camera_y;" in staircase
+assert "draw_circle_outline(" not in staircase
 assert "((float)i + camera_steps) * angle_step" in staircase
 assert "(t + camera_steps) * angle_step" in staircase
 assert "camera_step_whole" not in staircase

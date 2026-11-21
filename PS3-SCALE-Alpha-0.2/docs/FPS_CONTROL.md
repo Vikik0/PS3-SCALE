@@ -17,6 +17,8 @@ This screen is separate from the Online DB NCL installer:
 5. SQUARE removes a PS3 SCALE-owned pending script. CIRCLE cancels confirmation or returns to Game Details.
 6. Start the game from Game Details after the profile has been armed.
 
+For the normal launch path, press CROSS or START directly in Game Details. PS3 SCALE treats that button press as explicit consent, arms an eligible exact one-write B_COMMUNITY profile, and then launches the game. If no exact profile exists, the original game starts unmodified. Manual-only and multi-write profiles remain blocked.
+
 ## Matching and safety
 
 - A profile is exposed only for an exact Title ID + APP_VER match.

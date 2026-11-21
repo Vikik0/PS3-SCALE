@@ -153,7 +153,7 @@ static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 #define PS3SCALE_SUPPORT_OUTBOX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox.txt"
 /* Replace with the URL of the separate PS3 SCALE Supabase project after deployment. */
 #define PS3SCALE_SUPPORT_URL "https://YOUR_PROJECT.supabase.co/functions/v1/ps3scale-support"
-#define PS3SCALE_APP_VERSION "ALPHA 0.23"
+#define PS3SCALE_APP_VERSION "ALPHA 0.24"
 #define PS3SCALE_PS2_CONFIG_INDEX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/ps2_config_index.tsv"
 #define PS3SCALE_PS2_CLASSICS_CONFIG_DIR "/dev_hdd0/game/PS2CONFIG/USRDIR/CONFIG/ENC"
 #define PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT (PS3SCALE_PS2_CONFIG_MAX_BYTES * 2u)
@@ -274,7 +274,7 @@ enum {
     ONLINE_FILTER_ALL_ANY = 3,
     ONLINE_FILTER_MODE_COUNT = 4
 };
-static int g_online_filter_mode = ONLINE_FILTER_GRAPHICS_ANY;
+static int g_online_filter_mode = ONLINE_FILTER_ALL_ANY;
 static int g_online_first_opened = 0;
 static char g_online_query[64] = "";
 static char g_scan_search_stash[64] = "";
@@ -301,6 +301,8 @@ static volatile int g_profile_arm_result = -1;
 static int g_profile_arm_thread_started = 0;
 static sys_ppu_thread_t g_profile_arm_thread;
 static ps3scale_profile_t g_profile_arm_target;
+static int g_auto_launch_after_profile_arm = 0;
+static ps3scale_game_t g_auto_launch_target;
 
 static void clamp_selection(void);
 static void scan_library(void);
@@ -309,6 +311,7 @@ static int find_mounted_game(const ps3scale_game_t *selected,
 static int find_installed_game(const ps3scale_game_t *selected);
 static void service_game_launch(void);
 static void service_profile_arm(void);
+static void start_selected_game(void);
 static void refresh_details_cache(void);
 static void service_ps2_config_download(void);
 static void start_ps2_config_download(void);
@@ -1889,8 +1892,7 @@ static void draw_home_ambient(void)
     scene_set_camera(0.0f, camera_y, 0.0f,
                      center_x, camera_y, center_z);
 
-    draw_circle_outline(565.0f, 250.0f, 178.0f, 0xcbb8e830);
-    draw_circle_outline(565.0f, 250.0f, 164.0f, 0xe3d8f240);
+    /* One spiral staircase only; the scene background supplies no second flight. */
 
     /* White/silver treads stream past the camera with no visible end. */
     for (i = 0; i < PS3SCALE_STAIR_STEPS; i++) {
@@ -2366,7 +2368,7 @@ static void rebuild_online_results(void)
                 break;
             }
 
-            if (!matched_installed_game && g_online_query[0] &&
+            if (!matched_installed_game && !exact_only &&
                 online_result_matches_query(NULL, NULL, file)) {
                 int duplicate = 0;
                 for (k = 0; k < g_online_result_count; k++) {
@@ -2593,6 +2595,7 @@ static void profile_arm_worker(void *arg)
 static void service_profile_arm(void)
 {
     int result;
+    int auto_launch;
 
     if (!g_profile_arm_done)
         return;
@@ -2604,12 +2607,30 @@ static void service_profile_arm(void)
     }
 
     result = g_profile_arm_result;
+    auto_launch = g_auto_launch_after_profile_arm;
+    g_auto_launch_after_profile_arm = 0;
     g_profile_arm_done = 0;
     g_profile_arm_running = 0;
     g_details_cache_valid = 0;
 
     if (result == 0 || result == 1) {
-        set_details_message("ONE-LAUNCH PROFILE ARMED. START THIS GAME.");
+        if (auto_launch) {
+            const ps3scale_game_t *current = selected_game();
+            if (g_screen == SCREEN_DETAILS && current &&
+                strcmp(current->title_id, g_auto_launch_target.title_id) == 0 &&
+                strcmp(current->app_ver, g_auto_launch_target.app_ver) == 0 &&
+                strcmp(current->path, g_auto_launch_target.path) == 0) {
+                set_details_message("PROFILE ARMED. STARTING GAME...");
+                start_selected_game();
+            } else {
+                (void)ps3scale_profile_script_remove(
+                    g_auto_launch_target.title_id);
+                set_details_message(
+                    "GAME SELECTION CHANGED. PROFILE REMOVED; NOT LAUNCHED.");
+            }
+        } else {
+            set_details_message("ONE-LAUNCH PROFILE ARMED. START THIS GAME.");
+        }
     } else if (result == -100) {
         set_details_message("WEBMAN MOD NOT RESPONDING. PROFILE NOT ARMED.");
     } else if (result == -101) {
@@ -2636,6 +2657,11 @@ static void confirm_profile_install(void)
     }
     if (strcmp(profile->trust, "B_COMMUNITY_MANUAL") == 0) {
         set_details_message("MANUAL-ONLY PROFILE. ONE-LAUNCH APPLY IS NOT SUPPORTED.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+    if (strcmp(profile->trust, "B_COMMUNITY") != 0) {
+        set_details_message("PROFILE TRUST LEVEL DOES NOT ALLOW AUTO APPLY.");
         g_profile_confirm_pending = 0;
         return;
     }
@@ -2837,15 +2863,40 @@ static void start_selected_game(void)
             set_details_message("STALE PROFILE SCRIPT. REMOVE IT BEFORE STARTING.");
             return;
         }
+        if (profile && script_state == -1) {
+            set_details_message("USER WEBMAN SCRIPT EXISTS. PROFILE NOT OVERWRITTEN.");
+            return;
+        }
+        if (profile && strcmp(profile->trust, "B_COMMUNITY") != 0) {
+            set_details_message("PROFILE IS NOT ELIGIBLE FOR AUTOMATIC APPLY.");
+            return;
+        }
+        if (profile && profile->patch_count != 1) {
+            set_details_message("MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY.");
+            return;
+        }
+
+        /* CROSS/START is explicit consent to arm an exact one-write profile
+           and launch only after the one-launch script has been installed. */
+        if (profile && script_state == 0) {
+            g_auto_launch_target = *game;
+            g_auto_launch_after_profile_arm = 1;
+            confirm_profile_install();
+            if (!g_profile_arm_running && !g_profile_arm_done)
+                g_auto_launch_after_profile_arm = 0;
+            return;
+        }
 
         /* A one-launch patch must still target the exact selected game revision. */
         if (script_state == 1) {
             if (game->kind == PS3SCALE_GAME_PS3_HDD) {
                 if (!find_installed_game(game)) {
+                    (void)ps3scale_profile_script_remove(game->title_id);
                     set_details_message("GAME UPDATE CHANGED. RESCAN BEFORE STARTING PROFILE.");
                     return;
                 }
             } else if (!find_mounted_game(game, &mounted)) {
+                (void)ps3scale_profile_script_remove(game->title_id);
                 set_details_message("MOUNT THE EXACT GAME VERSION BEFORE STARTING PROFILE.");
                 return;
             }
@@ -4984,7 +5035,10 @@ static void draw_details(void)
     set_ui_font_size(7, 11);
     draw_text(212.0f, 251.0f,
               (profile || ps2_config) ? 0x26794bff : 0xb27b35ff,
-              profile ? "MATCHED PROFILE - REVIEW FIRST" :
+              profile ? ((strcmp(profile->trust, "B_COMMUNITY") == 0 &&
+                           profile->patch_count == 1) ?
+                          "MATCHED PROFILE - AUTO APPLY ON CROSS" :
+                          "MANUAL PROFILE - REVIEW FIRST") :
               ps2_config ? "MATCHED PS2 CONFIG - REVIEW FIRST" :
                            "NO MATCHED FILE - PLAY UNMODIFIED");
     set_ui_font_size(11, 17);
@@ -5099,7 +5153,7 @@ static void draw_details(void)
     set_ui_font_size(6, 9);
     if (game_is_ps3(game) && profile) {
         draw_text(544.0f, 285.0f, 0x26794bff,
-                  "VERIFIED MATCH - REVIEW THE EFFECT");
+                  "EXACT TITLE ID / APP VERSION MATCH");
         snprintf(line, sizeof(line), "Profile: %.27s", profile->effect);
         draw_text(544.0f, 304.0f, 0x514b69ff, line);
         draw_text(544.0f, 323.0f, 0x514b69ff,
@@ -5128,21 +5182,28 @@ static void draw_details(void)
 
     draw_soft_button(20.0f, 400.0f, 250.0f, 44.0f,
                      game_is_ps3(game) ?
-                     (profile ? "TRIANGLE: APPLY PROFILE" : "NO EXACT FPS PROFILE") :
+                     (profile ? "TRIANGLE: ARM PROFILE" : "NO EXACT FPS PROFILE") :
                      (ps2_config ? "TRIANGLE: DOWNLOAD CONFIG" : "NO CONFIG MATCH"),
                      1);
     draw_soft_button(282.0f, 400.0f, 250.0f, 44.0f,
                      game_is_ps3(game) ? "SQUARE: FPS CONTROL" :
                                          "PS2 CONFIGURATION", 0);
     draw_soft_button(544.0f, 400.0f, 290.0f, 44.0f,
-                     "CROSS: START GAME", 0);
+                     (game_is_ps3(game) && profile) ?
+                      ((strcmp(profile->trust, "B_COMMUNITY") == 0 &&
+                        profile->patch_count == 1) ?
+                       ((script_state == -1 || script_state == -2) ?
+                        "CROSS: PROFILE BLOCKED" :
+                        (script_state == 1 ? "CROSS: START WITH PROFILE" :
+                                             "CROSS: APPLY + START")) :
+                       "CROSS: MANUAL REVIEW") : "CROSS: START GAME", 0);
     set_ui_font_size(7, 11);
     draw_text(24.0f, PS3SCALE_UI_FOOTER_PRIMARY_Y, 0x77718fff,
               g_profile_confirm_pending ?
               "COMMUNITY PATCH: TRIANGLE CONFIRMS; CIRCLE CANCELS." :
               g_details_message);
     draw_text(24.0f, PS3SCALE_UI_FOOTER_SECONDARY_Y, 0x875be8ff,
-              "CROSS / START: PLAY   |   TRIANGLE: CONFIRM   |   CIRCLE / SELECT / LEFT: BACK");
+              "CROSS / START: AUTO APPLY + PLAY WHEN MATCHED | TRIANGLE: ARM PROFILE | CIRCLE / SELECT / LEFT: BACK");
     set_ui_font_size(14, 22);
 }
 
@@ -5751,7 +5812,7 @@ static void draw_about(void)
 
     draw_soft_chip(42.0f, 238.0f, 154.0f, "READ-ONLY SCANNING", 1);
     draw_soft_chip(204.0f, 238.0f, 176.0f, "VERSION-MATCHED DATA", 0);
-    draw_soft_chip(388.0f, 238.0f, 190.0f, "NO AUTO-APPLY", 0);
+    draw_soft_chip(388.0f, 238.0f, 190.0f, "EXACT-VERSION AUTO APPLY", 0);
 
     set_ui_font_size(9, 14);
     draw_text(42.0f, 282.0f, 0x29243fff, "Hardware Information");
