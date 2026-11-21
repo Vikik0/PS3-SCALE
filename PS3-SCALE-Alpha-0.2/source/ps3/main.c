@@ -144,6 +144,9 @@ static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 #define PS3SCALE_APOLLO_LOGO_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/apollo-save.png"
 #define PS3SCALE_PREVIEW_DIR "/dev_hdd0/game/PS3SCALE1/USRDIR/previews"
 #define PS3SCALE_ARTEMIS_USERLIST_DIR "/dev_hdd0/game/ARTPS3001/USRDIR/USERLIST"
+#define PS3SCALE_ARTEMIS_R5_USERLIST_DIR "/dev_hdd0/game/ARTZ00001/USRDIR/USERLIST"
+#define PS3SCALE_ARTEMIS_EBOOT_PATH "/dev_hdd0/game/ARTPS3001/USRDIR/EBOOT.BIN"
+#define PS3SCALE_ARTEMIS_R5_EBOOT_PATH "/dev_hdd0/game/ARTZ00001/USRDIR/EBOOT.BIN"
 #define PS3SCALE_TEMP_ENHANCEMENT_LIST_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/temp_enhancements.lst"
 #define PS3SCALE_SUPPORT_DIR "/dev_hdd0/game/PS3SCALE1/USRDIR/support"
 #define PS3SCALE_SUPPORT_OUTBOX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox.txt"
@@ -3265,6 +3268,10 @@ static void cleanup_temporary_enhancements(void)
                            PS3SCALE_ARTEMIS_USERLIST_DIR, name);
         if (written > 0 && (size_t)written < sizeof(target))
             (void)unlink(target);
+        written = snprintf(target, sizeof(target), "%s/%s",
+                           PS3SCALE_ARTEMIS_R5_USERLIST_DIR, name);
+        if (written > 0 && (size_t)written < sizeof(target))
+            (void)unlink(target);
     }
     fclose(manifest);
     (void)unlink(PS3SCALE_TEMP_ENHANCEMENT_LIST_PATH);
@@ -3372,7 +3379,7 @@ static void start_community_file_download(
     const ps3scale_community_file_t *entry,
     const ps3scale_game_t *game)
 {
-    static const char download_dir[] = PS3SCALE_ARTEMIS_USERLIST_DIR;
+    char download_dir[PS3SCALE_PATH_MAX];
     struct stat st;
     char encoded_branch[192];
     char encoded_path[640];
@@ -3415,9 +3422,15 @@ static void start_community_file_download(
                  "THIS NCL FILE IS NOT A GRAPHICS / FPS ENHANCEMENT.");
         return;
     }
-    if (!file_exists_readonly("/dev_hdd0/game/ARTPS3001/USRDIR/EBOOT.BIN")) {
+    if (file_exists_readonly(PS3SCALE_ARTEMIS_EBOOT_PATH)) {
+        snprintf(download_dir, sizeof(download_dir), "%s",
+                 PS3SCALE_ARTEMIS_USERLIST_DIR);
+    } else if (file_exists_readonly(PS3SCALE_ARTEMIS_R5_EBOOT_PATH)) {
+        snprintf(download_dir, sizeof(download_dir), "%s",
+                 PS3SCALE_ARTEMIS_R5_USERLIST_DIR);
+    } else {
         snprintf(g_online_message, sizeof(g_online_message),
-                 "INSTALL ARTEMIS PS3 BEFORE INSTALLING NCL FILES.");
+                 "INSTALL ARTEMIS PS3 R5 OR THE OFFICIAL BUILD FIRST.");
         return;
     }
     if (g_network_task_running ||
@@ -3689,8 +3702,9 @@ static void refresh_companion_tool_status(void)
 {
     g_apollo_installed = file_exists_readonly(
         "/dev_hdd0/game/NP0APOLLO/USRDIR/EBOOT.BIN");
-    g_artemis_installed = file_exists_readonly(
-        "/dev_hdd0/game/ARTPS3001/USRDIR/EBOOT.BIN");
+    g_artemis_installed =
+        file_exists_readonly(PS3SCALE_ARTEMIS_EBOOT_PATH) ||
+        file_exists_readonly(PS3SCALE_ARTEMIS_R5_EBOOT_PATH);
     g_webman_installed =
         file_exists_readonly("/dev_hdd0/plugins/webftp_server.sprx") ||
         file_contains_text_readonly("/dev_hdd0/boot_plugins.txt",
