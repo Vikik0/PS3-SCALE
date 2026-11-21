@@ -3,11 +3,13 @@
 
 #include <arpa/inet.h>
 #include <net/net.h>
+#include <net/netctl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/select.h>
+#include <sysmodule/sysmodule.h>
 #include <unistd.h>
 
 #include <errno.h>
@@ -20,6 +22,36 @@
 #define WEBMAN_HTTP_REQUEST_MAX 2048
 #define WEBMAN_CONNECT_TIMEOUT_SEC 3
 #define WEBMAN_IO_TIMEOUT_SEC 2
+
+static int network_modules_ready(void)
+{
+    if (sysModuleLoad(SYSMODULE_NET) < 0)
+        return -1;
+    if (sysModuleLoad(SYSMODULE_NETCTL) < 0) {
+        sysModuleUnload(SYSMODULE_NET);
+        return -1;
+    }
+    if (netInitialize() < 0) {
+        sysModuleUnload(SYSMODULE_NETCTL);
+        sysModuleUnload(SYSMODULE_NET);
+        return -1;
+    }
+    if (netCtlInit() < 0) {
+        netDeinitialize();
+        sysModuleUnload(SYSMODULE_NETCTL);
+        sysModuleUnload(SYSMODULE_NET);
+        return -1;
+    }
+    return 0;
+}
+
+static void network_modules_shutdown(void)
+{
+    netCtlTerm();
+    netDeinitialize();
+    sysModuleUnload(SYSMODULE_NETCTL);
+    sysModuleUnload(SYSMODULE_NET);
+}
 
 static int connect_with_timeout(int sock, const struct sockaddr *address,
                                 socklen_t address_length)
@@ -105,7 +137,8 @@ static int webman_http_get(const char *path, char *response,
 {
     int sock = -1;
     int ret;
-    int result = -1;
+    int result = PS3SCALE_WEBMAN_ERROR_INVALID_REQUEST;
+    int network_ready = 0;
     size_t used = 0;
     size_t sent = 0;
     size_t request_length;
@@ -113,17 +146,23 @@ static int webman_http_get(const char *path, char *response,
     struct timeval timeout;
     char request[WEBMAN_HTTP_REQUEST_MAX];
 
-    if (!path || path[0] != '/' || strlen(path) > WEBMAN_HTTP_PATH_MAX)
-        return -1;
-    if (response && response_size > 0)
-        response[0] = '\0';
+    if (!path || path[0] != '/' || strlen(path) > WEBMAN_HTTP_PATH_MAX ||
+        !response || response_size < 16)
+        return PS3SCALE_WEBMAN_ERROR_INVALID_REQUEST;
+    response[0] = '\0';
 
-    if (netInitialize() != 0)
-        return -1;
+    /* Match the lifecycle used by the HTTPS catalog worker. The previous
+       implementation called netInitialize() without loading NET/NETCTL or
+       starting netCtl, which made the local webMAN request fail on some boots. */
+    if (network_modules_ready() != 0)
+        return PS3SCALE_WEBMAN_ERROR_NETWORK_INIT;
+    network_ready = 1;
 
     sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (sock < 0)
+    if (sock < 0) {
+        result = PS3SCALE_WEBMAN_ERROR_SOCKET;
         goto cleanup;
+    }
 
     timeout.tv_sec = WEBMAN_IO_TIMEOUT_SEC;
     timeout.tv_usec = 0;
@@ -140,47 +179,60 @@ static int webman_http_get(const char *path, char *response,
 #endif
     server.sin_family = AF_INET;
     server.sin_port = htons(80);
-    if (inet_pton(AF_INET, "127.0.0.1", &server.sin_addr) != 1)
+    if (inet_pton(AF_INET, "127.0.0.1", &server.sin_addr) != 1) {
+        result = PS3SCALE_WEBMAN_ERROR_CONNECT;
         goto cleanup;
+    }
     if (connect_with_timeout(sock, (struct sockaddr *)&server,
-                             sizeof(server)) != 0)
+                             sizeof(server)) != 0) {
+        result = PS3SCALE_WEBMAN_ERROR_CONNECT;
         goto cleanup;
+    }
 
     ret = snprintf(request, sizeof(request),
-        "GET %s HTTP/1.0\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        "GET %s HTTP/1.0\r\nHost: 127.0.0.1\r\n"
+        "User-Agent: PS3SCALE/0.23\r\nConnection: close\r\n\r\n",
         path);
-    if (ret < 0 || (size_t)ret >= sizeof(request))
+    if (ret < 0 || (size_t)ret >= sizeof(request)) {
+        result = PS3SCALE_WEBMAN_ERROR_INVALID_REQUEST;
         goto cleanup;
+    }
     request_length = (size_t)ret;
 
     while (sent < request_length) {
         ret = (int)write(sock, request + sent, request_length - sent);
         if (ret < 0 && errno == EINTR)
             continue;
-        if (ret <= 0)
+        if (ret <= 0) {
+            result = PS3SCALE_WEBMAN_ERROR_SEND;
             goto cleanup;
+        }
         sent += (size_t)ret;
     }
 
-    if (response && response_size > 1) {
-        while (used + 1 < response_size) {
-            if (wait_for_readable(sock) != 0)
-                break;
-            ret = (int)read(sock, response + used, response_size - used - 1);
-            if (ret < 0 && errno == EINTR)
-                continue;
-            if (ret <= 0)
-                break;
-            used += (size_t)ret;
-            response[used] = '\0';
-
-            /* Read a small response body too; PS3MAPI reports its version there. */
-            if (used > 512)
-                break;
-        }
+    while (used + 1 < response_size) {
+        if (wait_for_readable(sock) != 0)
+            break;
+        ret = (int)read(sock, response + used, response_size - used - 1);
+        if (ret < 0 && errno == EINTR)
+            continue;
+        if (ret <= 0)
+            break;
+        used += (size_t)ret;
         response[used] = '\0';
-        if (http_status_is_success(response))
-            result = 0;
+
+        /* The status line is enough to confirm that webMAN accepted the
+           request; do not wait for a body that may be delayed by game launch. */
+        if (strstr(response, "\r\n\r\n") != NULL)
+            break;
+    }
+    response[used] = '\0';
+    if (used == 0 || strncmp(response, "HTTP/", 5) != 0) {
+        result = PS3SCALE_WEBMAN_ERROR_RESPONSE;
+    } else if (http_status_is_success(response)) {
+        result = 0;
+    } else {
+        result = PS3SCALE_WEBMAN_ERROR_HTTP_STATUS;
     }
 
 cleanup:
@@ -188,7 +240,8 @@ cleanup:
         (void)shutdown(sock, SHUT_RDWR);
         close(sock);
     }
-    netDeinitialize();
+    if (network_ready)
+        network_modules_shutdown();
     return result;
 }
 
@@ -218,7 +271,7 @@ int ps3scale_webman_start_game(const ps3scale_game_t *game)
 
     if (ps3scale_webman_build_start_path(game, request_path,
                                          sizeof(request_path)) != 0)
-        return -1;
+        return PS3SCALE_WEBMAN_ERROR_INVALID_REQUEST;
 
     return webman_http_get(request_path, response, sizeof(response));
 }
