@@ -846,4 +846,9 @@ assert "for (wave = 0; wave < 3; wave++)" in background_ui
 assert "segment <= 28" in background_ui
 assert "for (i = 0; i < 22; i++)" in background_ui
 assert "for (i = 0; i < 14; i++)" in background_ui
+# The spiral stairs keep visible silver/lavender depth behind pearl panels.
+assert "scene_blend(0x988eafff, 0xc7bedaff, light)" in staircase
+assert "scene_blend(0xa99fbeff, 0xd5cde5ff, light)" in staircase
+assert "scene_blend(0x6f6788ff, 0xa39abfff, light)" in staircase
+assert "0xa18ad2ff" in staircase
 print("PS3 SCALE UI contract tests: PASS")
