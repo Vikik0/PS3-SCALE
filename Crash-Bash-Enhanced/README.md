@@ -12,6 +12,7 @@ This branch contains the native PS3 homebrew shell and the first cloud-lobby int
 - Guest tokens signed by a server-only HMAC secret.
 - Private Vercel Blob storage for temporary room presence and signaling records.
 - Native PS3 HTTPS client using libcurl + PolarSSL: health check, public room list, create/join, ready heartbeat, room refresh and leave.
+- PS3 room controls: browse public rooms, create public/private rooms, and join a six-character invite code from the controller.
 - Host protocol and JSON parser tests, plus web lobby security tests.
 
 ## Honest implementation status
@@ -20,7 +21,7 @@ This is **not yet the complete Crash Bash game**. The repository does not contai
 
 The Vercel lobby API is deployed. Its health endpoint confirms that private storage and guest-token signing are configured, and the public-room endpoint responds. The PS3 menu now has code to connect to that API over HTTPS and perform the lobby actions above.
 
-The current lobby is limited to two players. Real-time gameplay transport is not implemented: the service does not yet carry per-frame game inputs. NAT traversal, relay fallback, and integration with the original Crash Bash engine remain outstanding. A successful room connection must not be described as a playable online match.
+On the PS3 room screen, L1 switches the next room between public and private; R1 opens invite-code entry (D-pad left/right selects a character, up/down changes it, Cross joins). The current lobby is limited to two players. Real-time gameplay transport is not implemented: the service does not yet carry per-frame game inputs. NAT traversal, relay fallback, and integration with the original Crash Bash engine remain outstanding. A successful room connection must not be described as a playable online match.
 
 ## Hosting and cost
 
