@@ -33,7 +33,7 @@ The adapter reads ports 0 and 1 only and does not call `cellPadInit`/`cellPadEnd
 
 ## PS3 runtime and candidate functions
 
-- Ghosts PS3 TU 1.16 offsets/functions collection: https://nextgenupdate.com/forums/ghosts-mods-cheats-glitches/901435-ghosts-offsets-addresses-collection-116updating-1.html
+- Ghosts PS3 TU 1.16 offsets/functions collection, including `PlayerCMD_IsSplitScreenPlayer` and `PlayerCMD_IsSplitScreenPlayerPrimary`: https://nextgenupdate.com/forums/ghosts-mods-cheats-glitches/901435-ghosts-offsets-addresses-collection-116updating-3.html
 - PS3 homebrew SDK/toolchain: https://github.com/ps3dev/PSL1GHT
 - PS3 game modding overview: https://consolemods.org/wiki/PS3:Modding_PS3_Games
 

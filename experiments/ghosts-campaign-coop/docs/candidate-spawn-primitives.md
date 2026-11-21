@@ -13,9 +13,22 @@ This is a reverse-engineering lead list, **not an executable patch**. The addres
 | SV_UnlinkEntity | 0x32C3A0 | Removes an entity from world linking | Unknown |
 | PlayerCMD_Spawn | 0x23D71C | Player script command; could be relevant to player creation | Unknown; VM context likely required |
 | PlayerCMD_ClonePlayer | 0x23D850 | Player clone script command; worth investigating for a visual/actor clone | Unknown; not proof of a second controllable client |
+| PlayerCMD_IsSplitScreenPlayer | 0x23EA54 | Script query that identifies whether a player entity is a split-screen player | Unknown in Campaign; strong validation lead |
+| PlayerCMD_IsSplitScreenPlayerPrimary | 0x23EB38 | Script query that identifies the primary split-screen player | Unknown in Campaign; strong validation lead |
 | PlayerCMD_SetOrigin | 0x23585C | Script command for actor position | Unknown |
 | PlayerCMD_SetVelocity | 0x235958 | Script command for actor movement | Unknown |
 | PlayerCMD_GiveWeapon | 0x233468 | Weapon assignment helper | Unknown |
+
+## Split-screen identity functions — new research lead
+
+The same TU 1.16 list also names two split-screen-specific player script commands:
+
+- `PlayerCMD_IsSplitScreenPlayer` at `0x23EA54`
+- `PlayerCMD_IsSplitScreenPlayerPrimary` at `0x23EB38`
+
+These names are useful because they suggest the game has script-level awareness of a player being part of a split-screen session and whether that player is the primary local player. The intended use in this project is **validation**, not creation: once a native second local player is initialized in a supported local mode, these checks may help verify which player entity is primary and which is secondary.
+
+They are script-command handlers, not documented general-purpose C APIs. They likely depend on a valid script VM/entity reference and must not be called directly as ordinary functions without confirming the calling convention and VM state. Their presence in a multiplayer-oriented offset list does not prove they work in Campaign.
 
 ## Important interpretation
 

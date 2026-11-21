@@ -32,6 +32,10 @@ The public PS3 update catalogue lists Ghosts Title Update 1.16 for the US and EU
 - Therefore, compiling a modified GSC file is not sufficient to install it in the retail game. Do not assume the old extract-edit-repack patch_mp.ff workflow works.
 - The current likely path is carefully verified EBOOT/PRX runtime hooks or another proven runtime script-loading mechanism.
 
+### Split-screen identity checks
+
+The public TU 1.16 function list includes `PlayerCMD_IsSplitScreenPlayer` and `PlayerCMD_IsSplitScreenPlayerPrimary`. These are promising validation probes for identifying the primary and secondary local player after a native local session has initialized. They are script-command handlers, so they must be invoked only through a verified script VM path; the listed offsets are not approved Campaign hooks.
+
 ### Spawn functions
 
 A public TU 1.16 offsets thread lists G_Spawn, G_CallSpawnEntity, PlayerCMD_Spawn and PlayerCMD_ClonePlayer. These addresses are Multiplayer-context leads only. No candidate is approved for Campaign until verified against the exact executable and calling convention.
