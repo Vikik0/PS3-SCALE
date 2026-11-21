@@ -24,7 +24,7 @@ python .\experiments\ghosts-campaign-coop\tools\rpcs3_preflight.py --game-root "
 
 For an installed RPCS3 game folder, pass dev_hdd0\game\BLUS31270 as game-root. You can also pass the PS3_GAME directory itself.
 
-The preflight is read-only. It checks PARAM.SFO and Title ID, fingerprints EBOOT.BIN, identifies whether it is an SCE container or plain ELF, finds the RPCS3 executable and log, extracts PPU hashes, and records what remains unverified.
+The preflight is read-only. It checks PARAM.SFO and Title ID, fingerprints EBOOT.BIN, identifies whether it is an SCE container or plain ELF, finds the RPCS3 executable and log, extracts PPU hashes, and reads RPCS3 Pad 0 / Pad 1 handler-binding entries when present. Two non-null bindings are emulator-side mapping evidence only; they do not prove controller input or Campaign split-screen.
 
 It does not decrypt SELF, infer TU 1.16 from APP_VER, configure controllers, launch the game, or generate an executable patch. A success result means only READY_FOR_BASELINE_BOOT.
 
@@ -32,7 +32,7 @@ It does not decrypt SELF, infer TU 1.16 from APP_VER, configure controllers, lau
 
 1. Open RPCS3 normally with the GUI. Do not use no-GUI mode during visual/debug work.
 2. Confirm the selected game matches the Title ID from preflight.
-3. Configure two independent controller ports and test them in an existing offline local multiplayer mode first.
+3. Configure two independent controller ports and test them in an existing offline local multiplayer mode first. After boot, check the preflight report for Pad 0 and Pad 1 bindings, then verify that each controller actually moves the correct local player.
 4. Boot Ghosts once. Do not enable any unverified patch or PRX.
 5. Close the game cleanly and rerun preflight to capture the PPU hash from RPCS3.log.
 6. Inspect the log around that hash and confirm it belongs to the Ghosts boot.
