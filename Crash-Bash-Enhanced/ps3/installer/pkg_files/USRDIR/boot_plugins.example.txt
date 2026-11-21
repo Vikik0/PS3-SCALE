@@ -1,0 +1,1 @@
+/dev_hdd0/game/CBAS00001/USRDIR/crash_bash_loader.fake.sprx
