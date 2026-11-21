@@ -70,7 +70,7 @@ end = text.find('"pcsx_rearmed_negcon_deadzone"', start)
 if start < 0 or end < 0:
     raise SystemExit("Could not locate the PCSX-ReARMed multitap option")
 block = text[start:end]
-if block.count('"disabled"') != 2 or block.rfind('"disabled"') < 0:
+if block.count('"disabled"') != 2 or block.count('"port 1"') != 1:
     raise SystemExit("Unexpected PCSX-ReARMed multitap option layout")
 position = block.rfind('"disabled"')
 block = block[:position] + '"port 1"' + block[position + len('"disabled"'):]
@@ -127,6 +127,7 @@ text = config.read_text()
 for old, new in (
     ("#define DEFAULT_NETPLAY_NAT_TRAVERSAL false", "#define DEFAULT_NETPLAY_NAT_TRAVERSAL true"),
     ("#define DEFAULT_NETPLAY_USE_MITM_SERVER false", "#define DEFAULT_NETPLAY_USE_MITM_SERVER true"),
+    ("#define DEFAULT_NETPLAY_LOCKSTEP false", "#define DEFAULT_NETPLAY_LOCKSTEP true"),
     ('#define DEFAULT_NETPLAY_MITM_SERVER "nyc"', '#define DEFAULT_NETPLAY_MITM_SERVER "madrid"'),
 ):
     if text.count(old) != 1:
@@ -136,6 +137,7 @@ for old, new in (
 required_config = (
     "#define DEFAULT_NETPLAY_PUBLIC_ANNOUNCE true",
     "#define DEFAULT_NETPLAY_MAX_CONNECTIONS 3",
+    "#define DEFAULT_NETPLAY_LOCKSTEP true",
 )
 for required in required_config:
     if required not in text:
@@ -217,9 +219,10 @@ netplay_mitm_server = "madrid"
 netplay_nat_traversal = "true"
 netplay_tcp_udp_port = "55435"
 netplay_max_connections = "3"
+netplay_lockstep = "true"
 netplay_start_as_spectator = "false"
 menu_show_load_content = "true"
-config_save_on_exit = "false"
+config_save_on_exit = "true"
 EOF
 
 cat > "$USRDIR/README-Crash-Bash-Online.txt" <<'EOF'
@@ -249,11 +252,17 @@ ONLINE PLAY
 5. Other players refresh the Netplay Host List and join the host.
 6. The host accepts up to three remote connections (four players total).
 
+Lockstep synchronization is enabled because the pinned PS1 core has a large
+savestate (0x440000 bytes). Lockstep keeps one state instead of a rollback state
+for every buffered frame; the trade-off is that a frame waits for every player's
+input, which can add latency or brief stalls on slower connections.
+
 Keep the game dump, region, BIOS choice, core version and core options identical
 on every console. The package enables the RetroArch public lobby, NAT traversal
 and the Madrid relay endpoint by default. If direct connection is needed,
 forward TCP/UDP port 55435 on the host router. Network restrictions or relay
-availability can still prevent a connection.
+availability can still prevent a connection. For a private match, set a Netplay
+Server Password on the host and share it only with invited players.
 
 PSN is not initialized or required by this homebrew build. An internet
 connection is still required for online Netplay.
@@ -280,6 +289,7 @@ PCSX-ReARMed commit: $PCSX_COMMIT
 RetroArch assets commit: $ASSETS_COMMIT
 libretro-super metadata commit: $LIBRETRO_SUPER_COMMIT
 Netplay: RetroArch Netplay, PSN-independent
+Synchronization: lockstep (one savestate; PS1 state size 0x440000 bytes)
 Player limit: 1 host + 3 remote clients (4 total)
 PCSX-ReARMed Multitap: Port 1
 Game data and BIOS: not included
