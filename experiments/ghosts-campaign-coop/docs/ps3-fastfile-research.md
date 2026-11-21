@@ -42,7 +42,7 @@ Example:
 python tools/ps3_fastfile_inspect.py "C:\Ghosts\common.ff" --output-zone "C:\Ghosts\analysis\common.zone" --report-json "C:\Ghosts\analysis\common-report.json"
 ~~~
 
-A small trailing region (up to 64 bytes) after the final valid block is reported and tolerated because retail samples document small alignment/slack bytes. Larger or truncated tails are not accepted as complete.
+The known retail writer terminates the block stream with the two-byte marker 00 01 followed by exactly four zero padding bytes. The inspector recognizes that exact marker and reports the four padding bytes. Arbitrary trailing data and truncated blocks are not accepted as complete.
 
 ### 2. tools/ps3_zone_script_export.py
 
@@ -76,3 +76,26 @@ The known multi-zone DLC files common_alien_dlc_updated_mp.ff and common_core_dl
 6. Compare those findings with the public Extinction/Multiplayer reference, then return to the exact PS3 EBOOT/PRX analysis to verify the engine-side local-client setup.
 
 This moves script archaeology ahead without pretending that a second Campaign player has been created. The main blocker remains proving the native second local-client path in the exact PS3 executable.
+
+
+## Cross-check against independent Ghosts tooling
+
+The public CoD-FF-Tools dev branch has a Ghosts PS3-specific decompressor and zone walker. Its inspected dev commit is 2cffc71b8275334527661b6aada744c9929a4c90 (2026-06-08). Its Ghosts extraction how-to documents the same IWffS100 anchor and A + 0x20000 stream offset, and says the two-pass extractor was checked against four retail PS3 samples (one base zone and three patches).
+
+Important implementation details cross-checked:
+- The retail stream ends with the two-byte 0x0001 marker and four zero padding bytes; the reference decompressor stops on a zero/one-byte length field and does not treat the marker as a compressed block.
+- The PS3 asset pool uses an eight-byte record with a big-endian type ID. The public PS3 enum places aitype at 0x24, mptype at 0x25, rawfile at 0x28, scriptfile at 0x29 and luafile at 0x32.
+- Wrapped rawfile/scriptfile/mptype/aitype bodies use short or long headers. Luafiles have a separate flat 16-byte header and are not zlib-wrapped.
+- The public asset walker currently pairs scriptfile/mptype/aitype records with located headers but does not export their bodies as script nodes. This remains a gap for our GSC extraction stage.
+
+References: [Ghosts extraction how-to](https://github.com/primetime43/CoD-FF-Tools/blob/dev/docs/Ghosts_Extraction_Howto.md), [Ghosts PS3 asset enum](https://github.com/primetime43/CoD-FF-Tools/blob/dev/FastFileLib/GameDefinitions/GhostsDefinition.cs), [Ghosts zone layout](https://github.com/primetime43/CoD-FF-Tools/blob/dev/FastFileLib/GhostsZoneLayout.cs), [Ghosts asset walker](https://github.com/primetime43/CoD-FF-Tools/blob/dev/Call%20of%20Duty%20FastFile%20Editor/ZoneParsers/GhostsAssetWalker.cs).
+
+The public GSC Tool dev branch supports IW6 on PS3 and defines the PS3 system as big-endian. Its README documents the GSC binary header and specifies that the three length fields in PS3/Xbox 360 .gscbin files are little-endian. The next step after extraction is to run the GSC Tool decompiler in IW6/PS3 mode. The bytecode symbol tables list these relevant VM builtin IDs:
+- function 0x0131: isSplitScreen
+- method 0x807A: getEntityNumber
+- method 0x80E2: isSplitscreenPlayer
+- method 0x80E3: isSplitscreenPlayerPrimary
+
+These are GSC VM builtin identifiers, not PS3 PPU function addresses and must not be used as EBOOT hook addresses.
+
+References: [GSC Tool README](https://github.com/xensik/gsc-tool/blob/dev/README.md), [IW6 PS3 function symbols](https://github.com/xensik/gsc-tool/blob/dev/src/gsc/engine/iw6_ps_func.cpp), [IW6 PS3 method symbols](https://github.com/xensik/gsc-tool/blob/dev/src/gsc/engine/iw6_ps_meth.cpp).
