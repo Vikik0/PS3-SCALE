@@ -497,7 +497,7 @@ assert "L1/R1 PREV/NEXT" in src
 assert "g_online_first_opened" in src
 assert "static int g_online_filter_mode = ONLINE_FILTER_ALL_ANY;" in src
 assert "if (!matched_installed_game && !exact_only &&" in src
-assert "g_online_filter_mode = ONLINE_FILTER_GRAPHICS_ANY" in src
+assert "g_online_filter_mode = ONLINE_FILTER_ALL_ANY" in src
 assert "GRAPHICS + EXACT" in src
 assert "online_filter_exact_only" in src
 assert "ps3scale_community_file_matches_exact_game" in src
