@@ -30,7 +30,7 @@ $(BUILD):
 # The PPC64 TOC anchor is .got + 0x8000. Extend the loadable segment through
 # that address so prx-gen can resolve invariant TOC16_HA/LO relocations.
 $(PRX_LD): $(PRX_LD_SOURCE) | $(BUILD)
-	python3 -c 'from pathlib import Path; import sys; src=Path(sys.argv[1]); text=src.read_text(); needle=chr(9)+"_end = .;"; assert text.count(needle) == 1; pad=chr(9)+".toc_anchor_pad MAX(., .TOC.) : { . += 0x100; } : hdr_load"; Path(sys.argv[2]).write_text(text.replace(needle, pad+chr(10)+needle, 1))' $(PRX_LD_SOURCE) $@
+	python3 -c 'from pathlib import Path; import sys; src=Path(sys.argv[1]); text=src.read_text(); needle=chr(9)+"_end = .;"; assert text.count(needle) == 1; pad=chr(9)+".toc_anchor_pad MAX(., .TOC.) : { . += 0x10000; } : hdr_load"; Path(sys.argv[2]).write_text(text.replace(needle, pad+chr(10)+needle, 1))' $(PRX_LD_SOURCE) $@
 
 $(BUILD)/module.o: module.c input_hook.h net_adapter.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
