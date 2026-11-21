@@ -55,6 +55,25 @@ async function call(path, method = "GET", body, token, extraHeaders = {}) {
   return { status: response.status, body: await response.json() };
 }
 
+function makeUplinkBatch(entries) {
+  const total = 5 + entries.reduce((sum, entry) => sum + 18 + entry.payload.length, 0);
+  const batch = new Uint8Array(total);
+  batch.set([0x43, 0x42, 0x55, 0x31], 0); // CBU1
+  batch[4] = entries.length;
+  let offset = 5;
+  for (const entry of entries) {
+    if (entry.recipientId) {
+      batch.set(Buffer.from(entry.recipientId, "hex"), offset);
+    }
+    offset += 16;
+    batch[offset++] = (entry.payload.length >>> 8) & 0xff;
+    batch[offset++] = entry.payload.length & 0xff;
+    batch.set(entry.payload, offset);
+    offset += entry.payload.length;
+  }
+  return batch.buffer;
+}
+
 const oversized = await call("/v1/sessions", "POST", { mode: "guest", padding: "x".repeat(9000) });
 assert.equal(oversized.status, 413);
 assert.equal(oversized.body.error, "BODY_TOO_LARGE");
@@ -156,6 +175,13 @@ const relayB = new FakeSocket({
   rateWindowStartedAt: 0,
   rateCount: 0
 });
+const relayC = new FakeSocket({
+  roomCode: code,
+  sessionId: players[2].session_id,
+  matchStarted: true,
+  rateWindowStartedAt: 0,
+  rateCount: 0
+});
 const otherRoom = new FakeSocket({
   roomCode: "ZZZZZZ",
   sessionId: players[2].session_id,
@@ -163,7 +189,7 @@ const otherRoom = new FakeSocket({
   rateWindowStartedAt: 0,
   rateCount: 0
 });
-sockets.push(relayA, relayB, otherRoom);
+sockets.push(relayA, relayB, relayC, otherRoom);
 lobby.webSocketMessage(relayA, "PING");
 assert.equal(relayA.sent[0], "PONG");
 lobby.webSocketMessage(relayA, new Uint8Array([0x10, 0x20, 0x30]).buffer);
@@ -174,6 +200,27 @@ assert.deepEqual(Array.from(relayed.slice(0, 4)), [0x43, 0x42, 0x52, 0x31]);
 assert.deepEqual(Array.from(relayed.slice(4, 20)), players[0].session_id.match(/../g).map(byte => Number.parseInt(byte, 16)));
 assert.deepEqual(Array.from(relayed.slice(20, 22)), [0, 3]);
 assert.deepEqual(Array.from(relayed.slice(22)), [0x10, 0x20, 0x30]);
+
+const targetedBatch = makeUplinkBatch([{
+  recipientId: players[1].session_id,
+  payload: [0xaa, 0xbb]
+}]);
+lobby.webSocketMessage(relayA, targetedBatch);
+assert.equal(relayB.sent.length, 2);
+assert.equal(relayC.sent.length, 0);
+const targetedEnvelope = new Uint8Array(relayB.sent[1]);
+assert.deepEqual(Array.from(targetedEnvelope.slice(22)), [0xaa, 0xbb]);
+
+const multiTargetBatch = makeUplinkBatch([
+  { recipientId: players[1].session_id, payload: [0x31] },
+  { recipientId: players[2].session_id, payload: [0x32, 0x33] }
+]);
+lobby.webSocketMessage(relayA, multiTargetBatch);
+assert.equal(relayB.sent.length, 3);
+assert.equal(relayC.sent.length, 1);
+assert.deepEqual(Array.from(new Uint8Array(relayB.sent[2]).slice(22)), [0x31]);
+assert.deepEqual(Array.from(new Uint8Array(relayC.sent[0]).slice(22)), [0x32, 0x33]);
+assert.equal(otherRoom.sent.length, 0);
 
 const textSocket = new FakeSocket({
   roomCode: code,
