@@ -121,7 +121,17 @@ jobs:
           script = Path(sys.argv[1])
           source = script.read_text()
           needle = 'make -C "$PS3_TOOLCHAIN_ROOT/sdk" install-headers >/dev/null'
-          addition = needle + '\nmkdir -p "$PS3DK/ppu/include/lv2" "$PS3DK/ppu/include/sys"\ncp "$PS3_TOOLCHAIN_ROOT/sdk/include/lv2/sysfs.h" "$PS3DK/ppu/include/lv2/sysfs.h"\ncp "$PS3_TOOLCHAIN_ROOT/sdk/include/lv2/spinlock.h" "$PS3DK/ppu/include/lv2/spinlock.h"\ncp "$PS3_TOOLCHAIN_ROOT/sdk/include/lv2/process.h" "$PS3DK/ppu/include/lv2/process.h"\ncp "$PS3_TOOLCHAIN_ROOT/sdk/include/lv2/syscalls.h" "$PS3DK/ppu/include/lv2/syscalls.h"\ncp "$PS3_TOOLCHAIN_ROOT/sdk/include/lv2/systime.h" "$PS3DK/ppu/include/lv2/systime.h"\ncp "$PS3_TOOLCHAIN_ROOT/sdk/include/ppu-lv2.h" "$PS3DK/ppu/include/ppu-lv2.h"\ncp "$PS3_TOOLCHAIN_ROOT/sdk/include/sys/lv2errno.h" "$PS3DK/ppu/include/sys/lv2errno.h"\ncp "$PS3_TOOLCHAIN_ROOT/sdk/include/sys/systime.h" "$PS3DK/ppu/include/sys/systime.h"
+          addition = needle + chr(10) + chr(10).join([
+              'mkdir -p "$PS3DK/ppu/include/lv2" "$PS3DK/ppu/include/sys"',
+              'cp "$PS3_TOOLCHAIN_ROOT/sdk/include/lv2/sysfs.h" "$PS3DK/ppu/include/lv2/sysfs.h"',
+              'cp "$PS3_TOOLCHAIN_ROOT/sdk/include/lv2/spinlock.h" "$PS3DK/ppu/include/lv2/spinlock.h"',
+              'cp "$PS3_TOOLCHAIN_ROOT/sdk/include/lv2/process.h" "$PS3DK/ppu/include/lv2/process.h"',
+              'cp "$PS3_TOOLCHAIN_ROOT/sdk/include/lv2/syscalls.h" "$PS3DK/ppu/include/lv2/syscalls.h"',
+              'cp "$PS3_TOOLCHAIN_ROOT/sdk/include/lv2/systime.h" "$PS3DK/ppu/include/lv2/systime.h"',
+              'cp "$PS3_TOOLCHAIN_ROOT/sdk/include/ppu-lv2.h" "$PS3DK/ppu/include/ppu-lv2.h"',
+              'cp "$PS3_TOOLCHAIN_ROOT/sdk/include/sys/lv2errno.h" "$PS3DK/ppu/include/sys/lv2errno.h"',
+              'cp "$PS3_TOOLCHAIN_ROOT/sdk/include/sys/systime.h" "$PS3DK/ppu/include/sys/systime.h"'
+          ])
           if needle not in source:
               raise SystemExit("Could not locate PS3DK runtime header installation step")
           script.write_text(source.replace(needle, addition, 1))
