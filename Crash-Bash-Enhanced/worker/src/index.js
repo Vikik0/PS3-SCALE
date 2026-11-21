@@ -149,11 +149,9 @@ function roomView(room) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const isApiRequest = request.method === "OPTIONS" ||
-      url.pathname === "/health" ||
-      url.pathname.startsWith("/v1/");
+    const isApiPath = url.pathname === "/health" || url.pathname.startsWith("/v1/");
 
-    if (!isApiRequest) {
+    if (!isApiPath) {
       if (env.ASSETS) return env.ASSETS.fetch(request);
       return new Response("Not Found", { status: 404, headers: CORS });
     }
