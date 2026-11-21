@@ -316,6 +316,7 @@ function startEmulator(primaryUrl, biosUrl, externalFiles, blobUrls) {
     emulatorStarted = true;
     emulatorLoading = false;
     const manager = gameManager();
+    try { manager?.functions?.setVariable?.("pcsx_rearmed_multitap", "port 1 only"); } catch {}
     try { manager?.toggleMainLoop?.(0); } catch {}
     const began = Date.now();
     const expose = () => {
