@@ -27,7 +27,7 @@ The server obtains the sender ID from the authenticated guest session, not from 
 
 ## Free-tier budget
 
-The free plan is not unlimited. Cloudflare's Durable Objects pricing lists 100,000 requests per day and applies a 20:1 billing ratio to incoming WebSocket messages. Hard caps protect the free budget: 16 guest sessions, four open rooms, and one active match at a time. One four-player match held at the five-message-per-second cap uses up to 86,400 metered request-equivalents per day (4 × 5 × 86,400 ÷ 20), before setup and reconnect overhead. The 220 ms PS3 batch cadence is designed to remain below that per-socket cap; actual billing must be checked against deployed traffic. The service must reject excess traffic rather than enable paid usage.
+The free plan is not unlimited. Cloudflare's Durable Objects pricing lists 100,000 requests per day and applies a 20:1 billing ratio to incoming WebSocket messages. Hard caps protect the free budget: 16 total browser and PS3 sessions, four open rooms, and one active match at a time. One four-player match held at the five-message-per-second cap uses up to 86,400 metered request-equivalents per day (4 × 5 × 86,400 ÷ 20), before setup and reconnect overhead. The 220 ms PS3 batch cadence is designed to remain below that per-socket cap; actual billing must be checked against deployed traffic. The service must reject excess traffic rather than enable paid usage.
 
 References:
 - Cloudflare Workers pricing: https://developers.cloudflare.com/workers/platform/pricing/
