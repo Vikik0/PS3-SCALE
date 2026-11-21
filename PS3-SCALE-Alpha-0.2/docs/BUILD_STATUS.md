@@ -1,12 +1,21 @@
-# Build status — PS3 SCALE Alpha 0.25
+# Build status — PS3 SCALE Alpha 0.26
 
 ## Current development head
 
 - Branch: `design/splash-transitions-ui-v6`
 - Pull request: Draft PR #16, targeting `design/settings-support-ui-v5`
-- Application version shown in the UI: `ALPHA 0.25`
-- Package metadata: `APP_VER=00.25`, `VERSION=00.25`
+- Application version shown in the UI: `ALPHA 0.26`
+- Package metadata: `APP_VER=00.26`, `VERSION=00.26`
 - Package title ID: `PS3SCALE1`
+
+## Alpha 0.26 — Companion Tools launch integration
+
+- Added a controller-selectable Apollo / Artemis launcher to Companion Tools.
+- Apollo and both supported Artemis package IDs are routed through the validated webMAN /play.ps3?<TITLE_ID> path.
+- The request runs on a worker thread with bounded local HTTP timeouts; failed requests leave PS3 SCALE open.
+- Added host tests for valid/invalid app IDs and static UI contract checks for navigation, launch and refresh actions.
+- Apollo save operations and Artemis NCL execution remain in their own applications; this change does not claim in-app reimplementation.
+- Alpha 0.26 CI and physical-console launch checks are pending.
 
 ## Latest code/package CI validation
 
@@ -26,7 +35,7 @@ Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/44951980356
 
 ## Build artifact
 
-Artifact name: `PS3-SCALE-Alpha-0.25-build-with-embedded-theme`
+Previous successful artifact (Alpha 0.25): `PS3-SCALE-Alpha-0.25-build-with-embedded-theme`
 
 Contains:
 - `ps3scale.elf` — 3,503,574 bytes

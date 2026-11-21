@@ -10,6 +10,20 @@ PS3 SCALE uses webMAN MOD as an optional bridge for title-specific, in-memory PS
 - Check the PS3MAPI server-version endpoint and read its JSON response body before deciding MAPI is unavailable. The probe must not treat a headers-only TCP packet as a failed MAPI check.
 - Do not read console identifiers (IDPS/PSID), alter syscalls, change clocks or write memory during connection detection.
 
+## Companion application launch
+
+The Companion Tools screen can request a direct launch of an installed Apollo Save Tool or Artemis PS3 package:
+
+- Apollo Save Tool: NP0APOLLO.
+- Upstream Artemis PS3: ARTPS3001.
+- Artemis R5: ARTZ00001.
+- PS3 SCALE validates the nine-character uppercase alphanumeric Title ID and builds the documented /play.ps3?<TITLE_ID> route.
+- The bounded local HTTP request runs on a worker thread. A successful HTTP response means webMAN accepted the request; it is not proof that the target application finished starting.
+- If webMAN is not active or rejects the request, PS3 SCALE reports the failure and remains available.
+- This is a launcher integration only. Apollo continues to perform save backup/restore/resigning inside Apollo, and Artemis continues to select and execute NCL files inside Artemis.
+
+Confirm the three installed app IDs on the target CFW setup before treating the launch flow as hardware-verified.
+
 ## Stage 2 — exact profile discovery
 
 - Load the bundled or HTTPS-synchronized catalogue.

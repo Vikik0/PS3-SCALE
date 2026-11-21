@@ -1,4 +1,4 @@
-# PS3 SCALE UI flow — Alpha 0.25
+# PS3 SCALE UI flow — Alpha 0.26
 
 ## First launch and language
 
@@ -28,7 +28,7 @@ Five primary controller-focusable cards in one horizontal row:
 
 The Home page no longer displays a separate FEATURES heading. The About page uses the full information card and no longer repeats the XMB icon as an extra image.
 
-**Companion Tools** remains available from the Home screen with SELECT and lists Apollo Save Tool, Artemis PS3 and webMAN MOD. This keeps the five-card reference layout without removing the existing tools screen.
+**Companion Tools** remains available from the Home screen with SELECT. UP/DOWN selects Apollo Save Tool or Artemis PS3; CROSS asks webMAN MOD to launch the selected installed app using its validated Title ID; TRIANGLE refreshes detection; CIRCLE returns Home. Apollo uses NP0APOLLO; Artemis selects ARTPS3001 or ARTZ00001 based on the installed build. The launch request runs on a worker thread and does not freeze controller input. A webMAN HTTP 2xx response confirms request acceptance only; physical-console testing must confirm that each app actually opens. Save management remains inside Apollo and NCL execution remains inside Artemis; PS3 SCALE does not claim to reimplement either tool's engine.
 
 ## Shared visual environment
 
@@ -86,6 +86,7 @@ The USB update check is offline and only looks for a package file with a PKG hea
 - Select opens search; Square cycles the result filter. The default is All Files + Any Region/Version. Every indexed community entry is visible on first open, including unmatched entries; unmatched entries are browse-only until the exact local game is scanned.
 - Cross installs an eligible NCL file into the detected Artemis USERLIST directory. It is available only for a scanned HDD game with an exact Title ID + APP_VER match, a `GRAPHICS_FPS` category and an installed Artemis app.
 - The app supports the upstream Artemis `ARTPS3001` package ID and the Artemis R5 `ARTZ00001` package ID.
+- The Home → SELECT → Companion Tools screen can launch the detected Artemis build directly through webMAN MOD. The actual NCL selection and execution still occur inside Artemis.
 - Downloads are limited to small plain-text NCL files. Existing files are not overwritten.
 - PS3 SCALE does not execute or auto-apply an NCL file. The user opens Artemis and selects the matching code.
 - A profile result without a community NCL opens Game Details instead of starting a download.
