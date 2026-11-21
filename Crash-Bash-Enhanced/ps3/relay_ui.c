@@ -9,6 +9,7 @@
 #include <cell/sysutil.h>
 #include <cell/sysutil_oskdialog.h>
 #include <sys/memory.h>
+#include <sys/timer.h>
 
 #include <stdint.h>
 #include <stdio.h>
@@ -111,7 +112,7 @@ static int show_dialog(const char *message, int yes_no)
 
     for (i = 0; i < 600 && !dialog_done; ++i) {
         (void)cellSysutilCheckCallback();
-        usleep(100000);
+        sys_timer_usleep(100000u);
     }
     if (!dialog_done) {
         (void)cellMsgDialogAbort();
@@ -197,13 +198,13 @@ static int prompt_text(const char *message, const char *initial,
 
     for (i = 0; i < 600 && !osk_unloaded; ++i) {
         (void)cellSysutilCheckCallback();
-        usleep(100000);
+        sys_timer_usleep(100000u);
     }
     if (!osk_unloaded) {
         (void)cellOskDialogAbort();
         for (i = 0; i < 30 && !osk_unloaded; ++i) {
             (void)cellSysutilCheckCallback();
-            usleep(100000);
+            sys_timer_usleep(100000u);
         }
         goto cleanup;
     }
