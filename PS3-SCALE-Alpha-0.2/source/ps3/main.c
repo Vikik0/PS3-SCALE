@@ -6003,51 +6003,57 @@ int main(int argc, char *argv[])
         } else if (g_screen == SCREEN_DETAILS) {
             const ps3scale_game_t *game = selected_game();
             const ps3scale_profile_t *profile = profile_for_game(game);
-            if (square && !old_square && game && game_is_ps3(game)) {
-                g_profile_confirm_pending = 0;
-                g_fps_control_selection = 0;
-                g_screen = SCREEN_FPS_CONTROL;
-            }
-            if (triangle && !old_triangle) {
-                if (g_profile_confirm_pending) {
-                    confirm_profile_install();
-                } else if (game && game_is_ps3(game)) {
-                    if (!profile) {
-                        set_details_message("NO EXACT FPS PROFILE FOR THIS GAME UPDATE.");
-                    } else if (strcmp(profile->trust, "B_COMMUNITY_MANUAL") == 0 ||
-                               profile->patch_count != 1) {
-                        set_details_message("PROFILE IS MANUAL-ONLY OR MULTI-WRITE. OPEN FPS CONTROL.");
-                    } else {
-                        g_profile_confirm_pending = 1;
-                        set_details_message("COMMUNITY PATCH. TRIANGLE AGAIN TO CONFIRM APPLY.");
-                    }
-                } else if (game &&
-                           (game->kind == PS3SCALE_GAME_PS2_ISO ||
-                            game->kind == PS3SCALE_GAME_PS2_CLASSIC)) {
-                    if (ps2_config_for_game(game))
-                        start_ps2_config_download();
-                    else if (game->kind == PS3SCALE_GAME_PS2_ISO) {
-                        g_config_preview = !g_config_preview;
-                        set_details_message("NO VERIFIED CONFIG. THIS IS PREVIEW ONLY.");
-                    } else {
-                        set_details_message("NO VERIFIED ENC CONFIG FOR THIS TITLE ID.");
-                    }
-                }
-            }
-            if (((cross && !old_cross) || (start && !old_start)) &&
-                !g_profile_confirm_pending) {
-                if (game && game->kind == PS3SCALE_GAME_PS2_CLASSIC)
-                    set_details_message("START THIS PS2 CLASSIC WITH ITS XMB LAUNCHER.");
-                else
-                    start_selected_game();
-            }
-            if ((circle && !old_circle) || (select && !old_select) ||
-                (left && !old_left)) {
+            int back_pressed = (circle && !old_circle) ||
+                               (select && !old_select) ||
+                               (left && !old_left);
+
+            /* Handle Back first so no stale Cross / Triangle input can launch
+               or arm an action while the user is trying to leave this screen. */
+            if (back_pressed) {
                 if (g_profile_confirm_pending) {
                     g_profile_confirm_pending = 0;
                     set_details_message("PROFILE INSTALL CANCELLED.");
                 } else {
                     g_screen = SCREEN_SCAN;
+                }
+            } else {
+                if (square && !old_square && game && game_is_ps3(game)) {
+                    g_profile_confirm_pending = 0;
+                    g_fps_control_selection = 0;
+                    g_screen = SCREEN_FPS_CONTROL;
+                }
+                if (triangle && !old_triangle) {
+                    if (g_profile_confirm_pending) {
+                        confirm_profile_install();
+                    } else if (game && game_is_ps3(game)) {
+                        if (!profile) {
+                            set_details_message("NO EXACT FPS PROFILE FOR THIS GAME UPDATE.");
+                        } else if (strcmp(profile->trust, "B_COMMUNITY_MANUAL") == 0 ||
+                                   profile->patch_count != 1) {
+                            set_details_message("PROFILE IS MANUAL-ONLY OR MULTI-WRITE. OPEN FPS CONTROL.");
+                        } else {
+                            g_profile_confirm_pending = 1;
+                            set_details_message("COMMUNITY PATCH. TRIANGLE AGAIN TO CONFIRM APPLY.");
+                        }
+                    } else if (game &&
+                               (game->kind == PS3SCALE_GAME_PS2_ISO ||
+                                game->kind == PS3SCALE_GAME_PS2_CLASSIC)) {
+                        if (ps2_config_for_game(game))
+                            start_ps2_config_download();
+                        else if (game->kind == PS3SCALE_GAME_PS2_ISO) {
+                            g_config_preview = !g_config_preview;
+                            set_details_message("NO VERIFIED CONFIG. THIS IS PREVIEW ONLY.");
+                        } else {
+                            set_details_message("NO VERIFIED ENC CONFIG FOR THIS TITLE ID.");
+                        }
+                    }
+                }
+                if (((cross && !old_cross) || (start && !old_start)) &&
+                    !g_profile_confirm_pending) {
+                    if (game && game->kind == PS3SCALE_GAME_PS2_CLASSIC)
+                        set_details_message("START THIS PS2 CLASSIC WITH ITS XMB LAUNCHER.");
+                    else
+                        start_selected_game();
                 }
             }
         } else if (g_screen == SCREEN_FPS_CONTROL) {
