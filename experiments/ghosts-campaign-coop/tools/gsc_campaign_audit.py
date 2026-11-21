@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Find likely split-screen, player-lifecycle and Campaign-flow code in IW6 GSC dumps.
+"""Find likely split-screen, local-player lifecycle and Campaign-flow code in IW6 GSC dumps.
 
 This is a text-only triage tool for source files produced by GSC Tool. Matches
 are leads for manual review, not proof that a function is called in Campaign.
@@ -10,7 +10,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -20,15 +19,23 @@ MAX_FINDINGS = 20000
 
 PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("split_screen", re.compile(
-        r"isSplitScreen|isSplitscreenPlayer|isSplitscreenPlayerPrimary|set_split_screen|split.?screen",
+        r"isSplitScreen|isSplitscreenPlayer|isSplitscreenPlayerPrimary|level\s*\.\s*splitscreen|set_split_screen|split.?screen",
         re.IGNORECASE,
     )),
     ("player_lifecycle", re.compile(
-        r"level\s*\.\s*players|player[_ ]?connect|player[_ ]?disconnect|clientid|local[_ ]?client|spawnplayer|spawn_player",
+        r"level\s*\.\s*players|player[_ ]?connect|player[_ ]?disconnect|clientid|local[_ ]?client|spawnplayer|spawn_player|waittill\s*\(\s*['""]connected['""]|waittill\s*\(\s*['""]disconnect['""]|getEntityNumber|removePlayerOnDisconnect",
         re.IGNORECASE,
     )),
     ("engine_player_api", re.compile(
         r"PlayerCmd_[A-Za-z0-9_]+|G_SpawnPlayer[A-Za-z0-9_]*|PlayerCMD_[A-Za-z0-9_]+",
+        re.IGNORECASE,
+    )),
+    ("client_presentation", re.compile(
+        r"SetClientOmnvar|SetClientDvars?|newClientHudElem|createFontString|cg_fovscale|viewport",
+        re.IGNORECASE,
+    )),
+    ("solo_coop_branch", re.compile(
+        r"isPlayingSolo|coop_gameShouldEnd|solo_gameShouldEnd|wait_to_be_revived|wait_for_self_revive|everyone_else_all_in_lastStand",
         re.IGNORECASE,
     )),
     ("down_revive", re.compile(
