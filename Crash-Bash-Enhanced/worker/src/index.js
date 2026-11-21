@@ -419,6 +419,18 @@ export class CrashBashLobby {
             !room.players.some(player => player.sessionId === session.sessionId)) {
           throw fail(403, "NOT_IN_ROOM", "Join this room before opening its game transport.");
         }
+        if (typeof this.ctx.getWebSockets === "function") {
+          for (const existing of this.ctx.getWebSockets()) {
+            try {
+              if (existing.deserializeAttachment()?.sessionId === session.sessionId) {
+                existing.close(1008, "REPLACED");
+              }
+            } catch {
+              // Ignore stale sockets while replacing a previous connection.
+            }
+          }
+        }
+
         const pair = new WebSocketPair();
         const client = pair[0];
         const server = pair[1];
