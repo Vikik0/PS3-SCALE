@@ -32,6 +32,8 @@ The PS4 `SV_UpdateSplitscreenStateForAddr` routine compares connected client net
 
 The PS4 decompilation also shows a normal multiplayer client lifecycle involving `ClientConnect`, `ClientBegin`, `ClientSpawn`, `SV_ClientEnterWorld` and `SV_ClientThink`. A second controllable player must participate in an equivalent lifecycle or a verified local-client path. A visual clone cannot substitute for that.
 
+The PS4/XB3 decompiled `client/splitscreen.cpp` is explicitly a single-local-client implementation: `CL_DoesControllerIndexHaveALocalClientNum` always returns `LOCAL_CLIENT_0`, `CL_ControllerIndexFromClientNum` returns one active controller index, and the public decomp header notes that this build has one local client and indexes the UI globals at slot 0. This is a platform/build limitation, not evidence about the PS3 retail game. It means the PC/PS4/XB3 client-side split-screen code cannot be used as a direct template for the PS3 local two-player path. The PS3 EBOOT must be analyzed independently.
+
 ## Consequences for this project
 
 1. Do not implement Player 2 using `PlayerCMD_ClonePlayer`.
@@ -50,3 +52,5 @@ The current PRX input poll uses `cellPadGetInfo2` and `cellPadGetData` without i
 - PS3 TU 1.16 offsets collection: https://nextgenupdate.com/forums/ghosts-mods-cheats-glitches/901435-ghosts-offsets-addresses-collection-3.html
 - IW6 PS4 decompilation, player script commands: https://github.com/lizardpeter/ghosts-decomp/blob/main/analysis/iw6_ds_ps4/pseudocode/game_mp/g_client_script_cmd_mp.cpp.c
 - IW6 PS4 decompilation, server client lifecycle and split-screen state: https://github.com/lizardpeter/ghosts-decomp/blob/main/analysis/iw6_ds_ps4/pseudocode/server_mp/sv_client_mp.cpp.c
+- IW6 PS4/XB3 decompilation, single-local-client split-screen stubs: https://github.com/lizardpeter/ghosts-decomp/blob/main/analysis/iw6_ds_ps4/pseudocode/client/splitscreen.cpp.c
+- IW6 PS4/XB3 client header noting one local client: https://github.com/lizardpeter/ghosts-decomp/blob/main/include/client/client.h
