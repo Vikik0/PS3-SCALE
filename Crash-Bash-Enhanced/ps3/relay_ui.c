@@ -4,6 +4,7 @@
 #include "net_adapter.h"
 
 #include <cell/msg_dialog.h>
+#include <cell/pad.h>
 #include <cell/sysmodule.h>
 #include <cell/sysutil.h>
 #include <cell/sysutil_oskdialog.h>
@@ -23,6 +24,10 @@ static int ui_sysutil_loaded;
 static int ui_chord_was_down;
 static int ui_busy;
 static int ui_host_room;
+static int ui_joined_room;
+static int ui_start_pending;
+static int ui_game_was_active;
+static int ui_transport_warning_shown;
 static int ui_callback_slot = -1;
 static char ui_worker_host[128];
 static char ui_worker_port[8] = "80";
@@ -284,11 +289,19 @@ static int open_relay_menu(void)
 
     if (cb_net_is_active()) return 0;
 
+    if (ui_start_pending || ui_joined_room) return 0;
+
+    if (!ui_transport_warning_shown) {
+        (void)show_dialog("Prototype transport uses plain HTTP/WS. Public HTTPS/WSS Workers are not supported yet; use a local test Worker endpoint.", 0);
+        ui_transport_warning_shown = 1;
+    }
+
     if (ui_host_room) {
         answer = show_dialog("Start the Crash Bash match now? Another PS3 must have joined first.", 1);
         if (answer == CELL_MSGDIALOG_BUTTON_YES) {
             if (cb_net_relay_start() == 0) {
                 ui_host_room = 0;
+                ui_start_pending = 1;
                 return 1;
             }
             (void)show_dialog("Players are not ready yet. Wait for the other PS3 to join, then try again.", 0);
@@ -335,6 +348,7 @@ static int open_relay_menu(void)
         (void)show_dialog("Could not join the room. Check the code and Worker endpoint.", 0);
         return -1;
     }
+    ui_joined_room = 1;
     (void)show_dialog("Joined the room. Wait for the host to start the match.", 0);
     return 1;
 }
@@ -344,7 +358,21 @@ void cb_net_ui_poll(void)
     CbPadState physical;
     int chord_down;
 
-    if (ui_busy || cb_net_is_active()) return;
+    if (ui_busy) return;
+    if (cb_net_is_active()) {
+        ui_game_was_active = 1;
+        ui_start_pending = 0;
+        ui_joined_room = 0;
+        return;
+    }
+    if (ui_game_was_active) {
+        ui_game_was_active = 0;
+        ui_start_pending = 0;
+        ui_host_room = 0;
+        ui_joined_room = 0;
+        return;
+    }
+    if (ui_start_pending || ui_joined_room) return;
     if (cb_input_read_physical(&physical) != 0) return;
 
     chord_down = (physical.digital1 & CB_RELAY_UI_CHORD) == CB_RELAY_UI_CHORD;
