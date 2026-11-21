@@ -399,7 +399,6 @@ int cb_relay_host_address(const CbRelayClient *client, char *address,
     if (!client || !client->host_session_id[0] || !address ||
         address_capacity == 0 || !port) return -1;
 
-    if (json_hex_field) { /* Keep this function independent of JSON parsing. */ }
     {
         unsigned int bytes[5];
         size_t i;
