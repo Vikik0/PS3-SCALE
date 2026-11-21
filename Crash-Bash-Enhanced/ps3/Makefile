@@ -59,7 +59,13 @@ $(BUILD)/crash_bash_input.elf: $(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/
 		$(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(BUILD)/ws_client.o $(BUILD)/relay_client.o $(CRT_I) $(CRT) $(CRT_INIT) $(NET_LIBS) -o $@
 
 $(BUILD)/crash_bash_input.prx: $(BUILD)/crash_bash_input.elf
-	$(PRX_GEN) build $< -o $@ --name crash_bash_input --version 0.2
+	$(PRX_GEN) build $< -o $@ --name crash_bash_input --version 0.2 || { \
+		echo "PRX relocation diagnostics:"; \
+		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-readelf -lW $<; \
+		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-readelf -rW $< | grep -B3 -A3 "0000000000003212" || true; \
+		$(PS3DEV)/ppu/bin/powerpc64-ps3-elf-nm -n $< | grep -B4 -A4 -i "195ce8" || true; \
+		exit 1; \
+	}
 	$(PRX_GEN) check $@
 
 $(BUILD)/crash_bash_input.fake.sprx: $(BUILD)/crash_bash_input.prx
