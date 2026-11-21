@@ -35,7 +35,7 @@ async function sha256(value) {
 function isIPv4(value) {
   const parts = String(value || "").split(".");
   if (parts.length !== 4) return false;
-  return parts.every(part => /^\\d{1,3}$/.test(part) && Number(part) >= 0 && Number(part) <= 255);
+  return parts.every(part => /^\d{1,3}$/.test(part) && Number(part) >= 0 && Number(part) <= 255);
 }
 
 function cleanName(value) {
