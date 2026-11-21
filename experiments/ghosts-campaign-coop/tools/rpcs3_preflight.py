@@ -12,6 +12,7 @@ from tools.ps3_sfo_inspect import SfoFormatError, parse_sfo
 
 TITLE_ID_RE = re.compile(r"\b[A-Z]{4}\d{5}\b")
 PPU_HASH_RE = re.compile(r"\bPPU-[0-9a-fA-F]{40}\b")
+PAD_BINDING_RE = re.compile(r"\bPad\s+(?P<port>\d+):\s+device='(?P<device>[^']*)',\s+handler=(?P<handler>[^,]+),\s+VID=0x", re.IGNORECASE)
 DEFAULT_TITLE_ID = "BLUS31270"
 
 
@@ -70,9 +71,33 @@ def inspect_log(path: Path | None) -> dict[str, Any]:
         return {
             "status": "WAITING_FOR_FIRST_BOOT", "path": None,
             "ppu_hashes": [], "latest_ppu_hash": None, "title_ids": [],
+            "controller_ports": {
+                "status": "NO_LOG_EVIDENCE",
+                "port0": None,
+                "port1": None,
+                "distinct_device_labels": None,
+            },
         }
     content = path.read_text(encoding="utf-8", errors="replace")
     hashes = [m.group(0).upper() for m in PPU_HASH_RE.finditer(content)]
+    bindings: dict[int, dict[str, str]] = {}
+    for match in PAD_BINDING_RE.finditer(content):
+        port = int(match.group("port"))
+        if port in (0, 1):
+            bindings[port] = {
+                "device": match.group("device").strip(),
+                "handler": match.group("handler").strip(),
+            }
+
+    def is_bound(binding: dict[str, str] | None) -> bool:
+        if not binding:
+            return False
+        handler = binding["handler"].strip().lower()
+        return bool(binding["device"]) and handler not in {"null", "nullpad", "none"}
+
+    port0, port1 = bindings.get(0), bindings.get(1)
+    both_bound = is_bound(port0) and is_bound(port1)
+    distinct_labels = port0["device"] != port1["device"] if both_bound else None
     return {
         "status": "HASH_FOUND" if hashes else "HASH_NOT_FOUND",
         "path": str(path),
@@ -80,6 +105,16 @@ def inspect_log(path: Path | None) -> dict[str, Any]:
         "ppu_hashes": list(dict.fromkeys(hashes)),
         "latest_ppu_hash": hashes[-1] if hashes else None,
         "title_ids": sorted(set(TITLE_ID_RE.findall(content))),
+        "controller_ports": {
+            "status": "BOTH_PORTS_HAVE_NON_NULL_BINDINGS" if both_bound else "INCOMPLETE_LOG_EVIDENCE",
+            "port0": port0,
+            "port1": port1,
+            "distinct_device_labels": distinct_labels,
+            "note": (
+                "RPCS3 pad-thread log evidence only; this does not prove both controllers "
+                "produce input or that Ghosts enters split-screen Campaign."
+            ),
+        },
         "note": "Confirm the surrounding log lines belong to the selected Ghosts boot.",
     }
 
@@ -172,7 +207,7 @@ def inspect_installation(
                 else "PASS" if expected_hash_match else "FAIL"
             ),
             "title_update": "NOT_VERIFIED",
-            "two_controller_ports": "MANUAL_BASELINE_REQUIRED",
+            "two_controller_ports": log["controller_ports"]["status"],
             "ghosts_prx_loader": "NOT_IMPLEMENTED",
             "campaign_second_player": "NOT_IMPLEMENTED",
         },
