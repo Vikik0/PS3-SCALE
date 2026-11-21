@@ -141,9 +141,24 @@ int main(void)
     cb_relay_leave(&client);
     if (client.connected) {
         fprintf(stderr, "PS3 relay leave did not close the client\n");
-        return 5;
+        return 12;
     }
 
-    puts("PS3 guest ticket and CBR1 relay integration test passed.");
+    if (cb_relay_host(&client, "127.0.0.1", 8766, "PS3 Host", 3000) != 0 ||
+        !client.connected || strcmp(client.room_code, "HOST42") != 0 ||
+        strcmp(client.session_id, "ffeeddccbbaa99887766554433221100") != 0 ||
+        strcmp(client.host_session_id, client.session_id) != 0) {
+        fprintf(stderr, "PS3 host-room creation and ticket connection failed\n");
+        cb_relay_leave(&client);
+        return 13;
+    }
+
+    cb_relay_leave(&client);
+    if (client.connected) {
+        fprintf(stderr, "PS3 host relay leave did not close the client\n");
+        return 14;
+    }
+
+    puts("PS3 host/guest ticket, CBU1 batching, and CBR1 relay tests passed.");
     return 0;
 }
