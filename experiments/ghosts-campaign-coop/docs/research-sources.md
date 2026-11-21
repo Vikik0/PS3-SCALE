@@ -46,3 +46,12 @@ Research notes do not establish that any offset is valid for Campaign or that a 
 - PS3 ELF/PRX Ghidra tooling reference: https://github.com/Clienthax/Ps3GhidraScripts
 
 These sources describe generic PS3 PPU analysis methods. They do not provide Ghosts-specific addresses, and their example OPD ranges must never be copied into this project.
+
+## IW6 script-level split-screen and revive reference
+
+- Public IW6 Multiplayer/Extinction GSC script dump, reviewed at commit `ae9886e1fa8e8d0a80e501a5f4cc6f17ab8563f7`: https://github.com/mjkzy/iw6dev-gsc-dump
+- Split-screen mode flag: `maps/mp/alien/_globallogic.gsc` — https://github.com/mjkzy/iw6dev-gsc-dump/blob/ae9886e1fa8e8d0a80e501a5f4cc6f17ab8563f7/maps/mp/alien/_globallogic.gsc
+- Per-player split-screen identity: `maps/mp/alien/_alien_matchdata.gsc` — https://github.com/mjkzy/iw6dev-gsc-dump/blob/ae9886e1fa8e8d0a80e501a5f4cc6f17ab8563f7/maps/mp/alien/_alien_matchdata.gsc
+- Extinction down/revive behavior: `maps/mp/alien/_laststand.gsc` — https://github.com/mjkzy/iw6dev-gsc-dump/blob/ae9886e1fa8e8d0a80e501a5f4cc6f17ab8563f7/maps/mp/alien/_laststand.gsc
+
+The public dump is an IW6 script-level lead. Its PS3 TU 1.16 provenance is not established and it contains no Campaign script tree.
