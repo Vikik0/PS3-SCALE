@@ -530,7 +530,7 @@ export class CrashBashLobby {
 
       if (method === "POST" && path === "/v1/sessions") {
         if (Object.keys(state.sessions).length >= MAX_TOTAL_SESSIONS) {
-          throw fail(503, "FREE_TIER_SESSION_LIMIT", "The free service has reached its guest-session limit. Try again later.");
+          throw fail(503, "FREE_TIER_SESSION_LIMIT", "The free service has reached its shared browser and PS3 session limit. Try again later.");
         }
         const body = await readBody(request);
         const mode = String(body.mode || "guest").toLowerCase();
@@ -559,7 +559,7 @@ export class CrashBashLobby {
 
       if (method === "POST" && path === "/v1/rooms/host-guest") {
         if (Object.keys(state.sessions).length >= MAX_TOTAL_SESSIONS) {
-          throw fail(503, "FREE_TIER_SESSION_LIMIT", "The free service has reached its guest-session limit. Try again later.");
+          throw fail(503, "FREE_TIER_SESSION_LIMIT", "The free service has reached its shared browser and PS3 session limit. Try again later.");
         }
         if (Object.keys(state.rooms).length >= MAX_ROOMS) {
           throw fail(503, "FREE_TIER_ROOM_LIMIT", "The free service supports up to four open rooms. Try again later.");
@@ -615,7 +615,7 @@ export class CrashBashLobby {
       const guestJoinRoute = path.match(/^\/v1\/rooms\/([A-Z0-9]{6})\/join-guest$/);
       if (method === "POST" && guestJoinRoute) {
         if (Object.keys(state.sessions).length >= MAX_TOTAL_SESSIONS) {
-          throw fail(503, "FREE_TIER_SESSION_LIMIT", "The free service has reached its guest-session limit. Try again later.");
+          throw fail(503, "FREE_TIER_SESSION_LIMIT", "The free service has reached its shared browser and PS3 session limit. Try again later.");
         }
         const code = guestJoinRoute[1];
         const room = state.rooms[code];
