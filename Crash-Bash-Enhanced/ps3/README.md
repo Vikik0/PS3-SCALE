@@ -41,7 +41,7 @@ To disable the loader, remove that exact line from `/dev_hdd0/boot_plugins.txt` 
 - The RAM fingerprint offset is documented for `ps1_netemu` 4.86; the page probe does not prove the same offset on every firmware or emulator revision. Firmware 4.93 and other revisions remain unverified.
 - The relay transport and lockstep adapter have host-side integration tests, but latency, packet loss, disconnect/rejoin, and long-session behavior need real-network testing.
 - Memory-card save synchronization is not implemented. The first intended test target is same-build Battle/minigame sessions, not Adventure progression.
-- The website currently provides guest sessions and room matchmaking, not a browser game runtime. Browser-to-PS3 gameplay is therefore not available yet.
+- The website now includes a local EmulatorJS PS1 player that reads user-selected disc and BIOS files in the browser. Its pad-state hook is not yet connected to the CBN1 lockstep relay, so browser-to-PS3 gameplay is still unavailable.
 
 ## Build
 
