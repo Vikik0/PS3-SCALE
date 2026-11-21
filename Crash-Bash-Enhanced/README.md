@@ -70,11 +70,11 @@ Room storage is temporary and designed for matchmaking/presence only, not per-fr
 
 A disc extraction tool now reads a retail PS1 BIN/CUE (Mode 2/2352), locates `CRASHBSH/CRASHBSH.DAT` and `SCUS_945.70` in ISO9660, reads the 992-entry DAT index from the PS-X EXE at virtual address `0x8004E110`, splits the archive into indexed files plus filler, and verifies a byte-identical reconstruction. It writes user-owned game data only to the chosen local output folder; no copyrighted game data is committed. The native PS3 archive reader remains an isolated file-I/O primitive, and the original engine, renderer, audio and gameplay are not yet integrated into the PS3 executable.
 
-Run `make host-test` to execute the archive, protocol, JSON, netcode and disc-extractor tests. To extract a retail BIN/CUE locally, run `python3 tools/extract_disc.py --bin "Crash Bash (USA).bin" --cue "Crash Bash (USA).cue" --out ./assets` from this directory.
+Run `make host-test` to execute the archive, protocol, JSON, UDP peer, netcode and disc-extractor tests. To extract a retail BIN/CUE locally, run `python3 tools/extract_disc.py --bin "Crash Bash (USA).bin" --cue "Crash Bash (USA).cue" --out ./assets` from this directory.
 
 ## Online gameplay transport groundwork
 
-A fixed 24-byte input-packet format is now defined and tested. It carries a protocol version, monotonically assigned sequence number, game-frame number, controller button mask, acknowledgement field and CRC-32 integrity check. The decoder rejects malformed lengths, unsupported versions and corrupted packets before exposing input data. This is the wire-format foundation only: it is not yet connected to a UDP peer transport, a game simulation loop, rollback/prediction, or the original Crash Bash modes. The existing HTTPS room service remains matchmaking/signaling, not a per-frame gameplay relay.
+A fixed 24-byte input-packet format is now defined and tested. It carries a protocol version, monotonically assigned sequence number, game-frame number, controller button mask, acknowledgement field and CRC-32 integrity check. The decoder rejects malformed lengths, unsupported versions and corrupted packets before exposing input data. This is the wire-format foundation only: it is not yet connected to a UDP peer transport, a game simulation loop, rollback/prediction, or the original Crash Bash modes. The existing HTTPS room service remains matchmaking/signaling, not a per-frame gameplay relay. The UDP transport is currently a tested primitive, not a complete internet matchmaking-to-gameplay path: public endpoint exchange, automatic router port mapping, packet-loss recovery, frame synchronization, and game-engine integration remain outstanding.
 
 ## Original game content
 
