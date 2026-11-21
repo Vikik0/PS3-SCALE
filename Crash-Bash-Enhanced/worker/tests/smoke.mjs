@@ -130,14 +130,14 @@ assert.equal(full.status, 409);
 assert.equal(full.body.error, "ROOM_FULL");
 
 // Public matchmaking lists only waiting, non-full public rooms and never leaks private rooms.
-const noPublicRooms = await call("/v1/rooms/public", "GET", undefined, players[5].token);
+const noPublicRooms = await call("/v1/rooms/public");
 assert.deepEqual(noPublicRooms.body.rooms, []);
 const publicCreated = await call(
   "/v1/rooms", "POST", { max_players: 3, is_private: false }, players[5].token
 );
 assert.equal(publicCreated.status, 201);
 assert.equal(publicCreated.body.is_private, false);
-const publicList = await call("/v1/rooms/public", "GET", undefined, players[4].token);
+const publicList = await call("/v1/rooms/public");
 assert.equal(publicList.status, 200);
 assert.equal(publicList.body.rooms.length, 1);
 assert.equal(publicList.body.rooms[0].room_code, publicCreated.body.room_code);
