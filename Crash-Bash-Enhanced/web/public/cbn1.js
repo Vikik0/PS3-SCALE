@@ -153,3 +153,37 @@ export function encodeBye(session, me, reason, step = 0) {
 }
 
 export const CBN1_TYPES = TYPE;
+export function encodeRelayBatch(entries) {
+  if (!Array.isArray(entries) || entries.length < 1 || entries.length > 32) throw new RangeError("Relay batches contain 1 to 32 packets.");
+  let size = 5;
+  for (const entry of entries) {
+    if (!/^[0-9a-f]{32}$/i.test(entry.recipientId) || !(entry.payload instanceof Uint8Array) || entry.payload.byteLength < 1 || entry.payload.byteLength > 1200) {
+      throw new TypeError("Each relay entry needs a 32-character session ID and a 1–1200 byte payload.");
+    }
+    size += 18 + entry.payload.byteLength;
+  }
+  if (size > 28672) throw new RangeError("Relay batch exceeds the Worker message limit.");
+  const message = new Uint8Array(size);
+  message.set([0x43, 0x42, 0x55, 0x31, entries.length], 0);
+  let offset = 5;
+  for (const entry of entries) {
+    for (let i = 0; i < 16; i++) message[offset + i] = Number.parseInt(entry.recipientId.slice(i * 2, i * 2 + 2), 16);
+    offset += 16;
+    message[offset++] = (entry.payload.byteLength >>> 8) & 0xff;
+    message[offset++] = entry.payload.byteLength & 0xff;
+    message.set(entry.payload, offset);
+    offset += entry.payload.byteLength;
+  }
+  return message;
+}
+
+export function decodeRelayEnvelope(bytes) {
+  const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  if (data.byteLength < 23 || data[0] !== 0x43 || data[1] !== 0x42 || data[2] !== 0x52 || data[3] !== 0x31) {
+    throw new Error("Invalid CBR1 relay envelope.");
+  }
+  const length = (data[20] << 8) | data[21];
+  if (length < 1 || length > 1200 || data.byteLength !== 22 + length) throw new Error("Invalid CBR1 payload length.");
+  const senderId = Array.from(data.subarray(4, 20), value => value.toString(16).padStart(2, "0")).join("");
+  return { senderId, payload: data.slice(22) };
+}
