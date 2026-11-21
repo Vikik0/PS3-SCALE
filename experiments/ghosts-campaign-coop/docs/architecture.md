@@ -10,14 +10,14 @@
 
 ## Components
 
-1. **PS3 client plugin (partially scaffolded):** the PRX bootstrap, GHC2 codec, RFC 6455 frame codec, PS3 libhttp/libssl lobby client, peer polling, candidate publishing, RFC 5389 STUN codec and BSD UDP socket primitives are implemented in source. The client can request a guest session and operate room create/join/ready/start/leave through HTTPS when a Worker URL is configured. The STUN parser and socket code compile; TLS compatibility and live NAT traversal need real-console testing. WebSocket upgrade/socket lifecycle and game-specific Campaign hooks are still not implemented.
+1. **PS3 client plugin (partially scaffolded):** the PRX bootstrap, GHC2 codec, RFC 6455 frame codec, PS3 libhttp/libssl lobby client, peer polling, candidate publishing, RFC 5389 STUN codec and libnet UDP socket primitives are implemented in source. The client can request a guest session and operate room create/join/ready/start/leave through HTTPS when a Worker URL is configured. The STUN parser and socket code compile; TLS compatibility and live NAT traversal need real-console testing. WebSocket upgrade/socket lifecycle and game-specific Campaign hooks are still not implemented.
 2. **Lobby API (implemented prototype):** guest session creation, six-character room codes, join/leave, ready state, two-player cap and host start.
 3. **UDP relay (implemented reference prototype):** forwards authenticated opaque packets only between the two members of a running room. The Python reference relay is locally integration-tested; it is not the Cloudflare deployment.
 4. **Cloudflare WebSocket relay fallback (implemented in Worker source):** an authenticated WSS route forwards binary GHC2 frames between the two room members when direct UDP cannot connect. It checks HMAC, replay window, frame size and per-session rate. Deployment and PS3 client integration are still pending.
-4. **Compatibility registry (implemented):** maps known title IDs and reports the first target profile (CEX 4.93 + TU 1.16). It intentionally does not report a profile as supported until hardware validation.
-5. **Campaign downed/revive rules (implemented as a standalone C state machine):** one player can be downed while the mission continues; the living partner can revive them; both downed or bleedout expiry fails the mission. A versioned 24-byte snapshot is ready to travel inside GHC2 payloads. The game-specific hooks are not implemented yet.
-6. **Game replication layer (not implemented):** movement, animation, weapon, damage, AI, checkpoint and mission-event replication.
-7. **PSN identity adapter (not implemented):** requires a legitimate supported platform identity mechanism. No fake PSN tokens or ban evasion are provided.
+5. **Compatibility registry (implemented): maps known title IDs and reports the first target profile (CEX 4.93 + TU 1.16). It intentionally does not report a profile as supported until hardware validation.
+6. **Campaign downed/revive rules (implemented as a standalone C state machine):** one player can be downed while the mission continues; the living partner can revive them; both downed or bleedout expiry fails the mission. A versioned 24-byte snapshot is ready to travel inside GHC2 payloads. The game-specific hooks are not implemented yet.
+7. **Game replication layer (not implemented):** movement, animation, weapon, damage, AI, checkpoint and mission-event replication.
+8. **PSN identity adapter (not implemented):** requires a legitimate supported platform identity mechanism. No fake PSN tokens or ban evasion are provided.
 
 ## Authority model to test
 
@@ -41,7 +41,7 @@ If direct UDP hole-punching fails, both PS3 clients can use the WSS relay path `
 
 - In-memory rooms; server restart clears all rooms.
 - Guest sessions expire after 12 hours.
-- No NAT traversal, relay region selection, persistence, encryption, DDoS protection or production deployment configuration yet.
+- STUN candidate discovery and UDP socket primitives are implemented but live NAT traversal / hole punching is not yet integrated or verified. Relay region selection, persistence, payload encryption, DDoS protection and production deployment configuration are also pending.
 - UDP relay is a transport experiment, not a complete netcode implementation.
 - PSN mode is explicitly unconfigured.
 - Title ID registry is metadata only; no EBOOT/SPRX is built.
