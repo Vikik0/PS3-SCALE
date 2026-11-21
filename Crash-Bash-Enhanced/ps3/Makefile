@@ -7,6 +7,7 @@ PPU_CC := $(PS3DEV)/ppu/bin/powerpc64-ps3-elf-gcc
 PRX_GEN := $(PS3DEV)/bin/prx-gen
 FSELF := $(PS3DEV)/bin/fself
 CRT := $(PS3DK)/ppu/lib/lv2-prx-crt.o
+CRT_INIT := $(PS3DK)/ppu/lib/lv2-prx-crt1.o
 PRX_LD := $(PS3DK)/ppu/lib/lv2-prx.ld
 PRX_SPECS := $(PS3DK)/ppu/lib/lv2-prx.specs
 
@@ -39,9 +40,9 @@ $(BUILD)/netdb_compat.o: netdb_compat.c compat/netdb.h | $(BUILD)
 $(BUILD)/thread_compat.o: thread_compat.c | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/crash_bash_input.elf: $(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(CRT) $(PRX_LD) $(PRX_SPECS)
+$(BUILD)/crash_bash_input.elf: $(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(CRT) $(CRT_INIT) $(PRX_LD) $(PRX_SPECS)
 	$(PPU_CC) -nostdlib -nostartfiles -specs=$(PRX_SPECS) \
-		-Wl,-q -Wl,--no-warn-rwx-segments -Wl,-T,$(PRX_LD) \
+		-Wl,-q -Wl,--gc-sections -Wl,--no-warn-rwx-segments -Wl,-T,$(PRX_LD) \
 		$(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(CRT) $(NET_LIBS) -o $@
 
 $(BUILD)/crash_bash_input.prx: $(BUILD)/crash_bash_input.elf
