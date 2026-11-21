@@ -9,15 +9,17 @@ This Worker provides the first online-service layer for the Crash Bash Enhanced 
 - Host handoff when the host leaves.
 - Ready state and host-controlled match start.
 - Room polling and peer roster endpoint.
-- SQLite-backed Durable Object storage.
+- Prototype binary WebSocket room relay at /v1/rooms/:code/transport.
+- Authenticated CBR1 sender envelope, 1200-byte payload cap, and five inbound messages/second per connected player.
+- SQLite-backed Durable Object storage with WebSocket hibernation.
 
 ## Not included yet
 
-This service is matchmaking only. It does not yet transmit controller inputs or synchronize the PS1 game. The PS3-side integration and frame/input synchronization must be implemented and tested separately before the game can be described as playable online.
+The relay is a transport prototype only. The PS3 UDP lockstep adapter and a future browser WebAssembly game runtime are not yet connected to it. The CBR1 envelope is documented in ../docs/CROSSPLAY-ARCHITECTURE.md. Do not describe the game as playable online until the PS3 and browser clients exchange real lockstep packets and pass hardware/browser match tests.
 
 ## Free-tier note
 
-Cloudflare Workers Free supports SQLite-backed Durable Objects with usage limits. The service is designed for lightweight room coordination, not for relaying game video or gameplay packets. Review current limits before public launch.
+Cloudflare Workers Free supports SQLite-backed Durable Objects with strict daily limits. The prototype rate limit is deliberately low to keep a small four-player room within the free-tier budget; it is not an unlimited relay. See ../docs/CROSSPLAY-ARCHITECTURE.md for the current quota calculation.
 
 ## Local checks
 
