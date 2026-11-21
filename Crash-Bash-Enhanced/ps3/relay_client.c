@@ -222,8 +222,9 @@ static int request_guest_ticket(const char *host, unsigned short port,
         }
     }
 
-    if (!header_end || strncmp(response, "HTTP/1.1 201", 12) != 0 &&
-        strncmp(response, "HTTP/1.0 201", 12) != 0) goto cleanup;
+    if (!header_end ||
+        (strncmp(response, "HTTP/1.1 201", 12) != 0 &&
+         strncmp(response, "HTTP/1.0 201", 12) != 0)) goto cleanup;
     if (have_content_length && received < header_end + body_length) goto cleanup;
     if (json_hex_field(response + header_end, "ticket", ticket, 65u, 64u) != 0 ||
         json_hex_field(response + header_end, "session_id", session_id, 33u, 32u) != 0) {
