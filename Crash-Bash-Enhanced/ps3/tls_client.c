@@ -18,8 +18,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#if defined(__powerpc64__)
-#include <lv2/system.h>
+#if defined(__PPU__) || defined(__powerpc64__)
+extern int sys_get_random_number(void *buffer, uint64_t length);
 #endif
 
 extern const unsigned char cb_ca_bundle_pem[];
@@ -82,11 +82,11 @@ static int cb_entropy_source(void *context, unsigned char *output,
     size_t offset = 0;
     (void)context;
 
-#if defined(__powerpc64__)
+#if defined(__PPU__) || defined(__powerpc64__)
     while (offset < length) {
         size_t chunk = length - offset;
         if (chunk > 256u) chunk = 256u;
-        if (sysGetRandomNumber(output + offset, (u64)chunk) != 0) {
+        if (sys_get_random_number(output + offset, (uint64_t)chunk) != 0) {
             return MBEDTLS_ERR_ENTROPY_SOURCE_FAILED;
         }
         offset += chunk;
