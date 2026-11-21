@@ -8,7 +8,10 @@ import re
 import sys
 from pathlib import Path
 from typing import Any
-from tools.ps3_sfo_inspect import SfoFormatError, parse_sfo
+try:
+    from tools.ps3_sfo_inspect import SfoFormatError, parse_sfo
+except ModuleNotFoundError:  # Direct execution: python tools/rpcs3_preflight.py
+    from ps3_sfo_inspect import SfoFormatError, parse_sfo
 
 TITLE_ID_RE = re.compile(r"\b[A-Z]{4}\d{5}\b")
 PPU_HASH_RE = re.compile(r"\bPPU-[0-9a-fA-F]{40}\b")
