@@ -458,6 +458,7 @@ int ghc_lobby_create_guest_session(
     result = gh_http_request_json(
         url,
         NULL,
+        CELL_HTTP_METHOD_POST,
         "{\"mode\":\"guest\"}",
         response,
         sizeof(response),

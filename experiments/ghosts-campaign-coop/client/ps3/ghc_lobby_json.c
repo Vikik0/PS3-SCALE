@@ -165,6 +165,8 @@ int ghc_hex_decode_exact(const char *hex, uint8_t *output, size_t output_length)
 int ghc_lobby_parse_guest_session(const char *json, GhcGuestSession *session) {
     char relay_id_hex[33];
     char relay_key_hex[65];
+    uint8_t token_bytes[32];
+    uint8_t session_id_bytes[16];
     if (!json || !session) return -1;
 
     ghc_memset(session, 0, sizeof(*session));
@@ -179,6 +181,8 @@ int ghc_lobby_parse_guest_session(const char *json, GhcGuestSession *session) {
 
     if (ghc_strlen(session->token) != GHC_LOBBY_TOKEN_HEX_LENGTH
         || ghc_strlen(session->session_id) != GHC_LOBBY_SESSION_ID_HEX_LENGTH
+        || ghc_hex_decode_exact(session->token, token_bytes, sizeof(token_bytes)) != 0
+        || ghc_hex_decode_exact(session->session_id, session_id_bytes, sizeof(session_id_bytes)) != 0
         || ghc_hex_decode_exact(relay_id_hex, session->relay_id, sizeof(session->relay_id)) != 0
         || ghc_hex_decode_exact(relay_key_hex, session->relay_key, sizeof(session->relay_key)) != 0) {
         ghc_memset(session, 0, sizeof(*session));
@@ -319,9 +323,9 @@ int ghc_lobby_parse_peer_snapshot(const char *json, GhcPeerSnapshot *snapshot) {
             ghc_memset(snapshot, 0, sizeof(*snapshot));
             return -1;
         }
-        ghc_memcpy(snapshot->candidate.public_address, public_address, sizeof(public_address));
-        ghc_memcpy(snapshot->candidate.local_address, local_address, sizeof(local_address));
-        ghc_memcpy(snapshot->candidate.nat_type, nat_type, sizeof(nat_type));
+        ghc_memcpy(snapshot->candidate.public_address, public_address, ghc_strlen(public_address) + 1u);
+        ghc_memcpy(snapshot->candidate.local_address, local_address, ghc_strlen(local_address) + 1u);
+        ghc_memcpy(snapshot->candidate.nat_type, nat_type, ghc_strlen(nat_type) + 1u);
         snapshot->candidate.public_port = (uint16_t)public_port;
         snapshot->candidate.local_port = (uint16_t)local_port;
         snapshot->candidate_present = 1;

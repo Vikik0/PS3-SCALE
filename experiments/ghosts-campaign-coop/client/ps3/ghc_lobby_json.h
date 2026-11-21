@@ -24,6 +24,7 @@ int ghc_json_get_string(
 
 /* Extract an unsigned 32-bit integer property. */
 int ghc_json_get_u32(const char *json, const char *key, uint32_t *value);
+int ghc_json_get_bool(const char *json, const char *key, int *value);
 
 /* Decode exactly output_length bytes from a hex string. */
 int ghc_hex_decode_exact(const char *hex, uint8_t *output, size_t output_length);
