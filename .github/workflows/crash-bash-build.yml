@@ -45,45 +45,8 @@ jobs:
         working-directory: .
         run: npm test
 
-  ps1-engine-build:
-    name: Build native PS1 emulator package for Crash Bash
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/02900/ps3-toolchain-tiny3d:latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install NVIDIA Cg compiler for the PS3 RSX shaders
-        run: |
-          set -eu
-          apt-get update
-          apt-get install -y nvidia-cg-toolkit
-          command -v cgc
-      - name: Verify PS3 emulator toolchain
-        run: |
-          set -eu
-          test -n "$PSL1GHT"
-          command -v ppu-gcc
-          command -v spu-gcc
-          command -v spu-strip
-          command -v cgc
-          test -x "$PS3DEV/bin/cgcomp"
-          command -v sprxlinker
-          command -v make_self_npdrm
-          command -v pkg
-          command -v sfo
-          command -v git
-          command -v patch
-      - name: Build Crash Bash PS1 emulator package
-        run: bash Crash-Bash-Enhanced/scripts/build_ps1_engine.sh
-      - name: Upload Crash Bash PS3 base package
-        uses: actions/upload-artifact@v4
-        with:
-          name: Crash-Bash-PS3-Base
-          if-no-files-found: error
-          path: Crash-Bash-Enhanced/build-artifacts/CrashBash-PS3-Base.pkg
-
-  ps3-build:
-    name: Build PS3 ELF, SELF and PKG
+  online-package-build:
+    name: Build Crash Bash Online PS3 package (RetroArch Netplay + PCSX-ReARMed)
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/02900/ps3-toolchain-tiny3d:latest
@@ -93,55 +56,22 @@ jobs:
         run: |
           set -eu
           test -n "$PSL1GHT"
+          test -n "$PS3DEV"
           command -v ppu-gcc
-          command -v make
-          command -v make_self
+          command -v ppu-g++
+          command -v spu-gcc
           command -v make_self_npdrm
-          command -v package_finalize
-          command -v python3
+          command -v pkg
+          command -v sfo
           command -v git
           command -v wget
           command -v patch
           test -s "$PS3DEV/portlibs/ppu/lib/libz.a"
-      - name: Install PS3 HTTPS libraries when missing
-        run: |
-          set -eu
-          if [ ! -f "$PORTLIBS/include/curl/curl.h" ] || [ ! -f "$PORTLIBS/lib/libcurl.a" ] || [ ! -f "$PORTLIBS/lib/libpolarssl.a" ]; then
-            git clone --depth 1 https://github.com/bucanero/ps3libraries.git /tmp/ps3libraries
-            git -C /tmp/ps3libraries checkout 74095b14f6327420787ca2f7fe95b0c58c835cc4
-            mkdir -p /tmp/ps3libraries/build
-            cd /tmp/ps3libraries/build
-            sh ../scripts/015-polarssl-1.3.9.sh
-            sh ../scripts/016-libcurl-7.64.1.sh
-          fi
-          test -f "$PORTLIBS/include/curl/curl.h"
-          test -f "$PORTLIBS/lib/libcurl.a"
-          test -f "$PORTLIBS/lib/libpolarssl.a"
-          test -f "$PORTLIBS/include/polarssl/ssl.h"
-      - name: Build homebrew package
-        working-directory: Crash-Bash-Enhanced
-        run: |
-          set -eu
-          make clean
-          make pkg
-          test -s crashbash.elf
-          test -s crashbash.self
-          test -s crashbash.pkg
-          test -s crashbash.gnpdrm.pkg
-          test -s pkgfiles/USRDIR/cacert.pem
-          PKG_MAGIC="$(od -An -tx1 -N4 crashbash.gnpdrm.pkg | tr -d ' \\n')"
-          test "$PKG_MAGIC" = "7f504b47"
-          echo "Build outputs:"
-          ls -lah crashbash.elf crashbash.self crashbash.pkg crashbash.gnpdrm.pkg
-          echo "SHA-256:"
-          sha256sum crashbash.elf crashbash.self crashbash.pkg crashbash.gnpdrm.pkg
-      - name: Upload PS3 build artifacts
+      - name: Build the online Crash Bash package
+        run: bash Crash-Bash-Enhanced/scripts/build_online_pkg.sh
+      - name: Upload installable PS3 package
         uses: actions/upload-artifact@v4
         with:
-          name: Crash-Bash-Enhanced-PS3-PKG
+          name: Crash-Bash-Online-PS3-PKG
           if-no-files-found: error
-          path: |
-            Crash-Bash-Enhanced/crashbash.elf
-            Crash-Bash-Enhanced/crashbash.self
-            Crash-Bash-Enhanced/crashbash.pkg
-            Crash-Bash-Enhanced/crashbash.gnpdrm.pkg
+          path: Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-PS3.pkg
