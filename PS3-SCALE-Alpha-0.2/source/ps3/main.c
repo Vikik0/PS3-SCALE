@@ -130,6 +130,9 @@ static char g_community_download_temp_path[PS3SCALE_PATH_MAX];
 static char g_search[64] = "";
 static u32 *g_font_texture = NULL;
 static ya2d_Texture *g_cover_texture = NULL;
+static ya2d_Texture *g_preview_before_texture = NULL;
+static ya2d_Texture *g_preview_after_texture = NULL;
+static char g_preview_key[32] = "";
 static ya2d_Texture *g_apollo_texture = NULL;
 static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 
@@ -142,7 +145,7 @@ static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 #define PS3SCALE_SUPPORT_OUTBOX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox.txt"
 /* Replace with the URL of the separate PS3 SCALE Supabase project after deployment. */
 #define PS3SCALE_SUPPORT_URL "https://YOUR_PROJECT.supabase.co/functions/v1/ps3scale-support"
-#define PS3SCALE_APP_VERSION "ALPHA 0.23"
+#define PS3SCALE_APP_VERSION "ALPHA 0.24"
 #define PS3SCALE_PS2_CONFIG_INDEX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/ps2_config_index.tsv"
 #define PS3SCALE_PS2_CLASSICS_CONFIG_DIR "/dev_hdd0/game/PS2CONFIG/USRDIR/CONFIG/ENC"
 #define PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT (PS3SCALE_PS2_CONFIG_MAX_BYTES * 2u)
@@ -174,6 +177,7 @@ static int g_music_file_open = 0;
 static volatile int g_music_track1_missing = 0;
 static int g_music1_imported_from_usb = 0;
 static int g_settings_selected = 0;
+static int g_auto_apply_profiles = 1;
 static int g_animation_enabled = 1;
 static unsigned long g_frame_counter = 0;
 static char g_settings_message[128] = "SETTINGS ARE STORED ON THE PS3 HDD.";
@@ -185,7 +189,7 @@ static int g_apollo_installed = 0;
 static int g_artemis_installed = 0;
 static int g_webman_installed = 0;
 static char g_tools_message[96] = "CROSS: REFRESH TOOL STATUS.";
-#define SETTINGS_COUNT 9
+#define SETTINGS_COUNT 10
 #define PS3SCALE_SETTINGS_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/settings.cfg"
 enum {
     LANGUAGE_UNSET = -1,
@@ -212,15 +216,16 @@ static unsigned char g_extended_glyph_ink_width[256];
 static int g_ui_font_width = 14;
 static int g_ui_font_height = 22;
 
+#define PS3SCALE_PREVIEW_DIR "/dev_hdd0/game/PS3SCALE1/USRDIR/previews"
 #define PS3SCALE_CATALOG_CACHE_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/graphics_catalog.tsv"
 #define PS3SCALE_CATALOG_DOWNLOAD_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/graphics_catalog.download"
-#define PS3SCALE_CATALOG_URL "https://raw.githubusercontent.com/Vikik0/PS3-SCALE/feature/online-graphics-database/PS3-SCALE-Alpha-0.2/data/online_profiles.tsv"
+#define PS3SCALE_CATALOG_URL "https://raw.githubusercontent.com/Vikik0/PS3-SCALE/design/splash-transitions-ui-v6/PS3-SCALE-Alpha-0.2/data/online_profiles.tsv"
 #define PS3SCALE_CATALOG_SYNC_SECONDS (24 * 60 * 60)
 #define PS3SCALE_COMMUNITY_INDEX_CACHE_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/community_game_files.tsv"
 #define PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/community_game_files.download"
-#define PS3SCALE_COMMUNITY_INDEX_URL "https://raw.githubusercontent.com/Vikik0/PS3-SCALE/feature/online-graphics-database/PS3-SCALE-Alpha-0.2/data/community_game_files.tsv"
+#define PS3SCALE_COMMUNITY_INDEX_URL "https://raw.githubusercontent.com/Vikik0/PS3-SCALE/design/splash-transitions-ui-v6/PS3-SCALE-Alpha-0.2/data/community_game_files.tsv"
 #define PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT (2u * 1024u * 1024u)
-#define PS3SCALE_MAX_ONLINE_RESULTS (PS3SCALE_COMMUNITY_MAX_FILES + PS3SCALE_MAX_GAMES + PS3SCALE_PS2_CONFIG_MAX_ENTRIES)
+#define PS3SCALE_MAX_ONLINE_RESULTS (PS3SCALE_COMMUNITY_MAX_FILES + PS3SCALE_MAX_GAMES + PS3SCALE_PS2_CONFIG_MAX_ENTRIES + PS3SCALE_CATALOG_MAX_PROFILES)
 #define PS3SCALE_ONLINE_PAGE_SIZE 8u
 
 typedef enum online_result_kind {
@@ -262,7 +267,7 @@ enum {
     ONLINE_FILTER_ALL_ANY = 3,
     ONLINE_FILTER_MODE_COUNT = 4
 };
-static int g_online_filter_mode = ONLINE_FILTER_GRAPHICS_EXACT;
+static int g_online_filter_mode = ONLINE_FILTER_GRAPHICS_ANY;
 static char g_online_query[64] = "";
 static char g_scan_search_stash[64] = "";
 static int g_keyboard_online_mode = 0;
@@ -272,7 +277,7 @@ static char g_catalog_status[96] = "LOCAL PROFILE + GITHUB INDEX NOT LOADED";
 static volatile size_t g_catalog_sync_downloaded = 0;
 static volatile size_t g_catalog_sync_total = 0;
 static volatile int g_catalog_sync_stage = 0;
-static char g_online_message[128] = "SELECT A GAME RESULT OR PRESS START TO REFRESH GITHUB.";
+static char g_online_message[128] = "PRESS TRIANGLE TO REFRESH THE ONLINE DATABASE.";
 static void rebuild_online_results(void);
 static volatile int g_game_launch_running = 0;
 static volatile int g_game_launch_done = 0;
@@ -287,6 +292,8 @@ static volatile int g_profile_arm_result = -1;
 static int g_profile_arm_thread_started = 0;
 static sys_ppu_thread_t g_profile_arm_thread;
 static ps3scale_profile_t g_profile_arm_target;
+static int g_launch_after_profile_arm = 0;
+static int g_skip_auto_apply_once = 0;
 
 static void clamp_selection(void);
 static void scan_library(void);
@@ -295,6 +302,7 @@ static int find_mounted_game(const ps3scale_game_t *selected,
 static int find_installed_game(const ps3scale_game_t *selected);
 static void service_game_launch(void);
 static void service_profile_arm(void);
+static void start_selected_game(void);
 static void refresh_details_cache(void);
 static void service_ps2_config_download(void);
 static void start_ps2_config_download(void);
@@ -1512,7 +1520,7 @@ typedef struct ps3scale_scene_face {
     u32 edge;
 } ps3scale_scene_face_t;
 
-#define PS3SCALE_STAIR_STEPS 32
+#define PS3SCALE_STAIR_STEPS 18
 #define PS3SCALE_STAIR_LOOP_FRAMES 21600ul
 #define PS3SCALE_STAIR_FACE_MAX (PS3SCALE_STAIR_STEPS * 5)
 
@@ -2875,6 +2883,8 @@ static void load_app_settings(void)
         else if (sscanf(line, "language=%d", &value) == 1 &&
                  value >= LANGUAGE_ENGLISH && value <= LANGUAGE_SPANISH)
             g_language = value;
+        else if (sscanf(line, "auto_apply_profiles=%d", &value) == 1)
+            g_auto_apply_profiles = value ? 1 : 0;
     }
     fclose(fp);
 
@@ -2895,7 +2905,7 @@ static int save_app_settings(void)
         set_settings_message("SETTINGS COULD NOT BE SAVED TO INTERNAL HDD.");
         return -1;
     }
-    fprintf(fp, "settings_version=2\n");
+    fprintf(fp, "settings_version=3\n");
     fprintf(fp, "music=%d\n", g_music_enabled ? 1 : 0);
     fprintf(fp, "volume=%d\n", g_music_volume);
     fprintf(fp, "animation_v2=%d\n", g_animation_enabled ? 1 : 0);
@@ -2903,6 +2913,7 @@ static int save_app_settings(void)
     fprintf(fp, "music_next=%d\n", g_music_next_track);
     fprintf(fp, "music_fade_ms=%d\n", g_music_fade_ms);
     fprintf(fp, "language=%d\n", g_language);
+    fprintf(fp, "auto_apply_profiles=%d\n", g_auto_apply_profiles ? 1 : 0);
     if (fclose(fp) != 0) {
         set_settings_message("SETTINGS SAVE FAILED.");
         return -1;
@@ -4113,8 +4124,7 @@ static void draw_home(void)
     draw_text(705.0f, 28.0f, 0x514b69ff, model_label);
     set_ui_font_size(14, 22);
 
-    draw_text(30.0f, 132.0f, 0x77718fff, "FEATURES");
-    for (i = 0; i < 5; i++) {
+        for (i = 0; i < 5; i++) {
         float x = 96.0f + (float)i * 134.0f;
         float y = 148.0f;
         const float w = 126.0f, h = 150.0f;
@@ -4965,7 +4975,7 @@ static void draw_settings(void)
         "Music", "Music Volume", "Animations (UI & Background)",
         "Check for USB Update", "Rescan Game Library",
         "Restore Default Settings", "Language", "Music Playlist",
-        "Track Fade Duration"
+        "Track Fade Duration", "Auto Apply Exact Profiles"
     };
     char value[96];
     int i;
@@ -4974,7 +4984,8 @@ static void draw_settings(void)
         active_group = 1; /* Display */
     else if (g_settings_selected == 3 || g_settings_selected == 4)
         active_group = 3; /* System */
-    else if (g_settings_selected == 5 || g_settings_selected == 6)
+    else if (g_settings_selected == 5 || g_settings_selected == 6 ||
+             g_settings_selected == 9)
         active_group = 0; /* General */
 
     draw_page_header("Settings", "Personalize PS3 SCALE; preferences are saved on the internal HDD");
@@ -5000,7 +5011,7 @@ static void draw_settings(void)
     draw_text(704.0f, 110.0f, 0x77718fff, "CURRENT VALUE");
 
     for (i = 0; i < SETTINGS_COUNT; i++) {
-        float y = 128.0f + (float)i * 30.0f;
+        float y = 126.0f + (float)i * 26.0f;
         int selected = (i == g_settings_selected);
         if (selected) {
             draw_rounded_rect(198.0f, y - 5.0f, 620.0f, 28.0f,
@@ -5030,14 +5041,15 @@ static void draw_settings(void)
             snprintf(value, sizeof(value), "%s",
                      ps3scale_locale_language_name(g_language));
         else if (i == 7 && g_music_mode == 0) {
-            const char *first = (g_music_start_track == 1) ? "BIOS" : "GTA V";
-            const char *second = (g_music_start_track == 1) ? "GTA V" : "BIOS";
-            snprintf(value, sizeof(value), "AUTO: %s > %s", first, second);
+            snprintf(value, sizeof(value), "MUSIC 1 / 2");
         } else if (i == 7) {
             snprintf(value, sizeof(value), "%s",
-                     g_music_mode == 1 ? "BIOS ONLY" : "GTA V ONLY");
+                     g_music_mode == 1 ? "MUSIC 1 ONLY" : "MUSIC 2 ONLY");
         } else if (i == 8) {
             snprintf(value, sizeof(value), "%d MS", g_music_fade_ms);
+        } else if (i == 9) {
+            snprintf(value, sizeof(value), "%s",
+                     g_auto_apply_profiles ? "ON (EXACT MATCH)" : "OFF");
         }
 
         set_ui_font_size(7, 11);
@@ -5046,9 +5058,10 @@ static void draw_settings(void)
         draw_text(604.0f, y + 3.0f,
                   selected ? 0x6b43b5ff : 0x77718fff, value);
 
-        if (i == 0 || i == 2) {
+        if (i == 0 || i == 2 || i == 9) {
             int enabled = ((i == 0 && g_music_enabled) ||
-                           (i == 2 && g_animation_enabled));
+                           (i == 2 && g_animation_enabled) ||
+                           (i == 9 && g_auto_apply_profiles));
             draw_rounded_rect(748.0f, y, 54.0f, 18.0f, 9.0f,
                               enabled ? 0xe5d9ffff : 0xe7e3f0ff);
             draw_rounded_outline(748.0f, y, 54.0f, 18.0f, 9.0f,
@@ -5070,7 +5083,7 @@ static void draw_settings(void)
     set_ui_font_size(6, 9);
     if (g_music_track1_missing)
         draw_text(202.0f, 418.0f, 0xffcc66ff,
-                  "MUSIC 1: BIOS - ZORROVIAN (USB IMPORT) | MUSIC 2: GTA V (BUILT IN).");
+                  "MUSIC 1 NEEDS USB IMPORT. MUSIC 2 IS AVAILABLE.");
     else if (g_music1_imported_from_usb)
         draw_text(202.0f, 418.0f, 0x468f78ff,
                   "MUSIC 1 IMPORTED FROM USB AND SAVED TO THE INTERNAL HDD.");
@@ -6396,6 +6409,7 @@ int main(int argc, char *argv[])
                     g_music_start_track = 1;
                     g_music_fade_ms = 1000;
                     g_animation_enabled = 1;
+                    g_auto_apply_profiles = 1;
                     g_language = LANGUAGE_ENGLISH;
                     g_language_choice = LANGUAGE_ENGLISH;
                     if (!g_music_playing && initialize_audio_backend() != 0)
@@ -6422,6 +6436,12 @@ int main(int argc, char *argv[])
                 } else if (g_settings_selected == 8) {
                     g_music_fade_ms = cycle_music_fade_ms(g_music_fade_ms, 1);
                     (void)save_app_settings();
+                } else if (g_settings_selected == 9) {
+                    g_auto_apply_profiles = !g_auto_apply_profiles;
+                    set_settings_message(g_auto_apply_profiles ?
+                        "EXACT-MATCH AUTO APPLY ENABLED." :
+                        "AUTO APPLY DISABLED. GAMES START UNMODIFIED.");
+                    (void)save_app_settings();
                 }
             }
 
@@ -6446,6 +6466,14 @@ int main(int argc, char *argv[])
                     set_background_music_volume(g_music_volume + 13);
                     (void)save_app_settings();
                 }
+            }
+            if (g_settings_selected == 9 && ((left && !old_left) ||
+                                               (right && !old_right))) {
+                g_auto_apply_profiles = !g_auto_apply_profiles;
+                set_settings_message(g_auto_apply_profiles ?
+                    "EXACT-MATCH AUTO APPLY ENABLED." :
+                    "AUTO APPLY DISABLED. GAMES START UNMODIFIED.");
+                (void)save_app_settings();
             }
             if (g_settings_selected == 8) {
                 if (left && !old_left) {
