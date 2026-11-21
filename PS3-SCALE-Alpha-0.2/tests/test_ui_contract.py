@@ -348,6 +348,7 @@ assert main.count("} else if (g_screen == SCREEN_DETAILS) {") == 1
 assert "circle && !old_circle" in details_input
 assert "select && !old_select" in details_input
 assert "left && !old_left" in details_input
+assert details_input.index("back_pressed") < details_input.index("if (square")
 fps_input = section("} else if (g_screen == SCREEN_FPS_CONTROL) {",
                     "} else if (g_screen == SCREEN_ONLINE_DB) {")
 assert "circle && !old_circle" in fps_input
