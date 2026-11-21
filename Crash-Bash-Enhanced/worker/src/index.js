@@ -267,6 +267,7 @@ export class CrashBashLobby {
     }
     for (const [code, room] of Object.entries(state.rooms)) {
       if (now - room.createdAt > ROOM_TTL_MS) {
+        this.closeRoomSockets(code, "ROOM_EXPIRED");
         for (const player of room.players) {
           const session = Object.values(state.sessions).find(s => s.sessionId === player.sessionId);
           if (session) session.roomCode = null;
