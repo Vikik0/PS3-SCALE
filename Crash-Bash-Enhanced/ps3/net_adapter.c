@@ -292,6 +292,7 @@ static volatile int net_active;
 static volatile int lobby_started;
 static volatile int have_previous_step;
 static uint64_t last_frame_step_ns;
+static uint64_t last_relay_batch_tick_ns;
 static int finish_code;
 static NetOptions ps3_net_options;
 
@@ -851,6 +852,14 @@ void portmap_close(void)
     portmap_external_port = 0;
 }
 
+static int relay_batch_tick_once(void)
+{
+    uint64_t now = SDL_GetTicksNS();
+    if (last_relay_batch_tick_ns && now - last_relay_batch_tick_ns < 30000000ULL) return 0;
+    last_relay_batch_tick_ns = now;
+    return cb_relay_batch_tick(&relay_client, &relay_batch, 6u);
+}
+
 static void configure_options(void)
 {
     memset(&ps3_net_options, 0, sizeof(ps3_net_options));
@@ -910,6 +919,7 @@ int cb_net_relay_host(const char *worker_host, unsigned short worker_port)
     (void)cb_net_init();
     configure_options();
     ps3_net_options.delay = 8;
+    ps3_net_options.local = 1;
     net_configure(&ps3_net_options);
 
     if (cb_relay_host(&relay_client, worker_host, worker_port, "PS3 Host", 5000) != 0 ||
@@ -926,6 +936,7 @@ int cb_net_relay_host(const char *worker_host, unsigned short worker_port)
     lobby_started = 0;
     have_previous_step = 0;
     last_frame_step_ns = 0;
+    last_relay_batch_tick_ns = 0;
 
     result = net_lobby_host(NULL);
     if (!result) {
@@ -974,6 +985,7 @@ int cb_net_relay_join_code(const char *worker_host, unsigned short worker_port,
     lobby_started = 0;
     have_previous_step = 0;
     last_frame_step_ns = 0;
+    last_relay_batch_tick_ns = 0;
 
     if (!net_lobby_join(join_address)) {
         cb_relay_leave(&relay_client);
@@ -1005,7 +1017,7 @@ int cb_net_lobby_poll(void)
 
     status = net_lobby_poll();
     if (relay_client.connected && !net_active &&
-        cb_relay_batch_tick(&relay_client, &relay_batch, 6u) != 0) {
+        relay_batch_tick_once() != 0) {
         cb_relay_leave(&relay_client);
         lobby_started = 0;
         return LOBBY_FAILED;
@@ -1041,6 +1053,7 @@ void cb_net_leave(void)
     net_active = 0;
     have_previous_step = 0;
     last_frame_step_ns = 0;
+    last_relay_batch_tick_ns = 0;
     platform_online_stop(NULL);
     portmap_close();
 }
@@ -1073,7 +1086,7 @@ void cb_net_frame(void)
     net_step();
     have_previous_step = 1;
     if (relay_client.connected &&
-        cb_relay_batch_tick(&relay_client, &relay_batch, 6u) != 0) {
+        relay_batch_tick_once() != 0) {
         net_active = 0;
         lobby_started = 0;
         cb_relay_leave(&relay_client);
