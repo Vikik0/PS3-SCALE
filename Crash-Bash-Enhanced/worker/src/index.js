@@ -503,7 +503,7 @@ export class CrashBashLobby {
           max_total_sessions: MAX_TOTAL_SESSIONS,
           max_active_matches: MAX_ACTIVE_MATCHES,
           transport: "websocket-room-relay-prototype",
-          gameplay_sync: "client-integration-pending"
+          gameplay_sync: "browser-cbn1-lockstep-prototype-not-hardware-verified"
         });
       }
 
@@ -522,7 +522,7 @@ export class CrashBashLobby {
             { serial: "SCPS-10140", region: "NTSC-J" },
             { serial: "SCPS-91319", region: "NTSC-J PSone Books" }
           ],
-          network_gameplay: "room WebSocket relay prototype; PS3 and browser game transports are not integrated yet"
+          network_gameplay: "browser CBN1 joiner is integrated in source; live PS3/browser gameplay is not hardware-verified"
         });
       }
 
