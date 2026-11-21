@@ -15,7 +15,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-gcc -std=c11 -Wall -Wextra -Werror -I"$ROOT" \
+gcc -std=c11 -D_POSIX_C_SOURCE=200112L -Wall -Wextra -Werror -I"$ROOT" \
   "$ROOT/ws_client.c" "$ROOT/tests/test_ws_client.c" \
   -o "$BUILD_DIR/test_ws_client"
 
