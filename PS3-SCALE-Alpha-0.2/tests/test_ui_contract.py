@@ -447,6 +447,8 @@ assert "CROSS: INSTALL TO ARTEMIS USERLIST" in src
 assert "MODE: TEMPORARY" in src and "MODE: PERMANENT" in src
 assert "COMMUNITY_DOWNLOADS" not in src
 assert "ARTPS3001/USRDIR/USERLIST" in src
+assert "ARTZ00001/USRDIR/USERLIST" in src
+assert "PS3SCALE_ARTEMIS_R5_EBOOT_PATH" in src
 assert "PS3SCALE_ARTEMIS_USERLIST_DIR" in src
 assert "PS3SCALE_TEMP_ENHANCEMENT_LIST_PATH" in src
 assert "cleanup_temporary_enhancements" in src
