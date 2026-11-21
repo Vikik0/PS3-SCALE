@@ -10,7 +10,7 @@
 
 ## Latest CI validation
 
-GitHub Actions run **#534** completed successfully on 2026-11-21.
+GitHub Actions run **#537** completed successfully on 2026-11-21.
 
 - Host-side regression tests: **PASS**
 - Arabic bitmap preview render: **PASS**
@@ -21,7 +21,7 @@ GitHub Actions run **#534** completed successfully on 2026-11-21.
 - GNPDRM PKG generation and package checks: **PASS**
 - Embedded Apollo Save logo, Music 1 source and Music 2 theme: **PASS**
 
-Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/44941356426
+Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/44941991544
 
 ## Build artifact
 
@@ -34,10 +34,10 @@ Contains:
 - `ps3scale.gnpdrm.pkg` — 11,395,872 bytes
 
 SHA-256:
-- ELF: `17c56decbccc664ba745c87bca10d90431a1c20ffb8b3fc9cf540b01cf4de6ef`
-- SELF: `c94b672412f2391b041ca33da2a2cbbdc755ecd31fdfd15ffdf2887d3e75e672`
-- Standard PKG: `b5e9068cb82d4d9e7543a40453433e83f2bbab74da513f14ecb0970e6445214a`
-- GNPDRM PKG: `de39abea7efaaafa5454c240f96134cc18321bd4d48f675f0a0a7bf1da01b516`
+- ELF: `04774bc1bc430dee6a823816ef078920e3b57d9cb1a6484af30b9935946912f3`
+- SELF: `14062f8bc7ccedc2b3f34bacc15cb18de5403c935a554ddfc56bde87c7604a7e`
+- Standard PKG: `df1b335535c290085791ca7002d4ea7f815bf013437f166cb4e7298f6c7ae850`
+- GNPDRM PKG: `c7e1ea2e6906b85473e57cfc1fdec57e8c76bb8ecc3515b391479e3acc1809dd`
 
 ## Alpha 0.23 changes in this continuation
 
@@ -45,6 +45,7 @@ SHA-256:
 - Renamed the visible playlist entries to Music 1 and Music 2.
 - Added the Enhancement Storage setting: Temporary by default or Permanent for new Artemis NCL files.
 - Online DB now refreshes automatically on first open, uses Triangle for manual refresh and Select for search, and defaults to Graphics + Any Region/Version.
+- Added strict Title ID + APP_VER matching for community installs; a same-title/same-region candidate is browse-only and cannot authorize a download.
 - Added exact-match `GRAPHICS_FPS` NCL installation to the detected Artemis USERLIST directory. Both upstream `ARTPS3001` and Artemis R5 `ARTZ00001` package IDs are supported. The app validates the source path, exact Title ID + APP_VER, text format and size, and never overwrites an existing file.
 - Temporary NCL files are tracked and removed on the next PS3 SCALE start. Permanent files remain until manually removed. PS3 SCALE does not execute or auto-apply NCL files; the user selects them in Artemis.
 - Replaced the synthetic Game Details comparison illustration with an exact-version local before/after PNG loader. No genuine game screenshot pairs are bundled yet; the UI reports a missing pair instead of showing a concept image.
