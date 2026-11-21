@@ -39,6 +39,8 @@ class Rpcs3PreflightTests(unittest.TestCase):
         if with_log:
             (emulator / "RPCS3.log").write_text(
                 "SYS: Booting BLUS31270\n"
+                "Pad 0: device='DualShock 3 Controller', handler=DualShock 3, VID=0x054c, PID=0x0268\n"
+                "Pad 1: device='DualShock 3 Controller', handler=DualShock 3, VID=0x054c, PID=0x0268\n"
                 "PPU executable hash: PPU-0123456789abcdef0123456789abcdef01234567\n",
                 encoding="utf-8",
             )
@@ -57,7 +59,8 @@ class Rpcs3PreflightTests(unittest.TestCase):
             "PPU-0123456789ABCDEF0123456789ABCDEF01234567",
         )
         self.assertEqual(report["checks"]["title_update"], "NOT_VERIFIED")
-        self.assertEqual(report["checks"]["two_controller_ports"], "MANUAL_BASELINE_REQUIRED")
+        self.assertEqual(report["checks"]["two_controller_ports"], "BOTH_PORTS_HAVE_NON_NULL_BINDINGS")
+        self.assertFalse(report["rpcs3"]["log"]["controller_ports"]["distinct_device_labels"])
         self.assertFalse(report["patch_gate"]["ready"])
 
     def test_wrong_region_blocks_baseline(self):
@@ -75,6 +78,17 @@ class Rpcs3PreflightTests(unittest.TestCase):
             report = inspect_installation(game_root, rpcs3_root=emulator)
         self.assertEqual(report["overall"], "READY_FOR_BASELINE_BOOT")
         self.assertEqual(report["rpcs3"]["log"]["status"], "WAITING_FOR_FIRST_BOOT")
+
+    def test_one_bound_pad_does_not_claim_two_ports(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            game_root, emulator = self.make_layout(root)
+            (emulator / "RPCS3.log").write_text(
+                "Pad 0: device='DualShock 3 Controller', handler=DualShock 3, VID=0x054c, PID=0x0268\n",
+                encoding="utf-8",
+            )
+            report = inspect_installation(game_root, rpcs3_root=emulator)
+        self.assertEqual(report["checks"]["two_controller_ports"], "INCOMPLETE_LOG_EVIDENCE")
 
     def test_expected_ppu_hash_mismatch_is_reported(self):
         with tempfile.TemporaryDirectory() as tmp:
