@@ -11,7 +11,7 @@ This folder builds the first native PS3 PRX for Crash Bash Enhanced.
 - Adapts the upstream SDL timing/file calls to PS3 APIs.
 - Uses STUN Binding requests on the same UDP socket as the game transport to discover the external IPv4/port. A second STUN destination is used to detect some symmetric-NAT mappings.
 - Provides native host/join/lobby functions through `net_adapter.h`; the game-input hook polls the lobby and feeds synchronized pad records into the emulator.
-- Includes an RFC 6455 WebSocket client and a PS3 relay client that requests a one-time guest ticket, joins the room transport, sends CBU1 batches with per-peer routing, and decodes authenticated CBR1 sender envelopes. Host-side HTTP-ticket/WebSocket integration tests cover this path.
+- Includes an RFC 6455 WebSocket client and a PS3 relay client that requests a one-time guest ticket, joins the room transport, sends CBU1 batches with per-peer routing, includes a six-frame batching queue, and decodes authenticated CBR1 sender envelopes. Host-side tests verify that six frame datagrams are sent as one relay message. The scheduler is not yet wired into upstream `sendto`/`recvfrom`.
 - The relay client currently uses plain HTTP and `ws://` for the prototype. TLS/WSS is not implemented, so do not treat this as production-secure.
 - Computes a guarded FNV-1a fingerprint over the PS1 RAM window documented for `ps1_netemu` 4.86 (base `0x770780`, size 2 MiB). A page-attribute probe disables the fingerprint if the address range is not readable.
 
