@@ -13,8 +13,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-SCE_MAGIC = b"SCE\\x00"
-ELF_MAGIC = b"\\x7fELF"
+SCE_MAGIC = b"SCE\x00"
+ELF_MAGIC = b"\x7fELF"
 SCE_HEADER = struct.Struct(">4sIHHIQQ")
 EXT_HEADER = struct.Struct(">10Q")
 APP_INFO = struct.Struct(">QIIQQ")
@@ -142,7 +142,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     output = json.dumps(reports, indent=2)
     if args.output:
-        Path(args.output).write_text(output + "\\n", encoding="utf-8")
+        Path(args.output).write_text(output + "\n", encoding="utf-8")
     else:
         print(output)
     return 0
