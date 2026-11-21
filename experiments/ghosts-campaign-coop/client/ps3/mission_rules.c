@@ -46,9 +46,11 @@ void ghc_mission_init(GhcMission *mission, const GhcMissionConfig *config) {
     size_t i;
     if (!mission) return;
 
-    mission->config.bleedout_ms = (config && config->bleedout_ms)
+    mission->config.bleedout_ms =
+        (config && config->bleedout_ms <= 0x7fffffffu && config->bleedout_ms)
         ? config->bleedout_ms : GHC_MISSION_DEFAULT_BLEEDOUT_MS;
-    mission->config.revive_ms = (config && config->revive_ms)
+    mission->config.revive_ms =
+        (config && config->revive_ms <= 42949672u && config->revive_ms)
         ? config->revive_ms : GHC_MISSION_DEFAULT_REVIVE_MS;
     mission->config.revived_health_percent =
         (config && config->revived_health_percent > 0u && config->revived_health_percent <= 100u)
@@ -212,8 +214,9 @@ int ghc_mission_get_view(const GhcMission *mission, uint32_t now_ms, GhcMissionV
                 if (revive_elapsed >= mission->config.revive_ms) {
                     view->revive_progress_percent[i] = 100u;
                 } else {
+                    // revive_ms is capped at UINT32_MAX / 100 during init.
                     view->revive_progress_percent[i] = (uint8_t)(
-                        ((uint64_t)revive_elapsed * 100u) / mission->config.revive_ms
+                        (revive_elapsed * 100u) / mission->config.revive_ms
                     );
                 }
             }
