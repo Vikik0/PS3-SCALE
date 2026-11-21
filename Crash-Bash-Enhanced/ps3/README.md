@@ -1,29 +1,31 @@
-# PS3 input bridge prototype
+# PS3 input bridge and netplay adapter
 
-This is the first native PS3-side component for Crash Bash Enhanced.
+This folder builds the first native PS3 PRX for Crash Bash Enhanced.
 
-## What it does
+## Implemented in the current prototype
 
-- Hooks the PS3 `cellPadGetData` and `cellPadGetInfo2` function descriptors in the process where the module is loaded.
-- Leaves the physical controller on PS3 port 0 as the local player.
-- Provides three remote PS1 controller slots when the bridge is explicitly activated.
-- Uses the PS3 libpad report layout (digital buttons plus analog axes).
-- Starts inactive and restores the original function descriptors when unloaded.
+- Hooks the process-local `cellPadGetData`, `cellPadGetDataExtra`, and `cellPadGetInfo2` function descriptors.
+- Keeps the physical DualShock controller as the local input source.
+- Exposes four standard PS1 controller ports to the PS1 emulator when online input is activated.
+- Integrates the upstream Crash Bash four-player deterministic UDP lockstep implementation from the pinned `../upstream/crash_bash_decomp` submodule.
+- Adapts the upstream SDL timing/file calls to PS3 APIs.
+- Uses STUN Binding requests on the same UDP socket as the game transport to discover the external IPv4/port. A second STUN destination is used to detect some symmetric-NAT mappings.
+- Provides native host/join/lobby functions through `net_adapter.h`; the game-input hook polls the lobby and feeds synchronized pad records into the emulator.
 
-## What it does not do yet
+## Still incomplete / not verified
 
-- It does not connect to the lobby service.
-- It does not send or receive UDP packets.
-- It does not synchronize game frames.
-- It has not been verified against the PS3 PS1 emulator or Crash Bash on physical hardware.
-
-The online architecture is based on the upstream Crash Bash source port's existing four-player deterministic UDP lockstep implementation. The upstream code is pinned as a Git submodule at `../upstream/crash_bash_decomp`; see its `port/platform/net.c` and `docs/PORT.md`.
+- There is no user-facing PS3 host/join menu yet. The native host/join APIs are compiled, but they are not yet connected to the web lobby or an on-screen keyboard/configuration flow.
+- The Cloudflare Worker and web lobby are not yet connected to this PRX. The Worker currently handles guest sessions, room codes, ready state and endpoint metadata; it does not relay game traffic.
+- No TURN or gameplay relay is included. Direct UDP connectivity can fail behind symmetric NAT, carrier-grade NAT, or networks that block peer UDP. STUN discovers mappings but does not create router port-forwarding rules.
+- Memory-card save synchronization is stubbed as empty data. The first target should be same-build Battle/minigame sessions, not Adventure progression.
+- The upstream state fingerprint is currently passed as zero because the PS3 emulator's game-state memory has not been mapped. The netcode therefore cannot detect deterministic state divergence yet.
+- The exact PS1 emulator process, multitap behavior, title-region identity and controller-port mapping have not been verified on physical PS3 hardware.
 
 ## Target process
 
-This module is intended for the PS3 PS1 emulator process that runs the Crash Bash title. It is not a VSH boot plugin and must not be loaded into unrelated games or system processes.
+The PRX is intended for the PS3 PS1-emulator process running the supported Crash Bash title. It is not a VSH boot plugin and must not be loaded into unrelated games or system processes.
 
-The exact emulator process, multitap configuration, and controller-port mapping must be confirmed on the target console before enabling the bridge. The module currently leaves the bridge inactive on load to avoid changing normal controller behavior.
+The module installs the hooks but leaves virtual-pad injection inactive until the netplay layer starts. This avoids changing normal controller behavior when the plugin is merely loaded.
 
 ## Build
 
@@ -31,15 +33,10 @@ The exact emulator process, multitap configuration, and controller-port mapping 
 make PS3DEV=/path/to/ps3dev PS3DK=/path/to/ps3dev/ps3dk
 ```
 
-The CI build uses the pinned PS3DK PPU toolchain and produces an unsigned PRX plus a fake-signed SPRX for CFW development. The fake-signed artifact is not a retail-signed package.
+GitHub Actions downloads the pinned PS3DK PPU toolchain, builds the runtime and import libraries, compiles the PRX, validates its import table, and uploads an unsigned PRX plus a fake-signed CFW development SPRX. A successful CI build proves compilation and PRX packaging only; it does not prove gameplay on hardware.
 
-## Continuous integration
+## Network behavior
 
-GitHub Actions compiles this PRX with the pinned PS3DK PPU toolchain and uploads the unsigned PRX plus fake-signed CFW development artifact. A successful build proves only that the module links; it does not prove the PS1 emulator accepts four injected pads on real hardware.
+The game-data channel is direct UDP using the upstream lockstep protocol. The matchmaking Worker is control-plane only and never receives gameplay packets. The initial connection strategy is STUN-assisted UDP hole punching; this is best-effort and not a universal NAT traversal solution.
 
-## Safety and compatibility
-
-- The module patches only the current process's imported function descriptors.
-- Both descriptors are restored on module unload.
-- The network layer must validate all packets before calling `cb_input_set_remote_state`.
-- The first target is the NTSC-U Crash Bash executable supported by the upstream decompilation project. Other regions need separate validation.
+The upstream implementation and its license remain in the pinned submodule at `../upstream/crash_bash_decomp`. The PS3 adapter does not copy or replace that upstream source.
