@@ -50,7 +50,7 @@ A mapped address is not proof that the candidate is the named function, that its
 4. Let Ghidra auto-analysis complete, then save the project locally. The script only seeds function starts from OPD descriptors; it does not patch or export the binary.
 5. Run `tools/ghidra/FindGhostsSplitScreenBuiltins.java`. It searches loaded memory blocks for the IW6 split-screen/player builtin names and prints recorded cross-references and containing functions. A missing string or xref is inconclusive; names may be stripped, hashed or stored outside the loaded ELF.
 
-The PS3 PPU function-descriptor layout and OPD-based function discovery are described in the public [ps3recomp PPU loader](https://github.com/sp00nznet/ps3recomp/blob/master/tools/ppu_loader.py) and [PS3 PPC reverse-engineering workflow](https://github.com/Mercenaries-Fan-Build/notes-on-the-released-game/blob/main/docs/ps3_ppc_re_workflow.md). Those are methodology references, not Ghosts offsets or proof of Ghosts runtime behavior.
+The two Ghidra scripts are manual analysis helpers and are not compiled by GitHub CI because the Ghidra runtime is not part of the build. Verify them against the installed Ghidra version before running. The PS3 PPU function-descriptor layout and OPD-based function discovery are described in the public [ps3recomp PPU loader](https://github.com/sp00nznet/ps3recomp/blob/master/tools/ppu_loader.py) and [PS3 PPC reverse-engineering workflow](https://github.com/Mercenaries-Fan-Build/notes-on-the-released-game/blob/main/docs/ps3_ppc_re_workflow.md). Those are methodology references, not Ghosts offsets or proof of Ghosts runtime behavior.
 
 ## What to inspect after import
 
