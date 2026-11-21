@@ -9,6 +9,15 @@
 #define CB_RELAY_MAX_PACKET 1200
 #define CB_RELAY_MAX_BATCH_PACKETS 32
 #define CB_RELAY_MAX_MESSAGE 24576
+#define CB_RELAY_MAX_PEERS 4
+
+typedef struct CbRelayPeer {
+    uint8_t session_id[16];
+    uint32_t address_network;
+    unsigned short port_host;
+    uint8_t slot;
+    uint8_t valid;
+} CbRelayPeer;
 
 typedef struct CbRelayPacket {
     /* Sixteen raw bytes. Set to all zeroes to broadcast to the room. */
@@ -32,6 +41,8 @@ typedef struct CbRelayClient {
     char host[256];
     unsigned short port;
     uint64_t last_ping_ms;
+    CbRelayPeer peers[CB_RELAY_MAX_PEERS];
+    size_t peer_count;
     int connected;
 } CbRelayClient;
 
@@ -70,9 +81,13 @@ int cb_relay_receive_packet(CbRelayClient *client, void *packet, size_t capacity
                             char *control, size_t control_capacity,
                             int timeout_ms);
 
-/* Returns a stable synthetic IPv4/port for the room host, for legacy netcode address matching. */
+/* Returns a stable synthetic IPv4/port for any session ID, for legacy netcode address matching. */
+int cb_relay_session_address(const uint8_t session_id[16], uint32_t *address_network,
+                             unsigned short *port_host);
 int cb_relay_host_address(const CbRelayClient *client, char *address,
                           size_t address_capacity, unsigned short *port);
+int cb_relay_peer_for_address(const CbRelayClient *client, uint32_t address_network,
+                              unsigned short port_host, uint8_t session_id[16]);
 
 void cb_relay_leave(CbRelayClient *client);
 
