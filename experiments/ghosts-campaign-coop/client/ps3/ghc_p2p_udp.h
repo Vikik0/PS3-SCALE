@@ -15,6 +15,8 @@ typedef struct {
     char peer_public_address[16];
     uint16_t peer_public_port;
     char peer_local_address[16];
+    char peer_observed_address[16];
+    uint16_t peer_observed_port;
     uint16_t peer_local_port;
     uint32_t next_sequence;
     GhcReplayWindow receive_window;

@@ -35,7 +35,7 @@ Relay -> peer:
 
 The bearer session token is used only in HTTPS/WSS Authorization headers. The relay key is issued by the HTTPS guest-session endpoint. The relay validates the HMAC, rejects duplicate/stale sequence numbers with a wrap-safe 64-packet window, caps frames at 1200 bytes and rate-limits each session. The gameplay payload remains opaque until game-state fields are reverse-engineered and validated.
 
-For direct UDP peer traffic, the sender signs the GHC2 packet with the recipient's relay key while retaining the sender's relay ID in the packet header. The recipient verifies with its own relay key, checks that the sender relay ID matches the paired peer, validates the source endpoint against the public/LAN candidates and applies its replay window. The WebSocket relay path is different: the sender signs with its own key and the Worker re-signs with the recipient's key before forwarding.
+For direct UDP peer traffic, the sender signs the GHC2 packet with the recipient's relay key while retaining the sender's relay ID in the packet header. The recipient verifies with its own relay key, checks that the sender relay ID matches the paired peer and applies its replay window. After authentication it learns the sender's observed source endpoint and prefers that endpoint on subsequent sends, allowing the peer path to adapt when NAT changes the mapped source port. The WebSocket relay path is different: the sender signs with its own key and the Worker re-signs with the recipient's key before forwarding.
 
 If direct UDP hole-punching fails, both PS3 clients can use the WSS relay path `/v1/rooms/{code}/relay`. The Worker forwards binary GHC2 frames only; the PS3 WSS client is not implemented yet.
 

@@ -44,8 +44,10 @@ void ghc_p2p_link_reset(GhcP2PLink *link) {
     }
     link->peer_public_address[0] = '\0';
     link->peer_local_address[0] = '\0';
+    link->peer_observed_address[0] = '\0';
     link->peer_public_port = 0;
     link->peer_local_port = 0;
+    link->peer_observed_port = 0;
     link->next_sequence = 1;
     ghc_replay_window_reset(&link->receive_window);
     link->initialized = 0;
@@ -101,13 +103,25 @@ int ghc_p2p_send(GhcP2PLink *link, const uint8_t *payload, size_t payload_length
             &packet_length
         ) != 0) return -2;
 
-    public_result = ghc_udp_sendto_ipv4(
-        link->socket_fd,
-        link->peer_public_address,
-        link->peer_public_port,
-        packet,
-        packet_length
-    );
+    public_result = -1;
+    if (link->peer_observed_address[0] && link->peer_observed_port) {
+        public_result = ghc_udp_sendto_ipv4(
+            link->socket_fd,
+            link->peer_observed_address,
+            link->peer_observed_port,
+            packet,
+            packet_length
+        );
+    }
+    if (public_result < 0) {
+        public_result = ghc_udp_sendto_ipv4(
+            link->socket_fd,
+            link->peer_public_address,
+            link->peer_public_port,
+            packet,
+            packet_length
+        );
+    }
 
     if (!gh_same_endpoint(
             link->peer_public_address,
@@ -153,11 +167,11 @@ int ghc_p2p_receive(
     );
     if (result != 0) return -2;
 
-    if (!gh_same_endpoint(source_address, source_port, link->peer_public_address, link->peer_public_port)
-        && !gh_same_endpoint(source_address, source_port, link->peer_local_address, link->peer_local_port)) {
-        return -3;
-    }
-
+    /*
+     * Do not hard-reject an authenticated peer because a symmetric NAT changed
+     * its source port. GHC2 HMAC + paired relay ID are the identity checks.
+     * Learn the observed endpoint only after authentication and replay checks.
+     */
     if (ghc_decode_client_packet(link->local_relay_key, packet, packet_length, &decoded) != 0) return -4;
     {
         size_t i;
@@ -168,6 +182,8 @@ int ghc_p2p_receive(
     if (!ghc_replay_window_accept(&link->receive_window, decoded.sequence)) return -6;
     if (decoded.payload_length > payload_capacity) return -7;
 
+    gh_copy_text(link->peer_observed_address, source_address, sizeof(link->peer_observed_address));
+    link->peer_observed_port = source_port;
     gh_copy_bytes(payload, decoded.payload, decoded.payload_length);
     *sequence = decoded.sequence;
     return (int)decoded.payload_length;
