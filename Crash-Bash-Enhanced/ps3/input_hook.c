@@ -2,7 +2,15 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
+
+
+static void *cb_cb_memset(void *destination, int value, size_t length)
+{
+    uint8_t *out = (uint8_t *)destination;
+    size_t i;
+    for (i = 0; i < length; ++i) out[i] = (uint8_t)value;
+    return destination;
+}
 
 typedef int32_t (*CellPadGetDataFn)(uint32_t port_no, CellPadData *data);
 typedef int32_t (*CellPadGetInfo2Fn)(CellPadInfo2 *info);
@@ -77,7 +85,7 @@ static CbPadState remote_snapshot(int slot)
     uint32_t before;
     uint32_t after;
 
-    memset(&copy, 0, sizeof(copy));
+    cb_memset(&copy, 0, sizeof(copy));
     copy.right_x = 0x80;
     copy.right_y = 0x80;
     copy.left_x = 0x80;
@@ -102,7 +110,7 @@ static CbPadState remote_snapshot(int slot)
 
 static void state_to_report(const CbPadState *state, CellPadData *data)
 {
-    memset(data, 0, sizeof(*data));
+    cb_memset(data, 0, sizeof(*data));
     data->len = 8;
     data->button[2] = state->digital1;
     data->button[3] = state->digital2;
@@ -214,7 +222,7 @@ void cb_input_set_active(int active, int local_slot)
             continue;
         }
         remote_slots[slot].sequence = 0;
-        memset(&remote_slots[slot].state, 0, sizeof(remote_slots[slot].state));
+        cb_memset(&remote_slots[slot].state, 0, sizeof(remote_slots[slot].state));
         remote_slots[slot].state.right_x = 0x80;
         remote_slots[slot].state.right_y = 0x80;
         remote_slots[slot].state.left_x = 0x80;
