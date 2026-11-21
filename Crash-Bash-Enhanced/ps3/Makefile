@@ -3,6 +3,7 @@ SHELL := /bin/bash
 PS3DEV ?=
 PS3DK ?= $(PS3DEV)/ps3dk
 BUILD := build
+LOADER_BUILD := $(BUILD)/loader
 PPU_CC := $(PS3DEV)/ppu/bin/powerpc64-ps3-elf-gcc
 PRX_GEN := $(PS3DEV)/bin/prx-gen
 FSELF := $(PS3DEV)/bin/fself
@@ -22,7 +23,7 @@ NET_LIBS := -L$(PS3DK)/ppu/lib -Wl,--start-group -lio_stub -lnet_stub \
 
 .PHONY: all clean check
 
-all: $(BUILD)/crash_bash_input.fake.sprx
+all: $(BUILD)/crash_bash_input.fake.sprx $(LOADER_BUILD)/crash_bash_loader.fake.sprx
 
 $(BUILD):
 	mkdir -p $@
@@ -81,8 +82,30 @@ $(BUILD)/crash_bash_input.prx: $(BUILD)/crash_bash_input.elf
 $(BUILD)/crash_bash_input.fake.sprx: $(BUILD)/crash_bash_input.prx
 	$(FSELF) $< $@
 
-check: $(BUILD)/crash_bash_input.prx
-	$(PRX_GEN) check $<
+$(LOADER_BUILD):
+	mkdir -p $@
+
+$(LOADER_BUILD)/loader.o: loader/loader.c | $(LOADER_BUILD)
+	$(PPU_CC) $(CFLAGS) -I$(CURDIR) -c $< -o $@
+
+$(LOADER_BUILD)/thread_compat.o: thread_compat.c | $(LOADER_BUILD)
+	$(PPU_CC) $(CFLAGS) -c $< -o $@
+
+$(LOADER_BUILD)/crash_bash_loader.elf: $(LOADER_BUILD)/loader.o $(LOADER_BUILD)/thread_compat.o $(CRT_I) $(CRT) $(CRT_INIT) $(PRX_LD) $(PRX_SPECS)
+	$(PPU_CC) -nostdlib -nostartfiles -specs=$(PRX_SPECS) \
+		-Wl,-q -Wl,--gc-sections -Wl,--no-warn-rwx-segments -Wl,-T,$(PRX_LD) \
+		$(LOADER_BUILD)/loader.o $(LOADER_BUILD)/thread_compat.o $(CRT_I) $(CRT) $(CRT_INIT) $(NET_LIBS) -o $@
+
+$(LOADER_BUILD)/crash_bash_loader.prx: $(LOADER_BUILD)/crash_bash_loader.elf
+	$(PRX_GEN) build $< -o $@ --name crash_bash_loader --version 0.1
+	$(PRX_GEN) check $@
+
+$(LOADER_BUILD)/crash_bash_loader.fake.sprx: $(LOADER_BUILD)/crash_bash_loader.prx
+	$(FSELF) $< $@
+
+check: $(BUILD)/crash_bash_input.prx $(LOADER_BUILD)/crash_bash_loader.prx
+	$(PRX_GEN) check $(BUILD)/crash_bash_input.prx
+	$(PRX_GEN) check $(LOADER_BUILD)/crash_bash_loader.prx
 
 clean:
 	rm -rf $(BUILD)
