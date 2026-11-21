@@ -3,6 +3,7 @@ import "./styles.css";
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const API_ORIGIN = API_BASE || window.location.origin;
 const STORAGE_KEY = "crash-bash-online-session-v1";
+try { localStorage.setItem("crash-bash-online-api-origin-v1", API_ORIGIN); } catch {}
 const app = document.querySelector("#app");
 
 const state = {
@@ -108,6 +109,7 @@ function roomCard() {
       <div class="room-actions">
         <button class="button button-secondary" data-action="leave">LEAVE ROOM</button>
         <button class="button button-primary" data-action="ready" ${room.status !== "waiting" ? "disabled" : ""}>${me?.ready ? "CANCEL READY" : "I'M READY"}</button>
+        <a class="button button-secondary" href="/play.html?room=${encodeURIComponent(room.room_code)}" target="_blank" rel="noopener">OPEN BROWSER PLAYER ↗</a>
         ${isHost ? `<button class="button button-start" data-action="start" ${!allReady || room.status !== "waiting" ? "disabled" : ""}>START MATCH <span>→</span></button>` : ""}
       </div>
       <p class="room-footnote">${state.relayStatus === "connected" ? (state.relayPackets > 0 ? "ROOM RELAY CONNECTED · " + state.relayPackets + " GAME PACKETS RECEIVED" : "ROOM RELAY CONNECTED · WAITING FOR GAME INPUTS") : state.relayStatus === "connecting" ? "CONNECTING TO ROOM RELAY..." : state.relayStatus === "error" ? "ROOM RELAY CONNECTION FAILED" : "CONNECT TO ROOM RELAY TO JOIN THE PARTY."}</p>
