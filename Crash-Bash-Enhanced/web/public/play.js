@@ -1,3 +1,5 @@
+import { applyPadStateToEmulator } from "/pad-bridge.js";
+
 const DATA_PATH = "https://cdn.emulatorjs.org/stable/data/";
 const gameInput = document.querySelector("#game-files");
 const biosInput = document.querySelector("#bios-file");
@@ -82,38 +84,7 @@ async function buildExternalFiles(primary, files) {
   }
 }
 function applyPadState(slot, buttons, sticks = [128, 128, 128, 128]) {
-  const emulator = window.EJS_emulator;
-  const gameManager = emulator?.gameManager;
-  const simulate = gameManager?.functions?.simulateInput;
-  if (!simulate || !Number.isInteger(slot) || slot < 0 || slot > 3) return false;
-
-  // The project's PS1 button bit order is translated to libretro's joypad indices.
-  const buttonMap = [
-    [0, 0x4000], // Cross
-    [1, 0x8000], // Square
-    [2, 0x0001], // Select
-    [3, 0x0008], // Start
-    [4, 0x0010], // Up
-    [5, 0x0040], // Down
-    [6, 0x0080], // Left
-    [7, 0x0020], // Right
-    [8, 0x2000], // Circle
-    [9, 0x1000], // Triangle
-    [10, 0x0400], // L1
-    [11, 0x0800], // R1
-    [12, 0x0100], // L2
-    [13, 0x0200]  // R2
-  ];
-  for (const [index, mask] of buttonMap) {
-    simulate(slot, index, (buttons & mask) ? 1 : 0);
-  }
-
-  const axis = value => Math.max(-32767, Math.min(32767, Math.round((value - 128) * 257)));
-  simulate(slot, 16, axis(sticks[2] ?? 128));
-  simulate(slot, 17, axis(sticks[3] ?? 128));
-  simulate(slot, 18, axis(sticks[0] ?? 128));
-  simulate(slot, 19, axis(sticks[1] ?? 128));
-  return true;
+  return applyPadStateToEmulator(window.EJS_emulator?.gameManager, slot, buttons, sticks);
 }
 
 function exposeBrowserInputBridge() {
