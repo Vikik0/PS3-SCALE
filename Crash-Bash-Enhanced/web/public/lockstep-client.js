@@ -110,7 +110,7 @@ export class BrowserLockstepClient {
       return this;
     } catch (error) {
       this.phase = "failed";
-      this.cleanup(false);
+      this.cleanup(true);
       throw error;
     }
   }
@@ -367,7 +367,7 @@ export class BrowserLockstepClient {
 
   stop() {
     if (["stopped", "closed"].includes(this.phase)) return;
-    if (this.session && this.me >= 0 && this.phase === "playing") {
+    if (this.session && this.me >= 0 && ["lobby", "starting", "playing"].includes(this.phase)) {
       this.send(encodeBye(this.session, this.me, CBN1_BYE_REASONS.LEFT, this.next), "cbn1-bye");
     }
     this.phase = "stopped";
