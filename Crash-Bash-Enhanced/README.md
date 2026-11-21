@@ -13,7 +13,7 @@ This branch contains the native PS3 homebrew shell and the first cloud-lobby int
 - Private Vercel Blob storage for temporary room presence and signaling records.
 - Native PS3 HTTPS client using libcurl + PolarSSL: health check, public room list, create/join, ready heartbeat, room refresh and leave.
 - PS3 room controls: browse public rooms, create public/private rooms, and join a six-character invite code from the controller.
-- Host protocol and JSON parser tests, PS1 DAT sector-reader tests, plus web lobby security tests.
+- Host protocol and JSON parser tests, PS1 DAT sector-reader tests, deterministic input-packet codec tests, plus web lobby security tests.
 
 ## Honest implementation status
 
@@ -71,6 +71,10 @@ Room storage is temporary and designed for matchmaking/presence only, not per-fr
 A first isolated engine-port component now reads a legally obtained `CRASHBSH.DAT` as 2048-byte sectors and indexed files. It validates buffer sizes, checks seek failures, and zero-pads short final sectors to match the reference PC archive reader. This is a tested file-I/O primitive only; the original engine, renderer, audio and gameplay are not yet integrated into the PS3 executable.
 
 Run `make host-test` to execute the archive tests alongside the existing protocol and JSON tests.
+
+## Online gameplay transport groundwork
+
+A fixed 24-byte input-packet format is now defined and tested. It carries a protocol version, monotonically assigned sequence number, game-frame number, controller button mask, acknowledgement field and CRC-32 integrity check. The decoder rejects malformed lengths, unsupported versions and corrupted packets before exposing input data. This is the wire-format foundation only: it is not yet connected to a UDP peer transport, a game simulation loop, rollback/prediction, or the original Crash Bash modes. The existing HTTPS room service remains matchmaking/signaling, not a per-frame gameplay relay.
 
 ## Original game content
 
