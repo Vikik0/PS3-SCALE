@@ -1,5 +1,12 @@
 # User-owned Ghosts PS3 input checklist
 
+## Current status (2026-11-22)
+
+**No additional file transfer is requested now.** The installed TU 1.16 PARAM.SFO, the three TU SELF files, the base disc samples, and the two TU patch FastFiles have already been received and inspected. The current Campaign mission sample is Clockwork only; full-campaign coverage is not yet established.
+
+RPCS3 is **optional**. You do not need to install it to play the final project on your PS3, and the project can continue with static FastFile/GSC analysis without it. A decrypted TU 1.16 ELF would be useful for native executable analysis, but do not install RPCS3 just for this stage and do not send console secrets or license material.
+
+
 This project does not bundle retail game files. Use files extracted from the user's own legally obtained Call of Duty: Ghosts PS3 copy. Do not upload them to GitHub, commit them, or post them in an issue/PR.
 
 ## First target profile
