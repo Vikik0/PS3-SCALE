@@ -44,10 +44,12 @@ function cleanName(value) {
 }
 
 async function readBody(request) {
-  const length = Number(request.headers.get("Content-Length") || 0);
-  if (length > 8192) throw fail(413, "BODY_TOO_LARGE", "Request body limit is 8 KiB.");
+  const raw = await request.text();
+  if (new TextEncoder().encode(raw).byteLength > 8192) {
+    throw fail(413, "BODY_TOO_LARGE", "Request body limit is 8 KiB.");
+  }
   try {
-    const body = await request.json();
+    const body = JSON.parse(raw);
     if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("object required");
     return body;
   } catch {
