@@ -99,3 +99,7 @@ The public GSC Tool dev branch supports IW6 on PS3 and defines the PS3 system as
 These are GSC VM builtin identifiers, not PS3 PPU function addresses and must not be used as EBOOT hook addresses.
 
 References: [GSC Tool README](https://github.com/xensik/gsc-tool/blob/dev/README.md), [IW6 PS3 function symbols](https://github.com/xensik/gsc-tool/blob/dev/src/gsc/engine/iw6_ps_func.cpp), [IW6 PS3 method symbols](https://github.com/xensik/gsc-tool/blob/dev/src/gsc/engine/iw6_ps_meth.cpp).
+
+### Compiled GSC validation
+
+The script exporter now validates the GSC Tool IW binary wrapper before treating a body as compiled script: GSC NUL magic, three little-endian 32-bit lengths, exact stored-buffer/bytecode size, and zlib expansion of the stack buffer when compressed. A magic-only false positive is no longer exported as a compiled script. The public GSC Tool README and asset serializer are the format references.
