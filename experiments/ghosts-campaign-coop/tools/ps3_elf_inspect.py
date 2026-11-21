@@ -35,20 +35,29 @@ STT_FUNC = 2
 # Addresses are leads copied from the repository's candidate-spawn document.
 # They are not verified against any particular retail EBOOT or Campaign.
 CANDIDATES = (
-    ("G_Spawn", 0x290E58, "entity allocation"),
-    ("G_CallSpawnEntity", 0x28AB00, "entity spawn dispatcher"),
-    ("G_SetModel", 0x28FA4C, "model assignment"),
-    ("SP_Script_Model", 0x286710, "script model spawn helper"),
-    ("SV_LinkEntity", 0x32C420, "world entity linking"),
-    ("SV_UnlinkEntity", 0x32C3A0, "world entity unlinking"),
-    ("PlayerCMD_Spawn", 0x23D71C, "player script command; VM context unknown"),
-    ("PlayerCMD_ClonePlayer", 0x23D850, "clone/corpse path; not a second local player"),
-    ("PlayerCMD_IsSplitScreenPlayer", 0x23EA54, "split-screen identity query"),
-    ("PlayerCMD_IsSplitScreenPlayerPrimary", 0x23EB38, "primary split-screen identity query"),
-    ("PlayerCMD_SetOrigin", 0x23585C, "script actor position command"),
-    ("PlayerCMD_SetVelocity", 0x235958, "script actor velocity command"),
-    ("PlayerCMD_GiveWeapon", 0x233468, "script weapon assignment command"),
+    ("G_Spawn", 0x290E58, "entity allocation", "function"),
+    ("G_CallSpawnEntity", 0x28AB00, "entity spawn dispatcher", "function"),
+    ("G_SetModel", 0x28FA4C, "model assignment", "function"),
+    ("SP_Script_Model", 0x286710, "script model spawn helper", "function"),
+    ("SV_LinkEntity", 0x32C420, "world entity linking", "function"),
+    ("SV_UnlinkEntity", 0x32C3A0, "world entity unlinking", "function"),
+    ("PlayerCMD_Spawn", 0x23D71C, "player script command; VM context unknown", "function"),
+    ("PlayerCMD_ClonePlayer", 0x23D850, "clone/corpse path; not a second local player", "function"),
+    ("PlayerCMD_IsSplitScreenPlayer", 0x23EA54, "split-screen identity query", "function"),
+    ("PlayerCMD_IsSplitScreenPlayerPrimary", 0x23EB38, "primary split-screen identity query", "function"),
+    ("PlayerCMD_SetOrigin", 0x23585C, "script actor position command", "function"),
+    ("PlayerCMD_SetVelocity", 0x235958, "script actor velocity command", "function"),
+    ("PlayerCMD_GiveWeapon", 0x233468, "script weapon assignment command", "function"),
+    ("G_Client", 0xF44980, "reported gclient base; data structure, not function", "data"),
+    ("G_Entity", 0xE04980, "reported gentity base; data structure, not function", "data"),
+    ("scrVmPub_t", 0x13C3140, "reported script VM public global; data, not function", "data"),
 )
+
+STRUCTURE_HINTS = (
+    {"name": "G_Client", "reported_base": "0xF44980", "reported_stride_bytes": 0x3700},
+    {"name": "G_Entity", "reported_base": "0xE04980", "reported_stride_bytes": 0x280},
+)
+
 
 TITLE_IDS = {
     "BLUS31270", "NPUB31301", "NPUB50021", "BLES01945", "BLES01948",
@@ -85,10 +94,11 @@ class Segment:
 @dataclass(frozen=True)
 class Mapping:
     virtual_address: int
-    file_offset: int
+    file_offset: int | None
     segment_index: int
     permissions: str
     executable: bool
+    file_backed: bool
 
 
 class PpuElf:
@@ -204,9 +214,30 @@ class PpuElf:
                 segment_index=segment.index,
                 permissions=segment.permissions,
                 executable=segment.executable,
+                file_backed=True,
             ))
         if len(matches) > 1:
             raise ElfFormatError(f"virtual address 0x{address:X} maps to overlapping PT_LOAD segments")
+        return matches[0] if matches else None
+
+    def map_memory_address(self, address: int) -> Mapping | None:
+        """Map a PT_LOAD address including its zero-filled BSS tail."""
+        matches: list[Mapping] = []
+        for segment in self.segments:
+            if segment.kind != PT_LOAD or not (segment.virtual_address <= address < segment.virtual_address + segment.memory_size):
+                continue
+            delta = address - segment.virtual_address
+            file_backed = delta < segment.file_size
+            matches.append(Mapping(
+                virtual_address=address,
+                file_offset=segment.file_offset + delta if file_backed else None,
+                segment_index=segment.index,
+                permissions=segment.permissions,
+                executable=segment.executable,
+                file_backed=file_backed,
+            ))
+        if len(matches) > 1:
+            raise ElfFormatError(f"virtual address 0x{address:X} maps to overlapping PT_LOAD memory segments")
         return matches[0] if matches else None
 
     def executable_ranges(self) -> list[tuple[int, int]]:
@@ -338,11 +369,12 @@ def inspect_file(
             "warning": "nearest OPD entry is only a navigation hint; OPD does not list every function",
         }
 
-    for name, reported_offset, purpose in CANDIDATES:
+    for name, reported_offset, purpose, kind in CANDIDATES:
         entry: dict[str, Any] = {
             "name": name,
             "reported_offset": f"0x{reported_offset:X}",
             "purpose": purpose,
+            "kind": kind,
             "direct_virtual_address": None,
             "rva_with_image_base": None,
             "mapping_status": "unmapped",
@@ -352,16 +384,17 @@ def inspect_file(
             addresses.append(("rva_with_image_base", image_base + reported_offset))
 
         for label, address in addresses:
-            mapping = elf.map_virtual_address(address)
+            mapping = elf.map_memory_address(address)
             if mapping is None:
                 continue
-            raw = data[mapping.file_offset:mapping.file_offset + max_bytes]
+            raw = data[mapping.file_offset:mapping.file_offset + max_bytes] if mapping.file_backed else None
             entry[label] = {
                 **asdict(mapping),
-                "file_offset": f"0x{mapping.file_offset:X}",
+                "file_offset": f"0x{mapping.file_offset:X}" if mapping.file_offset is not None else None,
                 "virtual_address": f"0x{mapping.virtual_address:X}",
-                "bytes": raw.hex(),
-                "function_context": describe_function(address) if mapping.executable else None,
+                "backing": "file" if mapping.file_backed else "zero_fill_bss",
+                "bytes": raw.hex() if raw is not None else None,
+                "function_context": describe_function(address) if mapping.executable and mapping.file_backed else None,
             }
             if mapping.executable:
                 entry["mapping_status"] = "mapped_executable"
@@ -371,7 +404,7 @@ def inspect_file(
 
     return {
         "tool": "ps3_elf_inspect",
-        "tool_version": "0.1.0",
+        "tool_version": "0.1.1",
         "input": {
             "file_name": file_path.name,
             "size_bytes": len(data),
@@ -403,6 +436,7 @@ def inspect_file(
             "image_base": f"0x{image_base:X}" if image_base is not None else None,
             "note": "Direct VA and RVA+image-base are tested separately. No image base is inferred.",
         },
+        "reported_structure_hints": list(STRUCTURE_HINTS),
         "candidate_offsets": candidates,
         "safety": [
             "Read-only inspection only; no bytes are changed.",
