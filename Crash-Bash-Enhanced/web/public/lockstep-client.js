@@ -73,6 +73,8 @@ export class BrowserLockstepClient {
     this.joinTimer = null;
     this.unsubscribers = [];
     this.lastError = "";
+    this.resolveWelcome = null;
+    this.rejectWelcome = null;
   }
 
   status(message, error = false) { this.onStatus(message, error); }
@@ -97,6 +99,10 @@ export class BrowserLockstepClient {
       this.phase = "joining";
       this.nonce = this.nonceFactory() >>> 0;
       this.joinDeadline = this.now() + this.joinTimeoutMs;
+      const welcomePromise = new Promise((resolve, reject) => {
+        this.resolveWelcome = resolve;
+        this.rejectWelcome = reject;
+      });
       this.sendJoin();
       this.joinTimer = setInterval(() => {
         if (this.phase !== "joining") return;
@@ -107,6 +113,9 @@ export class BrowserLockstepClient {
         this.sendJoin();
       }, 250);
       this.status("Connected to the room relay. Waiting for the PS3 host handshake…");
+      await welcomePromise;
+      this.resolveWelcome = null;
+      this.rejectWelcome = null;
       return this;
     } catch (error) {
       this.phase = "failed";
@@ -179,6 +188,7 @@ export class BrowserLockstepClient {
     if (this.joinTimer) clearInterval(this.joinTimer);
     this.joinTimer = null;
     this.status(`Joined the PS3 host as machine ${this.me + 1}. Waiting for lobby pings and save-slot checks…`);
+    this.resolveWelcome?.(welcome);
   }
 
   handlePing(packet) {
@@ -334,6 +344,9 @@ export class BrowserLockstepClient {
     if (["closed", "failed", "stopped"].includes(this.phase)) return;
     this.phase = "disconnected";
     this.clearTimers();
+    this.rejectWelcome?.(new Error("The room relay closed before the PS3 host handshake completed."));
+    this.resolveWelcome = null;
+    this.rejectWelcome = null;
     this.onStop({ reason: "relay-closed", event });
     this.status("The room relay disconnected. The browser game is paused; rejoin before starting another match.", true);
   }
@@ -341,6 +354,9 @@ export class BrowserLockstepClient {
   fail(message, sendBye = true) {
     if (["failed", "stopped", "closed"].includes(this.phase)) return;
     this.lastError = message;
+    this.rejectWelcome?.(new Error(message));
+    this.resolveWelcome = null;
+    this.rejectWelcome = null;
     if (sendBye && this.session) {
       try { this.send(encodeBye(this.session, this.me < 0 ? 0 : this.me, CBN1_BYE_REASONS.LEFT, this.next), "cbn1-bye"); } catch {}
     }
