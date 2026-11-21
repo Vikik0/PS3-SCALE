@@ -118,6 +118,10 @@ function startEmulator(primary, bios, externalFiles, blobUrls) {
   window.EJS_gameUrl = primary;
   window.EJS_biosUrl = bios || "";
   window.EJS_core = "psx";
+  window.EJS_defaultOptions = {
+    ...(window.EJS_defaultOptions || {}),
+    pcsx_rearmed_multitap: "port 1 only"
+  };
   window.EJS_pathtodata = DATA_PATH;
   window.EJS_externalFiles = externalFiles;
   window.EJS_startOnLoaded = true;
