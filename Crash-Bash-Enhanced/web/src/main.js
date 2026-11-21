@@ -136,9 +136,9 @@ function render() {
             <h1>GOOD TIMES.<br/><em>NO DISTANCE.</em></h1>
             <p>Bring the chaos back online. Create a room, invite your friends, and get the party started — no PSN sign-in required.</p>
             <div class="hero-stats">
-              <div><strong>04</strong><span>PLAYER ROOMS</span></div>
+              <div><strong>04</strong><span>OPEN ROOMS</span></div>
               <div><strong>00</strong><span>PSN REQUIRED</span></div>
-              <div><strong>∞</strong><span>REMATCHES</span></div>
+              <div><strong>01</strong><span>ACTIVE MATCH</span></div>
             </div>
           </div>
           <div class="hero-art" aria-hidden="true">
@@ -196,7 +196,7 @@ function render() {
         </section>
       </main>
 
-      <footer class="footer"><a class="brand footer-brand" href="#"><span class="brand-mark"><b>C</b><i></i></span><span class="brand-copy"><strong>CRASH BASH</strong><small>ENHANCED ONLINE</small></span></a><p>COMMUNITY PROJECT · NOT AFFILIATED WITH THE ORIGINAL GAME PUBLISHER</p><span>BUILD 0.1.0</span></footer>
+      <footer class="footer"><a class="brand footer-brand" href="#"><span class="brand-mark"><b>C</b><i></i></span><span class="brand-copy"><strong>CRASH BASH</strong><small>ENHANCED ONLINE</small></span></a><p>FREE COMMUNITY SERVICE · ONE ACTIVE MATCH · NOT AFFILIATED WITH THE ORIGINAL GAME PUBLISHER</p><span>BUILD 0.1.0</span></footer>
     </div>`;
 
   if (!API_BASE) {
