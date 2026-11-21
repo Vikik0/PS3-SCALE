@@ -133,7 +133,7 @@ def generate(font):
     with Image.open(PIC1_SOURCE) as source_file:
         source = source_file.convert("RGB")
     wallpaper = ImageOps.fit(
-        source, (1280, 720), method=Image.Resampling.LANCZOS
+        source, (1280, 720), method=Image.LANCZOS
     )
     wallpaper.save(PKG / "PIC1.PNG", format="PNG", optimize=True)
 
@@ -165,7 +165,7 @@ def generate(font):
     # PIC0 is the XMB preview tile: the same spiral-staircase scene with a
     # restrained PS3 SCALE identity panel on the right.
     pic0 = ImageOps.fit(
-        source, (310, 176), method=Image.Resampling.LANCZOS
+        source, (310, 176), method=Image.LANCZOS
     ).convert("RGBA")
     overlay = Image.new("RGBA", pic0.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
