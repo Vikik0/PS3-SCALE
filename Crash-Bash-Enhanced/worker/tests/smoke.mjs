@@ -5,6 +5,7 @@ import { CrashBashLobby } from "../src/index.js";
 globalThis.crypto ??= webcrypto;
 
 const data = new Map();
+const sockets = [];
 const ctx = {
   storage: {
     async get(key) {
@@ -13,8 +14,31 @@ const ctx = {
     async put(key, value) {
       data.set(key, structuredClone(value));
     }
+  },
+  getWebSockets() {
+    return sockets;
   }
 };
+
+class FakeSocket {
+  constructor(attachment) {
+    this.attachment = structuredClone(attachment);
+    this.sent = [];
+    this.closed = null;
+  }
+  deserializeAttachment() {
+    return structuredClone(this.attachment);
+  }
+  serializeAttachment(value) {
+    this.attachment = structuredClone(value);
+  }
+  send(value) {
+    this.sent.push(value);
+  }
+  close(code, reason) {
+    this.closed = { code, reason };
+  }
+}
 
 const lobby = new CrashBashLobby(ctx, {});
 async function call(path, method = "GET", body, token, extraHeaders = {}) {
@@ -90,6 +114,65 @@ for (const player of players.slice(0, 4)) {
 const started = await call("/v1/rooms/" + code + "/start", "POST", {}, players[0].token);
 assert.equal(started.status, 200);
 assert.equal(started.body.status, "running");
+
+// The room relay wraps opaque game packets with the authenticated sender ID.
+const relayA = new FakeSocket({
+  roomCode: code,
+  sessionId: players[0].session_id,
+  rateWindowStartedAt: 0,
+  rateCount: 0
+});
+const relayB = new FakeSocket({
+  roomCode: code,
+  sessionId: players[1].session_id,
+  rateWindowStartedAt: 0,
+  rateCount: 0
+});
+const otherRoom = new FakeSocket({
+  roomCode: "ZZZZZZ",
+  sessionId: players[2].session_id,
+  rateWindowStartedAt: 0,
+  rateCount: 0
+});
+sockets.push(relayA, relayB, otherRoom);
+lobby.webSocketMessage(relayA, new Uint8Array([0x10, 0x20, 0x30]).buffer);
+assert.equal(relayB.sent.length, 1);
+assert.equal(otherRoom.sent.length, 0);
+const relayed = new Uint8Array(relayB.sent[0]);
+assert.deepEqual(Array.from(relayed.slice(0, 4)), [0x43, 0x42, 0x52, 0x31]);
+assert.deepEqual(Array.from(relayed.slice(4, 20)), players[0].session_id.match(/../g).map(byte => Number.parseInt(byte, 16)));
+assert.deepEqual(Array.from(relayed.slice(20, 22)), [0, 3]);
+assert.deepEqual(Array.from(relayed.slice(22)), [0x10, 0x20, 0x30]);
+
+const textSocket = new FakeSocket({
+  roomCode: code,
+  sessionId: players[3].session_id,
+  rateWindowStartedAt: 0,
+  rateCount: 0
+});
+lobby.webSocketMessage(textSocket, "not a binary game packet");
+assert.equal(textSocket.closed.code, 1003);
+
+const largeSocket = new FakeSocket({
+  roomCode: code,
+  sessionId: players[3].session_id,
+  rateWindowStartedAt: 0,
+  rateCount: 0
+});
+lobby.webSocketMessage(largeSocket, new Uint8Array(1201).buffer);
+assert.equal(largeSocket.closed.code, 1009);
+
+const rateSocket = new FakeSocket({
+  roomCode: code,
+  sessionId: players[3].session_id,
+  rateWindowStartedAt: 0,
+  rateCount: 0
+});
+for (let i = 0; i < 6; i++) {
+  lobby.webSocketMessage(rateSocket, new Uint8Array([i]).buffer);
+}
+assert.equal(rateSocket.closed.code, 1008);
+assert.equal(rateSocket.closed.reason, "RATE_LIMITED");
 
 const invalidEndpoint = await call(
   "/v1/rooms/" + code + "/endpoint",
