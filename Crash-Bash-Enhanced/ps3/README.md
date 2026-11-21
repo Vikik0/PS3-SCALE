@@ -1,10 +1,11 @@
 # PS3 input bridge and netplay adapter
 
-This folder builds the first native PS3 PRX for Crash Bash Enhanced.
+This folder builds the process-local PS3 input bridge and a separate VSH-side PS3MAPI loader for Crash Bash Enhanced.
 
 ## Implemented in the current prototype
 
 - Hooks the process-local `cellPadGetData`, `cellPadGetDataExtra`, and `cellPadGetInfo2` function descriptors.
+- Builds a VSH-side loader that detects `ps1_emu`, `ps1_netemu`, and `ps1_newemu` processes and injects the input bridge through Cobra/Mamba PS3MAPI.
 - Keeps the physical DualShock controller as the local input source.
 - Exposes four standard PS1 controller ports to the PS1 emulator when online input is activated.
 - Integrates the upstream Crash Bash four-player deterministic UDP lockstep implementation from the pinned `../upstream/crash_bash_decomp` submodule.
@@ -22,7 +23,7 @@ This folder builds the first native PS3 PRX for Crash Bash Enhanced.
 - No TURN server is included. Relay mode is intended to avoid direct UDP/NAT traversal; packet loss, latency, reconnect behavior, and long-session stability still need real-network testing.
 - Memory-card save synchronization is stubbed as empty data. The first target should be same-build Battle/minigame sessions, not Adventure progression.
 - The PS1 RAM fingerprint uses a community-documented `ps1_netemu` 4.86 memory map. The page-attribute probe confirms that the range is mapped and readable, but it does not prove that the same offset is correct on every firmware/emulator revision. The exact 4.93 (or other target firmware) memory layout still needs hardware verification.
-- The exact PS1 emulator process, multitap behavior, title-region identity and controller-port mapping have not been verified on physical PS3 hardware.
+- The exact PS1 emulator process, multitap behavior, title-region identity and controller-port mapping have not been verified on physical PS3 hardware. The VSH loader currently detects PS1 emulator process names rather than Crash Bash serials, so it can load the inactive bridge into other PS1 emulator sessions as well.
 
 ## Target process
 
@@ -36,7 +37,7 @@ The module installs the hooks but leaves virtual-pad injection inactive until th
 make PS3DEV=/path/to/ps3dev PS3DK=/path/to/ps3dev/ps3dk
 ```
 
-GitHub Actions downloads the pinned PS3DK PPU toolchain, builds the runtime and import libraries, compiles the PRX, validates its import table, and uploads an unsigned PRX plus a fake-signed CFW development SPRX. A successful CI build proves compilation and PRX packaging only; it does not prove gameplay on hardware.
+GitHub Actions downloads the pinned PS3DK PPU toolchain, builds the runtime and import libraries, compiles both PRXs, validates their import tables, and uploads the unsigned PRXs plus fake-signed CFW development SPRXs. A successful CI build proves compilation and PRX packaging only; it does not prove gameplay on hardware.
 
 ## Network behavior
 
