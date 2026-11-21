@@ -36,7 +36,10 @@ $(BUILD)/net_adapter.o: net_adapter.c net_adapter.h input_hook.h compat/SDL3/SDL
 $(BUILD)/netdb_compat.o: netdb_compat.c compat/netdb.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/crash_bash_input.elf: $(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(CRT) $(PRX_LD) $(PRX_SPECS)
+$(BUILD)/thread_compat.o: thread_compat.c | $(BUILD)
+	$(PPU_CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/crash_bash_input.elf: $(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(BUILD)/thread_compat.o $(CRT) $(PRX_LD) $(PRX_SPECS)
 	$(PPU_CC) -nostdlib -nostartfiles -specs=$(PRX_SPECS) \
 		-Wl,-q -Wl,--no-warn-rwx-segments -Wl,-T,$(PRX_LD) \
 		$(BUILD)/module.o $(BUILD)/input_hook.o $(BUILD)/net_adapter.o $(BUILD)/netdb_compat.o $(CRT) $(NET_LIBS) -o $@
