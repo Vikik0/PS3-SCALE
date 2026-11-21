@@ -257,7 +257,7 @@ export class CrashBashLobby {
     }
   }
 
-  webSocketMessage(socket, message) {
+  async webSocketMessage(socket, message) {
     let attachment;
     try {
       attachment = socket.deserializeAttachment();
@@ -289,6 +289,32 @@ export class CrashBashLobby {
     if (typeof message === "string") {
       if (message === "PING") {
         socket.send("PONG");
+        return;
+      }
+      if (message === "START") {
+        const state = await this.load();
+        const room = state.rooms[attachment.roomCode];
+        if (!room || room.hostSessionId !== attachment.sessionId) {
+          socket.send("ERROR:NOT_HOST");
+          return;
+        }
+        if (room.status !== "waiting") {
+          socket.send("ERROR:ROOM_NOT_WAITING");
+          return;
+        }
+        if (room.players.length < 2 || !room.players.every(player => player.ready)) {
+          socket.send("ERROR:PLAYERS_NOT_READY");
+          return;
+        }
+        if (Object.values(state.rooms).filter(item => item.status === "running").length >= MAX_ACTIVE_MATCHES) {
+          socket.send("ERROR:FREE_TIER_MATCH_LIMIT");
+          return;
+        }
+        room.status = "running";
+        room.startedAt = Date.now();
+        await this.save(state);
+        this.broadcastRoomUpdate(room);
+        socket.send("STARTED");
         return;
       }
       socket.close(1003, "BINARY_PACKETS_REQUIRED");
