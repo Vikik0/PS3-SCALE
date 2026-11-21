@@ -1,7 +1,16 @@
 #include "local_input.h"
 
 #include <cell/pad.h>
-#include <string.h>
+#include <stddef.h>
+
+static void ghc_zero_memory(void *memory, size_t length)
+{
+    volatile uint8_t *bytes = (volatile uint8_t *)memory;
+    while (length > 0u) {
+        *bytes++ = 0u;
+        --length;
+    }
+}
 
 int ghc_local_input_poll_ps3(GhcLocalInputSnapshot *snapshot)
 {
@@ -11,7 +20,7 @@ int ghc_local_input_poll_ps3(GhcLocalInputSnapshot *snapshot)
     if (!snapshot) return GHC_LOCAL_INPUT_ERROR_ARGUMENT;
 
     ghc_local_input_snapshot_clear(snapshot);
-    memset(&info, 0, sizeof(info));
+    ghc_zero_memory(&info, sizeof(info));
 
     /* The title owns sys_io/cellPad initialization and shutdown. */
     if (cellPadGetInfo2(&info) != CELL_PAD_OK) {
@@ -24,7 +33,7 @@ int ghc_local_input_poll_ps3(GhcLocalInputSnapshot *snapshot)
 
         if ((info.port_status[port] & CELL_PAD_STATUS_CONNECTED) == 0u) continue;
 
-        memset(&data, 0, sizeof(data));
+        ghc_zero_memory(&data, sizeof(data));
         if (cellPadGetData(port, &data) != CELL_PAD_OK) {
             snapshot->read_error_mask |= (uint8_t)(1u << port);
             continue;

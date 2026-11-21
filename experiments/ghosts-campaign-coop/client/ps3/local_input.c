@@ -1,7 +1,5 @@
 #include "local_input.h"
 
-#include <string.h>
-
 #define GHC_PAD_INDEX_DIGITAL1 2u
 #define GHC_PAD_INDEX_DIGITAL2 3u
 #define GHC_PAD_INDEX_RIGHT_X 4u
@@ -34,13 +32,31 @@ static void ghc_map_button(uint32_t *buttons, uint16_t raw, uint16_t mask, uint3
     if ((raw & mask) != 0u) *buttons |= mapped;
 }
 
+static void ghc_local_player_clear(GhcLocalPlayerInput *player, uint8_t port)
+{
+    player->connected = 0u;
+    player->port = port;
+    player->left_x = 0u;
+    player->left_y = 0u;
+    player->right_x = 0u;
+    player->right_y = 0u;
+    player->l2_pressure = 0u;
+    player->r2_pressure = 0u;
+    player->digital1 = 0u;
+    player->digital2 = 0u;
+    player->buttons = 0u;
+}
+
 void ghc_local_input_snapshot_clear(GhcLocalInputSnapshot *snapshot)
 {
     uint32_t i;
     if (!snapshot) return;
-    memset(snapshot, 0, sizeof(*snapshot));
+    snapshot->connected_mask = 0u;
+    snapshot->connected_count = 0u;
+    snapshot->read_error_mask = 0u;
+    snapshot->reserved = 0u;
     for (i = 0; i < GHC_LOCAL_INPUT_PLAYER_COUNT; ++i) {
-        snapshot->players[i].port = (uint8_t)i;
+        ghc_local_player_clear(&snapshot->players[i], (uint8_t)i);
     }
 }
 
@@ -56,9 +72,7 @@ int ghc_local_input_decode_port(
         return GHC_LOCAL_INPUT_ERROR_ARGUMENT;
     }
 
-    memset(output, 0, sizeof(*output));
-    output->port = port;
-
+    ghc_local_player_clear(output, port);
     if (!connected) return GHC_LOCAL_INPUT_OK;
 
     if (!button_data || data_length < 8 || data_length > (int32_t)GHC_PAD_BUTTON_DATA_COUNT) {
