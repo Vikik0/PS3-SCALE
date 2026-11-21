@@ -22,7 +22,7 @@ Do not spend Phase 1 effort deploying online services or implementing NAT traver
 
 ## Research findings
 
-- Community reports for the PS3 release describe two-player offline local play in Multiplayer, Squads and Extinction. This is a lead for reusing Ghosts' existing local-player initialization; it is not proof that Campaign can accept a second player.
+- PS3 patch notes explicitly mention a split-screen UI fix, and community reports describe two-player offline local play in Multiplayer, Squads and Extinction. This is a lead for reusing Ghosts' existing local-player initialization; it is not proof that Campaign can accept a second player.
 - The original Campaign is documented as single-player. Adding a second Campaign participant requires engine/gameplay integration.
 - Ghosts PS3 IW6 FastFiles can be decompressed and inspected, but the documented retail container is signed and cannot be rebuilt/re-signed without the publisher's private signing key. A simple extract-edit-repack GSC workflow is therefore not a viable assumption.
 - GSC Tool supports IW6 scripts on PS3 for compile/decompile work. This does not itself solve signed FastFile repackaging.

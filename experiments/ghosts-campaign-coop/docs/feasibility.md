@@ -18,7 +18,7 @@ Online networking is not the current blocker because it is deferred until the lo
 
 ## Public research findings
 
-1. PS3 community reports list Multiplayer, Squads and Extinction as offline local modes with one or two players. Treat this as a lead to verify on the exact PS3 build, not as proof of Campaign support.
+1. PS3 title-update notes explicitly mention a split-screen UI fix, and community reports list Multiplayer, Squads and Extinction as offline local modes with one or two players. Treat this as a lead to verify on the exact PS3 build, not as proof of Campaign support.
 2. The original Campaign is single-player. No public source located in this research demonstrates an existing two-player Campaign mode.
 3. Ghosts uses the IW6 engine. GSC Tool documents IW6 script compile/decompile support for PS3.
 4. Public PS3 IW6 FastFile research documents the retail container as signed. It can be decompressed and inspected, but cannot be rebuilt/re-signed without the publisher's private key. GSC compilation alone does not solve this.

@@ -9,6 +9,7 @@
 
 ## Local multiplayer behavior
 
+- PS3 title-update notes mention a split-screen UI fix: https://www.playstationtrophies.org/news/news-11737-call-of-duty-ghosts-updated-on-ps3-ps4.html
 - PS3 GameFAQs Q&A reports Multiplayer, Squads and Extinction available offline with one or two local players: https://gamefaqs.gamespot.com/ps3/703505-call-of-duty-ghosts/answers/361457-can-the-multiplayer-played-offline
 - MobyGames PS3 technical specs list DualShock 3, same/split-screen and 1–2 offline players: https://www.mobygames.com/game/64165/call-of-duty-ghosts/specs/ps3/
 - Campaign single-player status and distinction from Extinction co-op: https://codghost.net/faq/

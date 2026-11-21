@@ -17,7 +17,7 @@ Online co-op is Phase 2 and does not begin until the local proof of concept work
 
 Ghosts already has offline local-play modes reported to support two players. The most valuable starting point is the native second-player setup used by those modes: local player slots, controller assignment, player state, camera/viewports and HUD. Reusing that machinery is more promising than spawning a generic soldier entity and trying to turn it into a player.
 
-The PS3 GameFAQs Q&A and MobbyGames technical entry are community/database references, not official proof of every mode on every region. The exact local modes must be confirmed against the target PS3 build.
+The PS3 title-update notes include a fix for a split-screen UI issue, which confirms the PS3 game has split-screen UI behavior. A PS3 GameFAQs Q&A also reports local two-player Multiplayer, Squads and Extinction. These sources support investigating the native local-player path, but do not prove Campaign can use it. The exact local modes must be confirmed against the target PS3 build.
 
 ## Research completed
 
