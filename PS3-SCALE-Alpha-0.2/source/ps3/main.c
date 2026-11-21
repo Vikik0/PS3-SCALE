@@ -6055,7 +6055,9 @@ int main(int argc, char *argv[])
                 g_fps_control_selection = 1;
 
             if (cross && !old_cross) {
-                if (g_profile_confirm_pending) {
+                if (g_profile_arm_running || g_profile_arm_done) {
+                    set_details_message("WAIT FOR PROFILE ARMING TO FINISH.");
+                } else if (g_profile_confirm_pending) {
                     set_details_message("PRESS TRIANGLE TO CONFIRM OR CIRCLE TO CANCEL.");
                 } else if (!game || !game_is_ps3(game)) {
                     set_details_message("FPS CONTROL REQUIRES A SELECTED PS3 GAME.");
@@ -6101,7 +6103,9 @@ int main(int argc, char *argv[])
             }
 
             if (square && !old_square) {
-                if (!game || !game_is_ps3(game)) {
+                if (g_profile_arm_running || g_profile_arm_done) {
+                    set_details_message("WAIT FOR PROFILE ARMING TO FINISH.");
+                } else if (!game || !game_is_ps3(game)) {
                     set_details_message("NO PS3 GAME SELECTED.");
                 } else {
                     state = profile_script_state_for_game(game, profile);
