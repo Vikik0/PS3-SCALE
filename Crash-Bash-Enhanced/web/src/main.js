@@ -51,7 +51,10 @@ async function api(path, { method = "GET", body } = {}) {
     body: body === undefined ? undefined : JSON.stringify(body)
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.message || data.error || `Request failed (${response.status})`);
+  if (!response.ok) {
+    if (response.status === 401) clearSession();
+    throw new Error(data.message || data.error || `Request failed (${response.status})`);
+  }
   return data;
 }
 
@@ -201,9 +204,9 @@ function render() {
   }
 }
 
-async function ensureSession() {
+async function ensureSession(displayName = "") {
   if (state.session?.token) return state.session;
-  const name = document.querySelector("#display-name")?.value?.trim() || "Player";
+  const name = displayName || document.querySelector("#display-name")?.value?.trim() || "Player";
   const session = await api("/v1/sessions", {
     method: "POST",
     body: { mode: "guest", display_name: name }
@@ -214,17 +217,20 @@ async function ensureSession() {
 
 async function runAction(action) {
   if (state.loading) return;
+  const displayName = document.querySelector("#display-name")?.value?.trim() || "";
+  const selectedLimit = document.querySelector("#player-limit")?.value || "4";
+  const enteredCode = enteredCode;
   state.loading = true;
   state.error = "";
   render();
   try {
     if (action === "create") {
-      await ensureSession();
-      const maxPlayers = Number(document.querySelector("#player-limit")?.value || 4);
+      await ensureSession(displayName);
+      const maxPlayers = Number(selectedLimit || 4);
       state.room = await api("/v1/rooms", { method: "POST", body: { max_players: maxPlayers, is_private: true, mode: "party" } });
       beginPolling();
     } else if (action === "join") {
-      await ensureSession();
+      await ensureSession(displayName);
       const code = document.querySelector("#room-code-input")?.value?.trim().toUpperCase() || "";
       if (!/^[A-Z0-9]{6}$/.test(code)) throw new Error("Enter a valid six-character room code.");
       state.room = await api(`/v1/rooms/${code}/join`, { method: "POST", body: {} });
@@ -246,7 +252,7 @@ async function runAction(action) {
         state.room = null;
         stopPolling();
       } else {
-        await ensureSession();
+        await ensureSession(displayName);
       }
     } else if (action === "dismiss-error") {
       state.error = "";
