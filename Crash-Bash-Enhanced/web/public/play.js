@@ -7,12 +7,12 @@ const gameWrap = document.querySelector("#game-wrap");
 
 let loaderScript = null;
 let emulatorStarted = false;
-let localObjectUrls = [];
+let activeBlobUrls = [];
 let loadTimeout = null;
 
 function releaseLocalObjectUrls() {
-  for (const url of localObjectUrls) URL.revokeObjectURL(url);
-  localObjectUrls = [];
+  for (const url of activeBlobUrls) URL.revokeObjectURL(url);
+  activeBlobUrls = [];
   if (loadTimeout) clearTimeout(loadTimeout);
   loadTimeout = null;
 }
@@ -39,41 +39,47 @@ async function buildExternalFiles(primary, files) {
   const external = {};
   const selectedByName = new Map();
   const urlByFile = new Map();
+  const blobUrls = [];
 
-  for (const file of files) {
-    if (file === primary) continue;
-    const key = file.name.toLowerCase();
-    if (selectedByName.has(key)) {
-      throw new Error(`More than one selected file is named "${file.name}". Rename the duplicate before loading.`);
+  try {
+    for (const file of files) {
+      if (file === primary) continue;
+      const key = file.name.toLowerCase();
+      if (selectedByName.has(key)) {
+        throw new Error(`More than one selected file is named "${file.name}". Rename the duplicate before loading.`);
+      }
+      selectedByName.set(key, file);
+      const url = URL.createObjectURL(file);
+      blobUrls.push(url);
+      urlByFile.set(file, url);
+      external[file.name] = url;
     }
-    selectedByName.set(key, file);
-    const url = URL.createObjectURL(file);
-    localObjectUrls.push(url);
-    urlByFile.set(file, url);
-    external[file.name] = url;
-  }
 
-  if (extension(primary) !== "cue") return external;
+    if (extension(primary) === "cue") {
+      const cue = await primary.text();
+      const references = [...cue.matchAll(/^\s*FILE\s+(?:"([^"]+)"|(\S+))\s+\w+/gim)]
+        .map(match => match[1] || match[2]);
 
-  const cue = await primary.text();
-  const references = [...cue.matchAll(/^\\s*FILE\\s+(?:"([^"]+)"|(\\S+))\\s+\\w+/gim)]
-    .map(match => match[1] || match[2]);
+      if (!references.length) {
+        throw new Error("The selected CUE file does not contain any FILE track entries.");
+      }
 
-  if (!references.length) {
-    throw new Error("The selected CUE file does not contain any FILE track entries.");
-  }
-
-  for (const reference of references) {
-    const basename = reference.split(/[\\\\/]/).pop().toLowerCase();
-    const match = selectedByName.get(basename);
-    if (!match) {
-      throw new Error(`The CUE file references "${reference}", but that file was not selected.`);
+      for (const reference of references) {
+        const basename = reference.split(/[\\/]/).pop().toLowerCase();
+        const match = selectedByName.get(basename);
+        if (!match) {
+          throw new Error(`The CUE file references "${reference}", but that file was not selected.`);
+        }
+        external[reference] = urlByFile.get(match);
+      }
     }
-    external[reference] = urlByFile.get(match);
+
+    return { external, blobUrls };
+  } catch (error) {
+    blobUrls.forEach(url => URL.revokeObjectURL(url));
+    throw error;
   }
-  return external;
 }
-
 function applyPadState(slot, buttons, sticks = [128, 128, 128, 128]) {
   const emulator = window.EJS_emulator;
   const gameManager = emulator?.gameManager;
@@ -127,6 +133,8 @@ function exposeBrowserInputBridge() {
 
 function startEmulator(primary, bios, externalFiles, blobUrls) {
   if (loaderScript) loaderScript.remove();
+  releaseLocalObjectUrls();
+  activeBlobUrls = blobUrls;
   emulatorStarted = false;
   gameWrap.hidden = false;
   document.querySelector("#game").replaceChildren();
@@ -152,7 +160,7 @@ function startEmulator(primary, bios, externalFiles, blobUrls) {
     const began = Date.now();
     const expose = () => {
       if (exposeBrowserInputBridge()) {
-        blobUrls.forEach(URL.revokeObjectURL);
+        releaseLocalObjectUrls();
         return;
       }
       if (Date.now() - began < 10000) {
@@ -168,8 +176,6 @@ function startEmulator(primary, bios, externalFiles, blobUrls) {
     startButton.disabled = false;
     releaseLocalObjectUrls();
     window.CBASH_EMULATOR_READY = false;
-    startButton.disabled = false;
-    blobUrls.forEach(URL.revokeObjectURL);
     setStatus("Emulator closed. Your disc image and BIOS remain on this device.");
   };
 
@@ -178,13 +184,19 @@ function startEmulator(primary, bios, externalFiles, blobUrls) {
   loaderScript.async = true;
   loaderScript.onerror = () => {
     startButton.disabled = false;
-    blobUrls.forEach(URL.revokeObjectURL);
+    releaseLocalObjectUrls();
     setStatus("Could not load the EmulatorJS runtime CDN. Check the internet connection and try again.", true);
   };
   document.body.appendChild(loaderScript);
+  loadTimeout = setTimeout(() => {
+    if (emulatorStarted) return;
+    startButton.disabled = false;
+    if (loaderScript) loaderScript.remove();
+    releaseLocalObjectUrls();
+    setStatus("The PlayStation runtime did not finish loading. Check the selected disc files and try again.", true);
+  }, 60000);
   setStatus("Loading the PlayStation runtime and your local disc image…");
 }
-
 gameInput.addEventListener("change", () => {
   const files = Array.from(gameInput.files || []);
   const primary = selectedGame(files);
@@ -210,10 +222,13 @@ startButton.addEventListener("click", async () => {
 
   startButton.disabled = true;
   try {
+    window.EJS_emulator?.gameManager?.exit?.();
+    releaseLocalObjectUrls();
     const { external, blobUrls } = await buildExternalFiles(primary, files);
     const bios = biosInput.files?.[0] || "";
     startEmulator(primary, bios, external, blobUrls);
   } catch (error) {
+    releaseLocalObjectUrls();
     startButton.disabled = false;
     setStatus(error.message || "Could not prepare the selected disc files.", true);
   }
