@@ -128,6 +128,7 @@ static char g_community_download_url[1024];
 static char g_community_download_path[PS3SCALE_PATH_MAX];
 static char g_community_download_temp_path[PS3SCALE_PATH_MAX];
 static int g_community_download_persistent = 0;
+static unsigned long g_community_download_expected_size = 0;
 static char g_search[64] = "";
 static u32 *g_font_texture = NULL;
 static ya2d_Texture *g_cover_texture = NULL;
@@ -3323,6 +3324,12 @@ static void community_download_worker(void *arg)
                 (unsigned long)file_size > PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT ||
                 fseek(fp, 0, SEEK_SET) != 0) {
                 result = -3;
+            } else if (g_community_download_expected_size == 0 ||
+                       (unsigned long)file_size !=
+                           g_community_download_expected_size) {
+                /* The index is the identity/size snapshot for this file.
+                   Reject a changed upstream file instead of installing it. */
+                result = -6;
             } else {
                 int text_file = 1;
                 got = fread(header, 1, sizeof(header), fp);
@@ -3451,9 +3458,10 @@ static void start_community_file_download(
                  "DOWNLOAD REJECTED: UNSAFE GITHUB PATH.");
         return;
     }
-    if (entry->file_size > PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT) {
+    if (entry->file_size == 0 ||
+        entry->file_size > PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT) {
         snprintf(g_online_message, sizeof(g_online_message),
-                 "DOWNLOAD REJECTED: FILE EXCEEDS 2 MB LIMIT.");
+                 "DOWNLOAD REJECTED: INVALID OR OVERSIZED FILE.");
         return;
     }
     dot = strrchr(entry->path, '.');
@@ -3558,6 +3566,7 @@ static void start_community_file_download(
     }
 
     g_community_download_persistent = g_enhancement_persistent;
+    g_community_download_expected_size = entry->file_size;
     g_community_download_result = -1;
     g_community_downloaded = 0;
     g_community_download_total = 0;
@@ -3571,6 +3580,7 @@ static void start_community_file_download(
         g_community_download_running = 0;
         g_community_downloaded = 0;
         g_community_download_total = 0;
+        g_community_download_expected_size = 0;
         g_network_task_running = 0;
         snprintf(g_online_message, sizeof(g_online_message),
                  "COULD NOT START COMMUNITY DOWNLOAD WORKER.");
@@ -3611,10 +3621,14 @@ static void service_community_download(void)
     } else if (g_community_download_result == -5) {
         snprintf(g_online_message, sizeof(g_online_message),
                  "DOWNLOAD VALIDATED BUT COULD NOT BE SAVED.");
+    } else if (g_community_download_result == -6) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "SOURCE SIZE MISMATCH. REFRESH ONLINE DB AND RETRY.");
     } else {
         snprintf(g_online_message, sizeof(g_online_message),
                  "COMMUNITY NCL DOWNLOAD FAILED. CHECK NETWORK AND SOURCE.");
     }
+    g_community_download_expected_size = 0;
     g_community_download_done = 0;
     g_community_downloaded = 0;
     g_community_download_total = 0;
