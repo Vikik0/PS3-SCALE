@@ -97,3 +97,14 @@ client/ps3/gsc/ghc_campaign_local_session.gsc
 
 هذا منطق قابل للاختبار الآن، لكنه لم يُربط بعد بكود Clockwork GSC الأصلي؛ لا أعتبر Drill co-op منتهياً قبل ربطه واختباره داخل اللعبة.
 
+## 4. أداة البحث عن منطق Multiplayer الأصلي
+
+أضفت مسار تحليل جديداً حتى لا نضطر للبحث اليدوي العشوائي داخل ELF:
+
+- tools/ghidra/ExportGhostsPpuFunctionInventory.java يصدر قائمة دوال من كل ELF بعد تحليله في Ghidra.
+- tools/compare_ppu_function_inventories.py يقارن بصمات الدوال بين Campaign وMultiplayer، ويعرض الدوال الموجودة في Multiplayer فقط، ويرتب المرشحات المرتبطة بـLocal Client وController وPlayer وCamera وHUD وInput.
+
+بهذا نقدر نحدد الدوال المشتركة التي يمكن إعادة استخدامها، والدوال الخاصة بـMultiplayer التي تستحق فحصاً أعمق. الأداة لا تعطي Hook جاهزاً ولا تسمح بنسخ دالة قبل التأكد من TOC والـimports والـcalling convention وسياق التشغيل.
+
+هذه الخطوة مهمة لأنها تنفذ اقتراحك مباشرة: البحث عن منطق اللاعبين المحليين الموجود أصلاً في Multiplayer، ثم تحديد أقل جزء يمكن نقله أو استدعاؤه من Campaign.
+
