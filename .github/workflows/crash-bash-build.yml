@@ -80,6 +80,7 @@ jobs:
           PKG="Crash-Bash-Enhanced/crashbash.pkg"
           MAGIC="$(od -An -tx1 -N4 "$PKG" | tr -d ' \\n')"
           REVISION="$(od -An -tx1 -j4 -N2 "$PKG" | tr -d ' \\n')"
+          printf 'Native lobby PKG magic=%s revision=%s\\n' "$MAGIC" "$REVISION"
           test "$MAGIC" = "7f504b47"
           test "$REVISION" = "8000"
           mkdir -p Crash-Bash-Enhanced/build-artifacts
