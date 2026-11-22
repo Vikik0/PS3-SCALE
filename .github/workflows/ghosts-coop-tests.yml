@@ -93,6 +93,18 @@ jobs:
               assert len(binary) == manifest["compiled_gscbin_bytes"], "session bridge bytecode size mismatch"
           print(f"Session bridge build observed: source_sha256={source_hash}, binary_sha256={binary_hash}, binary_bytes={len(binary)}")
           PY
+      - name: Compile and round-trip Clockwork NVG player helper fixture
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cd tests/fixtures
+          gsc-tool --mode comp --game iw6 --system ps3 clockwork_nvg_player.gsc
+          test -s compiled/iw6/clockwork_nvg_player.gscbin
+          cp compiled/iw6/clockwork_nvg_player.gscbin /tmp/clockwork-nvg-original.gscbin
+          gsc-tool --mode decomp --game iw6 --system ps3 compiled/iw6/clockwork_nvg_player.gscbin
+          test -s decompiled/iw6/clockwork_nvg_player.gsc
+          grep -q 'level.playengineeffects' decompiled/iw6/clockwork_nvg_player.gsc
+          gsc-tool --mode comp --game iw6 --system ps3 decompiled/iw6/clockwork_nvg_player.gsc
+          cmp /tmp/clockwork-nvg-original.gscbin compiled/iw6/clockwork_nvg_player.gscbin
       - uses: actions/upload-artifact@v6
         with:
           name: ghosts-campaign-gsc-registry
