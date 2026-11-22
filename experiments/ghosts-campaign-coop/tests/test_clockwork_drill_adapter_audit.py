@@ -202,11 +202,19 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
             '{\n'
             '    ghc_campaign_drill_abort_player( player );\n'
             '}\n'
-        ), require_reference_baseline=True)
+        ), reference_source=self.source, require_reference_baseline=True)
 
         self.assertEqual(report["status"], "SOURCE_BASELINE_MISMATCH")
         self.assertFalse(report["reference_baseline"]["matches"])
         self.assertIn("handle_drill_spot", report["reference_baseline"]["mismatches"])
+
+    def test_strict_mode_requires_an_original_reference_source(self):
+        report = audit(self.write_source(
+            'handle_drill_spot()\\n{\\n}\\n'
+            'handle_drilling()\\n{\\n}\\n'
+        ), require_reference_baseline=True)
+        self.assertEqual(report["status"], "SOURCE_REFERENCE_MISSING")
+        self.assertFalse(report["reference_baseline"]["provided"])
 
     def test_missing_misc_drill_details_is_reported_as_incomplete_source(self):
         self.source.write_text(
