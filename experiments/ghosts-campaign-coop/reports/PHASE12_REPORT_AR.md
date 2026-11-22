@@ -44,7 +44,7 @@ client/ps3/gsc/ghc_campaign_local_session.gsc
 
 ### 3. الاختبارات والبناء
 
-نجح GitHub Actions run 45032056333 في الوظائف الخمس:
+نجح GitHub Actions run 45032170463 في الوظائف الخمس:
 
 - 162 اختبار Python ناجح.
 - اختبارات C الخاصة بالبروتوكول ومنطق ملكية التفاعلات ناجحة.
@@ -61,7 +61,7 @@ a06ed224cd9bb1fc24ecccba46f38da87263abc4137ffdbdb27c2bbc8696240f
 
 73e6e6185ca31738de6b525b7919ff612fce663cc6d9215dcb25a4b1c36552d1
 
-حزمة البناء موجودة ضمن GitHub Actions artifact باسم ghosts-campaign-gsc-session-bridge، رقم 14757916996.
+حزمة البناء موجودة ضمن GitHub Actions artifact باسم ghosts-campaign-gsc-session-bridge، رقم 14758431413.
 
 ### 4. ما لم يصبح جاهزاً بعد
 
