@@ -117,9 +117,9 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
 
     def test_original_single_player_method_reference_blocks_player_scoping(self):
         source = passing_source().replace(
-            '    level.ghc_clockwork_drill_activator = drill_player;\n',
+            '    level.ghc_clockwork_drill_activator = drill_activator;\n',
             '    level.player getcurrentweapon();\n'
-            '    level.ghc_clockwork_drill_activator = drill_player;\n',
+            '    level.ghc_clockwork_drill_activator = drill_activator;\n',
         )
         report = audit(self.write_source(source))
         self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
@@ -158,9 +158,8 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
 
     def test_drill_worker_does_not_wait_forever_on_a_cleared_start_flag(self):
         source = passing_source().replace(
-            '    if ( player adsbuttonpressed( "ads" ) )\n',
-            '    common_scripts\\\\utility::flag_wait( var_1 );\n'
-            '    if ( player adsbuttonpressed( "ads" ) )\n',
+            'handle_drilling( var_0, var_1, player )\n{',
+            'handle_drilling( var_0, var_1, player )\n{\n    flag_wait( var_1 );',
         )
         report = audit(self.write_source(source))
         self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
