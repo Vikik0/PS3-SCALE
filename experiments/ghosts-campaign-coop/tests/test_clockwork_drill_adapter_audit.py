@@ -17,9 +17,9 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
     def write_source(self, content):
         if "handle_misc_drill_details(" not in content:
             content += (
-                "\\nhandle_misc_drill_details()\\n"
-                "{\\n"
-                "}\\n"
+                "\nhandle_misc_drill_details()\n"
+                "{\n"
+                "}\n"
             )
         self.source.write_text(content, encoding="utf-8")
         return self.source
@@ -166,20 +166,20 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
 
     def test_related_drill_support_functions_are_audited_as_independent_roots(self):
         report = audit(self.write_source(
-            'handle_drill_spot( player, spot )\\n'
-            '{\\n'
-            '    ghc_campaign_drill_begin( player, spot );\\n'
-            '    thread handle_drilling( player, spot );\\n'
-            '}\\n'
-            'handle_drilling( player, spot )\\n'
-            '{\\n'
-            '    ghc_campaign_drill_complete( player, spot );\\n'
-            '    ghc_campaign_drill_cancel( player, spot );\\n'
-            '}\\n'
-            'drillthrough_plate_sound()\\n'
-            '{\\n'
-            '    level.player maps\\\\::play_sound( "drill" );\\n'
-            '}\\n'
+            'handle_drill_spot( player, spot )\n'
+            '{\n'
+            '    ghc_campaign_drill_begin( player, spot );\n'
+            '    thread handle_drilling( player, spot );\n'
+            '}\n'
+            'handle_drilling( player, spot )\n'
+            '{\n'
+            '    ghc_campaign_drill_complete( player, spot );\n'
+            '    ghc_campaign_drill_cancel( player, spot );\n'
+            '}\n'
+            'drillthrough_plate_sound()\n'
+            '{\n'
+            '    level.player maps\\\\::play_sound( "drill" );\n'
+            '}\n'
         ))
 
         self.assertIn("drillthrough_plate_sound", report["related_function_details"])
@@ -189,19 +189,19 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
 
     def test_strict_mode_rejects_a_source_that_does_not_match_the_clockwork_reference(self):
         report = audit(self.write_source(
-            'handle_drill_spot( player, spot )\\n'
-            '{\\n'
-            '    ghc_campaign_drill_begin( player, spot );\\n'
-            '}\\n'
-            'handle_drilling( player, spot )\\n'
-            '{\\n'
-            '    ghc_campaign_drill_complete( player, spot );\\n'
-            '    ghc_campaign_drill_cancel( player, spot );\\n'
-            '}\\n'
-            'cleanup_drill( player )\\n'
-            '{\\n'
-            '    ghc_campaign_drill_abort_player( player );\\n'
-            '}\\n'
+            'handle_drill_spot( player, spot )\n'
+            '{\n'
+            '    ghc_campaign_drill_begin( player, spot );\n'
+            '}\n'
+            'handle_drilling( player, spot )\n'
+            '{\n'
+            '    ghc_campaign_drill_complete( player, spot );\n'
+            '    ghc_campaign_drill_cancel( player, spot );\n'
+            '}\n'
+            'cleanup_drill( player )\n'
+            '{\n'
+            '    ghc_campaign_drill_abort_player( player );\n'
+            '}\n'
         ), require_reference_baseline=True)
 
         self.assertEqual(report["status"], "SOURCE_BASELINE_MISMATCH")
@@ -210,8 +210,8 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
 
     def test_missing_misc_drill_details_is_reported_as_incomplete_source(self):
         self.source.write_text(
-            'handle_drill_spot()\\n{\\n}\\n'
-            'handle_drilling()\\n{\\n}\\n',
+            'handle_drill_spot()\n{\n}\n'
+            'handle_drilling()\n{\n}\n',
             encoding="utf-8",
         )
         report = audit(self.source)
