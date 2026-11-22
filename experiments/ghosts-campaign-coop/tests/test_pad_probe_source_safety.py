@@ -19,6 +19,12 @@ class PadProbeSourceSafetyTests(unittest.TestCase):
         self.assertIn("if (!select_mode())", source)
         self.assertIn("return SYS_PRX_RESIDENT;", source)
 
+    def test_mode_parser_rejects_internal_whitespace_instead_of_truncating(self):
+        source = (PROBE / "module.c").read_text(encoding="utf-8")
+        self.assertIn("while (length > 0u)", source)
+        self.assertIn("for (i = 0; i < length; ++i)", source)
+        self.assertIn("return 0;", source)
+
     def test_campaign_and_multiplayer_logs_are_separate(self):
         source = (PROBE / "module.c").read_text(encoding="utf-8")
         self.assertIn("ghosts_campaign_pad_probe.log", source)
