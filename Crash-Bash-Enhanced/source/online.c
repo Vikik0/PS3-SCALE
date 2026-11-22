@@ -137,6 +137,8 @@ static int parse_session(const char *json, CBOnlineSession *session) {
 static int parse_heartbeat(const char *json, CBOnlineRoomView *view) {
     cb_json_token tokens[CB_JSON_TOKEN_COUNT]; int count = cb_json_parse(json, tokens, CB_JSON_TOKEN_COUNT);
     int players; if (count <= 0 || !view) return -1;
+    get_string_field(json, tokens, count, 0, "hostPlayerId",
+                     view->host_player_id, sizeof(view->host_player_id));
     players = cb_json_object_get(json, tokens, count, 0, "players");
     parse_players(json, tokens, count, players, view); return 0;
 }
