@@ -8,7 +8,11 @@ def write_log(root: Path, name: str, samples, mode=None, include_ports=True):
     path = root / name
     lines = ["Ghosts Campaign Co-op Pad Probe v4", "READ_ONLY=1"]
     if mode:
-        lines.append(f"MODE={mode}")
+        lines.extend([
+            f"MODE={mode}",
+            "MODE_SOURCE=manual_mode_file",
+            "MODE_LABEL_IS_OPERATOR_SELECTED=1",
+        ])
     for index, mask in enumerate(samples):
         lines.append(
             f"sample={index} result=OK max_connect=7 now_connect={mask.bit_count()} "
@@ -49,6 +53,18 @@ class PadProbeComparatorTests(unittest.TestCase):
             self.assertTrue(campaign["port1_seen"])
             self.assertFalse(campaign["both_controllers_simultaneously_seen"])
             self.assertEqual(result["status"], "PORT1_SEEN_BUT_NOT_SIMULTANEOUS_WITH_PORT0")
+
+    def test_mode_provenance_is_explicitly_operator_selected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            campaign = parse_log(write_log(root, "campaign.log", [0x03], "CAMPAIGN"))
+            multiplayer = parse_log(write_log(root, "multiplayer.log", [0x03], "MULTIPLAYER"))
+            result = compare(campaign, multiplayer)
+            self.assertEqual(campaign["mode_source"], "manual_mode_file")
+            self.assertTrue(campaign["mode_label_is_operator_selected"])
+            self.assertTrue(result["mode_labels_are_operator_selected"])
+            self.assertTrue(result["mode_label_provenance"]["campaign"]["operator_selected"])
+            self.assertIn("not auto-detected", result["interpretation_limit"])
 
     def test_mislabeled_modes_are_inconclusive(self):
         with tempfile.TemporaryDirectory() as temp:
