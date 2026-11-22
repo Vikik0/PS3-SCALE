@@ -91,9 +91,17 @@ Documentation-only changes no longer trigger a full PS3 cross-build. Host protoc
 
 ## Separate prototype components
 
-The repository also contains an earlier native Tiny3D menu, a guest-room API backed by Vercel Blob, a JSON parser, a UDP input-packet codec, a UDP peer primitive, and PS1 disc/DAT extraction tools.
+The repository also contains an earlier native Tiny3D menu, a four-seat guest-room API backed by Vercel Blob, a JSON parser, a UDP input-packet codec, a UDP peer primitive, and PS1 disc/DAT extraction tools.
 
-Those components remain development prototypes. The current installable RetroArch PKG does **not** use the Vercel room API or custom UDP peer code for gameplay. Actual match synchronization in this package is provided by RetroArch Netplay. The web room service and custom transport must not be described as a completed game-session path.
+The web lobby now supports four guest seats, public/private rooms, invite-code joins, and an ANY BATTLE action. Heartbeats keep active seats alive. This is still a **room lobby only**: it does not run Crash Bash, stream game state, or connect its UDP input prototype to the emulator.
+
+The current installable RetroArch PKG does **not** use the Vercel room API or custom UDP peer code for gameplay. Actual match synchronization in that package is provided by RetroArch Netplay, which is a separate PS3-to-PS3 path. A green lobby status or four occupied seats does not mean a game session has started.
+
+## Cross-play with crashbash.app
+
+The website at https://crashbash.app is a separate browser port, not a PS1 emulator. It runs its own game simulation and multiplayer rooms. Its public documentation describes room codes, player seats, and controller inputs held by its server, but it does not publish a client API, wire protocol, or SDK for third-party consoles.
+
+Consequently, the current PS3 RetroArch Netplay package and this repository's Vercel lobby cannot join rooms on crashbash.app. Matching the menu design or reusing a room code does not make the game protocols compatible. Cross-play requires the site owner's permission and a supported integration interface (or access to the relevant source/protocol), followed by a PS3 implementation of the same game/session client and mixed-device hardware tests. Do not advertise PS3-to-browser cross-play until that work is complete.
 
 ## Licensing and project scope
 
