@@ -24,6 +24,20 @@ class GscSplitScreenAuditTests(unittest.TestCase):
             hit = next(item for item in result["hits"] if item["keyword"] == "issplitscreen")
             self.assertEqual(hit["function"], "init_level_flags")
 
+    def test_primary_player_reference_is_distinct_from_player_array(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "mission.gsc").write_text(
+                'main()\n{\n'
+                '    level.player freezecontrols(1);\n'
+                '    level.playerpiggyback[1] freezecontrols(0);\n'
+                '}\n',
+                encoding="utf-8",
+            )
+            result = scan_group("mission", root)
+            self.assertEqual(result["line_match_count"]["primary_player_ref"], 1)
+            self.assertEqual(result["line_match_count"]["playerpiggyback"], 1)
+
     def test_reports_primary_secondary_and_client_helpers(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
