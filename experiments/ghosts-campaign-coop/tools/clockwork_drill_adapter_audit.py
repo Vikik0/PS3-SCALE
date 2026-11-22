@@ -13,7 +13,6 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from tools.campaign_player_dependency_audit import (  # noqa: E402
-    GROUPS,
     METHOD_RE,
     PLAYER_RE,
     categories,
@@ -26,7 +25,21 @@ SIGNATURE_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*\((.*)\)\s*$")
 RECEIVER_METHOD_RE = re.compile(
     r"\b([A-Za-z_][A-Za-z0-9_]*)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\("
 )
-TARGETS = ("handle_drill_spot", "handle_drilling")
+
+# These three functions form the required drill interaction path.
+CORE_TARGETS = (
+    "handle_drill_spot",
+    "handle_drilling",
+    "handle_misc_drill_details",
+)
+
+# These adjacent functions own weapon switching, post-drill restoration and audio.
+RELATED_TARGETS = (
+    "switchmsg",
+    "restore_footstep_notetrack_scripts",
+    "drillthrough_plate_sound",
+)
+
 ADAPTER_MARKERS = {
     "begin": "ghc_campaign_drill_begin",
     "complete": "ghc_campaign_drill_complete",
@@ -34,8 +47,20 @@ ADAPTER_MARKERS = {
     "abort_player": "ghc_campaign_drill_abort_player",
 }
 
+# Reference values from the user's Clockwork asset analysis matrix.
+# They are an identity/safety check, not guessed patch offsets.
+REFERENCE_FASTFILE_SHA256 = "a2ac70c7349047f2eded5f45a5e46ff8278689839fe1655106263520fe639783"
+REFERENCE_FUNCTIONS = {
+    "switchmsg": {"start_line": 263, "end_line": 277, "level_player_refs": 8},
+    "handle_drill_spot": {"start_line": 278, "end_line": 503, "level_player_refs": 32},
+    "restore_footstep_notetrack_scripts": {"start_line": 504, "end_line": 514, "level_player_refs": 4},
+    "handle_drilling": {"start_line": 563, "end_line": 707, "level_player_refs": 10},
+    "drillthrough_plate_sound": {"start_line": 717, "end_line": 734, "level_player_refs": 1},
+    "handle_misc_drill_details": {"start_line": 760, "end_line": 848, "level_player_refs": 15},
+}
 
-def _function_inventory(path: Path) -> tuple[list[str], dict[str, dict]]:
+
+def _function_inventory(path: Path) -> dict[str, dict]:
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     ranges = function_ranges(lines)
     names = {name for name, _, _ in ranges}
@@ -52,7 +77,7 @@ def _function_inventory(path: Path) -> tuple[list[str], dict[str, dict]]:
                 if part.strip()
             ]
 
-        body_lines = lines[start:end]
+        body_lines = lines[start - 1:end]
         clean_body = "\n".join(strip_comments_and_strings(line) for line in body_lines)
         direct_methods = {method.lower() for method in METHOD_RE.findall(clean_body)}
         parameter_names = set(parameters)
@@ -79,7 +104,7 @@ def _function_inventory(path: Path) -> tuple[list[str], dict[str, dict]]:
             "local_calls": calls,
             "adapter_calls": adapter_calls,
         }
-        # Preserve duplicate function definitions rather than silently hiding one.
+        # Preserve duplicate definitions rather than silently hiding one.
         if name in inventory:
             existing = inventory[name]
             if isinstance(existing, list):
@@ -89,7 +114,7 @@ def _function_inventory(path: Path) -> tuple[list[str], dict[str, dict]]:
         else:
             inventory[name] = row
 
-    return lines, inventory
+    return inventory
 
 
 def _rows_for(inventory: dict[str, dict], name: str) -> list[dict]:
@@ -112,17 +137,46 @@ def _call_closure(inventory: dict[str, dict], root: str) -> list[str]:
     return sorted(visited)
 
 
-def audit(path: Path) -> dict:
+def _compare_reference_baseline(inventory: dict[str, dict]) -> dict:
+    comparisons = {}
+    mismatches = []
+    for name, expected in REFERENCE_FUNCTIONS.items():
+        rows = _rows_for(inventory, name)
+        observed = None
+        if len(rows) == 1:
+            row = rows[0]
+            observed = {
+                "start_line": row["start_line"],
+                "end_line": row["end_line"],
+                "level_player_refs": row["level_player_refs"],
+            }
+        matches = observed == expected
+        comparisons[name] = {
+            "expected": expected,
+            "observed": observed,
+            "matches": matches,
+        }
+        if not matches:
+            mismatches.append(name)
+    return {
+        "reference_fastfile_sha256": REFERENCE_FASTFILE_SHA256,
+        "function_comparisons": comparisons,
+        "matches": not mismatches,
+        "mismatches": mismatches,
+    }
+
+
+def audit(path: Path, *, require_reference_baseline: bool = False) -> dict:
     path = Path(path)
     if not path.is_file():
         raise FileNotFoundError(f"Clockwork GSC source was not found: {path}")
     if path.suffix.lower() != ".gsc":
         raise ValueError("input must be a decompiled .gsc source file")
 
-    _, inventory = _function_inventory(path)
-    missing = [name for name in TARGETS if not _rows_for(inventory, name)]
-    closures = {name: _call_closure(inventory, name) for name in TARGETS if name in inventory}
-
+    inventory = _function_inventory(path)
+    missing = [name for name in CORE_TARGETS if not _rows_for(inventory, name)]
+    roots = [name for name in (*CORE_TARGETS, *RELATED_TARGETS) if _rows_for(inventory, name)]
+    closures = {name: _call_closure(inventory, name) for name in roots}
     closure_functions = sorted({name for closure in closures.values() for name in closure})
     closure_rows = [
         row
@@ -134,7 +188,7 @@ def audit(path: Path) -> dict:
     })
 
     marker_locations = {}
-    for marker, function_name in ADAPTER_MARKERS.items():
+    for marker in ADAPTER_MARKERS:
         marker_locations[marker] = sorted({
             row["function"]
             for rows in inventory.values()
@@ -146,9 +200,10 @@ def audit(path: Path) -> dict:
     begin_in_entry = any(row["adapter_calls"]["begin"] for row in drill_spot_rows)
     complete_in_closure = any(row["adapter_calls"]["complete"] for row in closure_rows)
     cancel_in_closure = any(row["adapter_calls"]["cancel"] for row in closure_rows)
+    reference_baseline = _compare_reference_baseline(inventory)
 
     checks = {
-        "both_drill_functions_found": not missing,
+        "all_core_drill_functions_found": not missing,
         "begin_called_from_handle_drill_spot": begin_in_entry,
         "completion_path_present_in_drill_call_graph": complete_in_closure,
         "cancellation_path_present_in_drill_call_graph": cancel_in_closure,
@@ -158,36 +213,37 @@ def audit(path: Path) -> dict:
 
     if missing:
         status = "SOURCE_INCOMPLETE"
-    elif all(checks[key] for key in (
-        "both_drill_functions_found",
-        "begin_called_from_handle_drill_spot",
-        "completion_path_present_in_drill_call_graph",
-        "cancellation_path_present_in_drill_call_graph",
-        "no_level_player_references_in_drill_call_graph",
-        "abort_player_helper_referenced_in_source",
-    )):
+    elif require_reference_baseline and not reference_baseline["matches"]:
+        status = "SOURCE_BASELINE_MISMATCH"
+    elif all(checks.values()):
         status = "SOURCE_ADAPTER_READY_FOR_MANUAL_REVIEW"
     else:
         status = "BLOCKED_INCOMPLETE_PLAYER_SCOPING"
 
-    target_details = {}
-    for name in TARGETS:
-        rows = _rows_for(inventory, name)
-        target_details[name] = rows
-
     return {
         "status": status,
         "source_file": path.name,
-        "target_functions": target_details,
+        "required_core_functions": list(CORE_TARGETS),
+        "related_functions": list(RELATED_TARGETS),
+        "target_functions": {
+            name: _rows_for(inventory, name) for name in CORE_TARGETS
+        },
+        "related_function_details": {
+            name: _rows_for(inventory, name) for name in RELATED_TARGETS
+        },
         "call_graph": closures,
         "drill_call_graph_functions": closure_functions,
         "unscoped_level_player_functions": global_player_functions,
         "adapter_marker_locations": marker_locations,
         "checks": checks,
+        "reference_baseline": reference_baseline,
+        "reference_baseline_required_for_strict_mode": require_reference_baseline,
         "limitations": [
+            "The reference baseline comes from the user's Clockwork FastFile analysis; --strict requires all six known function ranges and level.player reference counts to match it.",
             "This is static source analysis only; it does not compile GSC or load it into the retail Campaign VM.",
             "A clean report does not prove that the passed player is the actual activating controller or that the drill spot index is mapped correctly.",
             "Weapon, ADS/fire input, stance, animation link, action-slot and control-lock cleanup still require manual path-by-path review.",
+            "The abort-player call site must be manually verified to run on death, disconnect, checkpoint restart and normal cancellation.",
             "Shared objective completion must remain idempotent and must not be committed by cancellation, death or disconnect.",
             "A source-ready result is not evidence of native Campaign Local Client creation, controller routing, camera/HUD separation or playable co-op.",
         ],
@@ -201,12 +257,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--strict",
         action="store_true",
-        help="return exit code 2 unless the drill adapter passes the static source gate",
+        help="require both the adapter checks and the exact six-function reference baseline",
     )
     args = parser.parse_args(argv)
 
     try:
-        report = audit(args.source)
+        report = audit(args.source, require_reference_baseline=args.strict)
     except (OSError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
