@@ -20,6 +20,7 @@ handle_drill_spot( var_0, var_1, var_2, var_3 )
     level.ghc_clockwork_drill_activator = drill_activator;
     common_scripts\\utility::flag_set( var_1, drill_player );
     thread handle_drilling( var_2, var_1, drill_player );
+    thread clockwork_drill_plant_sound( drill_player );
     if ( !isalive( drill_player ) )
     {
         common_scripts\\utility::flag_clear( var_1 );
@@ -47,6 +48,8 @@ handle_misc_drill_details( player )
 {
     thread watch_for_air_drop_death( player );
     player.ghc_aiming_at_ally = 0;
+    player playsound( "clkw_scn_vault_drill_pullout" );
+    player playsound( "clkw_scn_vault_drill_pullout" );
 }
 watch_for_air_drop_death( player )
 {
