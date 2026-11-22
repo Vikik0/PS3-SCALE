@@ -32,7 +32,7 @@ assert 'CORE_SELF="$USRDIR/cores/pcsx_rearmed_libretro_psl1ght.SELF"' in script
 assert "create-core CONTENTID=" in script, "The core-info identity SELF must be created"
 
 prototype_makefile = (ROOT / "Makefile").read_text()
-prototype_sfo = ET.parse(ROOT / "sfo.xml").getroot()
+prototype_sfo = ET.parse(ROOT / "sfo-native.xml").getroot()
 prototype_sfo_values = {
     node.attrib["name"]: (node.text or "").strip()
     for node in prototype_sfo.findall("value")
