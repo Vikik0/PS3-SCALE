@@ -16,7 +16,7 @@ const PLAYER_TTL_MS = 10 * 60 * 1000;
 const MAX_PLAYERS = 4;
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const LIBRETRO_LOBBY_LIST_URL = "http://lobby.libretro.com/list";
-let netplayLobbyCache = { expiresAt: 0, entries: [] };
+let netplayLobbyCache = { expiresAt: 0, hostNickname: "", entry: null };
 
 function reply(res, status, data) {
   res.setHeader("Cache-Control", "no-store");
@@ -162,8 +162,11 @@ function findPlayer(room, playerId) {
   return (room.players || []).find((player) => player.id === playerId);
 }
 
-async function getLibretroLobbyEntries() {
-  if (Date.now() < netplayLobbyCache.expiresAt) return netplayLobbyCache.entries;
+async function getLibretroLobbyEntry(hostNickname) {
+  if (Date.now() < netplayLobbyCache.expiresAt &&
+      netplayLobbyCache.hostNickname === hostNickname) {
+    return netplayLobbyCache.entry;
+  }
   const response = await fetch(LIBRETRO_LOBBY_LIST_URL, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(5000)
@@ -171,8 +174,15 @@ async function getLibretroLobbyEntries() {
   if (!response.ok) throw new Error("RetroArch Netplay lobby is unavailable.");
   const entries = await response.json();
   if (!Array.isArray(entries)) throw new Error("RetroArch Netplay lobby returned an invalid list.");
-  netplayLobbyCache = { expiresAt: Date.now() + 1500, entries };
-  return entries;
+  const entry = entries.find((candidate) =>
+    candidate?.fields?.username === hostNickname
+  ) || null;
+  netplayLobbyCache = {
+    expiresAt: Date.now() + 1500,
+    hostNickname,
+    entry
+  };
+  return entry;
 }
 
 function netplayEndpoint(fields) {
@@ -412,10 +422,7 @@ module.exports = async function handler(req, res) {
       // Rooms created before 0.6.0 used the invite code as their RetroArch nickname.
       const netplayId = record.room.netplayId || record.room.code;
       const hostNickname = "CB-" + netplayId + "-HOST";
-      const entries = await getLibretroLobbyEntries();
-      const hostEntry = entries.find((entry) =>
-        entry?.fields?.username === hostNickname
-      );
+      const hostEntry = await getLibretroLobbyEntry(hostNickname);
       if (!hostEntry) {
         return reply(res, 200, {
           ready: false,
