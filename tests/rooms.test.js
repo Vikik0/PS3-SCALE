@@ -368,3 +368,19 @@ test("expired room codes and sessions are rejected while leave remains available
   const leave = await call("POST", { action: "leave" }, host.body.token);
   assert.equal(leave.statusCode, 200);
 });
+
+
+test("public room discovery does not stop at the old forty-room cutoff", async () => {
+  for (let index = 0; index < 45; index += 1) {
+    const created = await call("POST", {
+      action: "create",
+      displayName: "Player " + index,
+      isPrivate: false
+    });
+    assert.equal(created.statusCode, 201);
+  }
+
+  const listing = await call("GET");
+  assert.equal(listing.statusCode, 200);
+  assert.equal(listing.body.rooms.length, 45);
+});
