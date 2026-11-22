@@ -13,7 +13,7 @@ const ACCESS = "private";
 const PREFIX = "cb-rooms/";
 const ROOM_TTL_MS = 30 * 60 * 1000;
 const PLAYER_TTL_MS = 10 * 60 * 1000;
-const MAX_PLAYERS = 2;
+const MAX_PLAYERS = 4;
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function reply(res, status, data) {
@@ -107,7 +107,7 @@ function findPlayer(room, playerId) {
 }
 
 module.exports = async function handler(req, res) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN || !process.env.CB_TOKEN_SECRET) {
+  if (!process.env.BLOB_READ_WRITE_TOKEN || !(process.env.CB_TOKEN_SECRET_V2 || process.env.CB_TOKEN_SECRET)) {
     return reply(res, 503, { error: "Lobby storage is not configured yet." });
   }
 
@@ -175,6 +175,32 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    if (action === "any") {
+      const candidates = await listRooms();
+      for (const candidate of candidates) {
+        const record = await readRoom(candidate.code);
+        if (!record) continue;
+        const room = record.room;
+        room.players = (room.players || []).filter((p) => Date.now() - p.lastSeen <= PLAYER_TTL_MS);
+        if (room.isPrivate || room.status !== "waiting" || room.players.length >= MAX_PLAYERS) continue;
+        const playerId = crypto.randomUUID();
+        const now = Date.now();
+        room.players.push({ id: playerId, name, ready: false, joinedAt: now, lastSeen: now });
+        room.updatedAt = now;
+        try {
+          await saveRoom(candidate.code, room, record.etag);
+          return reply(res, 200, {
+            room: publicRoom(room),
+            player: { id: playerId, name },
+            token: signGuestToken({ sub: playerId, room: candidate.code })
+          });
+        } catch (error) {
+          if (error?.name !== "BlobPreconditionFailedError") throw error;
+        }
+      }
+      return reply(res, 404, { error: "No public battle is waiting. Create a public battle first." });
+    }
+
     if (action === "join") {
       const code = String(body.code || "").toUpperCase();
       if (!/^[A-Z2-9]{6}$/.test(code)) return reply(res, 400, { error: "Enter a valid six-character room code." });
@@ -210,7 +236,7 @@ module.exports = async function handler(req, res) {
       player.lastSeen = now;
       if (typeof body.ready === "boolean") player.ready = body.ready;
       const activePlayers = room.players.filter((p) => now - p.lastSeen <= PLAYER_TTL_MS);
-      room.status = activePlayers.length === 2 && activePlayers.every((p) => p.ready) ? "ready" : "waiting";
+      room.status = activePlayers.length === MAX_PLAYERS && activePlayers.every((p) => p.ready) ? "ready" : "waiting";
       room.updatedAt = now;
       await saveRoom(code, room, record.etag);
       return reply(res, 200, { ok: true, players: room.players.map(({ id, name, ready }) => ({ id, name, ready })) });
