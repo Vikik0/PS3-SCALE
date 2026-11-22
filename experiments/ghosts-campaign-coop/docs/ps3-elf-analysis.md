@@ -116,3 +116,23 @@ Each TU file is SELF v2, key revision 28, ELF64 big-endian PowerPC64, with eight
 One optional route is RPCS3's debug option, which can save a decrypted PPU executable as exec.elf in its cache under ppu_progs/<TITLE_ID>-<hash>-<filename>/. The RPCS3 source implements this dump path and logs the saved path. This route is not mandatory and the user has chosen not to install RPCS3 at this stage. If a decrypted ELF becomes available through another user-controlled route, retain its exact build identity and ensure it belongs to the installed TU 1.16 default.self; a dump from the disc 1.00 file is not interchangeable. The corresponding default_mp.self dump is the comparison target for an existing local split-screen path.
 
 This remains a future engineering gate, not a user action required now. Until the decrypted TU ELF is available, continue only with metadata, FastFile, GSC, simulator and toolchain work; do not invent executable offsets or build an installable game hook.
+
+## Campaign vs Multiplayer function inventory comparison
+
+For the native local-player reuse route, analyze the exact TU 1.16 Campaign and Multiplayer decrypted PPU images separately:
+
+1. Import the Campaign ELF into Ghidra as PowerPC:BE:64:default and complete auto-analysis.
+2. Run tools/ghidra/ExportGhostsPpuFunctionInventory.java with an output path such as campaign-functions.csv.
+3. Repeat with the exact matching Multiplayer ELF and save multiplayer-functions.csv.
+4. From the project root, run:
+
+~~~powershell
+python tools/compare_ppu_function_inventories.py --campaign "D:\Ghosts\analysis\campaign-functions.csv" --multiplayer "D:\Ghosts\analysis\multiplayer-functions.csv" --output "D:\Ghosts\analysis\campaign-multiplayer-functions.json"
+~~~
+
+The exporter records function entry, body size, instruction count, a normalized instruction fingerprint and direct call targets. The comparator identifies fingerprints present in both builds and Multiplayer-only function leads, then ranks names containing local/client/controller/player/view/camera/viewport/HUD/connect/spawn/input terms.
+
+This is intended to narrow the manual reverse-engineering search toward the native local-player/session path. Fingerprints normalize long absolute addresses and auto-generated labels, so collisions and missed matches are possible. A Multiplayer-only match is not proof that the function creates a local client, and a matching function is not automatically safe to transplant. Verify the exact function body, TOC, imports, globals, calling convention and runtime lifecycle before proposing any Campaign hook.
+
+The scripts do not patch, export, or modify either executable. The Ghidra script is not run in GitHub CI because Ghidra is not installed in the build environment; the Python comparator is covered by host tests.
+
