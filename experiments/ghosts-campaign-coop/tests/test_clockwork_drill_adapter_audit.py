@@ -164,6 +164,59 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertEqual(source.read_text(encoding="utf-8"), original)
 
+    def test_primary_alias_fallback_and_identity_checks_are_allowed(self):
+        report = audit(self.write_source(
+            'handle_drill_spot( player, spot )\n'
+            '{\n'
+            '    if ( !isdefined( player ) ) player = level.player;\n'
+            '    if ( player != level.player )\n'
+            '        player = level.player;\n'
+            '    ghc_campaign_drill_begin( player, spot );\n'
+            '    thread handle_drilling( player, spot );\n'
+            '}\n'
+            'handle_drilling( player, spot )\n'
+            '{\n'
+            '    ghc_campaign_drill_complete( player, spot );\n'
+            '    ghc_campaign_drill_cancel( player, spot );\n'
+            '}\n'
+            'cleanup_drill( player )\n'
+            '{\n'
+            '    ghc_campaign_drill_abort_player( player );\n'
+            '}\n'
+        ))
+
+        self.assertEqual(report["status"], "SOURCE_ADAPTER_READY_FOR_MANUAL_REVIEW")
+        self.assertEqual(report["unscoped_level_player_functions"], [])
+        row = report["target_functions"]["handle_drill_spot"][0]
+        self.assertEqual(row["allowed_primary_alias_refs"], row["level_player_refs"])
+        self.assertEqual(row["unsafe_level_player_refs"], 0)
+
+    def test_primary_player_method_access_still_blocks_drill_adapter(self):
+        report = audit(self.write_source(
+            'handle_drill_spot( player, spot )\n'
+            '{\n'
+            '    if ( !isdefined( player ) ) player = level.player;\n'
+            '    if ( player != level.player ) player = level.player;\n'
+            '    level.player getcurrentweapon();\n'
+            '    ghc_campaign_drill_begin( player, spot );\n'
+            '    thread handle_drilling( player, spot );\n'
+            '}\n'
+            'handle_drilling( player, spot )\n'
+            '{\n'
+            '    ghc_campaign_drill_complete( player, spot );\n'
+            '    ghc_campaign_drill_cancel( player, spot );\n'
+            '}\n'
+            'cleanup_drill( player )\n'
+            '{\n'
+            '    ghc_campaign_drill_abort_player( player );\n'
+            '}\n'
+        ))
+
+        self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
+        row = report["target_functions"]["handle_drill_spot"][0]
+        self.assertGreater(row["unsafe_level_player_refs"], 0)
+        self.assertIn("handle_drill_spot", report["unscoped_level_player_functions"])
+
     def test_logan_only_switchmsg_is_reported_but_not_treated_as_p2_scope_leak(self):
         report = audit(self.write_source(
             'handle_drill_spot( player, spot )\n'
