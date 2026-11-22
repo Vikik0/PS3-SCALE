@@ -673,6 +673,7 @@ test("Netplay endpoint lookup reports a waiting state before the host announces"
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
   await call("POST", { action: "heartbeat", ready: true }, host.body.token);
   await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  await call("POST", { action: "game_start" }, host.body.token);
 
   global.fetch = async () => ({
     ok: true,
@@ -692,6 +693,7 @@ test("Netplay endpoint uses a connectable direct host when no relay session exis
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
   await call("POST", { action: "heartbeat", ready: true }, host.body.token);
   await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  await call("POST", { action: "game_start" }, host.body.token);
   const room = await call("GET", {}, guest.body.token, { code: host.body.room.code });
 
   global.fetch = async () => ({
@@ -726,6 +728,7 @@ test("Netplay endpoint ignores a stale public-lobby host entry", async () => {
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
   await call("POST", { action: "heartbeat", ready: true }, host.body.token);
   await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  await call("POST", { action: "game_start" }, host.body.token);
   const room = await call("GET", {}, guest.body.token, { code: host.body.room.code });
 
   global.fetch = async () => ({
