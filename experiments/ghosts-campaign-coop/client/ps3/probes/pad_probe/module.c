@@ -6,6 +6,7 @@
 #include <sys/lv2_syscall.h>
 #include <sys/timer.h>
 #include <sys/prx_module.h>
+#include <sys/prx.h>
 
 #ifndef SYS_PRX_RESIDENT
 #define SYS_PRX_RESIDENT 0
@@ -323,8 +324,10 @@ int module_stop(size_t args, void *argp)
     (void)argp;
     g_stop = 1;
     if (g_thread_started) {
-        (void)thread_join(g_thread, &thread_result);
+        int join_status = thread_join(g_thread, &thread_result);
+        if (join_status != 0)
+            return SYS_PRX_STOP_FAIL;
         g_thread_started = 0;
     }
-    return SYS_PRX_RESIDENT;
+    return SYS_PRX_STOP_OK;
 }
