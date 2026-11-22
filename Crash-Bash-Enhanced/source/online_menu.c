@@ -457,9 +457,23 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                     make_netplay_nickname(netplay_nickname, sizeof(netplay_nickname),
                                           &session, &view, is_host);
                     if (is_host) {
-                        cb_launch_game(discs[disc_selected].path, 1, netplay_nickname,
-                                       NULL, error, sizeof(error));
-                        snprintf(status, status_size, "%.120s", error);
+                        if (cb_online_mark_game_started(&session, error, sizeof(error)) != 0) {
+                            snprintf(status, status_size, "Could not lock the room for launch: %.100s", error);
+                        } else {
+                            int launch_result = cb_launch_game(discs[disc_selected].path, 1,
+                                                               netplay_nickname, NULL,
+                                                               error, sizeof(error));
+                            if (launch_result < 0) {
+                                char launch_error[160];
+                                snprintf(launch_error, sizeof(launch_error), "%.150s", error);
+                                if (cb_online_cancel_game_start(&session, error, sizeof(error)) == 0) {
+                                    snprintf(status, status_size, "%.120s", launch_error);
+                                } else {
+                                    snprintf(status, status_size, "Launch failed: %.52s / unlock failed: %.52s",
+                                             launch_error, error);
+                                }
+                            }
+                        }
                     } else {
                         netplay_waiting = 1;
                         netplay_wait_attempts = 0;
