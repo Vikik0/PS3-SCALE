@@ -123,12 +123,13 @@ jobs:
           cd tests/fixtures
           gsc-tool --mode comp --game iw6 --system ps3 clockwork_stage56.gsc
           test -s compiled/iw6/clockwork_stage56.gscbin
-          cp compiled/iw6/clockwork_stage56.gscbin /tmp/clockwork-stage56-original.gscbin
           gsc-tool --mode decomp --game iw6 --system ps3 compiled/iw6/clockwork_stage56.gscbin
           test -s decompiled/iw6/clockwork_stage56.gsc
           grep -q 'clockwork_get_secondary_player' decompiled/iw6/clockwork_stage56.gsc
           grep -q 'clockwork_apply_vault_blast' decompiled/iw6/clockwork_stage56.gsc
-          cp decompiled/iw6/clockwork_stage56.gsc /tmp/clockwork-stage56-first-pass.gsc
+          grep -q 'level.ghc_vault_player_two = secondary_player' decompiled/iw6/clockwork_stage56.gsc
+          grep -q 'secondary_player allowsprint' decompiled/iw6/clockwork_stage56.gsc
+          grep -q 'secondary_player getweaponammoclip' decompiled/iw6/clockwork_stage56.gsc
           gsc-tool --mode comp --game iw6 --system ps3 decompiled/iw6/clockwork_stage56.gsc
           test -s compiled/iw6/clockwork_stage56.gscbin
       - uses: actions/upload-artifact@v6
