@@ -132,3 +132,12 @@ The helper copies the binary tree into the output directory before decompiling, 
 The exact user-supplied BLUS31270 FastFiles and TU 1.16 executable set have now been parsed. See docs/phase7-retail-validation.md for file hashes and sizes, block counts, asset counts, SELF types and entry points. Key findings: Clockwork's marker is at 0x16644; its 2,048 valid blocks expand to a 128 MiB zone followed by 16,557,959 uninterpreted bytes. Its MapEnts pool entry is type 0x14 at index 4059 with pointer 0xFFFFFFFF, so spawn entities remain undecoded. The current extraction produces 109 compiled-GSC candidates, 54 RawFiles and one short source asset; the previous 109/109 decompile result was not repeated in this phase.
 
 The per-block four-byte suffix is reported as opaque; its meaning is not established. The exact end marker remains separate: 00 01 followed by four zero padding bytes. No modified FastFile is written or signed.
+
+
+### 3. tools/ps3_zone_pool_inspect.py
+
+Reads the 8-byte asset-pool records from an outer-decompressed raw zone. It scans a 32-byte variable trailer after the tag strings, reports type counts, and calls out MapEnts entries without treating their pointer values as file offsets.
+
+~~~powershell
+python tools/ps3_zone_pool_inspect.py "C:\Ghosts\analysis\clockwork.raw.zone" --report-json "C:\Ghosts\analysis\clockwork-pool.json" --records-csv "C:\Ghosts\analysis\clockwork-pool.csv"
+~~~
