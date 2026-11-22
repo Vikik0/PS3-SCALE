@@ -590,10 +590,16 @@ test("Netplay relay lookup is private to room members and resolves the matching 
   assert.match(netplayId, /^[A-F0-9]{12}$/);
   const publicListing = await call("GET");
   assert.equal(publicListing.body.rooms.some((entry) => entry.code === code), false);
-  assert.equal(publicListing.body.rooms.some((entry) => entry.netplayId === netplayId), false);
+  const publicHost = await call("POST", { action: "create", displayName: "Public Host", isPrivate: false });
+  const publicListingWithRoom = await call("GET");
+  const publicEntry = publicListingWithRoom.body.rooms.find((entry) => entry.code === publicHost.body.room.code);
+  assert.ok(publicEntry);
+  assert.equal(Object.hasOwn(publicEntry, "netplayId"), false);
 
-  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
-  await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  const hostReady = await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  const guestReady = await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  assert.equal(hostReady.body.netplayId, netplayId);
+  assert.equal(guestReady.body.netplayId, netplayId);
 
   let requestedUrl = "";
   global.fetch = async (url, options) => {
@@ -668,4 +674,68 @@ test("Netplay endpoint lookup reports a waiting state before the host announces"
   assert.equal(lookup.statusCode, 200);
   assert.equal(lookup.body.ready, false);
   assert.equal(lookup.body.state, "waiting_for_host");
+});
+
+
+test("Netplay endpoint uses a connectable direct host when no relay session exists", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  const room = await call("GET", {}, guest.body.token, { code: host.body.room.code });
+
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    async json() {
+      return [{
+        fields: {
+          username: "CB-" + room.body.room.netplayId + "-HOST",
+          connectable: true,
+          ip: "203.0.113.25",
+          port: 55435,
+          mitm_ip: "",
+          mitm_port: 0,
+          mitm_session: "",
+          updated: new Date().toISOString()
+        }
+      }];
+    }
+  });
+
+  const lookup = await call("POST", { action: "netplay" }, guest.body.token);
+  assert.equal(lookup.statusCode, 200);
+  assert.equal(lookup.body.ready, true);
+  assert.equal(lookup.body.mode, "direct");
+  assert.equal(lookup.body.address, "203.0.113.25");
+  assert.equal(lookup.body.mitmSession, "");
+});
+
+test("Netplay endpoint ignores a stale public-lobby host entry", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  const room = await call("GET", {}, guest.body.token, { code: host.body.room.code });
+
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    async json() {
+      return [{
+        fields: {
+          username: "CB-" + room.body.room.netplayId + "-HOST",
+          connectable: true,
+          ip: "203.0.113.25",
+          port: 55435,
+          updated: new Date(Date.now() - 3 * 60 * 1000).toISOString()
+        }
+      }];
+    }
+  });
+
+  const lookup = await call("POST", { action: "netplay" }, guest.body.token);
+  assert.equal(lookup.statusCode, 200);
+  assert.equal(lookup.body.ready, false);
+  assert.equal(lookup.body.state, "host_not_connectable");
 });
