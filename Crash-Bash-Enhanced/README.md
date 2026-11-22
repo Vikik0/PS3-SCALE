@@ -93,7 +93,7 @@ Documentation-only changes no longer trigger a full PS3 cross-build. Host protoc
 
 The repository also contains an earlier native Tiny3D menu, a four-seat guest-room API backed by Vercel Blob, a JSON parser, a UDP input-packet codec, a UDP peer primitive, and PS1 disc/DAT extraction tools.
 
-The web lobby now supports four guest seats, public/private rooms, invite-code joins, and an ANY BATTLE action. Heartbeats keep active seats alive. This is still a **room lobby only**: it does not run Crash Bash, stream game state, or connect its UDP input prototype to the emulator.
+The web lobby now supports four guest seats, public/private rooms, invite-code joins, and an ANY BATTLE action. Heartbeats keep active seats alive; browser refresh restores the same player identity and ready state; inactive seats are pruned; and rooms expire after 30 minutes without activity. Public matchmaking scans the current Blob listing in small batches rather than stopping at the previous 40-room cutoff. This is still a **room lobby only**: it does not run Crash Bash, stream game state, or connect its UDP input prototype to the emulator.
 
 The current installable RetroArch PKG does **not** use the Vercel room API or custom UDP peer code for gameplay. Actual match synchronization in that package is provided by RetroArch Netplay, which is a separate PS3-to-PS3 path. A green lobby status or four occupied seats does not mean a game session has started.
 
