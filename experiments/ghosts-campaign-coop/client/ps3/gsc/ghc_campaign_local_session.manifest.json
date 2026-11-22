@@ -5,9 +5,9 @@
   "platform": "PS3",
   "compiler": "GSC Tool 1.6.2.364",
   "compile_command": "gsc-tool --mode comp --game iw6 --system ps3 ghc_campaign_local_session.gsc",
-  "source_sha256": null,
-  "compiled_gscbin_sha256": null,
-  "compiled_gscbin_bytes": null,
-  "status": "compiled and round-trip decompiled after Phase 12 source update; not injected or runtime-tested; artifact hashes pending deterministic CI rebuild",
-  "behavior": "Reuses only engine-created native split-screen players; validates primary/secondary identity; binds Campaign aliases after exact-two-player validation; exposes a Clockwork Player 2 loadout helper and GSC-side two-spot drill ownership helpers; never spawns or clones a player."
+  "source_sha256": "560417dcadd38187537c117dadff8f674021c664d9f94b79cd485096cb506a8f",
+  "compiled_gscbin_sha256": "dc846bbe1e3256f1fb8aae20913722335afe17105b61607322e890d892751a1f",
+  "compiled_gscbin_bytes": 1798,
+  "status": "compiled and round-trip decompiled with GSC Tool 1.6.2.364; source and bytecode hashes verified from CI artifact; not injected or runtime-tested",
+  "behavior": "Reuses only engine-created native split-screen players; retries primary/secondary identity binding during bounded startup; binds Campaign aliases after exact-two-player validation; applies the Clockwork Player 2 starting loadout; initializes two shared drill spots with per-player ownership, owner-only completion/cancel and slot-based abort cleanup; never spawns or clones a player."
 }
