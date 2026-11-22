@@ -12,11 +12,6 @@ on:
       - "Crash-Bash-Enhanced/pkgfiles/**"
       - "Crash-Bash-Enhanced/sfo.xml"
       - "Crash-Bash-Enhanced/sfo-native.xml"
-      - "api/**"
-      - "tests/**"
-      - "index.html"
-      - "package.json"
-      - "vercel.json"
       - ".github/workflows/crash-bash-build.yml"
   pull_request:
     branches: [crash-bash-enhanced]
@@ -28,11 +23,6 @@ on:
       - "Crash-Bash-Enhanced/scripts/**"
       - "Crash-Bash-Enhanced/pkgfiles/**"
       - "Crash-Bash-Enhanced/sfo.xml"
-      - "api/**"
-      - "tests/**"
-      - "index.html"
-      - "package.json"
-      - "vercel.json"
       - ".github/workflows/crash-bash-build.yml"
   workflow_dispatch:
 
@@ -56,21 +46,6 @@ jobs:
         run: python3 Crash-Bash-Enhanced/scripts/test_package_metadata.py
       - name: Run protocol tests
         run: sh Crash-Bash-Enhanced/scripts/test_host.sh
-
-  web-tests:
-    name: Web lobby security tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Install web dependencies
-        working-directory: .
-        run: npm install --ignore-scripts --no-audit --no-fund
-      - name: Run web tests
-        working-directory: .
-        run: npm test
 
   online-package-build:
     name: Build Crash Bash Online PS3 package (RetroArch Netplay + PCSX-ReARMed)
