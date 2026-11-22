@@ -6,6 +6,8 @@
   "compiler": "GSC Tool 1.6.2.364",
   "compile_command": "gsc-tool --mode comp --game iw6 --system ps3 ghc_campaign_local_session.gsc",
   "source_sha256": "16172c70bffd89c05f13e20adde7abf61c3f1cd3452f46fc3ed6125558d937a6",
-  "status": "compiled and round-trip decompiled with GSC Tool 1.6.2.364; CI verified native-pair rebind resets Player 2 loadout guard; not injected or runtime-tested",
-  "behavior": "Reuses only engine-created native split-screen players; validates the exact live primary/secondary pair against the current player entity array before session reuse and Campaign actions; centralized invalidation sets status 8, releases the active sequential drill stage, preserves only a still-valid primary alias, and clears stale secondary/player handles; the Clockwork drill ownership helper allows one global active owner at a time and requires Stage 1 completion before Stage 2; owner may change between stages; exposes Player 2 loadout helper; never spawns or clones a player."
+  "status": "compiled and round-trip decompiled with GSC Tool 1.6.2.364; CI verifies source and bytecode hashes; not injected or runtime-tested",
+  "behavior": "Reuses only engine-created native split-screen players; validates the exact live primary/secondary pair against the current player entity array before session reuse and Campaign actions; centralized invalidation sets status 8, releases the active sequential drill stage, preserves only a still-valid primary alias, and clears stale secondary/player handles; the Clockwork drill ownership helper allows one global active owner at a time and requires Stage 1 completion before Stage 2; owner may change between stages; exposes Player 2 loadout helper; never spawns or clones a player.",
+  "compiled_gscbin_sha256": "b00d7f7c31a155a2f5e9be6ee9842b1e5d95cd803b588ad4489c7afc12c96244",
+  "compiled_gscbin_bytes": 2420
 }
