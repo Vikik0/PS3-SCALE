@@ -107,6 +107,8 @@ static int parse_room_view(const char *json, CBOnlineRoomView *view) {
     if (room < 0 || tokens[room].type != CB_JSON_OBJECT) return -1;
     memset(view, 0, sizeof(*view));
     get_string_field(json, tokens, count, room, "code", view->code, sizeof(view->code));
+    get_string_field(json, tokens, count, room, "hostPlayerId",
+                     view->host_player_id, sizeof(view->host_player_id));
     status = cb_json_object_get(json, tokens, count, room, "status");
     if (status >= 0 && tokens[status].type == CB_JSON_STRING) {
         char status_text[16]; cb_json_string(json, &tokens[status], status_text, sizeof(status_text));
