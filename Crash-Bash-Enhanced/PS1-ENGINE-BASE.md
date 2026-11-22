@@ -16,11 +16,11 @@ The package does not redistribute Crash Bash disc data or a PlayStation BIOS. Ea
 
 A BIOS dumped from the user's own PS1 is recommended. The system directory is:
 
-`/dev_hdd0/game/CBASH0001/USRDIR/system/`
+`/dev_hdd0/game/CBON00001/USRDIR/system/`
 
 RetroArch settings, saves and logs use an isolated app profile:
 
-`/dev_hdd0/home/<user-id>/retroarch/CBASH0001/`
+`/dev_hdd0/home/<user-id>/retroarch/CBON00001/`
 
 ## Pinned upstream sources
 
