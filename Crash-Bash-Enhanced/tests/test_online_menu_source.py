@@ -45,3 +45,17 @@ assert "/dev_hdd0/game/CBON00001/USRDIR/EBOOT.BIN" in launcher
 assert "sysProcessExitSpawn2(" in launcher
 assert "TRAINING ARENA" not in main_source
 assert "OFFLINE ARENA TEST" not in main_source
+
+disc_source = (root / "source/disc_browser.c").read_text(encoding="utf-8")
+launch_args = (root / "source/game_launch_args.c").read_text(encoding="utf-8")
+assert "#define SCREEN_DISC_SELECT 3" in source
+assert "cb_disc_scan(discs, CB_DISC_MAX, &scanned)" in source
+assert "cb_launch_game(discs[disc_selected].path, is_host, netplay_nickname" in source
+assert "if ((screen == SCREEN_ROOM || screen == SCREEN_DISC_SELECT)" in source
+assert "CB-%.6s-HOST" in source
+assert "No CUE files were found." in source
+assert '"/dev_hdd0/PSXISO"' in disc_source
+assert '"/dev_usb000/PSXISO"' in disc_source
+assert "is_host ? \"--host\" : \"--menu\"" in launch_args
+assert "CB_GAME_NETPLAY_PORT" in launch_args
+assert "host_player_id" in online_source
