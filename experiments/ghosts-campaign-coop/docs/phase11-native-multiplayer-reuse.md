@@ -97,3 +97,18 @@ Once that native path is proven:
 5. add independent camera/HUD, death/respawn, checkpoint and transition tests.
 
 **Phase 11 status:** the Campaign-side GSC reuse bridge and first Player 2 loadout adapter are implemented as compile-tested source. Native Player 2 creation, runtime loading, camera/HUD and playable Campaign co-op remain unproven.
+
+## Clockwork drill ownership contract
+
+Added a portable contract in client/ps3/campaign_interaction.h and campaign_interaction.c, with host tests in tests/campaign_interaction_test.c.
+
+It models the shared-interaction rules needed by the first Clockwork drill adaptation:
+- one active interaction per local player;
+- different players may operate different drill spots at the same time;
+- one drill spot has only one owner;
+- only the owner may complete or cancel that spot;
+- completion is shared and cannot be committed twice;
+- cancel, death or disconnect releases the owner's lock without marking the objective complete.
+
+This prevents Player 2 from completing, cancelling or stealing Player 1's drill action. The portable state machine is testable now, but the retail Clockwork GSC has not yet been rewritten to call it.
+
