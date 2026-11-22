@@ -13,11 +13,12 @@ RetroArch's current Netplay FAQ cautions that PSX netplay is generally unsuitabl
 - Two jailbroken PS3 consoles on the same compatible firmware family.
 - The exact same `Crash-Bash-Online-PS3.pkg` installed on both consoles.
 - A legal BIN/CUE dump of the same Crash Bash disc revision on both consoles.
-- The same BIOS choice on both consoles. A BIOS dumped from the user's own PS1 is recommended.
+- The exact same CUE file and byte-identical contents for every referenced BIN track.
+- The same BIOS file on both consoles, or both consoles using the same HLE mode. A BIOS dumped from the user's own PS1 is recommended.
 - A stable wired network for the first test; internet access for the relay test.
 - At least two controllers; four controllers for the final multiplayer test.
 
-Do not change the core version, disc image, region, BIOS choice, Multitap option or synchronization mode between consoles during a test.
+Do not change the core version, CUE/BIN content, region, BIOS file (or HLE choice), Multitap option or synchronization mode between consoles during a test. The package stores its settings and logs under `/dev_hdd0/home/<user-id>/retroarch/CBASH0001/`.
 
 ## Test 1 — Single-console baseline
 
@@ -34,7 +35,7 @@ If the game fails locally, stop here. Netplay testing cannot be meaningful until
 ## Test 2 — Two consoles on the same LAN
 
 1. Connect both PS3s to the same router, preferably by Ethernet.
-2. Load the same CUE file on both consoles.
+2. Load the exact same CUE file and byte-identical referenced BIN tracks on both consoles.
 3. On the host, start a Netplay session.
 4. On the client, refresh the Netplay Host List and join the host.
 5. Start a two-player Crash Bash match and play for at least 15 minutes.
@@ -46,7 +47,7 @@ Record whether input delay is acceptable. Lockstep is expected to wait for the s
 
 ## Test 3 — Two consoles over the internet
 
-1. Keep the same package, content, BIOS and core settings.
+1. Keep the same package, exact CUE/BIN content, BIOS file (or HLE choice) and core settings.
 2. Put the consoles on different internet connections.
 3. Leave the package's public lobby, NAT traversal and Madrid relay defaults enabled.
 4. Host from one console and join from the other through the host list.
@@ -57,8 +58,8 @@ Pass criteria: the client can join, the match remains synchronized, and the sess
 
 ## Test 4 — Four-player Multitap
 
-1. Connect one local controller to each of four participating PS3 consoles, if available.
-2. Host with one console and join with three remote consoles.
+1. Use four controllers across the available consoles. A practical first setup is two PS3s with two controllers attached to each; four separate consoles can also be used.
+2. Host from one console and join from the other. Use Netplay's device-assignment controls to map each local controller to a distinct Crash Bash player slot.
 3. Confirm that all four player slots are assigned and respond independently.
 4. Complete at least one full match.
 
@@ -76,7 +77,7 @@ Pass criteria: password protection behaves as expected, reconnection does not co
 
 ## Logs and evidence
 
-After each failed test, preserve the RetroArch log from the user's RetroArch directory under `/dev_hdd0/home/<user-id>/retroarch/` on both consoles. Record:
+After each failed test, preserve the RetroArch log from the app-specific profile's `logs` folder under `/dev_hdd0/home/<user-id>/retroarch/CBASH0001/` on both consoles. Record:
 
 - Which console was host and which was client.
 - Whether the consoles were on the same LAN or different internet connections.
