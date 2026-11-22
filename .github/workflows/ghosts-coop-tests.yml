@@ -105,6 +105,18 @@ jobs:
           grep -q 'level.playengineeffects' decompiled/iw6/clockwork_nvg_player.gsc
           gsc-tool --mode comp --game iw6 --system ps3 decompiled/iw6/clockwork_nvg_player.gsc
           cmp /tmp/clockwork-nvg-original.gscbin compiled/iw6/clockwork_nvg_player.gscbin
+      - name: Compile and round-trip Clockwork AI target helper fixture
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cd tests/fixtures
+          gsc-tool --mode comp --game iw6 --system ps3 clockwork_ai_targeting.gsc
+          test -s compiled/iw6/clockwork_ai_targeting.gscbin
+          cp compiled/iw6/clockwork_ai_targeting.gscbin /tmp/clockwork-ai-original.gscbin
+          gsc-tool --mode decomp --game iw6 --system ps3 compiled/iw6/clockwork_ai_targeting.gscbin
+          test -s decompiled/iw6/clockwork_ai_targeting.gsc
+          grep -q 'clockwork_pick_enemy_target' decompiled/iw6/clockwork_ai_targeting.gsc
+          gsc-tool --mode comp --game iw6 --system ps3 decompiled/iw6/clockwork_ai_targeting.gsc
+          cmp /tmp/clockwork-ai-original.gscbin compiled/iw6/clockwork_ai_targeting.gscbin
       - uses: actions/upload-artifact@v6
         with:
           name: ghosts-campaign-gsc-registry
