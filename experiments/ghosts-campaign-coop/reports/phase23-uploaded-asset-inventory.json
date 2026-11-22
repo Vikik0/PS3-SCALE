@@ -8,26 +8,59 @@
       "sha256": "a2ac70c7349047f2eded5f45a5e46ff8278689839fe1655106263520fe639783",
       "inner_magic_offset": 91716,
       "block_count": 2048,
+      "block_trailer_bytes": 4,
       "outer_zone_bytes": 134217728,
       "inner_inflated_zone_bytes": 134573892,
       "inner_zlib_streams": 164,
       "outer_stream_complete": false,
-      "stop_reason": "invalid raw-DEFLATE distance after validated blocks",
+      "stop_reason": "bad_block: invalid distance too far back",
       "trailing_bytes": 16557959,
       "asset_pool": {
         "tags": 1999,
         "assets": 4153,
         "scriptfiles": 109,
         "rawfiles": 55,
-        "map_ents": 1
+        "map_ents": 1,
+        "type_counts": {
+          "0x29": 109,
+          "0x28": 55,
+          "0x02": 386,
+          "0x08": 508,
+          "0x21": 544,
+          "0x05": 282,
+          "0x0A": 2033,
+          "0x04": 182,
+          "0x10": 1,
+          "0x17": 1,
+          "0x1F": 38,
+          "0x2E": 6,
+          "0x15": 1,
+          "0x16": 1,
+          "0x14": 1,
+          "0x11": 1,
+          "0x12": 1,
+          "0x13": 1,
+          "0x0F": 1
+        }
+      },
+      "gsc_exporter": {
+        "candidates": 109,
+        "rawfiles": 54,
+        "source_files": 1
       }
     },
     {
       "file": "clockwork_start_tr.ff",
       "bytes": 9684153,
       "sha256": "ebc3bf38f3947161b4243c0d5dc7122f73f0cf817cb3d98059468b813bda3b4a",
-      "blocks": 221,
-      "zone_bytes": 14483456,
+      "inner_magic_offset": 36,
+      "block_count": 221,
+      "block_trailer_bytes": 4,
+      "outer_zone_bytes": 14483456,
+      "inner_inflated_zone_bytes": 14483456,
+      "inner_zlib_streams": 0,
+      "outer_stream_complete": true,
+      "trailing_bytes": 0,
       "asset_pool": {
         "tags": 545,
         "assets": 245,
@@ -35,17 +68,25 @@
         "rawfiles": 1,
         "map_ents": 0,
         "type_counts": {
-          "xanim": 199,
-          "xmodel": 23,
-          "techset": 21
+          "0x08": 21,
+          "0x04": 23,
+          "0x02": 199,
+          "0x28": 1
         }
       }
     },
     {
       "file": "clockwork_end_tr.ff",
-      "bytes": 9293040,
-      "sha256": "",
-      "blocks": 214,
+      "bytes": 9331272,
+      "sha256": "abb1818c72f6d120c38306639fa2fc92cbb49fe107a6fccd97045ea57d2652ee",
+      "inner_magic_offset": 36,
+      "block_count": 214,
+      "block_trailer_bytes": 4,
+      "outer_zone_bytes": 14024704,
+      "inner_inflated_zone_bytes": 14024704,
+      "inner_zlib_streams": 0,
+      "outer_stream_complete": true,
+      "trailing_bytes": 0,
       "asset_pool": {
         "tags": 721,
         "assets": 315,
@@ -53,77 +94,114 @@
         "rawfiles": 1,
         "map_ents": 0,
         "type_counts": {
-          "xanim": 282,
-          "xmodel": 15,
-          "techset": 16
+          "0x02": 282,
+          "0x08": 16,
+          "0x04": 15,
+          "0x28": 1
         }
       }
     },
     {
       "file": "por_clockwork.ff",
-      "bytes": 0,
-      "sha256": "",
-      "blocks": 17,
+      "bytes": 456525,
+      "sha256": "c5748e305dc7c4662af8d4ea43f1b23317939ee0d9c817840ec2483528a5febd",
+      "inner_magic_offset": 36,
+      "block_count": 17,
+      "block_trailer_bytes": 4,
+      "outer_zone_bytes": 1114112,
+      "inner_inflated_zone_bytes": 1114112,
+      "inner_zlib_streams": 0,
+      "outer_stream_complete": true,
+      "trailing_bytes": 0,
       "asset_pool": {
+        "tags": 0,
         "assets": 2380,
         "scriptfiles": 0,
         "rawfiles": 1,
         "map_ents": 0,
         "type_counts": {
-          "sound": 2101,
-          "localize": 276,
-          "stringtable": 1
+          "0x0A": 2101,
+          "0x1D": 276,
+          "0x2A": 1,
+          "0x28": 1
         }
       }
     },
     {
       "file": "sna_clockwork.ff",
-      "bytes": 0,
-      "sha256": "",
-      "blocks": 17,
+      "bytes": 452946,
+      "sha256": "711c8782903bb5ff5e10628c6e4bf2f0877f77070455ab8ea851c516cd65bb37",
+      "inner_magic_offset": 36,
+      "block_count": 17,
+      "block_trailer_bytes": 4,
+      "outer_zone_bytes": 1114112,
+      "inner_inflated_zone_bytes": 1114112,
+      "inner_zlib_streams": 0,
+      "outer_stream_complete": true,
+      "trailing_bytes": 0,
       "asset_pool": {
+        "tags": 0,
         "assets": 2380,
         "scriptfiles": 0,
         "rawfiles": 1,
         "map_ents": 0,
         "type_counts": {
-          "sound": 2101,
-          "localize": 276,
-          "stringtable": 1
+          "0x0A": 2101,
+          "0x1D": 276,
+          "0x2A": 1,
+          "0x28": 1
         }
       }
     },
     {
       "file": "fra_clockwork.ff",
-      "bytes": 0,
-      "sha256": "",
-      "blocks": 17,
+      "bytes": 462257,
+      "sha256": "55d303e7dae7d1cd26e8ab5c6cfa52cd6cb65c9a512e072c617d05d58a8bed8a",
+      "inner_magic_offset": 36,
+      "block_count": 17,
+      "block_trailer_bytes": 4,
+      "outer_zone_bytes": 1114112,
+      "inner_inflated_zone_bytes": 1114112,
+      "inner_zlib_streams": 0,
+      "outer_stream_complete": true,
+      "trailing_bytes": 0,
       "asset_pool": {
+        "tags": 0,
         "assets": 2380,
         "scriptfiles": 0,
         "rawfiles": 1,
         "map_ents": 0,
         "type_counts": {
-          "sound": 2101,
-          "localize": 276,
-          "stringtable": 1
+          "0x0A": 2101,
+          "0x1D": 276,
+          "0x2A": 1,
+          "0x28": 1
         }
       }
     },
     {
       "file": "eng_clockwork.ff",
-      "bytes": 0,
-      "sha256": "",
-      "blocks": 16,
+      "bytes": 434363,
+      "sha256": "eaa1d3f553bc85400d6654e020a96b39c5a4b8d226f0635f0b327da3c2add7be",
+      "inner_magic_offset": 36,
+      "block_count": 16,
+      "block_trailer_bytes": 4,
+      "outer_zone_bytes": 1048576,
+      "inner_inflated_zone_bytes": 1048576,
+      "inner_zlib_streams": 0,
+      "outer_stream_complete": true,
+      "trailing_bytes": 0,
       "asset_pool": {
+        "tags": 0,
         "assets": 2380,
         "scriptfiles": 0,
         "rawfiles": 1,
         "map_ents": 0,
         "type_counts": {
-          "sound": 2101,
-          "localize": 276,
-          "stringtable": 1
+          "0x0A": 2101,
+          "0x1D": 276,
+          "0x2A": 1,
+          "0x28": 1
         }
       }
     }
@@ -131,44 +209,53 @@
   "bink_media": [
     {
       "file": "mission_preview_clockwork.bik",
-      "bytes": 0,
+      "bytes": 150676,
       "duration_seconds": 0.5,
+      "codec": "binkvideo",
       "width": 1280,
       "height": 720,
-      "fps": "30/1"
+      "fps": "30/1",
+      "audio_streams": 0
     },
     {
       "file": "clockwork_load.bik",
-      "bytes": 0,
-      "duration_seconds": 38.17,
+      "bytes": 76593948,
+      "duration_seconds": 38.171467,
+      "codec": "binkvideo",
       "width": 1280,
       "height": 720,
       "fps": "30000/1001",
-      "multiple_bink_audio_streams": true
+      "audio_streams": 44
     },
     {
       "file": "clockwork_vault_drill.bik",
-      "bytes": 0,
-      "duration_seconds": 8.61,
+      "bytes": 4305144,
+      "duration_seconds": 8.6086,
+      "codec": "binkvideo",
       "width": 1024,
       "height": 512,
-      "fps": "30000/1001"
+      "fps": "30000/1001",
+      "audio_streams": 0
     },
     {
       "file": "clockwork_vault_scan.bik",
-      "bytes": 0,
-      "duration_seconds": 3.97,
+      "bytes": 1985640,
+      "duration_seconds": 3.970633,
+      "codec": "binkvideo",
       "width": 1024,
       "height": 512,
-      "fps": "30000/1001"
+      "fps": "30000/1001",
+      "audio_streams": 0
     },
     {
       "file": "clockwork_vault_still.bik",
-      "bytes": 0,
-      "duration_seconds": 1.03,
+      "bytes": 517280,
+      "duration_seconds": 1.034367,
+      "codec": "binkvideo",
       "width": 1024,
       "height": 512,
-      "fps": "30000/1001"
+      "fps": "30000/1001",
+      "audio_streams": 0
     }
   ],
   "extracted_source": {
