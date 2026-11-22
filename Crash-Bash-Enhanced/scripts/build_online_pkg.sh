@@ -207,7 +207,489 @@ test -s "$USRDIR/EBOOT.BIN"
 
 # Fail the build if the libretro entry points are not linked into the EBOOT.
 NM="$(command -v ppu-nm || command -v nm)"
-"$NM" -g "$RA/retroarch_psl1ght.elf" | grep -Eq '[[:space:]][Tt][[:space:]]+retro_run$'
+"$NM" -g "$RA/retroarch_psl1ght.elf" | grep -E '[[:space:]][Tt][[:space:]]+retro_run
+"$NM" -g "$RA/retroarch_psl1ght.elf" | grep -E '[[:space:]][Tt][[:space:]]+retro_get_system_info
+
+echo "== Install pinned core metadata, menu assets and licenses"
+wget -qO "$USRDIR/info/pcsx_rearmed_libretro.info" \
+    "https://raw.githubusercontent.com/libretro/libretro-super/$LIBRETRO_SUPER_COMMIT/dist/info/pcsx_rearmed_libretro.info"
+grep -q 'savestate_features = "deterministic"' "$USRDIR/info/pcsx_rearmed_libretro.info"
+
+cp -a "$ASSETS/fonts" "$USRDIR/assets/"
+cp -a "$ASSETS/rgui" "$USRDIR/assets/"
+cp -a "$ASSETS/xmb" "$USRDIR/assets/"
+cp -a "$ASSETS/ozone" "$USRDIR/assets/"
+cp -a "$ASSETS/wallpapers" "$USRDIR/assets/"
+cp "$RA/COPYING" "$USRDIR/licenses/RetroArch-GPL-3.0.txt"
+cp "$PCSX/COPYING" "$USRDIR/licenses/PCSX-ReARMed-GPL-2.0.txt"
+cp "$ASSETS/COPYING" "$USRDIR/licenses/RetroArch-assets-CC-BY-4.0.txt"
+base64 -d "$ROOT/pkgfiles/ICON0.PNG.b64" > "$PKGDIR/ICON0.PNG"
+python3 - "$PKGDIR/ICON0.PNG" <<'PY'
+from pathlib import Path
+import struct
+data = Path(__import__("sys").argv[1]).read_bytes()
+if data[:8] != b"\x89PNG\r\n\x1a\n":
+    raise SystemExit("ICON0.PNG is not a valid PNG")
+width, height = struct.unpack(">II", data[16:24])
+if (width, height) != (320, 176):
+    raise SystemExit(f"ICON0.PNG must be 320x176, got {width}x{height}")
+PY
+
+sfo --title "$APP_TITLE" --appid "$APP_ID" -f "$PS3DEV/bin/sfo.xml" "$PKGDIR/PARAM.SFO"
+
+# Validate the app identity and both launchable PS3 SELF files before packaging.
+python3 - "$PKGDIR/PARAM.SFO" "$APP_ID" "$APP_TITLE" "$USRDIR/EBOOT.BIN" "$CORE_SELF" <<'PY'
+from pathlib import Path
+import sys
+
+sfo_path, app_id, title, eboot_path, core_path = sys.argv[1:]
+sfo = Path(sfo_path).read_bytes()
+if app_id.encode("ascii") not in sfo:
+    raise SystemExit("PARAM.SFO does not contain the expected application ID")
+if title.encode("utf-8") not in sfo:
+    raise SystemExit("PARAM.SFO does not contain the expected application title")
+
+for filename in (eboot_path, core_path):
+    path = Path(filename)
+    data = path.read_bytes()
+    if len(data) < 4 or data[:4] != b"SCE\x00":
+        raise SystemExit(f"{path.name} is not a valid PS3 SELF header")
+PY
+
+cat > "$USRDIR/retroarch.cfg" <<EOF
+# Crash Bash Online - PS3
+menu_driver = "rgui"
+system_directory = "/dev_hdd0/game/$APP_ID/USRDIR/system"
+netplay_nickname = "CrashBashPlayer"
+netplay_public_announce = "true"
+netplay_use_mitm_server = "true"
+netplay_mitm_server = "madrid"
+netplay_nat_traversal = "true"
+netplay_tcp_udp_port = "55435"
+netplay_max_connections = "3"
+netplay_lockstep = "true"
+netplay_start_as_spectator = "false"
+menu_show_load_content = "true"
+config_save_on_exit = "true"
+EOF
+
+cat > "$USRDIR/retroarch-core-options.cfg" <<'EOF'
+pcsx_rearmed_multitap = "port 1"
+EOF
+
+cat > "$USRDIR/README-Crash-Bash-Online.txt" <<'EOF'
+CRASH BASH ONLINE — PLAYSTATION 3
+
+This package starts RetroArch directly from EBOOT.BIN with the PCSX-ReARMed
+PlayStation 1 core statically linked into the same executable. It does not contain the Crash Bash game disc image or a
+Sony PlayStation BIOS.
+
+GETTING THE GAME
+1. Create a BIN/CUE dump from your own Crash Bash disc.
+2. Copy both files to /dev_hdd0/PSXISO/ or to a /PSXISO/ folder on USB.
+3. Keep the BIN filename referenced by the CUE file exactly correct.
+4. A BIOS dumped from your own PS1 is recommended. If you use one, place the
+   same BIOS file in /dev_hdd0/game/CBASH0001/USRDIR/system/ on each console.
+5. Settings and logs are kept in the app-specific profile under
+   /dev_hdd0/home/<user-id>/retroarch/CBASH0001/.
+
+LOCAL PLAY
+1. Launch Crash Bash Online from the PS3 XMB.
+2. Choose Load Content and open the game's CUE file.
+3. The included core has Multitap Mode set to Port 1.
+
+ONLINE PLAY
+1. Both consoles install the same PKG and use identical game dumps.
+2. Both players load the same CUE file with the included PCSX-ReARMed core.
+3. Open RetroArch's Netplay menu.
+4. The host selects Start Netplay Host.
+5. Other players refresh the Netplay Host List and join the host.
+6. The host is configured to accept up to three remote clients (four participants
+   total); four-player performance has not yet been validated on PS3 hardware.
+
+Lockstep synchronization is enabled because the pinned PS1 core has a large
+savestate (0x440000 bytes). Lockstep keeps one state instead of a rollback state
+for every buffered frame; the trade-off is that a frame waits for every player's
+input, which can add latency or brief stalls on slower connections.
+
+Keep the exact same CUE file and every referenced BIN track byte-for-byte
+identical on all consoles, along with the same region, BIOS file, core version
+and core options. The package enables the RetroArch public lobby, NAT traversal
+and the Madrid relay endpoint by default. If direct connection is needed,
+forward TCP port 55435 on the host router. Network restrictions or relay
+availability can still prevent a connection. For a password-protected match,
+set a Netplay Server Password on the host and share it only with invited players.
+The room may still appear in the public host list.
+
+PSN is not initialized or required by this homebrew build. An internet
+connection is still required for online Netplay.
+
+This is an unofficial homebrew project and is not affiliated with Sony,
+Activision or the original Crash Bash developers.
+EOF
+
+echo "== Package Crash Bash Online"
+OUT="$ROOT/build-artifacts/Crash-Bash-Online-PS3.pkg"
+pkg --contentid "$CONTENT_ID" "$PKGDIR/" "$OUT"
+test -s "$OUT"
+
+# PSL1GHT's pkg command first emits a non-finalized debug PKG (revision 0x0000).
+# Finalize it for normal CEX/CFW package installation before computing the hash.
+package_finalize "$OUT"
+MAGIC="$(od -An -tx1 -N4 "$OUT" | tr -d ' \\n')"
+REVISION="$(od -An -tx1 -j4 -N2 "$OUT" | tr -d ' \\n')"
+test "$MAGIC" = "7f504b47"
+test "$REVISION" = "8000"
+
+(
+    cd "$ROOT/build-artifacts"
+    sha256sum "Crash-Bash-Online-PS3.pkg" > "Crash-Bash-Online-PS3.pkg.sha256"
+)
+cat > "$ROOT/build-artifacts/BUILD-MANIFEST.txt" <<EOF
+Package: Crash Bash Online — PS3
+Application ID: $APP_ID
+Content ID: $CONTENT_ID
+RetroArch commit: $RA_COMMIT
+PCSX-ReARMed commit: $PCSX_COMMIT
+RetroArch assets commit: $ASSETS_COMMIT
+libretro-super metadata commit: $LIBRETRO_SUPER_COMMIT
+Launch: direct NPDRM EBOOT.BIN (no Salamander second-stage launcher)
+Core: PCSX-ReARMed statically linked into the launched executable
+Netplay: RetroArch Netplay, PSN-independent
+Synchronization: lockstep (one savestate; PS1 state size 0x440000 bytes)
+Configured maximum: 1 host + 3 remote clients (4 total; hardware test pending)
+PCSX-ReARMed Multitap: Port 1
+PS3 user profile: /dev_hdd0/home/<user-id>/retroarch/CBASH0001/
+Cover art: custom ICON0.PNG
+Game data and BIOS: not included
+EOF
+
+echo "Build outputs:"
+ls -lah "$OUT" "$OUT.sha256" "$ROOT/build-artifacts/BUILD-MANIFEST.txt"
+cat "$OUT.sha256"
+
+ >/dev/null
+"$NM" -g "$RA/retroarch_psl1ght.elf" | grep -Eq '[[:space:]][Tt][[:space:]]+retro_get_system_info$'
+
+echo "== Install pinned core metadata, menu assets and licenses"
+wget -qO "$USRDIR/info/pcsx_rearmed_libretro.info" \
+    "https://raw.githubusercontent.com/libretro/libretro-super/$LIBRETRO_SUPER_COMMIT/dist/info/pcsx_rearmed_libretro.info"
+grep -q 'savestate_features = "deterministic"' "$USRDIR/info/pcsx_rearmed_libretro.info"
+
+cp -a "$ASSETS/fonts" "$USRDIR/assets/"
+cp -a "$ASSETS/rgui" "$USRDIR/assets/"
+cp -a "$ASSETS/xmb" "$USRDIR/assets/"
+cp -a "$ASSETS/ozone" "$USRDIR/assets/"
+cp -a "$ASSETS/wallpapers" "$USRDIR/assets/"
+cp "$RA/COPYING" "$USRDIR/licenses/RetroArch-GPL-3.0.txt"
+cp "$PCSX/COPYING" "$USRDIR/licenses/PCSX-ReARMed-GPL-2.0.txt"
+cp "$ASSETS/COPYING" "$USRDIR/licenses/RetroArch-assets-CC-BY-4.0.txt"
+base64 -d "$ROOT/pkgfiles/ICON0.PNG.b64" > "$PKGDIR/ICON0.PNG"
+python3 - "$PKGDIR/ICON0.PNG" <<'PY'
+from pathlib import Path
+import struct
+data = Path(__import__("sys").argv[1]).read_bytes()
+if data[:8] != b"\x89PNG\r\n\x1a\n":
+    raise SystemExit("ICON0.PNG is not a valid PNG")
+width, height = struct.unpack(">II", data[16:24])
+if (width, height) != (320, 176):
+    raise SystemExit(f"ICON0.PNG must be 320x176, got {width}x{height}")
+PY
+
+sfo --title "$APP_TITLE" --appid "$APP_ID" -f "$PS3DEV/bin/sfo.xml" "$PKGDIR/PARAM.SFO"
+
+# Validate the app identity and both launchable PS3 SELF files before packaging.
+python3 - "$PKGDIR/PARAM.SFO" "$APP_ID" "$APP_TITLE" "$USRDIR/EBOOT.BIN" "$CORE_SELF" <<'PY'
+from pathlib import Path
+import sys
+
+sfo_path, app_id, title, eboot_path, core_path = sys.argv[1:]
+sfo = Path(sfo_path).read_bytes()
+if app_id.encode("ascii") not in sfo:
+    raise SystemExit("PARAM.SFO does not contain the expected application ID")
+if title.encode("utf-8") not in sfo:
+    raise SystemExit("PARAM.SFO does not contain the expected application title")
+
+for filename in (eboot_path, core_path):
+    path = Path(filename)
+    data = path.read_bytes()
+    if len(data) < 4 or data[:4] != b"SCE\x00":
+        raise SystemExit(f"{path.name} is not a valid PS3 SELF header")
+PY
+
+cat > "$USRDIR/retroarch.cfg" <<EOF
+# Crash Bash Online - PS3
+menu_driver = "rgui"
+system_directory = "/dev_hdd0/game/$APP_ID/USRDIR/system"
+netplay_nickname = "CrashBashPlayer"
+netplay_public_announce = "true"
+netplay_use_mitm_server = "true"
+netplay_mitm_server = "madrid"
+netplay_nat_traversal = "true"
+netplay_tcp_udp_port = "55435"
+netplay_max_connections = "3"
+netplay_lockstep = "true"
+netplay_start_as_spectator = "false"
+menu_show_load_content = "true"
+config_save_on_exit = "true"
+EOF
+
+cat > "$USRDIR/retroarch-core-options.cfg" <<'EOF'
+pcsx_rearmed_multitap = "port 1"
+EOF
+
+cat > "$USRDIR/README-Crash-Bash-Online.txt" <<'EOF'
+CRASH BASH ONLINE — PLAYSTATION 3
+
+This package starts RetroArch directly from EBOOT.BIN with the PCSX-ReARMed
+PlayStation 1 core statically linked into the same executable. It does not contain the Crash Bash game disc image or a
+Sony PlayStation BIOS.
+
+GETTING THE GAME
+1. Create a BIN/CUE dump from your own Crash Bash disc.
+2. Copy both files to /dev_hdd0/PSXISO/ or to a /PSXISO/ folder on USB.
+3. Keep the BIN filename referenced by the CUE file exactly correct.
+4. A BIOS dumped from your own PS1 is recommended. If you use one, place the
+   same BIOS file in /dev_hdd0/game/CBASH0001/USRDIR/system/ on each console.
+5. Settings and logs are kept in the app-specific profile under
+   /dev_hdd0/home/<user-id>/retroarch/CBASH0001/.
+
+LOCAL PLAY
+1. Launch Crash Bash Online from the PS3 XMB.
+2. Choose Load Content and open the game's CUE file.
+3. The included core has Multitap Mode set to Port 1.
+
+ONLINE PLAY
+1. Both consoles install the same PKG and use identical game dumps.
+2. Both players load the same CUE file with the included PCSX-ReARMed core.
+3. Open RetroArch's Netplay menu.
+4. The host selects Start Netplay Host.
+5. Other players refresh the Netplay Host List and join the host.
+6. The host is configured to accept up to three remote clients (four participants
+   total); four-player performance has not yet been validated on PS3 hardware.
+
+Lockstep synchronization is enabled because the pinned PS1 core has a large
+savestate (0x440000 bytes). Lockstep keeps one state instead of a rollback state
+for every buffered frame; the trade-off is that a frame waits for every player's
+input, which can add latency or brief stalls on slower connections.
+
+Keep the exact same CUE file and every referenced BIN track byte-for-byte
+identical on all consoles, along with the same region, BIOS file, core version
+and core options. The package enables the RetroArch public lobby, NAT traversal
+and the Madrid relay endpoint by default. If direct connection is needed,
+forward TCP port 55435 on the host router. Network restrictions or relay
+availability can still prevent a connection. For a password-protected match,
+set a Netplay Server Password on the host and share it only with invited players.
+The room may still appear in the public host list.
+
+PSN is not initialized or required by this homebrew build. An internet
+connection is still required for online Netplay.
+
+This is an unofficial homebrew project and is not affiliated with Sony,
+Activision or the original Crash Bash developers.
+EOF
+
+echo "== Package Crash Bash Online"
+OUT="$ROOT/build-artifacts/Crash-Bash-Online-PS3.pkg"
+pkg --contentid "$CONTENT_ID" "$PKGDIR/" "$OUT"
+test -s "$OUT"
+
+# PSL1GHT's pkg command first emits a non-finalized debug PKG (revision 0x0000).
+# Finalize it for normal CEX/CFW package installation before computing the hash.
+package_finalize "$OUT"
+MAGIC="$(od -An -tx1 -N4 "$OUT" | tr -d ' \\n')"
+REVISION="$(od -An -tx1 -j4 -N2 "$OUT" | tr -d ' \\n')"
+test "$MAGIC" = "7f504b47"
+test "$REVISION" = "8000"
+
+(
+    cd "$ROOT/build-artifacts"
+    sha256sum "Crash-Bash-Online-PS3.pkg" > "Crash-Bash-Online-PS3.pkg.sha256"
+)
+cat > "$ROOT/build-artifacts/BUILD-MANIFEST.txt" <<EOF
+Package: Crash Bash Online — PS3
+Application ID: $APP_ID
+Content ID: $CONTENT_ID
+RetroArch commit: $RA_COMMIT
+PCSX-ReARMed commit: $PCSX_COMMIT
+RetroArch assets commit: $ASSETS_COMMIT
+libretro-super metadata commit: $LIBRETRO_SUPER_COMMIT
+Launch: direct NPDRM EBOOT.BIN (no Salamander second-stage launcher)
+Core: PCSX-ReARMed statically linked into the launched executable
+Netplay: RetroArch Netplay, PSN-independent
+Synchronization: lockstep (one savestate; PS1 state size 0x440000 bytes)
+Configured maximum: 1 host + 3 remote clients (4 total; hardware test pending)
+PCSX-ReARMed Multitap: Port 1
+PS3 user profile: /dev_hdd0/home/<user-id>/retroarch/CBASH0001/
+Cover art: custom ICON0.PNG
+Game data and BIOS: not included
+EOF
+
+echo "Build outputs:"
+ls -lah "$OUT" "$OUT.sha256" "$ROOT/build-artifacts/BUILD-MANIFEST.txt"
+cat "$OUT.sha256"
+
+ >/dev/null
+
+echo "== Install pinned core metadata, menu assets and licenses"
+wget -qO "$USRDIR/info/pcsx_rearmed_libretro.info" \
+    "https://raw.githubusercontent.com/libretro/libretro-super/$LIBRETRO_SUPER_COMMIT/dist/info/pcsx_rearmed_libretro.info"
+grep -q 'savestate_features = "deterministic"' "$USRDIR/info/pcsx_rearmed_libretro.info"
+
+cp -a "$ASSETS/fonts" "$USRDIR/assets/"
+cp -a "$ASSETS/rgui" "$USRDIR/assets/"
+cp -a "$ASSETS/xmb" "$USRDIR/assets/"
+cp -a "$ASSETS/ozone" "$USRDIR/assets/"
+cp -a "$ASSETS/wallpapers" "$USRDIR/assets/"
+cp "$RA/COPYING" "$USRDIR/licenses/RetroArch-GPL-3.0.txt"
+cp "$PCSX/COPYING" "$USRDIR/licenses/PCSX-ReARMed-GPL-2.0.txt"
+cp "$ASSETS/COPYING" "$USRDIR/licenses/RetroArch-assets-CC-BY-4.0.txt"
+base64 -d "$ROOT/pkgfiles/ICON0.PNG.b64" > "$PKGDIR/ICON0.PNG"
+python3 - "$PKGDIR/ICON0.PNG" <<'PY'
+from pathlib import Path
+import struct
+data = Path(__import__("sys").argv[1]).read_bytes()
+if data[:8] != b"\x89PNG\r\n\x1a\n":
+    raise SystemExit("ICON0.PNG is not a valid PNG")
+width, height = struct.unpack(">II", data[16:24])
+if (width, height) != (320, 176):
+    raise SystemExit(f"ICON0.PNG must be 320x176, got {width}x{height}")
+PY
+
+sfo --title "$APP_TITLE" --appid "$APP_ID" -f "$PS3DEV/bin/sfo.xml" "$PKGDIR/PARAM.SFO"
+
+# Validate the app identity and both launchable PS3 SELF files before packaging.
+python3 - "$PKGDIR/PARAM.SFO" "$APP_ID" "$APP_TITLE" "$USRDIR/EBOOT.BIN" "$CORE_SELF" <<'PY'
+from pathlib import Path
+import sys
+
+sfo_path, app_id, title, eboot_path, core_path = sys.argv[1:]
+sfo = Path(sfo_path).read_bytes()
+if app_id.encode("ascii") not in sfo:
+    raise SystemExit("PARAM.SFO does not contain the expected application ID")
+if title.encode("utf-8") not in sfo:
+    raise SystemExit("PARAM.SFO does not contain the expected application title")
+
+for filename in (eboot_path, core_path):
+    path = Path(filename)
+    data = path.read_bytes()
+    if len(data) < 4 or data[:4] != b"SCE\x00":
+        raise SystemExit(f"{path.name} is not a valid PS3 SELF header")
+PY
+
+cat > "$USRDIR/retroarch.cfg" <<EOF
+# Crash Bash Online - PS3
+menu_driver = "rgui"
+system_directory = "/dev_hdd0/game/$APP_ID/USRDIR/system"
+netplay_nickname = "CrashBashPlayer"
+netplay_public_announce = "true"
+netplay_use_mitm_server = "true"
+netplay_mitm_server = "madrid"
+netplay_nat_traversal = "true"
+netplay_tcp_udp_port = "55435"
+netplay_max_connections = "3"
+netplay_lockstep = "true"
+netplay_start_as_spectator = "false"
+menu_show_load_content = "true"
+config_save_on_exit = "true"
+EOF
+
+cat > "$USRDIR/retroarch-core-options.cfg" <<'EOF'
+pcsx_rearmed_multitap = "port 1"
+EOF
+
+cat > "$USRDIR/README-Crash-Bash-Online.txt" <<'EOF'
+CRASH BASH ONLINE — PLAYSTATION 3
+
+This package starts RetroArch directly from EBOOT.BIN with the PCSX-ReARMed
+PlayStation 1 core statically linked into the same executable. It does not contain the Crash Bash game disc image or a
+Sony PlayStation BIOS.
+
+GETTING THE GAME
+1. Create a BIN/CUE dump from your own Crash Bash disc.
+2. Copy both files to /dev_hdd0/PSXISO/ or to a /PSXISO/ folder on USB.
+3. Keep the BIN filename referenced by the CUE file exactly correct.
+4. A BIOS dumped from your own PS1 is recommended. If you use one, place the
+   same BIOS file in /dev_hdd0/game/CBASH0001/USRDIR/system/ on each console.
+5. Settings and logs are kept in the app-specific profile under
+   /dev_hdd0/home/<user-id>/retroarch/CBASH0001/.
+
+LOCAL PLAY
+1. Launch Crash Bash Online from the PS3 XMB.
+2. Choose Load Content and open the game's CUE file.
+3. The included core has Multitap Mode set to Port 1.
+
+ONLINE PLAY
+1. Both consoles install the same PKG and use identical game dumps.
+2. Both players load the same CUE file with the included PCSX-ReARMed core.
+3. Open RetroArch's Netplay menu.
+4. The host selects Start Netplay Host.
+5. Other players refresh the Netplay Host List and join the host.
+6. The host is configured to accept up to three remote clients (four participants
+   total); four-player performance has not yet been validated on PS3 hardware.
+
+Lockstep synchronization is enabled because the pinned PS1 core has a large
+savestate (0x440000 bytes). Lockstep keeps one state instead of a rollback state
+for every buffered frame; the trade-off is that a frame waits for every player's
+input, which can add latency or brief stalls on slower connections.
+
+Keep the exact same CUE file and every referenced BIN track byte-for-byte
+identical on all consoles, along with the same region, BIOS file, core version
+and core options. The package enables the RetroArch public lobby, NAT traversal
+and the Madrid relay endpoint by default. If direct connection is needed,
+forward TCP port 55435 on the host router. Network restrictions or relay
+availability can still prevent a connection. For a password-protected match,
+set a Netplay Server Password on the host and share it only with invited players.
+The room may still appear in the public host list.
+
+PSN is not initialized or required by this homebrew build. An internet
+connection is still required for online Netplay.
+
+This is an unofficial homebrew project and is not affiliated with Sony,
+Activision or the original Crash Bash developers.
+EOF
+
+echo "== Package Crash Bash Online"
+OUT="$ROOT/build-artifacts/Crash-Bash-Online-PS3.pkg"
+pkg --contentid "$CONTENT_ID" "$PKGDIR/" "$OUT"
+test -s "$OUT"
+
+# PSL1GHT's pkg command first emits a non-finalized debug PKG (revision 0x0000).
+# Finalize it for normal CEX/CFW package installation before computing the hash.
+package_finalize "$OUT"
+MAGIC="$(od -An -tx1 -N4 "$OUT" | tr -d ' \\n')"
+REVISION="$(od -An -tx1 -j4 -N2 "$OUT" | tr -d ' \\n')"
+test "$MAGIC" = "7f504b47"
+test "$REVISION" = "8000"
+
+(
+    cd "$ROOT/build-artifacts"
+    sha256sum "Crash-Bash-Online-PS3.pkg" > "Crash-Bash-Online-PS3.pkg.sha256"
+)
+cat > "$ROOT/build-artifacts/BUILD-MANIFEST.txt" <<EOF
+Package: Crash Bash Online — PS3
+Application ID: $APP_ID
+Content ID: $CONTENT_ID
+RetroArch commit: $RA_COMMIT
+PCSX-ReARMed commit: $PCSX_COMMIT
+RetroArch assets commit: $ASSETS_COMMIT
+libretro-super metadata commit: $LIBRETRO_SUPER_COMMIT
+Launch: direct NPDRM EBOOT.BIN (no Salamander second-stage launcher)
+Core: PCSX-ReARMed statically linked into the launched executable
+Netplay: RetroArch Netplay, PSN-independent
+Synchronization: lockstep (one savestate; PS1 state size 0x440000 bytes)
+Configured maximum: 1 host + 3 remote clients (4 total; hardware test pending)
+PCSX-ReARMed Multitap: Port 1
+PS3 user profile: /dev_hdd0/home/<user-id>/retroarch/CBASH0001/
+Cover art: custom ICON0.PNG
+Game data and BIOS: not included
+EOF
+
+echo "Build outputs:"
+ls -lah "$OUT" "$OUT.sha256" "$ROOT/build-artifacts/BUILD-MANIFEST.txt"
+cat "$OUT.sha256"
+
+ >/dev/null
 "$NM" -g "$RA/retroarch_psl1ght.elf" | grep -Eq '[[:space:]][Tt][[:space:]]+retro_get_system_info$'
 
 echo "== Install pinned core metadata, menu assets and licenses"
