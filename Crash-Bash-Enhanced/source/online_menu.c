@@ -162,8 +162,8 @@ static void draw_room(const CBOnlineRoomView *view, const CBOnlineSession *sessi
             draw_text((float)x + 18, (float)y + 23, 16, 0x9bb4c2ff, slot);
         }
     }
-    if (view->is_ready) draw_text(58, 338, 16, 0x7ce0a8ff, "ALL FOUR PLAYERS READY");
-    else draw_text(58, 338, 15, 0x9bb4c2ff, "Waiting for players to join and mark READY.");
+    if (view->is_ready) draw_text(58, 338, 16, 0x7ce0a8ff, "FOUR SEATS READY - LOBBY ONLY");
+    else draw_text(58, 338, 15, 0x9bb4c2ff, "Waiting for players. Game sync is not connected.");
     draw_rect(58, 390, 720, 38, 0x0b1720ff);
     draw_text(72, 398, 14, 0x9bb4c2ff, status);
     draw_text(56, 474, 12, 0x6d8794ff, "CROSS TOGGLE READY  SQUARE REFRESH  CIRCLE LEAVE ROOM");
