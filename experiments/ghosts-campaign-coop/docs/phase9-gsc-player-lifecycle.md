@@ -144,3 +144,8 @@ This is still a read-only diagnostic PRX, not a Campaign co-op mod. It has passe
 The Campaign/Multiplayer comparator now parses MODE_SOURCE and MODE_LABEL_IS_OPERATOR_SELECTED from each log. It reports both sources and marks the labels as operator-selected, not auto-detected. The combined result says both labels are operator-selected only when both logs carry the marker. A new test covers the case where only one log has provenance.
 
 The final comparator/instructions commit passed all five CI jobs and 127/127 host tests (run 45023444205). The final documentation/instructions commit also passed Actions (run 45023497892).
+
+
+## 10. Final instruction/build verification
+
+The PS3MAPI README now checks for the actual PRX module name, ghosts_campaign_pad_probe, and verifies that the PRX ID disappears after a successful unload. The latest branch push run 45023988610 passed all five CI jobs and 129/129 host tests; the matching PR workflow run 45023992976 also passed.
