@@ -12,25 +12,32 @@
 
 main()
 {
+    if ( isdefined( level.ghc_campaign_session_ready )
+        && level.ghc_campaign_session_ready )
+        return 1;
+
     level.ghc_campaign_session_ready = 0;
     level.ghc_campaign_session_status = 0;
     level.ghc_campaign_player_0 = undefined;
     level.ghc_campaign_player_1 = undefined;
+    level.playerpiggyback = undefined;
 
     /*
-     * Campaign's shared loader may enumerate players before the second
-     * native local player has completed its begin lifecycle. Refresh the
-     * entity list for a bounded period, using the same native player
-     * entities that Multiplayer registers after its connect/begin path.
+     * The second native entity can appear before its split-screen identity
+     * flags are ready. Retry the full identity bind, not just the entity
+     * count, for a bounded period. Never return early on an unready pair.
      */
     for ( var_0 = 0; var_0 < 200; var_0++ )
     {
         var_1 = getentarray( "player", "classname" );
 
+        if ( isdefined( var_1 ) )
+            level.playerpiggyback = var_1;
+
         if ( issplitscreen() && isdefined( var_1 ) && var_1.size >= 2 )
         {
-            level.playerpiggyback = var_1;
-            return ghc_campaign_bind_native_local_pair();
+            if ( ghc_campaign_bind_native_local_pair() )
+                return 1;
         }
 
         wait 0.05;
