@@ -47,7 +47,7 @@ make -C client/ps3/probes/pad_probe PS3DEV="$PS3DEV" PS3DK="$PS3DK"
    استبدل PID_HERE بالرقم الذي ظهر في الخطوة السابقة.
 7. تحقق من أن الوحدة حُمّلت:
    http://PS3_IP/ps3mapi.ps3?MODULE+GETALLPRXID+PID_HERE
-   ثم استخدم MODULE+GETNAME أو MODULE+GETFILENAME مع PID ومعرّف الوحدة للتأكد من اسم ghosts_pad_probe.
+   ثم استخدم MODULE+GETNAME أو MODULE+GETFILENAME مع PID ومعرّف الوحدة للتأكد من اسم الوحدة ghosts_campaign_pad_probe (اسم مكتبة التصدير الداخلي مختلف).
 8. انتظر 30 ثانية حتى ينتهي أخذ العينات، ثم انسخ ملف السجل المناسب إلى الكمبيوتر.
 9. أزل الوحدة بعد نسخ السجل:
    http://PS3_IP/ps3mapi.ps3?MODULE+UNLOAD+PID_HERE+PRX_ID
