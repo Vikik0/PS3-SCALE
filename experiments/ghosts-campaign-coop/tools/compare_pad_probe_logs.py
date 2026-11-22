@@ -98,7 +98,7 @@ def compare(campaign: dict, multiplayer: dict) -> dict:
         "mode_label_values_match_expected": not mode_mismatch,
         "mode_labels_are_operator_selected": (
             campaign.get("mode_label_is_operator_selected") is True
-            or multiplayer.get("mode_label_is_operator_selected") is True
+            and multiplayer.get("mode_label_is_operator_selected") is True
         ),
         "mode_label_provenance": {
             "campaign": {
