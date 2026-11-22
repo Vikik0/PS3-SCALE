@@ -18,7 +18,7 @@ RetroArch's current Netplay FAQ cautions that PSX netplay is generally unsuitabl
 - A stable wired network for the first test; internet access for the relay test.
 - At least two controllers; four controllers for the final multiplayer test.
 
-Do not change the core version, CUE/BIN content, region, BIOS file (or HLE choice), Multitap option or synchronization mode between consoles during a test. The package stores its settings and logs under `/dev_hdd0/home/<user-id>/retroarch/CBASH0001/`.
+Do not change the core version, CUE/BIN content, region, BIOS file (or HLE choice), Multitap option or synchronization mode between consoles during a test. The package stores its settings and logs under `/dev_hdd0/home/<user-id>/retroarch/CBON00001/`.
 
 ## Test 1 — Single-console baseline
 
@@ -77,7 +77,7 @@ Pass criteria: password protection behaves as expected, reconnection does not co
 
 ## Logs and evidence
 
-After each failed test, preserve the RetroArch log from the app-specific profile's `logs` folder under `/dev_hdd0/home/<user-id>/retroarch/CBASH0001/` on both consoles. Record:
+After each failed test, preserve the RetroArch log from the app-specific profile's `logs` folder under `/dev_hdd0/home/<user-id>/retroarch/CBON00001/` on both consoles. Record:
 
 - Which console was host and which was client.
 - Whether the consoles were on the same LAN or different internet connections.
