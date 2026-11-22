@@ -5,9 +5,9 @@
   "platform": "PS3",
   "compiler": "GSC Tool 1.6.2.364",
   "compile_command": "gsc-tool --mode comp --game iw6 --system ps3 ghc_campaign_player_registry.gsc",
-  "source_sha256": null,
-  "compiled_gscbin_sha256": null,
-  "compiled_gscbin_bytes": null,
-  "status": "source updated for bounded initialization wait; pinned GSC Tool CI must regenerate and record source and compiled artifact hashes",
+  "source_sha256": "cd5e013ff9c4d04053cc7d73bdcb4a3f7de18bce485fa079acff4d105020753e",
+  "compiled_gscbin_sha256": "aae81e8775ccc8af819f1b68787f35d178ba6fa292176ca6b700449a926f0bbe",
+  "compiled_gscbin_bytes": 461,
+  "status": "compiled and round-trip decompiled after bounded initialization wait; exposes explicit registry status codes 0-6; not injected or runtime-tested",
   "behavior": "Read-only validation of exactly two already-registered native split-screen player entities; assigns primary and secondary slots by native identity rather than assuming player-array order; exposes failure reason in level.ghc_campaign_registry_status; does not create or clone a player."
 }
