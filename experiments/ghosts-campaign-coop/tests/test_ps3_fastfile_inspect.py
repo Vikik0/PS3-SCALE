@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from tools.ps3_fastfile_inspect import (
+from ps3_fastfile_inspect import (
     FastFileError, INNER_MAGIC, OUTER_MAGIC, STREAM_DELTA, ZONE_BLOCK_SIZE,
     inspect_bytes, inspect_bytes_full,
 )
