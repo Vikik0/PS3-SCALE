@@ -264,6 +264,44 @@ int cb_online_leave_room(CBOnlineSession *session, char *error, size_t error_siz
     memset(session, 0, sizeof(*session)); if (error && error_size) error[0] = '\0'; return 0;
 }
 
+static int post_room_game_start_action(CBOnlineSession *session,
+                                          const char *action,
+                                          char *error, size_t error_size) {
+    char body[64], response[CB_HTTP_BUFFER];
+    cb_json_token tokens[CB_JSON_TOKEN_COUNT];
+    int count, ok;
+
+    if (!session || !session->token[0]) {
+        set_error(error, error_size, "No active room session");
+        return -1;
+    }
+    snprintf(body, sizeof(body), "{\\"action\\":\\"%s\\"}", action);
+    if (http_request("POST", "/api/rooms", body, session->token,
+                     response, sizeof(response), error, error_size) < 0) return -1;
+    count = cb_json_parse(response, tokens, CB_JSON_TOKEN_COUNT);
+    if (count <= 0) {
+        set_error(error, error_size, "Invalid room launch response");
+        return -1;
+    }
+    ok = cb_json_object_get(response, tokens, count, 0, "ok");
+    if (!cb_json_bool(response, ok >= 0 ? &tokens[ok] : NULL, 0)) {
+        set_error(error, error_size, "Room launch action was not accepted");
+        return -1;
+    }
+    if (error && error_size) error[0] = '\\0';
+    return 0;
+}
+
+int cb_online_mark_game_started(CBOnlineSession *session,
+                                char *error, size_t error_size) {
+    return post_room_game_start_action(session, "game_start", error, error_size);
+}
+
+int cb_online_cancel_game_start(CBOnlineSession *session,
+                                char *error, size_t error_size) {
+    return post_room_game_start_action(session, "game_start_cancel", error, error_size);
+}
+
 int cb_online_get_netplay_endpoint(CBOnlineSession *session,
                                    CBOnlineNetplayEndpoint *endpoint,
                                    char *error, size_t error_size) {
