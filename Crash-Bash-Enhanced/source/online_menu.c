@@ -192,7 +192,7 @@ static void draw_room(const CBOnlineRoomView *view, const CBOnlineSession *sessi
             draw_text((float)x + 18, (float)y + 23, 16, 0x9bb4c2ff, slot);
         }
     }
-    if (view->is_ready) draw_text(58, 338, 16, 0x7ce0a8ff, "ALL PLAYERS READY - PRESS START TO OPEN CRASH BASH");
+    if (view->is_ready) draw_text(58, 338, 16, 0x7ce0a8ff, "ALL PLAYERS READY - PRESS START TO OPEN CRASH BASH ONLINE");
     else if (view->player_count < 2) draw_text(58, 338, 15, 0x9bb4c2ff, "Waiting for at least two players.");
     else draw_text(58, 338, 15, 0x9bb4c2ff, "Waiting for every player to mark READY.");
     draw_rect(58, 390, 720, 38, 0x0b1720ff);
