@@ -60,6 +60,18 @@ async function saveRoom(code, room, expectedEtag) {
   });
 }
 
+async function deleteExpiredRoom(code, expectedEtag) {
+  try {
+    await del(pathFor(code), { access: ACCESS, ifMatch: expectedEtag });
+    return true;
+  } catch (error) {
+    // A heartbeat or join updated the room after the listing read it. Keep the
+    // newer version; the next listing pass will evaluate its fresh timestamp.
+    if (error?.name === "BlobPreconditionFailedError") return false;
+    throw error;
+  }
+}
+
 function tokenClaims(req) {
   return verifyGuestToken(bearerToken(req));
 }
@@ -106,7 +118,10 @@ async function listRooms() {
         const room = record.room;
         const now = Date.now();
         const active = activePlayers(room, now);
-        if (!Number.isFinite(room.updatedAt) || now - room.updatedAt > ROOM_TTL_MS || active.length === 0) return null;
+        if (!Number.isFinite(room.updatedAt) || now - room.updatedAt > ROOM_TTL_MS || active.length === 0) {
+          await deleteExpiredRoom(code, record.etag);
+          return null;
+        }
         const staleReadyRoom = room.status === "ready" && active.length < MAX_PLAYERS;
         if (!room.isPrivate && (room.status === "waiting" || staleReadyRoom) && active.length < MAX_PLAYERS) {
           return publicRoom(room);
