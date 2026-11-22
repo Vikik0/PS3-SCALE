@@ -310,7 +310,7 @@ async function refreshRoom(){
     renderRoom();
     return true;
   }catch(e){
-    if([401,403,404].includes(e.status)){
+    if([401,403,404,410].includes(e.status)){
       expireRoomSession(e.message||"Your room session expired. Join or create another battle.");
     }else{
       $("roomNotice").textContent="Connection issue: "+e.message+" — retrying automatically.";
@@ -349,7 +349,7 @@ async function sendHeartbeat(){
     renderRoom();
     return true;
   }catch(e){
-    if([401,403,404].includes(e.status)){
+    if([401,403,404,410].includes(e.status)){
       expireRoomSession(e.message||"Your room session expired. Join or create another battle.");
     }else{
       $("roomNotice").textContent="Connection issue: "+e.message+" — retrying automatically.";
