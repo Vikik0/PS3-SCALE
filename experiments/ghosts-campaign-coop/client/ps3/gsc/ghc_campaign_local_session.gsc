@@ -438,6 +438,15 @@ ghc_campaign_drill_begin( var_0, var_1 )
     if ( ghc_campaign_drill_active_spot_for_player( var_2 ) != -1 )
         return 0;
 
+    /* The retail Clockwork flow reuses shared drill flags and one vault rig.
+     * Its two drill spots are sequential stages, never concurrent sessions. */
+    if ( ghc_campaign_drill_active_spot_for_player( 0 ) != -1
+        || ghc_campaign_drill_active_spot_for_player( 1 ) != -1 )
+        return 0;
+
+    if ( var_1 == 1 && !ghc_campaign_drill_is_complete( 0 ) )
+        return 0;
+
     if ( ghc_campaign_drill_is_complete( var_1 ) )
         return 0;
 
