@@ -1,6 +1,7 @@
 struct timeval;
 #include "online_menu.h"
 #include "game_launcher.h"
+#include "disc_browser.h"
 #include "online.h"
 #include <stdio.h>
 #include <string.h>
@@ -17,6 +18,7 @@ struct timeval;
 #define SCREEN_ROOMS 0
 #define SCREEN_ROOM 1
 #define SCREEN_JOIN_CODE 2
+#define SCREEN_DISC_SELECT 3
 
 static const char g_room_code_chars[] = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -201,12 +203,86 @@ static void draw_room(const CBOnlineRoomView *view, const CBOnlineSession *sessi
     tiny3d_Flip();
 }
 
+static int session_is_room_host(const CBOnlineSession *session,
+                                const CBOnlineRoomView *view)
+{
+    const char *host_id;
+    if (!session || !view || !session->player_id[0]) return 0;
+    host_id = view->host_player_id;
+    if (!host_id[0] && view->player_count > 0) host_id = view->players[0].id;
+    return host_id[0] && strcmp(host_id, session->player_id) == 0;
+}
+
+static void make_netplay_nickname(char *output, size_t output_size,
+                                  const CBOnlineSession *session,
+                                  const CBOnlineRoomView *view, int is_host)
+{
+    int i;
+    int player_number = 2;
+    if (!output || output_size == 0 || !session || !view) return;
+    for (i = 0; i < view->player_count; i++) {
+        if (strcmp(view->players[i].id, session->player_id) == 0) {
+            player_number = i + 1;
+            break;
+        }
+    }
+    if (is_host) snprintf(output, output_size, "CB-%.6s-HOST", session->code);
+    else snprintf(output, output_size, "CB-%.6s-P%d", session->code, player_number);
+}
+
+static void draw_disc_select(const CBGameDisc *discs, int count, int selected,
+                             const CBOnlineSession *session, int is_host,
+                             const char *status)
+{
+    int i;
+    char line[112];
+    tiny3d_Clear(0x071019ff, TINY3D_CLEAR_ALL);
+    tiny3d_Project2D();
+    draw_rect(24, 22, 800, 468, 0x101e2aff);
+    draw_rect(24, 22, 800, 5, 0x46d6b2ff);
+    draw_text(56, 42, 26, 0xf5fbffff, "SELECT CRASH BASH DISC");
+    snprintf(line, sizeof(line), "ROOM %.6s  |  ROLE: %s",
+             session ? session->code : "", is_host ? "HOST" : "PLAYER");
+    draw_text(56, 82, 15, 0x61d9baff, line);
+
+    if (count == 0) {
+        draw_rect(58, 130, 720, 170, 0x0b1720ff);
+        draw_text(82, 158, 18, 0xffc18aff, "No CUE files were found.");
+        draw_text(82, 198, 14, 0xc2d0d8ff, "Copy your Crash Bash disc dump to one of these folders:");
+        draw_text(82, 232, 14, 0x9bb4c2ff, "/dev_hdd0/PSXISO/");
+        draw_text(82, 258, 14, 0x9bb4c2ff, "/dev_usb000/PSXISO/ (or another USB port)");
+    } else {
+        for (i = 0; i < count; i++) {
+            u32 background = i == selected ? 0x28594fff : 0x172a36ff;
+            u32 foreground = i == selected ? 0xffffffff : 0xc2d0d8ff;
+            snprintf(line, sizeof(line), "%c  %.52s",
+                     i == selected ? '>' : ' ', discs[i].name);
+            draw_rect(58, 122 + i * 25, 720, 22, background);
+            draw_text(76, 124 + i * 25, 14, foreground, line);
+        }
+        if (selected >= 0 && selected < count) {
+            draw_text(58, 430, 11, 0x9bb4c2ff, discs[selected].path);
+        }
+    }
+
+    if (is_host) {
+        draw_text(58, 398, 13, 0x7ce0a8ff, "HOST: RetroArch will start the game and create the Netplay session.");
+    } else {
+        draw_text(58, 398, 13, 0xffc18aff, "PLAYER: RetroArch opens its menu; choose Netplay Host List and find your room host.");
+    }
+    draw_text(58, 450, 13, 0x9bb4c2ff, status ? status : "");
+    draw_text(56, 474, 12, 0x6d8794ff, "UP/DOWN SELECT  CROSS LAUNCH  SQUARE RESCAN  CIRCLE BACK");
+    tiny3d_Flip();
+}
+
 int cb_online_menu(const char *guest_name, int *network_state, int *online_state, volatile int *exit_requested, char *status, size_t status_size)
 {
     CBOnlineRoom rooms[MENU_ROOM_LIMIT];
     CBOnlineSession session;
     CBOnlineRoomView view;
+    CBGameDisc discs[CB_DISC_MAX];
     char error[160] = "";
+    char netplay_nickname[32] = "";
     char join_code[7] = "AAAAAA";
     int screen = SCREEN_ROOMS;
     int room_count = 0;
@@ -214,6 +290,8 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
     int ready = 0;
     int private_create = 0;
     int code_cursor = 0;
+    int disc_count = 0;
+    int disc_selected = 0;
     int curl_initialized = 0;
     int lobby_ready = 0;
     unsigned int poll_frames = 0;
@@ -342,6 +420,35 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
             }
             if (circle && !old_circle) screen = SCREEN_ROOMS;
             draw_join_code(join_code, code_cursor, status);
+        } else if (screen == SCREEN_DISC_SELECT) {
+            if (up && !old_up && disc_count > 0) {
+                disc_selected = (disc_selected + disc_count - 1) % disc_count;
+            }
+            if (down && !old_down && disc_count > 0) {
+                disc_selected = (disc_selected + 1) % disc_count;
+            }
+            if (square && !old_square) {
+                size_t scanned = 0;
+                if (cb_disc_scan(discs, CB_DISC_MAX, &scanned) == 0) {
+                    disc_count = (int)scanned;
+                    if (disc_count == 0) disc_selected = 0;
+                    else if (disc_selected >= disc_count) disc_selected = disc_count - 1;
+                    snprintf(status, status_size, "Found %d CUE file(s).", disc_count);
+                } else {
+                    snprintf(status, status_size, "Disc scan failed.");
+                }
+            }
+            if (cross && !old_cross && disc_count > 0) {
+                int is_host = session_is_room_host(&session, &view);
+                make_netplay_nickname(netplay_nickname, sizeof(netplay_nickname),
+                                      &session, &view, is_host);
+                cb_launch_game(discs[disc_selected].path, is_host, netplay_nickname,
+                               error, sizeof(error));
+                snprintf(status, status_size, "%.120s", error);
+            }
+            if (circle && !old_circle) screen = SCREEN_ROOM;
+            draw_disc_select(discs, disc_count, disc_selected, &session,
+                             session_is_room_host(&session, &view), status);
         } else {
             if (cross && !old_cross) {
                 int next_ready = !ready;
@@ -356,9 +463,18 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
             if (start && !old_start && screen == SCREEN_ROOM) {
                 if (!view.is_ready) {
                     snprintf(status, status_size, "At least two players must join and all must be READY.");
+                } else if (cb_disc_scan(discs, CB_DISC_MAX, (size_t *)&disc_count) != 0) {
+                    disc_count = 0;
+                    snprintf(status, status_size, "Could not scan the PS3 disc folders.");
+                    screen = SCREEN_DISC_SELECT;
                 } else {
-                    cb_launch_game(error, sizeof(error));
-                    snprintf(status, status_size, "%.120s", error);
+                    disc_selected = 0;
+                    screen = SCREEN_DISC_SELECT;
+                    if (disc_count == 0) {
+                        snprintf(status, status_size, "Copy the Crash Bash CUE file to a PSXISO folder, then rescan.");
+                    } else {
+                        snprintf(status, status_size, "Select the same Crash Bash CUE file on every console.");
+                    }
                 }
             }
             if (square && !old_square && screen == SCREEN_ROOM) {
