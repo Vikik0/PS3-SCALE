@@ -28,3 +28,7 @@ Updated the local Stage 4 `maps__clockwork_interior.gsc` call site to pass the s
 The PIP camera object is now created for the selected player in source. This does not prove that all `newhudelem` elements render independently in both split-screen viewports. That requires a live Campaign split-screen test on PS3/RPCS3. Native Player 2 creation, independent camera context and actual HUD visibility remain separate runtime gates.
 
 No FastFile rebuild, signing or PKG creation is claimed by this phase.
+
+## CI validation
+
+GitHub Actions run `45071437477` passed all five jobs. The Python suite passed 202 tests, including the PIP-owner audit and negative tests for primary-player hard-coding. GSC Tool compile/round-trip, PS3 PRX bootstrap, protocol-header and worker checks passed. This is still source/build validation; no PS3/RPCS3 Campaign runtime test was performed.
