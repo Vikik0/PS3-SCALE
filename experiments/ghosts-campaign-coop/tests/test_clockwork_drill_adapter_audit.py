@@ -158,9 +158,9 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
 
     def test_drill_worker_does_not_wait_forever_on_a_cleared_start_flag(self):
         source = passing_source().replace(
-            '    if ( player adsbuttonpressed( "ads" ) )\\n',
-            '    common_scripts\\\\utility::flag_wait( var_1 );\\n'
-            '    if ( player adsbuttonpressed( "ads" ) )\\n',
+            '    if ( player adsbuttonpressed( "ads" ) )\n',
+            '    common_scripts\\\\utility::flag_wait( var_1 );\n'
+            '    if ( player adsbuttonpressed( "ads" ) )\n',
         )
         report = audit(self.write_source(source))
         self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
