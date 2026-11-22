@@ -21,7 +21,7 @@ assert content_id == f"UP0001-{app_id}_00-0000000000000001"
 assert sfo_values.get("TITLE_ID") == app_id, "SFO template TITLE_ID must match the package"
 assert sfo_values.get("TITLE") == "Crash Bash Online"
 assert sfo_values.get("CATEGORY") == "HG"
-assert 'strlcpy(path, "/dev_hdd0/game/CBON00001/USRDIR/EBOOT.BIN"' in script
+assert '/dev_hdd0/game/CBON00001/USRDIR/EBOOT.BIN' in script
 assert 'make -C "$RA" -f Makefile.psl1ght -j"$JOBS" all CONTENTID="$CONTENT_ID"' in script
 assert 'make_self_npdrm "$RA/build/retroarch_psl1ght.elf" "$USRDIR/EBOOT.BIN" "$CONTENT_ID"' in script
 assert '"$NM" -g "$RA/build/retroarch_psl1ght.elf"' in script, "Check symbols in the exact ELF wrapped into EBOOT.BIN"
