@@ -137,3 +137,12 @@ No separate TU-specific Campaign FastFile has been verified in the current input
 ### Current blocker
 
 The TU 1.16 executable identity is confirmed, but the main Campaign code in default.self is still encrypted in the supplied SELF container. The next analysis input is a decrypted ELF dump of the TU 1.16 default.self; a decrypted default_mp.self dump is also useful as the reference for the game's already-supported local split-screen path. Do not send account credentials, IDPS/PSID, RAP/RIF files, or a full game image.
+
+
+## Phase 7 — additional retail FastFile audit (2026-11-22)
+
+The four locally supplied FastFiles have now been checked with the retail-aware parser: common.ff, clockwork.ff, patch_common.ff, and patch_common_mp.ff. The parser now handles the Clockwork marker at 0x16644 and the four opaque bytes after each 64 KiB raw-DEFLATE block. Exact hashes, sizes, pool counts, script/rawfile counts, and partial-tail handling are recorded in docs/phase7-retail-validation.md.
+
+Clockwork expands to 128 MiB across 2,048 valid blocks, but 16,557,959 trailing file bytes remain uninterpreted. The MapEnts pool entry is type 0x14/index 4059 with pointer 0xFFFFFFFF. A PS3 MapEnts entity-string probe found no candidate in the validated Clockwork zone; spawn coordinates are not known. The patch_common_mp scan finds 119 compiled-script candidates against 121 ScriptFile pool entries, so two entries remain unmatched.
+
+The current inputs still do not establish a decrypted TU 1.16 Campaign ELF or a runtime two-controller capture. No hook address or second local client is approved from the static metadata alone. The next useful native-analysis input remains a decrypted ELF of TU 1.16 default.self, plus default_mp.self for comparison; do not send console/account secrets or license files.
