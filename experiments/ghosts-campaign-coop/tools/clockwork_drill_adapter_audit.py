@@ -144,10 +144,6 @@ def audit(path: Path) -> dict:
 
     drill_spot_rows = _rows_for(inventory, "handle_drill_spot")
     begin_in_entry = any(row["adapter_calls"]["begin"] for row in drill_spot_rows)
-    finish_in_closure = any(
-        row["adapter_calls"]["complete"] or row["adapter_calls"]["cancel"]
-        for row in closure_rows
-    )
     complete_in_closure = any(row["adapter_calls"]["complete"] for row in closure_rows)
     cancel_in_closure = any(row["adapter_calls"]["cancel"] for row in closure_rows)
 
@@ -168,6 +164,7 @@ def audit(path: Path) -> dict:
         "completion_path_present_in_drill_call_graph",
         "cancellation_path_present_in_drill_call_graph",
         "no_level_player_references_in_drill_call_graph",
+        "abort_player_helper_referenced_in_source",
     )):
         status = "SOURCE_ADAPTER_READY_FOR_MANUAL_REVIEW"
     else:
@@ -216,8 +213,14 @@ def main(argv: list[str] | None = None) -> int:
 
     rendered = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     if args.json_out:
-        args.json_out.parent.mkdir(parents=True, exist_ok=True)
-        args.json_out.write_text(rendered, encoding="utf-8")
+        try:
+            if args.json_out.resolve() == args.source.resolve():
+                raise ValueError("JSON report path must not overwrite the input GSC source")
+            args.json_out.parent.mkdir(parents=True, exist_ok=True)
+            args.json_out.write_text(rendered, encoding="utf-8")
+        except (OSError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
     print(rendered, end="")
     if args.strict and report["status"] != "SOURCE_ADAPTER_READY_FOR_MANUAL_REVIEW":
         return 2
