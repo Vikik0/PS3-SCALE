@@ -84,7 +84,8 @@ ghc_campaign_bind_native_local_pair()
      * 0 = not checked, 1 = ready, 2 = player array missing,
      * 3 = native split-screen inactive, 4 = duplicate primary,
      * 5 = duplicate secondary, 6 = not exactly two native players,
-     * 7 = one of the two native identities is missing.
+     * 7 = one of the two native identities is missing,
+     * 8 = a previously ready native pair is no longer current.
      */
     if ( !isdefined( level.playerpiggyback ) )
     {
@@ -161,6 +162,15 @@ ghc_campaign_bind_native_local_pair()
     return 1;
 }
 
+ghc_campaign_invalidate_local_session()
+{
+    level.ghc_campaign_session_ready = 0;
+    level.ghc_campaign_session_status = 8;
+    ghc_campaign_drill_abort_slot( 0 );
+    ghc_campaign_drill_abort_slot( 1 );
+    return 0;
+}
+
 ghc_campaign_native_pair_is_current()
 {
     if ( !issplitscreen()
@@ -227,9 +237,11 @@ ghc_campaign_player_for_slot( var_0 )
 ghc_campaign_apply_clockwork_player_two_loadout()
 {
     if ( !isdefined( level.ghc_campaign_session_ready )
-        || !level.ghc_campaign_session_ready
-        || !ghc_campaign_native_pair_is_current() )
+        || !level.ghc_campaign_session_ready )
         return 0;
+
+    if ( !ghc_campaign_native_pair_is_current() )
+        return ghc_campaign_invalidate_local_session();
 
     if ( isdefined( level.ghc_campaign_clockwork_p2_loadout_applied )
         && level.ghc_campaign_clockwork_p2_loadout_applied )
@@ -391,12 +403,7 @@ ghc_campaign_drill_begin( var_0, var_1 )
         return 0;
 
     if ( !ghc_campaign_native_pair_is_current() )
-    {
-        level.ghc_campaign_session_ready = 0;
-        ghc_campaign_drill_abort_slot( 0 );
-        ghc_campaign_drill_abort_slot( 1 );
-        return 0;
-    }
+        return ghc_campaign_invalidate_local_session();
 
     var_2 = ghc_campaign_drill_player_slot( var_0 );
     if ( var_2 < 0 || var_1 < 0 || var_1 > 1 )
@@ -419,14 +426,11 @@ ghc_campaign_drill_begin( var_0, var_1 )
 ghc_campaign_drill_finish( var_0, var_1, var_2 )
 {
     if ( !isdefined( level.ghc_campaign_session_ready )
-        || !level.ghc_campaign_session_ready
-        || !ghc_campaign_native_pair_is_current() )
-    {
-        level.ghc_campaign_session_ready = 0;
-        ghc_campaign_drill_abort_slot( 0 );
-        ghc_campaign_drill_abort_slot( 1 );
+        || !level.ghc_campaign_session_ready )
         return 0;
-    }
+
+    if ( !ghc_campaign_native_pair_is_current() )
+        return ghc_campaign_invalidate_local_session();
 
     var_3 = ghc_campaign_drill_player_slot( var_0 );
     if ( var_3 < 0 || var_1 < 0 || var_1 > 1 )
