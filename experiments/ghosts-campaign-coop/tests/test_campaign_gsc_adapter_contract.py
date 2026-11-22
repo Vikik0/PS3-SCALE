@@ -1,9 +1,12 @@
+import hashlib
+import json
 import unittest
 from pathlib import Path
 
 
 PROJECT = Path(__file__).resolve().parents[1]
 ADAPTER = PROJECT / "client" / "ps3" / "gsc" / "ghc_campaign_player_registry.gsc"
+MANIFEST = PROJECT / "client" / "ps3" / "gsc" / "ghc_campaign_player_registry.manifest.json"
 
 
 class CampaignGscAdapterContractTests(unittest.TestCase):
@@ -25,6 +28,17 @@ class CampaignGscAdapterContractTests(unittest.TestCase):
         self.assertIn("level.ghc_campaign_coop_ready = 0", source)
         self.assertIn("level.ghc_campaign_player_count != 2", source)
         self.assertIn("return 0", source)
+
+    def test_manifest_source_hash_matches_registry_and_records_binary(self):
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        source_hash = hashlib.sha256(ADAPTER.read_bytes()).hexdigest()
+        self.assertEqual(manifest["source_sha256"], source_hash)
+        self.assertEqual(manifest["compiled_gscbin_bytes"], 457)
+        self.assertEqual(
+            manifest["compiled_gscbin_sha256"],
+            "27eab77b588ab79dd3627ca64d6454911a98712fcc6123eb999d60e44c56b375",
+        )
+        self.assertIn("status codes 0-6", manifest["status"])
 
     def test_registry_exposes_distinct_fail_closed_status_codes(self):
         source = ADAPTER.read_text(encoding="utf-8")
