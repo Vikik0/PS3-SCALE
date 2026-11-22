@@ -64,8 +64,11 @@ The build script is `scripts/build_online_pkg.sh`. It:
 - Enables RetroArch Netplay lockstep, NAT traversal and the Madrid relay.
 - Isolates the PS3 user profile under `retroarch/CBASH0001`.
 - Builds the PS1 core and Salamander EBOOT, then links the real core into RetroArch.
-- Validates the SELF headers, SFO app identity and PKG header.
+- Validates the SELF headers and SFO app identity.
+- Finalizes the PKG with `package_finalize` and requires header revision `0x8000` before upload.
 - Produces a SHA-256 checksum and build manifest.
+
+Artifacts from workflow runs before the PKG-finalization fix contain revision `0x0000` (debug/non-finalized). Use only an artifact from a run after the finalization fix; the CI workflow now rejects a non-finalized package.
 
 The CI artifact contains:
 
