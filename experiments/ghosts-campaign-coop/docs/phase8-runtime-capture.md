@@ -1,0 +1,85 @@
+# Phase 8 — runtime evidence pipeline
+
+## Objective
+
+Phase 8 prepares the first reproducible evidence loop for the exact BLUS31270 TU 1.16 Campaign and Multiplayer executables. It does not claim that Campaign can create a second local client. The gate remains: prove the native local-client lifecycle and controller-to-client mapping before enabling any Campaign hook.
+
+## 1. PS3MAPI runtime dump and ELF reconstruction
+
+Added under tools/ps3mapi:
+
+- dump_campaign_tu116.bat — manual, read-only Campaign PT_LOAD capture.
+- dump_multiplayer_tu116.bat — manual, read-only Multiplayer PT_LOAD capture.
+- SELF_MEMORY_MAP_TU116.json — exact segment sizes, virtual addresses, entry points.
+- verify_tu116_dump.py — verifies exact SELF program headers, mode-specific files, 64 KiB padding, and executable-segment sanity before reconstruction.
+- reconstruct_elf_from_ps3mapi_dumps.py — rebuilds a minimal ELF64 BE PPU analysis image from the SELF headers and process dumps.
+- scan_runtime_strings.py — finds client/split-screen/controller/camera/HUD-related ASCII strings in the reconstructed ELF.
+- compare_runtime_strings.py — compares string leads between Campaign and Multiplayer.
+
+### Capture identity
+
+Campaign and Multiplayer share Title ID BLUS31270. Therefore the two dump scripts are manual and must not be installed as an automatic wm_ingame/BLUS31270.bat. The operator must be inside the matching mode when running its script. webMAN's current-game PID is used by omitting proc; dump sizes are byte counts and the writer rounds reads to 64 KiB chunks.
+
+The Campaign and Multiplayer segment outputs have distinct filenames. The verifier does not require manual renaming and rejects wrong profile metadata, incomplete chunks, empty executable segments, and unsafe output overwrites.
+
+The reconstructed ELF is for local static analysis only. It preserves PT_LOAD program headers and the entry point, omits section headers, represents BSS via p_memsz, and may contain loader relocations. It is not a runnable replacement EBOOT.
+
+## 2. Read-only pad enumeration probe v4
+
+Added as a separate PS3 PRX under client/ps3/probes/pad_probe:
+
+- Reads cellPadGetInfo2 only.
+- Does not call cellPadInit, cellPadEnd, cellPadGetData, or pad-setting APIs.
+- Does not write to game memory, install hooks, or change dvars.
+- Requires an exact CAMPAIGN or MULTIPLAYER mode file; otherwise it fails closed and does not sample.
+- Writes distinct Campaign and Multiplayer logs.
+- Samples 30 times at one-second intervals, recording connected-port masks and per-port status/capability/device type.
+
+The probe is built separately from the main bootstrap PRX. Its output is diagnostic only; it does not create a Local Client, Player Entity, camera, HUD, or input command stream.
+
+The log comparator was strengthened: it now requires port 0 and port 1 to appear together in the same sample (mask 0x03) before reporting simultaneous two-pad visibility. Seeing port 0 in one sample and port 1 in another is not counted as simultaneous.
+
+## 3. CI and tests
+
+The GitHub Actions PS3 toolchain job now prepares libfs_stub and liblv2_stub and builds the separate pad-probe PRX alongside the existing bootstrap. The expected pad-probe artifact contains the PRX, fake-signed SPRX and ELF.
+
+New host tests cover:
+- exact Campaign and Multiplayer PT_LOAD profile verification;
+- 64 KiB PS3MAPI dump sizes and rejection of truncated/zero-filled executable segments;
+- refusal to overwrite SELF or existing output files;
+- mode-specific dump filenames without manual renaming;
+- simultaneous controller-port detection;
+- probe source safety (cellPadGetInfo2 only, no pad-data polling or memory writes).
+
+Host and CI tests validate the tooling and build. They do not replace an actual PS3 load test.
+
+## 4. Runtime steps still outstanding
+
+The remaining evidence must come from the user's console:
+
+1. Load pad-probe in Campaign and collect ghosts_campaign_pad_probe.log.
+2. Load pad-probe in Multiplayer and collect ghosts_multiplayer_pad_probe.log.
+3. Run the comparator and share its JSON/log output.
+4. Capture Campaign and Multiplayer PT_LOAD segments using their matching manual scripts.
+5. Run verify_tu116_dump.py against the exact installed TU 1.16 SELF files.
+6. Share the two verification JSON reports and string-diff report. Keep raw game dumps local unless a specific byte range is required for analysis.
+
+## 5. Native player-two gate
+
+A second local player is not proven by any of the following alone:
+- port 1 is connected;
+- a split-screen string exists;
+- a GSC helper mentions player 2;
+- a second entity is spawned;
+- a PRX loads successfully.
+
+Before a hook is considered, analysis must establish:
+- two active local-client slots and their lifecycle;
+- controller port 0/1 mapping to distinct command streams;
+- distinct client/player-state/entity ownership;
+- separate view/refdef/camera contexts;
+- primary/secondary split-screen identity;
+- Campaign startup and checkpoint/respawn behavior;
+- Hesh remains an NPC and Logan remains player one.
+
+**Phase 8 status:** the capture pipeline and read-only probe are prepared in source and CI. No PS3 hardware logs or TU 1.16 runtime dumps have been received in this phase, so no native player-two hook or playable Campaign co-op build is claimed.
