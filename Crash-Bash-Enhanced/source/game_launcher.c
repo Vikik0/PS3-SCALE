@@ -8,6 +8,7 @@
 #define CB_GAME_EBOOT "/dev_hdd0/game/CBON00001/USRDIR/EBOOT.BIN"
 
 int cb_launch_game(const char *content_path, int is_host, const char *nickname,
+                   const CBOnlineNetplayEndpoint *endpoint,
                    char *error, size_t error_size)
 {
     struct stat target;
@@ -23,7 +24,7 @@ int cb_launch_game(const char *content_path, int is_host, const char *nickname,
     }
 
     if (!nickname || !nickname[0] ||
-        cb_game_build_argv(content_path, is_host, nickname,
+        cb_game_build_argv(content_path, is_host, nickname, endpoint,
                            arguments, CB_GAME_LAUNCH_ARGV_CAPACITY) < 0) {
         if (error && error_size) {
             snprintf(error, error_size, "Invalid game launch settings.");
