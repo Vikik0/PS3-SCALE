@@ -14,6 +14,8 @@ OK_RE = re.compile(
 )
 ERR_RE = re.compile(r"sample=(?P<sample>\d+)\s+result=ERROR\s+rc=0x(?P<rc>[0-9a-fA-F]+)", re.I)
 MODE_RE = re.compile(r"^MODE=(CAMPAIGN|MULTIPLAYER|UNSPECIFIED)\s*$", re.I)
+MODE_SOURCE_RE = re.compile(r"^MODE_SOURCE=(manual_mode_file|auto_detected|unspecified)\s*$", re.I)
+MODE_OPERATOR_RE = re.compile(r"^MODE_LABEL_IS_OPERATOR_SELECTED=(0|1)\s*$", re.I)
 PORT_RE = re.compile(
     r"port(?P<port>\d+)\s+status=0x(?P<status>[0-9a-fA-F]+)"
     r"\s+capability=0x(?P<cap>[0-9a-fA-F]+)\s+device_type=(?P<type>\d+)", re.I
