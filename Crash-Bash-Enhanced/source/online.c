@@ -208,6 +208,23 @@ int cb_online_join_room(const char *code, const char *display_name, CBOnlineSess
     if (!code || strlen(code) != 6) { set_error(error, error_size, "Room code must contain six characters"); return -1; }
     return create_or_join("join", code, display_name, 0, session, view, error, error_size);
 }
+int cb_online_join_any_room(const char *display_name, CBOnlineSession *session, CBOnlineRoomView *view, char *error, size_t error_size) {
+    char escaped_name[CB_ONLINE_NAME_MAX * 6 + 4], response[CB_HTTP_BUFFER], body[256];
+    if (!session || !view) { set_error(error, error_size, "Invalid online session buffer"); return -1; }
+    json_escape(display_name && display_name[0] ? display_name : "Guest", escaped_name, sizeof(escaped_name));
+    snprintf(body, sizeof(body), "{\"action\":\"any\",\"displayName\":%s}", escaped_name);
+    if (http_request("POST", "/api/rooms", body, NULL, response, sizeof(response), error, error_size) < 0) return -1;
+    if (parse_session(response, session) < 0) { set_error(error, error_size, "Lobby did not return a valid public-room session"); return -1; }
+    memset(view, 0, sizeof(*view));
+    snprintf(view->code, sizeof(view->code), "%s", session->code);
+    if (cb_online_get_room(session, view, error, error_size) < 0) {
+        snprintf(view->players[0].id, sizeof(view->players[0].id), "%s", session->player_id);
+        snprintf(view->players[0].name, sizeof(view->players[0].name), "%s", session->player_name);
+        view->player_count = 1;
+        if (error && error_size) error[0] = '\0';
+    }
+    return 0;
+}
 int cb_online_get_room(CBOnlineSession *session, CBOnlineRoomView *view, char *error, size_t error_size) {
     char path[64], response[CB_HTTP_BUFFER]; int i;
     if (!session || !session->token[0] || !session->code[0] || !view) { set_error(error, error_size, "No active room session"); return -1; }
