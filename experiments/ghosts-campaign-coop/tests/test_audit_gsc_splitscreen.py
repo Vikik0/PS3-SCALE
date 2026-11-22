@@ -54,6 +54,31 @@ class GscSplitScreenAuditTests(unittest.TestCase):
             self.assertEqual(result["line_match_count"]["issplitscreenplayerprimary"], 1)
             self.assertEqual(result["line_match_count"]["getplayerfromclientnum"], 1)
 
+    def test_reports_campaign_and_multiplayer_player_lifecycle_markers(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "campaign.gsc").write_text(
+                'init_level_flags()\n{\n'
+                '    level.playerpiggyback = getentarray("player", "classname");\n'
+                '    level.playengineeffects = level.playerpiggyback[1];\n'
+                '}\n',
+                encoding="utf-8",
+            )
+            (root / "mp.gsc").write_text(
+                'callback_playerconnect()\n{\n'
+                '    level.playerpiggyback[level.playerpiggyback.size] = self;\n'
+                '    self.clientid = getlowestavailableclientid();\n'
+                '}\n',
+                encoding="utf-8",
+            )
+            result = scan_group("mixed", root)
+            counts = result["line_match_count"]
+            self.assertEqual(counts["player_array_initializer"], 1)
+            self.assertEqual(counts["second_player_alias"], 1)
+            self.assertEqual(counts["player_array_append"], 1)
+            self.assertEqual(counts["getlowestavailableclientid"], 1)
+            self.assertEqual(counts["callback_playerconnect"], 1)
+
     def test_caps_hit_records_without_losing_counts(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
