@@ -101,7 +101,7 @@ static void parse_players(const char *json, const cb_json_token *tokens, int cou
 }
 static int parse_room_view(const char *json, CBOnlineRoomView *view) {
     cb_json_token tokens[CB_JSON_TOKEN_COUNT]; int count = cb_json_parse(json, tokens, CB_JSON_TOKEN_COUNT);
-    int room, players, status, private_token;
+    int room, players, status, private_token, game_started_token;
     if (count <= 0 || !view) return -1;
     room = cb_json_object_get(json, tokens, count, 0, "room");
     if (room < 0 || tokens[room].type != CB_JSON_OBJECT) return -1;
@@ -118,8 +118,11 @@ static int parse_room_view(const char *json, CBOnlineRoomView *view) {
     }
     private_token = cb_json_object_get(json, tokens, count, room, "isPrivate");
     view->is_private = cb_json_bool(json, private_token >= 0 ? &tokens[private_token] : NULL, 0);
+    game_started_token = cb_json_object_get(json, tokens, count, room, "gameStarted");
+    view->game_started = cb_json_bool(json, game_started_token >= 0 ? &tokens[game_started_token] : NULL, 0);
     players = cb_json_object_get(json, tokens, count, room, "players");
     parse_players(json, tokens, count, players, view);
+    if (view->game_started) view->is_ready = 1;
     return 0;
 }
 static int parse_session(const char *json, CBOnlineSession *session) {
@@ -138,13 +141,17 @@ static int parse_session(const char *json, CBOnlineSession *session) {
 }
 static int parse_heartbeat(const char *json, CBOnlineRoomView *view) {
     cb_json_token tokens[CB_JSON_TOKEN_COUNT]; int count = cb_json_parse(json, tokens, CB_JSON_TOKEN_COUNT);
-    int players; if (count <= 0 || !view) return -1;
+    int players, game_started_token; if (count <= 0 || !view) return -1;
     get_string_field(json, tokens, count, 0, "hostPlayerId",
                      view->host_player_id, sizeof(view->host_player_id));
     get_string_field(json, tokens, count, 0, "netplayId",
                      view->netplay_id, sizeof(view->netplay_id));
+    game_started_token = cb_json_object_get(json, tokens, count, 0, "gameStarted");
+    view->game_started = cb_json_bool(json, game_started_token >= 0 ? &tokens[game_started_token] : NULL, 0);
     players = cb_json_object_get(json, tokens, count, 0, "players");
-    parse_players(json, tokens, count, players, view); return 0;
+    parse_players(json, tokens, count, players, view);
+    if (view->game_started) view->is_ready = 1;
+    return 0;
 }
 static void json_escape(const char *input, char *output, size_t size) {
     size_t i, used = 0; if (!output || size == 0) return; output[used++] = '"';

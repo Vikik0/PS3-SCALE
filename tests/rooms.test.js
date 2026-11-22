@@ -829,10 +829,15 @@ test("a started Netplay match keeps its host identity when the host leaves the l
   await call("POST", { action: "game_start" }, host.body.token);
   const room = await call("GET", {}, guest.body.token, { code: host.body.room.code });
   const netplayId = room.body.room.netplayId;
+  assert.equal(room.body.room.gameStarted, true);
 
   await call("POST", { action: "leave" }, host.body.token);
   const afterLeave = await call("GET", {}, guest.body.token, { code: host.body.room.code });
   assert.equal(afterLeave.body.room.netplayId, netplayId);
+  assert.equal(afterLeave.body.room.gameStarted, true);
+  const guestHeartbeat = await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  assert.equal(guestHeartbeat.body.gameStarted, true);
+  assert.equal(guestHeartbeat.body.players.length, 1);
 
   global.fetch = async () => ({
     ok: true,

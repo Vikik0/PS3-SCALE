@@ -282,6 +282,7 @@ module.exports = async function handler(req, res) {
           status: record.room.status === "ready" && (active.length < 2 || active.length !== (record.room.players || []).length) ? "waiting" : record.room.status,
           hostPlayerId: record.room.hostPlayerId || active[0]?.id || "",
           netplayId: record.room.netplayId || "",
+          gameStarted: Boolean(record.room.gameStartedAt),
           isPrivate: record.room.isPrivate,
           players: active.map(({ id, name, ready }) => ({ id, name, ready: inactiveSeats ? false : ready })),
           selfPlayerId: claims.sub,
@@ -521,6 +522,7 @@ module.exports = async function handler(req, res) {
             ok: true,
             hostPlayerId: room.hostPlayerId || active[0]?.id || "",
             netplayId: room.netplayId || "",
+            gameStarted: Boolean(room.gameStartedAt),
             players: active.map(({ id, name, ready }) => ({ id, name, ready }))
           }
         };

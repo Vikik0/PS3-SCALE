@@ -76,4 +76,7 @@ assert "Netplay Host List" not in source
 assert "CB_GAME_NETPLAY_PORT" in launch_args
 assert "host_player_id" in online_source
 assert 'get_string_field(json, tokens, count, room, "netplayId"' in online_source
+assert '"gameStarted"' in online_source
+assert "view->game_started" in online_source
+assert "if (view->game_started) view->is_ready = 1;" in online_source
 assert "cb_online_get_netplay_endpoint" in online_source
