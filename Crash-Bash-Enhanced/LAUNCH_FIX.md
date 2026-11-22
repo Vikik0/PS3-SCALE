@@ -31,7 +31,7 @@ CI checks:
 
 - PS3 toolchain and symbol-inspection utility are available.
 - The direct EBOOT has a PS3 SELF header, matching NPDRM Content ID and NPD metadata.
-- The static libretro entry points are linked into the exact stripped and SPRX-linked ELF used to create `EBOOT.BIN`.
+- The static libretro entry points are checked in the unstripped ELF before PSL1GHT strips its symbol table. The processed ELF that is actually wrapped into `EBOOT.BIN` is separately checked for 64-bit big-endian PowerPC architecture.
 - The SFO contains the exact `TITLE_ID`, title, bootable flag and HDD-game category.
 - The XMB icon is a valid 320x176 PNG.
 - The PKG is finalized (revision `0x8000`) and its SHA-256 checksum matches.
