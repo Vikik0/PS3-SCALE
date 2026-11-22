@@ -4,6 +4,7 @@
 
 #ifdef __PSL1GHT__
 #include <sys/time.h>
+struct timeval;
 #include <arpa/inet.h>
 #include <net/net.h>
 #include <netinet/in.h>
