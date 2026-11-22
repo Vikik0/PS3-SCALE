@@ -17,6 +17,10 @@ The direct EBOOT is generated from PSL1GHT's stripped and SPRX-linked ELF output
 
 The PS3 frontend also sets its active static-core path to the installed app's own `EBOOT.BIN`, and the per-user RetroArch profile's parent directory is created before the app-specific directory.
 
+The application identifier was corrected to \`CBON00001\`, a valid PS3 \`TITLE_ID\` shape (four letters plus five digits). The same ID is used by \`PARAM.SFO\`, the NPDRM Content ID, the PS3 install path and the isolated user profile. The previous \`CBASH0001\` value had five letters and four digits, so it did not follow the PS3 title-ID format.
+
+The package no longer includes the extra \`CORE.SELF\` copied from the RetroArch frontend. That file was another RetroArch executable, not a standalone PCSX-ReARMed libretro core; the PS1 core is linked into \`EBOOT.BIN\` and does not need a duplicate core file.
+
 ## XMB artwork
 
 The package now decodes and validates the custom 320x176 Crash Bash Online `ICON0.PNG` cover art before building the PKG.
@@ -26,9 +30,9 @@ The package now decodes and validates the custom 320x176 Crash Bash Online `ICON
 CI checks:
 
 - PS3 toolchain and symbol-inspection utility are available.
-- The direct EBOOT has a PS3 SELF header.
-- The static libretro entry points are linked into the unstripped RetroArch ELF.
-- The SFO contains the expected application ID and title.
+- The direct EBOOT has a PS3 SELF header, matching NPDRM Content ID and NPD metadata.
+- The static libretro entry points are linked into the exact stripped and SPRX-linked ELF used to create `EBOOT.BIN`.
+- The SFO contains the exact `TITLE_ID`, title, bootable flag and HDD-game category.
 - The XMB icon is a valid 320x176 PNG.
 - The PKG is finalized (revision `0x8000`) and its SHA-256 checksum matches.
 
