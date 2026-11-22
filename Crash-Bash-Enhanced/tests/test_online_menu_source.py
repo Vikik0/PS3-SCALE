@@ -26,7 +26,7 @@ heartbeat = re.search(
 )
 assert heartbeat, "Periodic room heartbeat block is missing"
 assert heartbeat.group(1).count("cb_online_set_ready(") == 1
-assert "cb_online_get_room(" not in heartbeat.group(1)), (
+assert "cb_online_get_room(" not in heartbeat.group(1), (
     "Heartbeat must return the player list itself; do not issue a duplicate room GET."
 )
 
