@@ -36,5 +36,7 @@ int cb_online_join_any_room(const char *display_name, CBOnlineSession *session, 
 int cb_online_get_room(CBOnlineSession *session, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_set_ready(CBOnlineSession *session, int ready, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_get_netplay_endpoint(CBOnlineSession *session, CBOnlineNetplayEndpoint *endpoint, char *error, size_t error_size);
+int cb_online_mark_game_started(CBOnlineSession *session, char *error, size_t error_size);
+int cb_online_cancel_game_start(CBOnlineSession *session, char *error, size_t error_size);
 int cb_online_leave_room(CBOnlineSession *session, char *error, size_t error_size);
 #endif
