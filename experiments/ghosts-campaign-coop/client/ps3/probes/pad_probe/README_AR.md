@@ -60,7 +60,7 @@ make -C client/ps3/probes/pad_probe PS3DEV="$PS3DEV" PS3DK="$PS3DK"
 - mode_files/ghosts_probe_mode_MULTIPLAYER.txt
 - الناتج: /dev_hdd0/tmp/ghosts_multiplayer_pad_probe.log
 
-**تنبيه:** رد MODULE LOAD قد يرجع HTTP 200 حتى لو لم تنجح عملية التحميل؛ لذلك لا تعتمد عليه وحده. افحص قائمة الوحدات واسم الوحدة عبر GETALLPRXID وGETNAME/GETFILENAME.
+**تنبيه:** رد MODULE LOAD قد يرجع HTTP 200 حتى لو لم تنجح عملية التحميل؛ لذلك لا تعتمد عليه وحده. افحص قائمة الوحدات واسم الوحدة عبر GETALLPRXID وGETNAME/GETFILENAME. سطر MODE في السجل مصدره ملف الوضع الذي اخترته أنت؛ الوحدة لا تكتشف Campaign أو Multiplayer تلقائياً، لذلك تأكد من الوضع قبل التحميل.
 
 إذا كان ملف الوضع مفقوداً أو لا يحتوي إحدى الكلمتين بالضبط، لا تبدأ الوحدة sampling وتكتب سبب الرفض إلى ghosts_pad_probe_error.log. لا تشغّل ملف CAMPAIGN وأنت داخل Multiplayer أو العكس.
 
