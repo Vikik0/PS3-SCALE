@@ -10,11 +10,21 @@ process.env.CB_TOKEN_SECRET_V2 = "test-only-guest-token-secret-with-more-than-fo
 
 const blobs = new Map();
 let etagSequence = 0;
+let refreshOnNextRead = "";
 const blobMock = {
   async get(pathname) {
     const record = blobs.get(pathname);
     if (!record) return null;
-    return { statusCode: 200, stream: new Response(record.body).body, blob: { etag: record.etag } };
+    const responseBody = record.body;
+    const responseEtag = record.etag;
+    if (refreshOnNextRead === pathname) {
+      const refreshed = JSON.parse(record.body);
+      refreshed.updatedAt = Date.now();
+      refreshed.players = refreshed.players.map((player) => ({ ...player, lastSeen: Date.now() }));
+      blobs.set(pathname, { body: JSON.stringify(refreshed), etag: String(++etagSequence) });
+      refreshOnNextRead = "";
+    }
+    return { statusCode: 200, stream: new Response(responseBody).body, blob: { etag: responseEtag } };
   },
   async put(pathname, body, options = {}) {
     const previous = blobs.get(pathname);
@@ -38,7 +48,15 @@ const blobMock = {
       hasMore: next < all.length
     };
   },
-  async del(pathname) { blobs.delete(pathname); }
+  async del(pathname, options = {}) {
+    const previous = blobs.get(pathname);
+    if (options.ifMatch && (!previous || previous.etag !== options.ifMatch)) {
+      const error = new Error("Blob changed before conditional delete");
+      error.name = "BlobPreconditionFailedError";
+      throw error;
+    }
+    blobs.delete(pathname);
+  }
 };
 
 const blobModulePath = require.resolve("@vercel/blob");
@@ -58,7 +76,7 @@ async function call(method, body = {}, token = "", query = {}) {
   await handler({ method, body, query, headers: token ? { authorization: "Bearer " + token } : {} }, res);
   return res;
 }
-test.beforeEach(() => { blobs.clear(); etagSequence = 0; });
+test.beforeEach(() => { blobs.clear(); etagSequence = 0; refreshOnNextRead = ""; });
 
 test("a public room supports four human seats and rejects a fifth", async () => {
   const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
@@ -425,4 +443,39 @@ test("public room discovery follows Blob pagination beyond one hundred rooms", a
   const listing = await call("GET");
   assert.equal(listing.statusCode, 200);
   assert.equal(listing.body.rooms.length, 120);
+});
+
+
+test("public room discovery removes expired Blob records", async () => {
+  const created = await call("POST", { action: "create", displayName: "Expired Host", isPrivate: false });
+  const code = created.body.room.code;
+  const pathname = "cb-rooms/" + code + ".json";
+  const stored = JSON.parse(blobs.get(pathname).body);
+  stored.updatedAt = Date.now() - 31 * 60 * 1000;
+  blobs.set(pathname, { body: JSON.stringify(stored), etag: String(++etagSequence) });
+
+  const listing = await call("GET");
+  assert.equal(listing.statusCode, 200);
+  assert.equal(listing.body.rooms.length, 0);
+  assert.equal(blobs.has(pathname), false);
+});
+
+test("expired-room cleanup never deletes a concurrently refreshed room", async () => {
+  const created = await call("POST", { action: "create", displayName: "Refreshing Host", isPrivate: false });
+  const code = created.body.room.code;
+  const pathname = "cb-rooms/" + code + ".json";
+  const stored = JSON.parse(blobs.get(pathname).body);
+  stored.updatedAt = Date.now() - 31 * 60 * 1000;
+  blobs.set(pathname, { body: JSON.stringify(stored), etag: String(++etagSequence) });
+  refreshOnNextRead = pathname;
+
+  const firstListing = await call("GET");
+  assert.equal(firstListing.statusCode, 200);
+  assert.equal(firstListing.body.rooms.length, 0);
+  assert.equal(blobs.has(pathname), true);
+
+  const secondListing = await call("GET");
+  assert.equal(secondListing.statusCode, 200);
+  assert.equal(secondListing.body.rooms.length, 1);
+  assert.equal(secondListing.body.rooms[0].code, code);
 });
