@@ -58,7 +58,7 @@ GitHub Actions run 45032662329 passed all five jobs on commit 94ef85ef349fcaa41b
 - PS3DK: PRX bootstrap, Pad Probe and PRX importer build/validation passed.
 - Cloudflare Worker: lobby tests and dry-run bundle passed.
 
-The previous local-session GSCBIN was 2,365 bytes with SHA-256 `5dc36d7e2305803b3bfa73f1f649192fdcd85f15d2a9b38678c963d0cb594474`. The source and compiled artifact hashes are pinned in `client/ps3/gsc/ghc_campaign_local_session.manifest.json` and refreshed after each verified source change. The verified CI artifact is `ghosts-campaign-gsc-session-bridge`.
+After the Player 2 rebind-guard fix, CI rebuilt the local-session GSCBIN at 2,372 bytes with SHA-256 `545c064f21aad28c5d3d636adaf4d8b1009da852a446a394267e54570c1b44b2`. Its source SHA-256 is `ae46676fb265aa334759e7700a7f2a9b7c305e2c6868393afddbf94421b4c58f`. Both values are pinned in `client/ps3/gsc/ghc_campaign_local_session.manifest.json`. The CI artifact is `ghosts-campaign-gsc-session-bridge`.
 
 ## What remains unimplemented
 
