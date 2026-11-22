@@ -61,11 +61,17 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertIn("ghc_campaign_native_pair_is_current()", main)
         for body in (loadout, begin, finish):
             self.assertIn("ghc_campaign_native_pair_is_current()", body)
-        self.assertIn("level.ghc_campaign_session_ready = 0", begin)
-        self.assertIn("ghc_campaign_drill_abort_slot( 0 )", begin)
-        self.assertIn("ghc_campaign_drill_abort_slot( 1 )", begin)
-        self.assertIn("ghc_campaign_drill_abort_slot( 0 )", finish)
-        self.assertIn("ghc_campaign_drill_abort_slot( 1 )", finish)
+        self.assertIn("ghc_campaign_invalidate_local_session()", loadout)
+        self.assertIn("ghc_campaign_invalidate_local_session()", begin)
+        self.assertIn("ghc_campaign_invalidate_local_session()", finish)
+
+    def test_stale_pair_invalidation_clears_ready_and_releases_both_drill_locks(self):
+        body = function_body(self.source, "ghc_campaign_invalidate_local_session")
+        self.assertIn("level.ghc_campaign_session_ready = 0", body)
+        self.assertIn("level.ghc_campaign_session_status = 8", body)
+        self.assertIn("ghc_campaign_drill_abort_slot( 0 )", body)
+        self.assertIn("ghc_campaign_drill_abort_slot( 1 )", body)
+        self.assertIn("return 0", body)
 
     def test_startup_retries_identity_binding_until_native_flags_are_ready(self):
         body = function_body(self.source, "main")
