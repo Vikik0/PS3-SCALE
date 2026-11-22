@@ -198,6 +198,7 @@ module.exports = async function handler(req, res) {
         return reply(res, 410, { error: "This battle room has expired. Create a new room." });
       }
       const active = activePlayers(record.room);
+      const inactiveSeats = active.length !== (record.room.players || []).length;
       const player = active.find((entry) => entry.id === claims.sub);
       if (!player) {
         return reply(res, 403, { error: "Your room seat has expired. Rejoin the room." });
@@ -208,7 +209,7 @@ module.exports = async function handler(req, res) {
           code: record.room.code,
           status: record.room.status === "ready" && (active.length < 2 || active.length !== (record.room.players || []).length) ? "waiting" : record.room.status,
           isPrivate: record.room.isPrivate,
-          players: active.map(({ id, name, ready }) => ({ id, name, ready })),
+          players: active.map(({ id, name, ready }) => ({ id, name, ready: inactiveSeats ? false : ready })),
           selfPlayerId: claims.sub,
           maxPlayers: MAX_PLAYERS,
           createdAt: record.room.createdAt,
