@@ -1,5 +1,7 @@
 # Crash Bash Online — PlayStation 3
 
+**PS3 Title ID:** `CBON00001` (four letters followed by five digits; consistent across the SFO, NPDRM Content ID and installed app path).
+
 The current installable package is **RetroArch for PSL1GHT with PCSX-ReARMed statically linked as the PS1 core**. It runs the user's own Crash Bash disc dump and uses RetroArch Netplay for match synchronization.
 
 This is an emulator-based homebrew package, not a native reimplementation of Crash Bash's original engine.
@@ -21,14 +23,14 @@ The package does **not** include the Crash Bash disc image or a PlayStation BIOS
 1. Install `Crash-Bash-Online-PS3.pkg` on a compatible jailbroken PS3.
 2. Create a BIN/CUE dump from your own Crash Bash disc.
 3. Copy the CUE file and every referenced BIN track to `/dev_hdd0/PSXISO/` or a `/PSXISO/` folder on USB. Keep the CUE file and referenced filenames intact.
-4. If using a BIOS, place the same BIOS file on each console in `/dev_hdd0/game/CBASH0001/USRDIR/system/`.
+4. If using a BIOS, place the same BIOS file on each console in `/dev_hdd0/game/CBON00001/USRDIR/system/`.
 5. Launch **Crash Bash Online** from the XMB, choose **Load Content**, and open the CUE file.
 
 The included core defaults to `Multitap Mode: Port 1`. PCSX-ReARMed supports Multitap and Netplay; its official documentation describes Port 1 Multitap as supporting up to five controller inputs. Crash Bash's own game limit still applies.
 
 Settings, saves and logs are stored separately for this package under:
 
-`/dev_hdd0/home/<user-id>/retroarch/CBASH0001/`
+`/dev_hdd0/home/<user-id>/retroarch/CBON00001/`
 
 The BIOS/system folder remains under the installed app directory shown above.
 
@@ -66,7 +68,7 @@ The build script is `scripts/build_online_pkg_clean.sh`. It:
 
 - Patches the PCSX-ReARMed Multitap default to Port 1.
 - Enables RetroArch Netplay lockstep, NAT traversal and the Madrid relay.
-- Isolates the PS3 user profile under `retroarch/CBASH0001`.
+- Isolates the PS3 user profile under `retroarch/CBON00001`.
 - Builds the PS1 core, links it into RetroArch, and creates a direct NPDRM `EBOOT.BIN` from that executable.
 - Validates the direct EBOOT SELF header, static libretro entry points and SFO app identity.
 - Finalizes the PKG with `package_finalize` and requires header revision `0x8000` before upload.
