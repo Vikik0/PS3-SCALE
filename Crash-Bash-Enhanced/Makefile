@@ -3,7 +3,7 @@ ifeq ($(strip $(PSL1GHT)),)
 $(error "Please set PSL1GHT in your environment (normally $$PS3DEV).")
 endif
 TITLE := Crash Bash Enhanced
-APPID := CBASHE001
+APPID := CBEN00001
 CONTENTID := UP0001-$(APPID)_00-0000000000000000
 ICON0 := $(CURDIR)/pkgfiles/ICON0.PNG
 PKGFILES := $(CURDIR)/pkgfiles
