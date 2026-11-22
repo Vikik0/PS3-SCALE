@@ -343,6 +343,7 @@ test("a restored browser session keeps the same player identity and ready state"
   assert.match(html, /state\.ready=Boolean\(me\.ready\)/);
   assert.match(html, /startRoomTimers\(3000\)/);
   assert.match(html, /Your room session expired/);
+  assert.equal((html.match(/\[401,403,404,410\]\.includes\(e\.status\)/g) || []).length, 2);
 });
 
 
