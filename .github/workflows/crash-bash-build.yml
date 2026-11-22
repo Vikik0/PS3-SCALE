@@ -4,7 +4,12 @@ on:
   push:
     branches: [crash-bash-enhanced]
     paths:
-      - "Crash-Bash-Enhanced/**"
+      - "Crash-Bash-Enhanced/Makefile"
+      - "Crash-Bash-Enhanced/source/**"
+      - "Crash-Bash-Enhanced/include/**"
+      - "Crash-Bash-Enhanced/tests/**"
+      - "Crash-Bash-Enhanced/scripts/**"
+      - "Crash-Bash-Enhanced/pkgfiles/**"
       - "api/**"
       - "tests/**"
       - "index.html"
@@ -14,7 +19,17 @@ on:
   pull_request:
     branches: [crash-bash-enhanced]
     paths:
-      - "Crash-Bash-Enhanced/**"
+      - "Crash-Bash-Enhanced/Makefile"
+      - "Crash-Bash-Enhanced/source/**"
+      - "Crash-Bash-Enhanced/include/**"
+      - "Crash-Bash-Enhanced/tests/**"
+      - "Crash-Bash-Enhanced/scripts/**"
+      - "Crash-Bash-Enhanced/pkgfiles/**"
+      - "api/**"
+      - "tests/**"
+      - "index.html"
+      - "package.json"
+      - "vercel.json"
       - ".github/workflows/crash-bash-build.yml"
   workflow_dispatch:
 
@@ -79,6 +94,10 @@ jobs:
           test -s "$PS3DEV/portlibs/ppu/lib/libz.a"
       - name: Build the online Crash Bash package
         run: bash Crash-Bash-Enhanced/scripts/build_online_pkg.sh
+      - name: Verify package checksum
+        run: |
+          cd Crash-Bash-Enhanced/build-artifacts
+          sha256sum -c Crash-Bash-Online-PS3.pkg.sha256
       - name: Upload installable PS3 package and build manifest
         uses: actions/upload-artifact@v4
         with:
