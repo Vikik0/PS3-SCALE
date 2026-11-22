@@ -247,8 +247,14 @@ module.exports = async function handler(req, res) {
       if (!["offer", "answer", "ice"].includes(type)) return reply(res, 400, { error: "Unsupported signal type." });
       const payload = JSON.stringify(body.payload ?? null);
       if (Buffer.byteLength(payload, "utf8") > 12000) return reply(res, 413, { error: "Signal payload too large." });
-      const target = room.players.find((p) => p.id !== player.id);
-      if (!target) return reply(res, 409, { error: "The other player has not joined yet." });
+      const targetPlayerId = String(body.toPlayerId || "");
+      if (!targetPlayerId) return reply(res, 400, { error: "A target player ID is required for room signaling." });
+      const target = room.players.find((p) =>
+        p.id === targetPlayerId &&
+        p.id !== player.id &&
+        now - p.lastSeen <= PLAYER_TTL_MS
+      );
+      if (!target) return reply(res, 404, { error: "Target player is not an active member of this room." });
       room.signals.push({ id: room.nextSignalId++, from: player.id, to: target.id, type, payload: JSON.parse(payload), createdAt: now });
       room.signals = room.signals.slice(-32);
       room.updatedAt = now;
