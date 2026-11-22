@@ -97,7 +97,8 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
             body.index("wait 0.05"),
         )
         self.assertIn("level.playerpiggyback = undefined", body)
-        self.assertIn("return ghc_campaign_bind_native_local_pair()", body)
+        self.assertIn("if ( ghc_campaign_bind_native_local_pair() )", body)
+        self.assertIn("return 0", body)
 
     def test_campaign_aliases_are_bound_only_after_exact_native_pair_validation(self):
         body = function_body(self.source, "ghc_campaign_bind_native_local_pair")
