@@ -199,10 +199,21 @@
     "compiler": "GSC Tool 1.6.2.364",
     "target": "IW6/PS3",
     "round_trip_decompile_succeeded": true,
-    "compiled_bytes": 400,
-    "compiled_sha256": "0c52cb5712cadce6308b47c9c216ac7c483036bd3084ff35899c096c6d35ee85",
+    "compiled_bytes": 457,
+    "compiled_sha256": "27eab77b588ab79dd3627ca64d6454911a98712fcc6123eb999d60e44c56b375",
     "matches_verified_phase7_artifact": true,
-    "injected_or_hardware_tested": false
+    "injected_or_hardware_tested": false,
+    "source_sha256": "ea943514d1a285875e8d772d70d67e20d7f41a2fe382e74da57f9bb50e8488af",
+    "status_codes": {
+      "0": "not checked",
+      "1": "ready",
+      "2": "player array missing",
+      "3": "split-screen inactive",
+      "4": "duplicate primary",
+      "5": "duplicate secondary",
+      "6": "player count is not exactly two"
+    },
+    "manifest_hash_and_size_verified_in_ci": true
   },
   "pad_probe_v4_ci": {
     "workflow_run_id": 45023069795,
@@ -221,11 +232,10 @@
     "hardware_loaded": false
   },
   "final_ci": {
-    "workflow_run_id": 45023444205,
+    "workflow_run_id": 45023769195,
     "all_five_jobs_passed": true,
-    "host_tests": "127/127",
-    "final_documentation_workflow_run_id": 45023497892,
-    "final_documentation_workflow_passed": true
+    "host_tests": "129/129",
+    "gsc_registry_compile_and_manifest_check_passed": true
   },
   "pad_probe_mode_provenance": {
     "parsed_fields": [
