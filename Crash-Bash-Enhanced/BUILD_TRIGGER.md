@@ -14,7 +14,7 @@ The installable PKG is built from:
 - RetroArch Netplay lockstep enabled to reduce the memory cost of the
   0x440000-byte PS1 savestate.
 - Public lobby announcement, NAT traversal and the Madrid relay endpoint.
-- An app-specific PS3 user profile under `retroarch/CBASH0001`.
+- An app-specific PS3 user profile under `retroarch/CBON00001`.
 
 The earlier Tiny3D shell, Vercel room API and custom UDP input codec are separate
 prototypes; they are not the gameplay path in this PKG.
