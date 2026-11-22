@@ -25,6 +25,7 @@ command -v spu-gcc >/dev/null
 command -v make_self_npdrm >/dev/null
 command -v make_self >/dev/null
 command -v pkg >/dev/null
+command -v package_finalize >/dev/null
 command -v sfo >/dev/null
 command -v git >/dev/null
 command -v wget >/dev/null
@@ -303,8 +304,13 @@ OUT="$ROOT/build-artifacts/Crash-Bash-Online-PS3.pkg"
 pkg --contentid "$CONTENT_ID" "$PKGDIR/" "$OUT"
 test -s "$OUT"
 
-MAGIC="$(od -An -tx1 -N4 "$OUT" | tr -d ' \n')"
+# PSL1GHT's pkg command first emits a non-finalized debug PKG (revision 0x0000).
+# Finalize it for normal CEX/CFW package installation before computing the hash.
+package_finalize "$OUT"
+MAGIC="$(od -An -tx1 -N4 "$OUT" | tr -d ' \\n')"
+REVISION="$(od -An -tx1 -j4 -N2 "$OUT" | tr -d ' \\n')"
 test "$MAGIC" = "7f504b47"
+test "$REVISION" = "8000"
 
 (
     cd "$ROOT/build-artifacts"
