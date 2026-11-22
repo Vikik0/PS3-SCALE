@@ -36,6 +36,13 @@ class PadProbeSourceSafetyTests(unittest.TestCase):
         self.assertIn("ghosts_multiplayer_pad_probe.log", source)
         self.assertIn("ghosts_probe_mode.txt", source)
 
+    def test_module_stop_does_not_unload_while_worker_join_fails(self):
+        source = (PROBE / "module.c").read_text(encoding="utf-8")
+        self.assertIn("int join_status = thread_join(g_thread, &thread_result);", source)
+        self.assertIn("if (join_status != 0)", source)
+        self.assertIn("return SYS_PRX_STOP_FAIL;", source)
+        self.assertIn("return SYS_PRX_STOP_OK;", source)
+
     def test_build_checks_prx_and_links_required_read_only_imports(self):
         makefile = (PROBE / "Makefile").read_text(encoding="utf-8")
         self.assertIn("-lsys_fs_stub", makefile)
