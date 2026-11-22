@@ -221,8 +221,17 @@ cp -a "$ASSETS/wallpapers" "$USRDIR/assets/"
 cp "$RA/COPYING" "$USRDIR/licenses/RetroArch-GPL-3.0.txt"
 cp "$PCSX/COPYING" "$USRDIR/licenses/PCSX-ReARMed-GPL-2.0.txt"
 cp "$ASSETS/COPYING" "$USRDIR/licenses/RetroArch-assets-CC-BY-4.0.txt"
-cp "$ROOT/pkgfiles/ICON0.PNG" "$PKGDIR/ICON0.PNG"
-test -s "$PKGDIR/ICON0.PNG"
+base64 -d "$ROOT/pkgfiles/ICON0.PNG.b64" > "$PKGDIR/ICON0.PNG"
+python3 - "$PKGDIR/ICON0.PNG" <<'PY'
+from pathlib import Path
+import struct
+data = Path(__import__("sys").argv[1]).read_bytes()
+if data[:8] != b"\\x89PNG\\r\\n\\x1a\\n":
+    raise SystemExit("ICON0.PNG is not a valid PNG")
+width, height = struct.unpack(">II", data[16:24])
+if (width, height) != (320, 176):
+    raise SystemExit(f"ICON0.PNG must be 320x176, got {width}x{height}")
+PY
 
 sfo --title "$APP_TITLE" --appid "$APP_ID" -f "$PS3DEV/bin/sfo.xml" "$PKGDIR/PARAM.SFO"
 
