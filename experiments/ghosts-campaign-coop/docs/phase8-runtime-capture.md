@@ -59,9 +59,11 @@ Host and CI tests validate the tooling and build. They do not replace an actual 
 
 The remaining evidence must come from the user's console:
 
-1. Load pad-probe in Campaign and collect ghosts_campaign_pad_probe.log.
-2. Load pad-probe in Multiplayer and collect ghosts_multiplayer_pad_probe.log.
-3. Run the comparator and share its JSON/log output.
+1. Copy ghosts_campaign_pad_probe.fake.sprx to /dev_hdd0/tmp and place the exact CAMPAIGN mode file at /dev_hdd0/tmp/ghosts_probe_mode.txt.
+2. While inside Campaign, request /ps3mapi.ps3?PROCESS+GETCURRENTPID, then load the PRX with /ps3mapi.ps3?MODULE+LOAD+PID+/dev_hdd0/tmp/ghosts_campaign_pad_probe.fake.sprx. Verify it via MODULE+GETALLPRXID and MODULE+GETNAME/GETFILENAME; MODULE LOAD may return HTTP 200 even if the load failed.
+3. Wait 30 seconds, copy ghosts_campaign_pad_probe.log, then unload the module with MODULE+UNLOAD+PID+PRX_ID.
+4. Repeat in Multiplayer using the MULTIPLAYER mode file and collect ghosts_multiplayer_pad_probe.log.
+5. Run the comparator and share its JSON/log output.
 4. Capture Campaign and Multiplayer PT_LOAD segments using their matching manual scripts.
 5. Run verify_tu116_dump.py against the exact installed TU 1.16 SELF files.
 6. Share the two verification JSON reports and string-diff report. Keep raw game dumps local unless a specific byte range is required for analysis.
