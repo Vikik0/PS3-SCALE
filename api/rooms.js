@@ -81,17 +81,24 @@ function publicRoom(room) {
 }
 
 async function listRooms() {
-  const page = await list({ prefix: PREFIX, limit: 100 });
-  const candidates = (page.blobs || []).filter((blob) => {
+  const candidates = [];
+  let cursor;
+  do {
+    const page = await list({ prefix: PREFIX, limit: 100, ...(cursor ? { cursor } : {}) });
+    candidates.push(...(page.blobs || []));
+    cursor = page.hasMore && page.cursor ? page.cursor : undefined;
+  } while (cursor);
+
+  const validCandidates = candidates.filter((blob) => {
     const code = blob.pathname.slice(PREFIX.length).replace(/\.json$/, "");
     return /^[A-Z2-9]{6}$/.test(code);
   });
   const output = [];
 
-  // Read rooms in small concurrent batches: do not hide valid public rooms after an
-  // arbitrary 40-room cutoff, while also avoiding one unbounded burst of Blob reads.
-  for (let offset = 0; offset < candidates.length; offset += 10) {
-    const batch = await Promise.all(candidates.slice(offset, offset + 10).map(async (blob) => {
+  // Read rooms in small concurrent batches across every Blob listing page. This
+  // avoids arbitrary room-count cutoffs without creating one unbounded read burst.
+  for (let offset = 0; offset < validCandidates.length; offset += 10) {
+    const batch = await Promise.all(validCandidates.slice(offset, offset + 10).map(async (blob) => {
       const code = blob.pathname.slice(PREFIX.length).replace(/\.json$/, "");
       try {
         const record = await readRoom(code);
