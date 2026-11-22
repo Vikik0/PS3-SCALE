@@ -85,6 +85,10 @@ function prunePlayers(room, now = Date.now()) {
   const active = activePlayers(room, now);
   if (active.length !== previous.length) {
     active.forEach((player) => { player.ready = false; });
+    const activeIds = new Set(active.map((player) => player.id));
+    room.signals = (room.signals || []).filter((signal) =>
+      activeIds.has(signal.from) && activeIds.has(signal.to)
+    );
     room.status = "waiting";
   }
   room.players = active;
