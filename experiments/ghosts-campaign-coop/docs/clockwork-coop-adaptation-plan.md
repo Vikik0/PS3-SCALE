@@ -71,3 +71,20 @@ Add downed/revive, bleedout, both-down failure, checkpoint restart and mission t
 - Do not patch or rebuild signed retail FastFiles.
 - Do not claim full Campaign coverage from the Clockwork sample.
 - Do not build an installable PKG until the native slot and mission hooks are verified on the exact TU 1.16 target.
+
+## Phase 11 — native local-session reuse vertical slice
+
+The first Campaign-side adapter is now at client/ps3/gsc/ghc_campaign_local_session.gsc.
+
+- Reuse the engine-created local split-screen players from the native Multiplayer path.
+- Refresh the Campaign player entity list from getentarray("player", "classname") for a bounded startup window.
+- Identify primary and secondary with issplitscreenplayer() and issplitscreenplayerprimary(); never infer slot identity from entity-array order or match clientid.
+- After validation only, bind level.player to the primary and level.playengineeffects to the secondary.
+- Preserve Logan's original setup_combat() and apply its known starting loadout to Player 2 through ghc_campaign_apply_clockwork_player_two_loadout().
+
+The helper is intended to run after the original Player 1 setup_combat() call. It does not spawn the native second client, and it is not yet loaded by the retail Campaign VM.
+
+The first mission behavior to adapt after the native gate passes is the drill interaction. Its input, weapon checks, animation link, stance and control locks must belong to the player who activates the drill. Drill completion, objective flags and autosave remain one shared mission state. Only one player may own a drill interaction at a time; cancellation and every exit path must restore that same player's controls and animation link.
+
+This vertical slice is intentionally smaller than a blanket 644-reference conversion. It proves the native identity bridge and one per-player gameplay interaction before broader mission refactoring.
+
