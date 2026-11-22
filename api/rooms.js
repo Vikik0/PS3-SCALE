@@ -84,7 +84,7 @@ async function listRooms() {
   const page = await list({ prefix: PREFIX, limit: 100 });
   const output = [];
   for (const blob of (page.blobs || []).slice(0, 40)) {
-    const code = blob.pathname.slice(PREFIX.length).replace(/\\.json$/, "");
+    const code = blob.pathname.slice(PREFIX.length).replace(/\.json$/, "");
     if (!/^[A-Z2-9]{6}$/.test(code)) continue;
     try {
       const record = await readRoom(code);
