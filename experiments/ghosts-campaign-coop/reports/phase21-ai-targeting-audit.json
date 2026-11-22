@@ -1,0 +1,28 @@
+{
+  "status": "PASS",
+  "checks": {
+    "discovery_ai_has_one_primary_only_enemy_target_call": true,
+    "discovery_target_assignment_is_inside_filtered_ai_loop": true,
+    "shared_ally_attack_targets_ai_group_not_player": true,
+    "intro_closest_ai_call_is_dialogue_only": true,
+    "snowmobile_player_distance_is_audio_only": true
+  },
+  "inputs": {
+    "maps__clockwork_interior.gsc": {
+      "bytes": 91543,
+      "sha256": "7fc0f02476d5c9ebbe7c28e68abe762a26a976a28587228c5027d1a5c543e1f1"
+    },
+    "maps__clockwork_interior_nvg.gsc": {
+      "bytes": 47250,
+      "sha256": "d7e07d1c7886ecd156a83c2d949525b9d2a348f702d53d09aad1d0d0f37ed16e"
+    },
+    "maps__clockwork_code.gsc": {
+      "bytes": 78879,
+      "sha256": "86a2b3422b1cfeead0c89352a2e5c96b6b483782e1ca421e3654ab9e04d84877"
+    }
+  },
+  "direct_enemy_to_player_assignments": 1,
+  "shared_ally_to_enemy_target_functions": 1,
+  "recommended_policy": "select the nearest currently valid local player once per discovery AI at wake-up and call getenemyinfo exactly once",
+  "runtime_validation": "NOT_PERFORMED"
+}
