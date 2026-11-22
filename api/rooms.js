@@ -82,24 +82,34 @@ function publicRoom(room) {
 
 async function listRooms() {
   const page = await list({ prefix: PREFIX, limit: 100 });
-  const output = [];
-  for (const blob of (page.blobs || []).slice(0, 40)) {
+  const candidates = (page.blobs || []).filter((blob) => {
     const code = blob.pathname.slice(PREFIX.length).replace(/\.json$/, "");
-    if (!/^[A-Z2-9]{6}$/.test(code)) continue;
-    try {
-      const record = await readRoom(code);
-      if (!record) continue;
-      const room = record.room;
-      const now = Date.now();
-      const active = activePlayers(room, now);
-      if (now - room.updatedAt > ROOM_TTL_MS || active.length === 0) continue;
-      const staleReadyRoom = room.status === "ready" && active.length < MAX_PLAYERS;
-      if (!room.isPrivate && (room.status === "waiting" || staleReadyRoom) && active.length < MAX_PLAYERS) {
-        output.push(publicRoom(room));
+    return /^[A-Z2-9]{6}$/.test(code);
+  });
+  const output = [];
+
+  // Read rooms in small concurrent batches: do not hide valid public rooms after an
+  // arbitrary 40-room cutoff, while also avoiding one unbounded burst of Blob reads.
+  for (let offset = 0; offset < candidates.length; offset += 10) {
+    const batch = await Promise.all(candidates.slice(offset, offset + 10).map(async (blob) => {
+      const code = blob.pathname.slice(PREFIX.length).replace(/\.json$/, "");
+      try {
+        const record = await readRoom(code);
+        if (!record) return null;
+        const room = record.room;
+        const now = Date.now();
+        const active = activePlayers(room, now);
+        if (!Number.isFinite(room.updatedAt) || now - room.updatedAt > ROOM_TTL_MS || active.length === 0) return null;
+        const staleReadyRoom = room.status === "ready" && active.length < MAX_PLAYERS;
+        if (!room.isPrivate && (room.status === "waiting" || staleReadyRoom) && active.length < MAX_PLAYERS) {
+          return publicRoom(room);
+        }
+      } catch {
+        // A corrupt or expired room must not prevent the rest of the lobby listing.
       }
-    } catch {
-      // A corrupt or expired room must not prevent the rest of the lobby listing.
-    }
+      return null;
+    }));
+    output.push(...batch.filter(Boolean));
   }
   return output.sort((a, b) => b.createdAt - a.createdAt);
 }
