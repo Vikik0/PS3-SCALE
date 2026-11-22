@@ -32,6 +32,9 @@ assert 'CORE_SELF="$USRDIR/cores/pcsx_rearmed_libretro_psl1ght.SELF"' in script
 assert "create-core CONTENTID=" in script, "The core-info identity SELF must be created"
 
 prototype_makefile = (ROOT / "Makefile").read_text()
+assert '@package_finalize "$(OUTPUT).pkg"' in prototype_makefile, (
+    "Native lobby make pkg target must finalize the PKG for normal installation"
+)
 prototype_sfo = ET.parse(ROOT / "sfo-native.xml").getroot()
 prototype_sfo_values = {
     node.attrib["name"]: (node.text or "").strip()
