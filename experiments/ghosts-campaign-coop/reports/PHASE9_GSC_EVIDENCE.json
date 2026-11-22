@@ -169,5 +169,15 @@
     "Verify both captures against the exact installed SELF headers.",
     "Compare runtime ELFs to identify native local-client creation, controller mapping, player entity creation, and independent view contexts.",
     "Only then consider a Campaign-specific hook or mission adapter."
-  ]
+  ],
+  "registry_shim_compile": {
+    "source": "client/ps3/gsc/ghc_campaign_player_registry.gsc",
+    "compiler": "GSC Tool 1.6.2.364",
+    "target": "IW6/PS3",
+    "round_trip_decompile_succeeded": true,
+    "compiled_bytes": 400,
+    "compiled_sha256": "0c52cb5712cadce6308b47c9c216ac7c483036bd3084ff35899c096c6d35ee85",
+    "matches_verified_phase7_artifact": true,
+    "injected_or_hardware_tested": false
+  }
 }
