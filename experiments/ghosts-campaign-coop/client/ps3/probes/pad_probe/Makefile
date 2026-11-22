@@ -32,7 +32,7 @@ $(BUILD)/ghosts_campaign_pad_probe.elf: $(BUILD)/module.o $(BUILD)/exports.o $(C
 		-Wl,-q -Wl,--no-warn-rwx-segments -Wl,-T,$(PRX_LD) \
 		$(BUILD)/module.o $(BUILD)/exports.o $(CRT) \
 		-L$(PS3DK)/ppu/lib -L$(PS3DEV)/ppu/lib \
-		-lfs_stub -lio_stub -llv2_stub -lgcc -o $@
+		-lsys_fs_stub -lio_stub -llv2_stub -lgcc -o $@
 
 $(BUILD)/ghosts_campaign_pad_probe.prx: $(BUILD)/ghosts_campaign_pad_probe.elf
 	$(PRX_GEN) build $< -o $@ --name ghosts_campaign_pad_probe --version 0.1
