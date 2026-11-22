@@ -524,3 +524,55 @@ test("room view clears ready flags when a disconnected seat is detected", async 
   assert.equal(room.body.room.players.length, 3);
   assert.equal(room.body.room.players.filter((player) => player.ready).length, 0);
 });
+
+
+test("room creator is the host and host role transfers when they leave", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const joined = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  let room = await call("GET", {}, joined.body.token, { code: host.body.room.code });
+  assert.equal(room.body.room.hostPlayerId, host.body.player.id);
+
+  const left = await call("POST", { action: "leave" }, host.body.token);
+  assert.equal(left.statusCode, 200);
+  room = await call("GET", {}, joined.body.token, { code: host.body.room.code });
+  assert.equal(room.body.room.hostPlayerId, joined.body.player.id);
+  assert.equal(room.body.room.players.length, 1);
+});
+
+test("a ready two-player room stays locked and is not advertised as waiting", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+
+  let room = await call("GET", {}, host.body.token, { code: host.body.room.code });
+  assert.equal(room.body.room.status, "ready");
+
+  const listing = await call("GET");
+  assert.equal(listing.body.rooms.some((entry) => entry.code === host.body.room.code), false);
+
+  const third = await call("POST", {
+    action: "join",
+    code: host.body.room.code,
+    displayName: "Late Player"
+  });
+  assert.equal(third.statusCode, 409);
+
+  const any = await call("POST", { action: "any", displayName: "Quick Join" });
+  assert.equal(any.statusCode, 404);
+});
+
+test("an expired host seat is promoted before the remaining player heartbeats", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  const pathname = "cb-rooms/" + host.body.room.code + ".json";
+  const stored = JSON.parse(blobs.get(pathname).body);
+  stored.players[0].lastSeen = Date.now() - 11 * 60 * 1000;
+  blobs.set(pathname, { body: JSON.stringify(stored), etag: String(++etagSequence) });
+
+  const heartbeat = await call("POST", { action: "heartbeat", ready: false }, guest.body.token);
+  assert.equal(heartbeat.statusCode, 200);
+  const room = await call("GET", {}, guest.body.token, { code: host.body.room.code });
+  assert.equal(room.body.room.hostPlayerId, guest.body.player.id);
+  assert.equal(room.body.room.status, "waiting");
+});
