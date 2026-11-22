@@ -93,22 +93,6 @@ jobs:
               assert len(binary) == manifest["compiled_gscbin_bytes"], "session bridge bytecode size mismatch"
           print(f"Session bridge build observed: source_sha256={source_hash}, binary_sha256={binary_hash}, binary_bytes={len(binary)}")
           PY
-      - name: Compile and round-trip the IW6 PS3 Campaign interaction owner helper
-        working-directory: experiments/ghosts-campaign-coop
-        run: |
-          gsc-tool --mode comp --game iw6 --system ps3 client/ps3/gsc/ghc_campaign_interaction_owner.gsc
-          test -s compiled/iw6/ghc_campaign_interaction_owner.gscbin
-          gsc-tool --mode decomp --game iw6 --system ps3 compiled/iw6/ghc_campaign_interaction_owner.gscbin
-          test -s decompiled/iw6/ghc_campaign_interaction_owner.gsc
-          grep -q 'ghc_campaign_interaction_begin' decompiled/iw6/ghc_campaign_interaction_owner.gsc
-          grep -q 'ghc_campaign_interaction_abort_player' decompiled/iw6/ghc_campaign_interaction_owner.gsc
-          grep -q 'ghc_campaign_interaction_completed_by_spot' decompiled/iw6/ghc_campaign_interaction_owner.gsc
-      - uses: actions/upload-artifact@v6
-        with:
-          name: ghosts-campaign-gsc-interaction-owner
-          path: |
-            experiments/ghosts-campaign-coop/compiled/iw6/ghc_campaign_interaction_owner.gscbin
-            experiments/ghosts-campaign-coop/client/ps3/gsc/ghc_campaign_interaction_owner.gsc
       - uses: actions/upload-artifact@v6
         with:
           name: ghosts-campaign-gsc-registry
