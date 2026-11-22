@@ -12,8 +12,22 @@
 
 main()
 {
+    /*
+     * Idempotent only while the exact same native primary/secondary pair
+     * is still alive. If a controller disconnects or the native pair is
+     * replaced, fall through to cleanup and a bounded rebind.
+     */
     if ( isdefined( level.ghc_campaign_session_ready )
-        && level.ghc_campaign_session_ready )
+        && level.ghc_campaign_session_ready
+        && issplitscreen()
+        && isdefined( level.ghc_campaign_player_0 )
+        && level.ghc_campaign_player_0 issplitscreenplayer()
+        && level.ghc_campaign_player_0 issplitscreenplayerprimary()
+        && isdefined( level.ghc_campaign_player_1 )
+        && level.ghc_campaign_player_1 issplitscreenplayer()
+        && !level.ghc_campaign_player_1 issplitscreenplayerprimary()
+        && level.player == level.ghc_campaign_player_0
+        && level.playengineeffects == level.ghc_campaign_player_1 )
         return 1;
 
     if ( isdefined( level.ghc_campaign_drill_state_initialized )
