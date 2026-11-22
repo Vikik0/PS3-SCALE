@@ -344,3 +344,26 @@ test("a restored browser session keeps the same player identity and ready state"
   assert.match(html, /startRoomTimers\(3000\)/);
   assert.match(html, /Your room session expired/);
 });
+
+
+test("expired room codes and sessions are rejected while leave remains available", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const code = host.body.room.code;
+  const blobPath = "cb-rooms/" + code + ".json";
+  const stored = JSON.parse(blobs.get(blobPath).body);
+  stored.updatedAt = Date.now() - 31 * 60 * 1000;
+  blobs.set(blobPath, { body: JSON.stringify(stored), etag: String(++etagSequence) });
+
+  const room = await call("GET", {}, host.body.token, { code });
+  assert.equal(room.statusCode, 410);
+  assert.match(room.body.error, /expired/i);
+
+  const join = await call("POST", { action: "join", code, displayName: "Late Player" });
+  assert.equal(join.statusCode, 410);
+
+  const heartbeat = await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  assert.equal(heartbeat.statusCode, 410);
+
+  const leave = await call("POST", { action: "leave" }, host.body.token);
+  assert.equal(leave.statusCode, 200);
+});
