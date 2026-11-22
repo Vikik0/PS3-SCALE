@@ -21,14 +21,14 @@ assert content_id == f"UP0001-{app_id}_00-0000000000000001"
 assert sfo_values.get("TITLE_ID") == app_id, "SFO template TITLE_ID must match the package"
 assert sfo_values.get("TITLE") == "Crash Bash Online"
 assert sfo_values.get("CATEGORY") == "HG"
-assert '/dev_hdd0/game/CBON00001/USRDIR/EBOOT.BIN' in script
+assert '/dev_hdd0/game/CBON00001/USRDIR/cores/pcsx_rearmed_libretro_psl1ght.SELF' in script
 assert 'make -C "$RA" -f Makefile.psl1ght -j"$JOBS" all CONTENTID="$CONTENT_ID"' in script
 assert 'make_self_npdrm "$RA/build/retroarch_psl1ght.elf" "$USRDIR/EBOOT.BIN" "$CONTENT_ID"' in script
 assert '"$NM" -g "$RA/build/retroarch_psl1ght.elf"' in script, "Check symbols in the exact ELF wrapped into EBOOT.BIN"
 assert 'sfo --title "$APP_TITLE" --appid "$APP_ID" -f "$ROOT/sfo.xml"' in script
 assert "values.get(\"TITLE_ID\") != app_id" in script
 assert "content_id.encode(\"ascii\") not in eboot" in script
-assert "CORE_SELF" not in script, "Do not package the frontend SELF as a fake standalone core"
+assert 'CORE_SELF="$USRDIR/cores/pcsx_rearmed_libretro_psl1ght.SELF"' in script\nassert "create-core CONTENTID=" in script, "The core-info identity SELF must be created"
 
 prototype_makefile = (ROOT / "Makefile").read_text()
 prototype_app_id = re.search(r"^APPID := ([A-Z0-9]+)$", prototype_makefile, re.M)
