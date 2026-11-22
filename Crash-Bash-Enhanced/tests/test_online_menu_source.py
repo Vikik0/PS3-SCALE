@@ -39,7 +39,7 @@ assert "BTN_START" in source
 assert "cb_launch_game(" in source
 assert "ALL PLAYERS READY - PRESS START TO OPEN CRASH BASH" in source
 assert "view->player_count >= 2" in online_source
-assert "START CRASH BASH" in main_source
+assert "OPEN CRASH BASH ONLINE" in main_source
 assert "cb_launch_game(g_status, sizeof(g_status))" in main_source
 assert "/dev_hdd0/game/CBON00001/USRDIR/EBOOT.BIN" in launcher
 assert "sysProcessExitSpawn2(" in launcher
