@@ -267,9 +267,7 @@ def audit(
         and signatures.get("drillthrough_plate_sound") == [["var_0", "var_1", "player"]]
         and signatures.get("stop_current_car_watcher") == [["player", "var_0", "var_1"]]
     )
-    drill_worker_does_not_block_on_start_flag = not _has(
-        body("handle_drilling"), r"flag_wait\\s*\\(\\s*var_1\\s*\\)"
-    )
+    drill_worker_does_not_block_on_start_flag = "flag_wait" not in body("handle_drilling")
     per_player_aim_state = (
         "level.aiming_at_ally" not in body("handle_misc_drill_details")
         and "level.aiming_at_ally" not in body("watch_for_air_drop_death")
