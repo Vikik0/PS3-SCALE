@@ -11,7 +11,7 @@ MANIFEST = PROJECT / "client" / "ps3" / "gsc" / "ghc_campaign_local_session.mani
 
 
 def function_body(source: str, name: str) -> str:
-    match = re.search(rf"(?m)^{re.escape(name)}\\s*\\([^)]*\\)\\s*\\{{", source)
+    match = re.search(rf"(?m)^{re.escape(name)}\s*\([^)]*\)\s*\{{", source)
     if match is None:
         raise AssertionError(f"function definition not found: {name}")
     opening = source.index("{", match.start())
