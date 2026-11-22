@@ -275,7 +275,7 @@ static int post_room_game_start_action(CBOnlineSession *session,
         set_error(error, error_size, "No active room session");
         return -1;
     }
-    snprintf(body, sizeof(body), "{\\"action\\":\\"%s\\"}", action);
+    snprintf(body, sizeof(body), "{\"action\":\"%s\"}", action);
     if (http_request("POST", "/api/rooms", body, session->token,
                      response, sizeof(response), error, error_size) < 0) return -1;
     count = cb_json_parse(response, tokens, CB_JSON_TOKEN_COUNT);
@@ -288,7 +288,7 @@ static int post_room_game_start_action(CBOnlineSession *session,
         set_error(error, error_size, "Room launch action was not accepted");
         return -1;
     }
-    if (error && error_size) error[0] = '\\0';
+    if (error && error_size) error[0] = '\0';
     return 0;
 }
 
