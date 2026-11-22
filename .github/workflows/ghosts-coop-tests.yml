@@ -124,6 +124,16 @@ jobs:
           gsc-tool --mode comp --game iw6 --system ps3 clockwork_stage56_toolchain.gsc
           test -s compiled/iw6/clockwork_stage56_toolchain.gscbin
           gsc-tool --mode decomp --game iw6 --system ps3 compiled/iw6/clockwork_stage56_toolchain.gscbin
+          echo "Stage 5/6 toolchain decompile diagnostics:"
+          ls -l decompiled/iw6 || true
+          wc -c decompiled/iw6/clockwork_stage56_toolchain.gsc || true
+          for marker in 'clockwork_get_secondary_player' 'clockwork_apply_vault_blast' 'level.ghc_vault_player_two = secondary_player' 'secondary_player allowsprint' 'secondary_player getweaponammoclip'; do
+            if grep -Fq "$marker" decompiled/iw6/clockwork_stage56_toolchain.gsc; then
+              echo "PASS: $marker"
+            else
+              echo "MISSING: $marker"
+            fi
+          done
           test -s decompiled/iw6/clockwork_stage56_toolchain.gsc
           grep -q 'clockwork_get_secondary_player' decompiled/iw6/clockwork_stage56_toolchain.gsc
           grep -q 'clockwork_apply_vault_blast' decompiled/iw6/clockwork_stage56_toolchain.gsc
