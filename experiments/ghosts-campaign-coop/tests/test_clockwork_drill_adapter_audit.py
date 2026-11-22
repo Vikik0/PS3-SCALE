@@ -210,8 +210,8 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
 
     def test_strict_mode_requires_an_original_reference_source(self):
         report = audit(self.write_source(
-            'handle_drill_spot()\\n{\\n}\\n'
-            'handle_drilling()\\n{\\n}\\n'
+            'handle_drill_spot()\n{\n}\n'
+            'handle_drilling()\n{\n}\n'
         ), require_reference_baseline=True)
         self.assertEqual(report["status"], "SOURCE_REFERENCE_MISSING")
         self.assertFalse(report["reference_baseline"]["provided"])
