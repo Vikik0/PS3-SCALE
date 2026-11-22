@@ -295,7 +295,7 @@ int module_start(size_t args, void *argp)
     if (fd < 0) return SYS_PRX_RESIDENT;
     log_literal(fd, "Ghosts Campaign Co-op Pad Probe v4\nMODE=");
     log_literal(fd, g_mode_name);
-    log_literal(fd, "\nREAD_ONLY=1\n");
+    log_literal(fd, "\nREAD_ONLY=1\nMODE_SOURCE=manual_mode_file\nMODE_LABEL_IS_OPERATOR_SELECTED=1\n");
     log_literal(fd, "Calls: cellPadGetInfo2 only; no cellPadInit/End/GetData\n");
     log_literal(fd, "No game memory writes, hooks, or dvar changes.\n\n");
     cellFsClose(fd);
