@@ -11,7 +11,7 @@ from tools.clockwork_ai_target_patch import main, patch_source, function_span
 SYNTHETIC_SOURCE = r'''
 setup_clockwork()
 {
-    level.ghc_stage6_marker = 1;
+    level.ghc_fixture_marker = 1;
 }
 
 discovery_guys_wakeup()
@@ -25,7 +25,7 @@ discovery_guys_wakeup()
     }
 }
 
-stage6_interior_setup()
+fixture_interior_setup()
 {
     level.ghc_stage6_marker = 2;
 }
@@ -42,6 +42,9 @@ class ClockworkAiTargetPatchTests(unittest.TestCase):
         self.assertIn("level.ghc_stage6_marker = 1;", patched)
         self.assertIn("level.ghc_stage6_marker = 2;", patched)
         self.assertIn("clockwork_pick_enemy_target( var_1 )", patched)
+        self.assertIn("issplitscreen() && isdefined( level.playengineeffects )", patched)
+        self.assertIn("secondary_player issplitscreenplayer()", patched)
+        self.assertIn("!secondary_player issplitscreenplayerprimary()", patched)
         self.assertIn("distance( ai.origin, secondary_player.origin )", patched)
         self.assertEqual(patched.count("getenemyinfo( var_2 )"), 1)
         self.assertNotIn("var_1 getenemyinfo( level.player )", patched)
@@ -67,7 +70,7 @@ class ClockworkAiTargetPatchTests(unittest.TestCase):
         with TemporaryDirectory() as temp:
             source = Path(temp) / "unknown.gsc"
             output = Path(temp) / "patched.gsc"
-            source.write_text("not the pinned Stage 6 source", encoding="utf-8")
+            source.write_text("not the pinned Clockwork source", encoding="utf-8")
             with redirect_stderr(StringIO()):
                 result = main([str(source), str(output)])
             self.assertEqual(result, 1)
