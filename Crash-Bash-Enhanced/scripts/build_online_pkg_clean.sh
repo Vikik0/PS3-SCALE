@@ -234,23 +234,60 @@ PY
 
 sfo --title "$APP_TITLE" --appid "$APP_ID" -f "$ROOT/sfo.xml" "$PKGDIR/PARAM.SFO"
 
-# Validate the app identity and both launchable PS3 SELF files before packaging.
-python3 - "$PKGDIR/PARAM.SFO" "$APP_ID" "$APP_TITLE" "$USRDIR/EBOOT.BIN" "$CORE_SELF" <<'PY'
+# Validate the actual SFO fields, the PowerPC64 ELF used for EBOOT, and its NPDRM identity.
+python3 - "$PKGDIR/PARAM.SFO" "$APP_ID" "$APP_TITLE" "$CONTENT_ID" "$USRDIR/EBOOT.BIN" "$RA/build/retroarch_psl1ght.elf" <<'PY'
 from pathlib import Path
+import re
+import struct
 import sys
 
-sfo_path, app_id, title, eboot_path, core_path = sys.argv[1:]
-sfo = Path(sfo_path).read_bytes()
-if app_id.encode("ascii") not in sfo:
-    raise SystemExit("PARAM.SFO does not contain the expected application ID")
-if title.encode("utf-8") not in sfo:
-    raise SystemExit("PARAM.SFO does not contain the expected application title")
+sfo_path, app_id, title, content_id, eboot_path, elf_path = sys.argv[1:]
+if not re.fullmatch(r"[A-Z]{4}[0-9]{5}", app_id):
+    raise SystemExit(f"Invalid PS3 TITLE_ID format: {app_id!r}; expected four letters and five digits")
+if content_id != f"UP0001-{app_id}_00-0000000000000001":
+    raise SystemExit("NPDRM Content ID does not match the application TITLE_ID")
 
-for filename in (eboot_path, core_path):
-    path = Path(filename)
-    data = path.read_bytes()
-    if len(data) < 4 or data[:4] != b"SCE\x00":
-        raise SystemExit(f"{path.name} is not a valid PS3 SELF header")
+sfo = Path(sfo_path).read_bytes()
+if len(sfo) < 0x14 or sfo[:4] != b"\x00PSF":
+    raise SystemExit("PARAM.SFO has an invalid PSF header")
+_, key_offset, value_offset, entry_count = struct.unpack_from("<IIII", sfo, 4)
+values = {}
+for i in range(entry_count):
+    entry_offset = 0x14 + i * 0x10
+    key_rel, data_type, data_len, data_max_len, data_rel = struct.unpack_from("<HHIII", sfo, entry_offset)
+    key_start = key_offset + key_rel
+    key_end = sfo.find(b"\x00", key_start)
+    if key_end < 0:
+        raise SystemExit("PARAM.SFO contains an unterminated key")
+    key = sfo[key_start:key_end].decode("ascii")
+    raw = sfo[value_offset + data_rel:value_offset + data_rel + data_len]
+    if len(raw) != data_len:
+        raise SystemExit(f"PARAM.SFO value is truncated: {key}")
+    if data_type == 0x0204:
+        values[key] = raw.split(b"\x00", 1)[0].decode("utf-8")
+    elif data_type == 0x0404:
+        values[key] = int.from_bytes(raw[:4], "little")
+
+if values.get("TITLE_ID") != app_id:
+    raise SystemExit(f"PARAM.SFO TITLE_ID mismatch: {values.get('TITLE_ID')!r}")
+if values.get("TITLE") != title:
+    raise SystemExit(f"PARAM.SFO TITLE mismatch: {values.get('TITLE')!r}")
+if values.get("CATEGORY") != "HG" or values.get("BOOTABLE") != 1:
+    raise SystemExit("PARAM.SFO is not marked as a bootable HDD game package")
+
+elf = Path(elf_path).read_bytes()
+if len(elf) < 64 or elf[:4] != b"\x7fELF" or elf[4] != 2 or elf[5] != 2:
+    raise SystemExit("Direct EBOOT input is not a 64-bit big-endian ELF")
+if struct.unpack_from(">H", elf, 18)[0] != 21:
+    raise SystemExit("Direct EBOOT input is not a PowerPC64 PS3 ELF")
+
+eboot = Path(eboot_path).read_bytes()
+if len(eboot) < 4 or eboot[:4] != b"SCE\x00":
+    raise SystemExit("EBOOT.BIN is not a PS3 SELF")
+if content_id.encode("ascii") not in eboot:
+    raise SystemExit("EBOOT.BIN NPDRM Content ID does not match the package")
+if b"NPD\x00" not in eboot:
+    raise SystemExit("EBOOT.BIN is missing its NPDRM metadata block")
 PY
 
 cat > "$USRDIR/retroarch.cfg" <<EOF
