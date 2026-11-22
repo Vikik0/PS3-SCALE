@@ -3,8 +3,9 @@
 
 #include <stddef.h>
 
-/* Launches the separate RetroArch + PCSX-ReARMed Crash Bash package.
-   Returns -1 with an explanatory message only if the target cannot be launched. */
-int cb_launch_game(char *error, size_t error_size);
+/* Starts the installed RetroArch app with the selected CUE and room role.
+   Host starts Netplay; clients open the in-game menu to select the host lobby. */
+int cb_launch_game(const char *content_path, int is_host, const char *nickname,
+                   char *error, size_t error_size);
 
 #endif
