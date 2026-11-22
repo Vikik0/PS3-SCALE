@@ -122,11 +122,17 @@ Added a Ghidra exporter and Python comparator for the exact next research step: 
 
 The Ghidra exporter is read-only and requires manual execution on both exact TU 1.16 images. The Python comparator is covered by the normal host test suite. Neither tool proposes a hook address.
 
-## GSC interaction owner adapter
+## Clockwork GSC drill ownership helpers
 
-Added client/ps3/gsc/ghc_campaign_interaction_owner.gsc as the Campaign-side counterpart to the portable C ownership contract.
+The two-spot Clockwork ownership state now lives directly inside ghc_campaign_local_session.gsc and is initialized once after the validated native player pair is bound.
 
-It waits a bounded time for the validated session bridge, maps a player entity to native slot 0 or 1, and exposes begin/complete/cancel/abort operations for up to eight shared interaction spots. Each player may own one interaction; both players may own different spots concurrently; a spot cannot be claimed by both; only the owner may finish it; and abort releases the lock without completing the objective.
+The bridge exposes:
+- ghc_campaign_drill_begin(player, spot): claim spot 0 or 1 for the validated player, only if that player is not already using another spot and the spot is neither owned nor complete.
+- ghc_campaign_drill_finish(player, spot, completed): owner-only finish; marks shared completion only when completed is true, then releases the spot.
+- ghc_campaign_drill_complete(player, spot) and ghc_campaign_drill_cancel(player, spot): explicit finish/cancel wrappers.
+- ghc_campaign_drill_abort_player(player): releases that player's active spot on death/disconnect/cutscene exit without marking it complete.
+- owner/completion accessors for mission-side checks.
 
-The helper is compiled separately from the local-session bridge. It is not yet invoked by Clockwork's original handle_drill_spot() because the original mission script source is not part of the repository's committed source tree. Do not mark the drill as co-op integrated until that original function is patched to pass the actual player entity through input, weapon, animation and cleanup paths.
+This is more direct than maintaining a second generic GSC owner manager. The portable C interaction state machine remains the host-tested model for race and ownership behavior.
 
+The helper is not yet wired into Clockwork's original handle_drill_spot() because that retail GSC source is not committed in the repository. Do not mark the drill as co-op integrated until the original function passes the actual player entity through input, weapon, animation, control-lock and cleanup paths.
