@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <cell/pad.h>
 #include <cell/fs/cell_fs_file_api.h>
-#include <sys/thread.h>
+#include <sys/lv2_syscall.h>
 #include <sys/timer.h>
 #include <sys/prx_module.h>
 
@@ -33,6 +33,15 @@ extern void sys_ppu_thread_exit(uint64_t exit_code);
 #define PROBE_PRIORITY 3000
 #define PROBE_STACK_SIZE 0x8000u
 #define LINE_CAPACITY 320u
+
+typedef uint64_t sys_ppu_thread_t;
+#define THREAD_JOINABLE 1u
+
+static int thread_join(sys_ppu_thread_t thread_id, uint64_t *result)
+{
+    lv2syscall2(44, thread_id, (uint64_t)(uintptr_t)result);
+    return_to_user_prog(int);
+}
 
 static volatile uint32_t g_stop;
 static uint32_t g_thread_started;
@@ -310,7 +319,7 @@ int module_stop(size_t args, void *argp)
     (void)argp;
     g_stop = 1;
     if (g_thread_started) {
-        (void)sysThreadJoin(g_thread, &thread_result);
+        (void)thread_join(g_thread, &thread_result);
         g_thread_started = 0;
     }
     return SYS_PRX_RESIDENT;
