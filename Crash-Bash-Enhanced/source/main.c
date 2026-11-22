@@ -76,7 +76,7 @@ static void draw_home(void)
     else
         text(472, 310, 16, 0xb9c7ceff, "NOT TESTED");
     if (g_online_state == 1)
-        text(472, 352, 15, 0x7ce0a8ff, "CLOUD LOBBY LINK OK");
+        text(472, 352, 15, 0x7ce0a8ff, "ROOM SERVICE OK - NO GAME SYNC");
     else if (g_online_state < 0)
         text(472, 352, 15, 0xff9a80ff, "CLOUD LOBBY OFFLINE");
     else
