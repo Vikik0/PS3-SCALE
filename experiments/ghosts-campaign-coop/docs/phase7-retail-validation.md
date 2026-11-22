@@ -53,3 +53,14 @@ The PR head at intake, aaf08883047d4d1b5c1bd597c4a1b7692af703d5, had a successfu
 5. Adapt Clockwork mission dependencies only after the engine-level player-two gate passes.
 
 Current truth: retail-file parsing and executable identity are grounded in the user's supplied BLUS31270 files. A second Campaign local client is still not created or proven, and no playable co-op build exists.
+
+
+## Reproducing the asset-pool result
+
+After exporting the raw zone, run the independent pool inspector to reproduce the ScriptFile, RawFile and MapEnts counts:
+
+~~~powershell
+python tools/ps3_zone_pool_inspect.py "C:\Ghosts\analysis\clockwork.raw.zone" --report-json "C:\Ghosts\analysis\clockwork-pool.json" --records-csv "C:\Ghosts\analysis\clockwork-pool.csv"
+~~~
+
+The inspector locates the pool by scoring the next 32 bytes after the tag strings, because the retail trailer length varies. It reports the MapEnts pool record and its pointer verbatim; it does not interpret the pointer or decode entity data.
