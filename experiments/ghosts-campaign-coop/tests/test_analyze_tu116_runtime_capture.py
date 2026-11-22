@@ -1,0 +1,160 @@
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from tools.ps3mapi import analyze_tu116_runtime_capture as analyzer
+
+
+class RuntimeCaptureAnalyzerTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        self.campaign_self = self.root / "default.self"
+        self.multiplayer_self = self.root / "default_mp.self"
+        self.campaign_self.write_bytes(b"campaign-self-fixture")
+        self.multiplayer_self.write_bytes(b"multiplayer-self-fixture")
+        self.campaign_dumps = self.root / "campaign-dumps"
+        self.multiplayer_dumps = self.root / "multiplayer-dumps"
+        self.campaign_dumps.mkdir()
+        self.multiplayer_dumps.mkdir()
+        self.map_file = self.root / "memory-map.json"
+        self.map_file.write_text('{"campaign": {}, "multiplayer": {}}', encoding="utf-8")
+        self.output_dir = self.root / "analysis"
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def fake_verify(self, self_file, dump_dir, map_file, output_elf, mode, *, overwrite=False):
+        Path(output_elf).write_bytes((mode + "-analysis-elf").encode("ascii"))
+        return {
+            "status": "PASS_METADATA",
+            "mode": mode,
+            "self_sha256": analyzer.sha256_file(Path(self_file)),
+        }
+
+    @staticmethod
+    def fake_scan(path):
+        return {
+            "file": str(path),
+            "entry_point": "0x10000",
+            "match_count": 0,
+            "unique_strings": 0,
+            "matches": [],
+        }
+
+    @staticmethod
+    def fake_string_compare(campaign_elf, multiplayer_elf):
+        return {"counts": {"campaign_only": 0, "multiplayer_only": 0, "common": 0}}
+
+    @staticmethod
+    def fake_binary_compare(campaign_elf, multiplayer_elf):
+        return {"totals": {"blocks_compared": 1, "identical_bytes": 0, "different_bytes": 1}}
+
+    def write_log(self, name, mode):
+        path = self.root / name
+        path.write_text(
+            "\n".join([
+                "Ghosts Campaign Co-op Pad Probe v4",
+                f"MODE={mode}",
+                "MODE_SOURCE=manual_mode_file",
+                "MODE_LABEL_IS_OPERATOR_SELECTED=1",
+                "sample=0 result=OK max_connect=7 now_connect=2 system_info=0x00000000 port_mask=0x03",
+            ]) + "\n",
+            encoding="utf-8",
+        )
+        return path
+
+    def run_analyzer(self, **kwargs):
+        defaults = {
+            "campaign_self": self.campaign_self,
+            "campaign_dumps": self.campaign_dumps,
+            "multiplayer_self": self.multiplayer_self,
+            "multiplayer_dumps": self.multiplayer_dumps,
+            "output_dir": self.output_dir,
+            "map_file": self.map_file,
+        }
+        defaults.update(kwargs)
+        with (
+            patch.object(analyzer, "verify_dump", side_effect=self.fake_verify),
+            patch.object(analyzer, "scan_runtime_strings", side_effect=self.fake_scan),
+            patch.object(analyzer, "compare_runtime_strings", side_effect=self.fake_string_compare),
+            patch.object(analyzer, "compare_runtime_elfs", side_effect=self.fake_binary_compare),
+        ):
+            return analyzer.analyze(**defaults)
+
+    def test_complete_capture_pair_is_ready_for_engine_review_not_player_two(self):
+        campaign_log = self.write_log("campaign.log", "CAMPAIGN")
+        multiplayer_log = self.write_log("multiplayer.log", "MULTIPLAYER")
+        result = self.run_analyzer(campaign_log=campaign_log, multiplayer_log=multiplayer_log)
+
+        self.assertEqual(result["status"], "CAPTURE_READY_FOR_ENGINE_REVIEW")
+        self.assertTrue(result["dump_verification"]["both_passed"])
+        self.assertTrue(result["pad_probe"]["both_ports_visible_simultaneously_in_both_modes"])
+        self.assertEqual(result["player_two_gate"]["status"], "NOT_PROVEN")
+        self.assertTrue((self.output_dir / "campaign_tu116_runtime.elf").is_file())
+        self.assertTrue((self.output_dir / "multiplayer_tu116_runtime.elf").is_file())
+        self.assertTrue((self.output_dir / "capture_summary.json").is_file())
+
+    def test_missing_pad_logs_are_reported_without_claiming_controller_visibility(self):
+        result = self.run_analyzer()
+        self.assertEqual(result["status"], "ELF_ANALYSIS_READY_PAD_EVIDENCE_MISSING")
+        self.assertEqual(result["pad_probe"]["status"], "NOT_PROVIDED")
+        self.assertFalse(result["pad_probe"]["both_ports_visible_simultaneously_in_both_modes"])
+        self.assertEqual(result["player_two_gate"]["status"], "NOT_PROVEN")
+
+    def test_only_one_pad_log_is_rejected(self):
+        campaign_log = self.write_log("campaign.log", "CAMPAIGN")
+        with self.assertRaisesRegex(ValueError, "both pad-probe logs or neither"):
+            self.run_analyzer(campaign_log=campaign_log)
+
+    def test_wrong_manual_mode_labels_do_not_pass_pad_gate(self):
+        campaign_log = self.write_log("campaign.log", "MULTIPLAYER")
+        multiplayer_log = self.write_log("multiplayer.log", "CAMPAIGN")
+        result = self.run_analyzer(campaign_log=campaign_log, multiplayer_log=multiplayer_log)
+        self.assertEqual(result["pad_probe"]["status"], "INCONCLUSIVE_MODE_LABEL_MISMATCH")
+        self.assertEqual(result["status"], "ELF_ANALYSIS_READY_PAD_GATE_NOT_PASSED")
+
+    def test_existing_outputs_are_protected_without_overwrite(self):
+        self.output_dir.mkdir()
+        existing = self.output_dir / "capture_summary.json"
+        existing.write_text("keep", encoding="utf-8")
+        with patch.object(analyzer, "verify_dump") as verify:
+            with self.assertRaises(FileExistsError):
+                self.run_analyzer()
+            verify.assert_not_called()
+        self.assertEqual(existing.read_text(encoding="utf-8"), "keep")
+
+    def test_overwrite_must_be_explicit_and_replaces_only_analysis_outputs(self):
+        self.output_dir.mkdir()
+        existing = self.output_dir / "capture_summary.json"
+        existing.write_text("old", encoding="utf-8")
+        unrelated = self.output_dir / "operator-notes.txt"
+        unrelated.write_text("keep", encoding="utf-8")
+        result = self.run_analyzer(overwrite=True)
+        self.assertEqual(result["status"], "ELF_ANALYSIS_READY_PAD_EVIDENCE_MISSING")
+        self.assertNotEqual(existing.read_text(encoding="utf-8"), "old")
+        self.assertEqual(unrelated.read_text(encoding="utf-8"), "keep")
+
+    def test_invalid_capture_inputs_fail_before_analysis(self):
+        with patch.object(analyzer, "verify_dump") as verify:
+            with self.assertRaises(FileNotFoundError):
+                self.run_analyzer(campaign_dumps=self.root / "missing")
+            verify.assert_not_called()
+
+    def test_verification_failure_does_not_write_a_success_summary(self):
+        with patch.object(analyzer, "verify_dump", side_effect=ValueError("bad TU profile")):
+            with self.assertRaisesRegex(ValueError, "bad TU profile"):
+                analyzer.analyze(
+                    self.campaign_self,
+                    self.campaign_dumps,
+                    self.multiplayer_self,
+                    self.multiplayer_dumps,
+                    self.output_dir,
+                    map_file=self.map_file,
+                )
+        self.assertFalse((self.output_dir / "capture_summary.json").exists())
+
+
+if __name__ == "__main__":
+    unittest.main()
