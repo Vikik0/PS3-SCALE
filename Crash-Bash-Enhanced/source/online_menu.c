@@ -196,12 +196,21 @@ static void draw_room(const CBOnlineRoomView *view, const CBOnlineSession *sessi
             draw_text((float)x + 18, (float)y + 23, 16, 0x9bb4c2ff, slot);
         }
     }
-    if (view->is_ready) draw_text(58, 338, 16, 0x7ce0a8ff, "ALL PLAYERS READY - PRESS START TO OPEN CRASH BASH ONLINE");
-    else if (view->player_count < 2) draw_text(58, 338, 15, 0x9bb4c2ff, "Waiting for at least two players.");
-    else draw_text(58, 338, 15, 0x9bb4c2ff, "Waiting for every player to mark READY.");
+    if (view->game_started) {
+        draw_text(58, 338, 16, 0x7ce0a8ff, "MATCH STARTED - PRESS START, THEN SELECT THE SAME CUE TO JOIN");
+    } else if (view->is_ready) {
+        draw_text(58, 338, 16, 0x7ce0a8ff, "ALL PLAYERS READY - PRESS START TO SELECT THE GAME");
+    } else if (view->player_count < 2) {
+        draw_text(58, 338, 15, 0x9bb4c2ff, "Waiting for at least two players.");
+    } else {
+        draw_text(58, 338, 15, 0x9bb4c2ff, "Waiting for every player to mark READY.");
+    }
     draw_rect(58, 390, 720, 38, 0x0b1720ff);
     draw_text(72, 398, 14, 0x9bb4c2ff, status);
-    draw_text(56, 474, 12, 0x6d8794ff, "CROSS READY  START LAUNCH GAME  SQUARE REFRESH  CIRCLE LEAVE");
+    if (view->game_started)
+        draw_text(56, 474, 12, 0x6d8794ff, "START JOIN MATCH  SQUARE REFRESH  CIRCLE BACK");
+    else
+        draw_text(56, 474, 12, 0x6d8794ff, "CROSS READY  START SELECT GAME  SQUARE REFRESH  CIRCLE LEAVE");
     tiny3d_Flip();
 }
 
@@ -247,7 +256,7 @@ static void draw_disc_select(const CBGameDisc *discs, int count, int selected,
     draw_rect(24, 22, 800, 5, 0x46d6b2ff);
     draw_text(56, 42, 26, 0xf5fbffff, "SELECT CRASH BASH DISC");
     snprintf(line, sizeof(line), "ROOM %.6s  |  ROLE: %s",
-             session ? session->code : "", is_host ? "HOST" : "PLAYER");
+             session ? session->code : "", is_host ? "HOST" : "CLIENT");
     draw_text(56, 82, 15, 0x61d9baff, line);
 
     if (count == 0) {
@@ -271,12 +280,12 @@ static void draw_disc_select(const CBGameDisc *discs, int count, int selected,
     }
 
     if (is_host) {
-        draw_text(58, 398, 13, 0x7ce0a8ff, "HOST: Start the match; RetroArch publishes a private relay.");
+        draw_text(58, 398, 13, 0x7ce0a8ff, "HOST: CROSS starts Netplay and publishes the private relay.");
     } else {
-        draw_text(58, 398, 13, 0xffc18aff, "PLAYER: The lobby finds the host and joins automatically.");
+        draw_text(58, 398, 13, 0xffc18aff, "CLIENT: CROSS joins the host using the same CUE file.");
     }
     draw_text(58, 450, 13, 0x9bb4c2ff, status ? status : "");
-    draw_text(56, 474, 12, 0x6d8794ff, "UP/DOWN SELECT  CROSS LAUNCH  SQUARE RESCAN  CIRCLE BACK");
+    draw_text(56, 474, 12, 0x6d8794ff, "UP/DOWN SELECT  CROSS START / JOIN  SQUARE RESCAN  CIRCLE BACK");
     tiny3d_Flip();
 }
 

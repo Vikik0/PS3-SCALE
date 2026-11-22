@@ -69,6 +69,11 @@ assert 'argv[used++] = "--mitm-session";' in launch_args
 assert "endpoint->mitm_session[0]" in launch_args
 assert "cb_online_get_netplay_endpoint(&session, &endpoint" in source
 assert "cb_online_mark_game_started(&session" in source
+assert "MATCH STARTED - PRESS START, THEN SELECT THE SAME CUE TO JOIN" in source
+assert "START JOIN MATCH  SQUARE REFRESH  CIRCLE BACK" in source
+assert '"HOST" : "CLIENT"' in source
+assert "HOST: CROSS starts Netplay and publishes the private relay." in source
+assert "CLIENT: CROSS joins the host using the same CUE file." in source
 assert "cb_online_cancel_game_start(&session" in source
 assert "NETPLAY_DISCOVERY_MAX_ATTEMPTS" in source
 assert "CB-%.12s-HOST" in source
