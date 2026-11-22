@@ -35,10 +35,10 @@ class CampaignGscAdapterContractTests(unittest.TestCase):
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
         source_hash = hashlib.sha256(ADAPTER.read_bytes()).hexdigest()
         self.assertEqual(manifest["source_sha256"], source_hash)
-        self.assertEqual(manifest["compiled_gscbin_bytes"], 457)
+        self.assertEqual(manifest["compiled_gscbin_bytes"], 461)
         self.assertEqual(
             manifest["compiled_gscbin_sha256"],
-            "27eab77b588ab79dd3627ca64d6454911a98712fcc6123eb999d60e44c56b375",
+            "aae81e8775ccc8af819f1b68787f35d178ba6fa292176ca6b700449a926f0bbe",
         )
         self.assertIn("status codes 0-6", manifest["status"])
 
