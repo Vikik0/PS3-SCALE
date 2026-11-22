@@ -326,8 +326,8 @@ def audit(
         and "maps\\\\clockwork_audio::drill_pullout" not in literal_body("handle_misc_drill_details")
     )
     vault_blast_targets_both_local_players = (
-        _has(body("new_trench_setup"), r"thread\\s+clockwork_apply_vault_blast\\s*\\(\\s*level\\.player")
-        and _has(body("new_trench_setup"), r"thread\\s+clockwork_apply_vault_blast\\s*\\(\\s*level\\.playengineeffects")
+        _has(body("new_trench_setup"), r"thread\s+clockwork_apply_vault_blast\s*\(\s*level\.player")
+        and _has(body("new_trench_setup"), r"thread\s+clockwork_apply_vault_blast\s*\(\s*level\.playengineeffects")
         and "level.playengineeffects playrumbleonentity" in body("new_trench_setup")
     )
     vault_blast_helper_is_player_scoped = (
