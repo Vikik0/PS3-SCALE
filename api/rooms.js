@@ -15,6 +15,8 @@ const ROOM_TTL_MS = 30 * 60 * 1000;
 const PLAYER_TTL_MS = 10 * 60 * 1000;
 const MAX_PLAYERS = 4;
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const LIBRETRO_LOBBY_LIST_URL = "http://lobby.libretro.com/list";
+let netplayLobbyCache = { expiresAt: 0, entries: [] };
 
 function reply(res, status, data) {
   res.setHeader("Cache-Control", "no-store");
@@ -160,6 +162,55 @@ function findPlayer(room, playerId) {
   return (room.players || []).find((player) => player.id === playerId);
 }
 
+async function getLibretroLobbyEntries() {
+  if (Date.now() < netplayLobbyCache.expiresAt) return netplayLobbyCache.entries;
+  const response = await fetch(LIBRETRO_LOBBY_LIST_URL, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(5000)
+  });
+  if (!response.ok) throw new Error("RetroArch Netplay lobby is unavailable.");
+  const entries = await response.json();
+  if (!Array.isArray(entries)) throw new Error("RetroArch Netplay lobby returned an invalid list.");
+  netplayLobbyCache = { expiresAt: Date.now() + 1500, entries };
+  return entries;
+}
+
+function netplayEndpoint(fields) {
+  if (!fields || fields.connectable !== true) return null;
+  const updatedAt = Date.parse(fields.updated || fields.created || "");
+  if (Number.isFinite(updatedAt) && Date.now() - updatedAt > 120000) return null;
+
+  const validHost = (value) =>
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= 127 &&
+    /^[A-Za-z0-9.:-]+$/.test(value);
+  const validPort = (value) => Number.isInteger(Number(value)) &&
+    Number(value) >= 1 && Number(value) <= 65535;
+
+  if (validHost(fields.mitm_ip) && validPort(fields.mitm_port) &&
+      typeof fields.mitm_session === "string" &&
+      /^[A-Za-z0-9+/=]{8,64}$/.test(fields.mitm_session)) {
+    return {
+      mode: "relay",
+      address: fields.mitm_ip,
+      port: Number(fields.mitm_port),
+      mitmSession: fields.mitm_session
+    };
+  }
+
+  if (validHost(fields.ip) && validPort(fields.port)) {
+    return {
+      mode: "direct",
+      address: fields.ip,
+      port: Number(fields.port),
+      mitmSession: ""
+    };
+  }
+
+  return null;
+}
+
 async function mutateRoom(code, update, maxAttempts = 6) {
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const record = await readRoom(code);
@@ -214,6 +265,7 @@ module.exports = async function handler(req, res) {
           code: record.room.code,
           status: record.room.status === "ready" && (active.length < 2 || active.length !== (record.room.players || []).length) ? "waiting" : record.room.status,
           hostPlayerId: record.room.hostPlayerId || active[0]?.id || "",
+          netplayId: record.room.netplayId || "",
           isPrivate: record.room.isPrivate,
           players: active.map(({ id, name, ready }) => ({ id, name, ready: inactiveSeats ? false : ready })),
           selfPlayerId: claims.sub,
@@ -246,6 +298,7 @@ module.exports = async function handler(req, res) {
           createdAt: now,
           updatedAt: now,
           hostPlayerId: playerId,
+          netplayId: crypto.randomBytes(6).toString("hex").toUpperCase(),
           players: [{ id: playerId, name, ready: false, joinedAt: now, lastSeen: now }],
           signals: [],
           nextSignalId: 1
@@ -332,6 +385,65 @@ module.exports = async function handler(req, res) {
     const player = findPlayer(record.room, claims.sub);
     if (!player) return reply(res, 403, { error: "You are not a member of this room." });
 
+    if (action === "netplay") {
+      const active = activePlayers(record.room);
+      const activePlayer = active.find((entry) => entry.id === claims.sub);
+      if (!activePlayer) {
+        return reply(res, 403, { error: "Your room seat has expired. Rejoin the room." });
+      }
+      if (record.room.status !== "ready" ||
+          active.length < 2 ||
+          active.length !== (record.room.players || []).length ||
+          !active.every((entry) => entry.ready)) {
+        return reply(res, 409, {
+          ready: false,
+          state: "room_not_ready",
+          error: "Every active player must be READY before Netplay can start."
+        });
+      }
+
+      const hostPlayerId = active.some((entry) => entry.id === record.room.hostPlayerId)
+        ? record.room.hostPlayerId
+        : active[0]?.id;
+      if (!hostPlayerId || !record.room.netplayId) {
+        return reply(res, 503, { error: "This room is missing its Netplay identity. Create a new room." });
+      }
+
+      const hostNickname = "CB-" + record.room.netplayId + "-HOST";
+      const entries = await getLibretroLobbyEntries();
+      const hostEntry = entries.find((entry) =>
+        entry?.fields?.username === hostNickname
+      );
+      if (!hostEntry) {
+        return reply(res, 200, {
+          ready: false,
+          state: "waiting_for_host",
+          hostNickname
+        });
+      }
+
+      const endpoint = netplayEndpoint(hostEntry.fields);
+      if (!endpoint) {
+        return reply(res, 200, {
+          ready: false,
+          state: "host_not_connectable",
+          hostNickname
+        });
+      }
+
+      return reply(res, 200, {
+        ready: true,
+        state: "connected",
+        hostNickname,
+        ...endpoint,
+        gameName: String(hostEntry.fields.game_name || "").slice(0, 100),
+        coreName: String(hostEntry.fields.core_name || "").slice(0, 80),
+        coreVersion: String(hostEntry.fields.core_version || "").slice(0, 80),
+        retroArchVersion: String(hostEntry.fields.retroarch_version || "").slice(0, 40),
+        updatedAt: hostEntry.fields.updated || hostEntry.fields.created || ""
+      });
+    }
+
     if (action === "heartbeat") {
       const outcome = await mutateRoom(code, (room) => {
         const currentPlayer = findPlayer(room, claims.sub);
@@ -354,6 +466,7 @@ module.exports = async function handler(req, res) {
           body: {
             ok: true,
             hostPlayerId: room.hostPlayerId || active[0]?.id || "",
+            netplayId: room.netplayId || "",
             players: active.map(({ id, name, ready }) => ({ id, name, ready }))
           }
         };
