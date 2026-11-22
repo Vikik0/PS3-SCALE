@@ -252,10 +252,12 @@ test("a ready public room reopens when a disconnected seat expires", async () =>
   const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
   const code = host.body.room.code;
   const tokens = [host.body.token];
+  const playerIds = [host.body.player.id];
 
   for (const displayName of ["B", "C", "D"]) {
     const joined = await call("POST", { action: "join", code, displayName });
     tokens.push(joined.body.token);
+    playerIds.push(joined.body.player.id);
   }
   await Promise.all(tokens.map((token) =>
     call("POST", { action: "heartbeat", ready: true }, token)
@@ -324,7 +326,7 @@ test("heartbeat prunes expired seats and returns only active players", async () 
   const heartbeat = await call("POST", { action: "heartbeat", ready: true }, tokens[0]);
   assert.equal(heartbeat.statusCode, 200);
   assert.equal(heartbeat.body.players.length, 3);
-  assert.equal(heartbeat.body.players.some((player) => player.id === tokens[3]), false);
+  assert.equal(heartbeat.body.players.some((player) => player.id === playerIds[3]), false);
 
   const persisted = JSON.parse(blobs.get(blobPath).body);
   assert.equal(persisted.players.length, 3);
