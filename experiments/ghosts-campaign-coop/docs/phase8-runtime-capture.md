@@ -36,7 +36,7 @@ Added as a separate PS3 PRX under client/ps3/probes/pad_probe:
 - Writes distinct Campaign and Multiplayer logs.
 - Samples 30 times at one-second intervals, recording connected-port masks and per-port status/capability/device type.
 
-The probe is built separately from the main bootstrap PRX. Its output is diagnostic only; it does not create a Local Client, Player Entity, camera, HUD, or input command stream.
+The probe is built separately from the main bootstrap PRX. Its MODE label is explicitly marked as operator-selected in the log; it does not auto-detect Campaign versus Multiplayer. Its output is diagnostic only; it does not create a Local Client, Player Entity, camera, HUD, or input command stream.
 
 The log comparator was strengthened: it now requires port 0 and port 1 to appear together in the same sample (mask 0x03) before reporting simultaneous two-pad visibility. Seeing port 0 in one sample and port 1 in another is not counted as simultaneous.
 
@@ -60,7 +60,7 @@ Host and CI tests validate the tooling and build. They do not replace an actual 
 The remaining evidence must come from the user's console:
 
 1. Copy ghosts_campaign_pad_probe.fake.sprx to /dev_hdd0/tmp and place the exact CAMPAIGN mode file at /dev_hdd0/tmp/ghosts_probe_mode.txt.
-2. While inside Campaign, request /ps3mapi.ps3?PROCESS+GETCURRENTPID, then load the PRX with /ps3mapi.ps3?MODULE+LOAD+PID+/dev_hdd0/tmp/ghosts_campaign_pad_probe.fake.sprx. Verify it via MODULE+GETALLPRXID and MODULE+GETNAME/GETFILENAME; MODULE LOAD may return HTTP 200 even if the load failed.
+2. While inside Campaign, request /ps3mapi.ps3?PROCESS+GETCURRENTPID, then load the PRX with /ps3mapi.ps3?MODULE+LOAD+PID+/dev_hdd0/tmp/ghosts_campaign_pad_probe.fake.sprx. Verify it via MODULE+GETALLPRXID and MODULE+GETNAME/GETFILENAME; MODULE LOAD may return HTTP 200 even if the load failed. The MODE log label is manual, so the operator must ensure the correct game mode is active.
 3. Wait 30 seconds, copy ghosts_campaign_pad_probe.log, then unload the module with MODULE+UNLOAD+PID+PRX_ID.
 4. Repeat in Multiplayer using the MULTIPLAYER mode file and collect ghosts_multiplayer_pad_probe.log.
 5. Run the comparator and share its JSON/log output.
