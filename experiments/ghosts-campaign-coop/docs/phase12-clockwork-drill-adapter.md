@@ -17,7 +17,7 @@ Updated client/ps3/gsc/ghc_campaign_local_session.gsc:
 - A rebind releases any active drill ownership for slots 0 and 1 before clearing the previous player references. Completed drill state remains shared and is not reset by a rebind.
 - Every successful native-pair bind resets `ghc_campaign_clockwork_p2_loadout_applied` before marking the session ready. A replacement secondary entity therefore receives its own Clockwork loadout; the previous pair's idempotency flag cannot suppress loadout application after controller disconnect/rebind.
 
-## Clockwork two-spot ownership
+## Clockwork sequential drill-stage ownership
 
 The same GSC bridge now initializes two drill spots once after the native pair is validated.
 
@@ -36,12 +36,12 @@ Available helpers:
 
 Rules:
 
-- Each local player can own at most one active drill spot.
-- Player 1 and Player 2 may operate different spots concurrently.
-- A spot cannot be claimed by both players.
-- Only the owner may complete or cancel a spot.
-- Completion is shared mission state and is set only once.
-- Cancel, death, disconnect or session rebind releases ownership without falsely completing the objective.
+- Clockwork exposes two sequential drill stages on one vault door; the retail GSC calls `handle_drill_spot` for `drill_spot1` and only later for `drill_spot2`.
+- The two stages share global flags, one vault rig, one `pip_drill` entity and one drill-progress state, so they must not run concurrently.
+- Only one player may own the active stage globally; either P1 or P2 may own it.
+- Stage 2 cannot be claimed until Stage 1 has been committed complete.
+- The owner may change between stages, but only the current owner may complete or cancel the active stage.
+- Cancel, death, disconnect or session rebind releases the active stage without falsely completing it, so either local player can retry.
 - Claim and finish critical sections contain no wait/yield, so the script VM cannot interleave another GSC event between the owner check and assignment.
 
 ## Portable test model
