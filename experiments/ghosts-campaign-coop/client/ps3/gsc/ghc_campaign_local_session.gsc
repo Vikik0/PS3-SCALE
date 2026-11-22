@@ -16,6 +16,13 @@ main()
         && level.ghc_campaign_session_ready )
         return 1;
 
+    if ( isdefined( level.ghc_campaign_drill_state_initialized )
+        && level.ghc_campaign_drill_state_initialized )
+    {
+        ghc_campaign_drill_abort_slot( 0 );
+        ghc_campaign_drill_abort_slot( 1 );
+    }
+
     level.ghc_campaign_session_ready = 0;
     level.ghc_campaign_session_status = 0;
     level.ghc_campaign_player_0 = undefined;
@@ -375,6 +382,10 @@ ghc_campaign_drill_cancel( var_0, var_1 )
 
 ghc_campaign_drill_abort_slot( var_0 )
 {
+    if ( !isdefined( level.ghc_campaign_drill_state_initialized )
+        || !level.ghc_campaign_drill_state_initialized )
+        return 0;
+
     if ( var_0 < 0 || var_0 > 1 )
         return 0;
 
