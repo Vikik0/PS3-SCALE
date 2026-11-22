@@ -7,10 +7,10 @@ module.exports = function handler(_req, res) {
     service: "Crash Bash Enhanced lobby",
     version: "0.2.0",
     psnRequired: false,
-    maxPlayersPerRoom: 2,
+    maxPlayersPerRoom: 4,
     storageConfigured: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
     tokenConfigured: Boolean(process.env.CB_TOKEN_SECRET),
     gameplayTransport: "not connected yet",
-    note: "This endpoint verifies the lobby service only; it does not claim that Crash Bash gameplay is online."
+    note: "This endpoint verifies the four-seat room lobby only. It does not connect to crashbash.app or claim that Crash Bash gameplay is online."
   });
 };
