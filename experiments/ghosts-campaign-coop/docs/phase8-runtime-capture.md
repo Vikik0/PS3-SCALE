@@ -105,3 +105,19 @@ The archive contains:
 - Arabic instructions and both Campaign/Multiplayer mode files.
 
 The build is verified; hardware loading is not. Do not treat the CI artifact as a playable game mod.
+
+
+## 8. GSC split-screen audit
+
+The 380 extracted ScriptFile candidates from common.ff, clockwork.ff, patch_common.ff, and patch_common_mp.ff were decompiled locally with GSC Tool 1.6.2 (380/380). The decompiled game scripts are not committed.
+
+The audit found a stronger script-side foundation than the first pass:
+- common asset 1002 builds level.playerpiggyback from player entities, assigns the first to level.player, and the second (when present) to level.playengineeffects;
+- common asset 1063 distinguishes issplitscreen() from the separate coop dvar and includes a player1/player2 spawn-marker placement helper;
+- common asset 962 initializes co-op HUD/icon handling for every entity in level.playerpiggyback;
+- Clockwork's dog combat script uses hideonclient with level.player and level.playengineeffects in its multi-player-aware path;
+- Multiplayer patch assets use issplitscreenplayer/primary, split-screen HUD camera layout, and split-screen menu variants.
+
+This does not prove Campaign creates a second native local client. The scripts consume the player entities and split-screen state; no script-side native local-client creation routine was found. Also, Multiplayer clientid and getentitynumber bookkeeping must not be confused with local-client slot 0/1.
+
+Full findings and line references are in docs/phase8-gsc-splitscreen-audit.md. The reusable static scanner is tools/audit_gsc_splitscreen.py.
