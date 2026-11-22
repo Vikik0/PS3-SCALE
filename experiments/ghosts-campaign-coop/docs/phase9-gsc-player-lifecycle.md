@@ -45,6 +45,11 @@ Other shared helpers operate over level.playerpiggyback:
 - get_closest_player() and get_players_healthy() select from the full player array (common/1063.gsc:815-843).
 - get_other_player() returns a different player entity from that array (common/1063.gsc:6760-6768).
 - The shared co-op HUD script initializes per-player color and friendly-location HUD elements when is_controlling_uav() is active (common/962.gsc:4-30, 82-116).
+- Autosave logic waits for the secondary alias to die when the co-op/split-screen branch is active (common/954.gsc:238-242).
+- Missile targeting creates a second attractor for level.playengineeffects when the co-op/split-screen branch is active (common/1120.gsc:99-105).
+- Shared difficulty logic compares the primary and secondary players' gameskill values (common/981.gsc:315-326).
+
+The coop dvar is a script-mode condition, not a client-creation command. Setting coop=1 alone does not establish a second local client or bind another controller.
 
 There is also a helper teleport_player_post_osprey() (common/1063.gsc:6626-6662) that maps map entities marked player1 and player2 to level.player and level.playengineeffects. No call site for this helper was found in the supplied decompiled source sets, so it is a dormant lead, not proof that Clockwork uses a second-player teleport path.
 
