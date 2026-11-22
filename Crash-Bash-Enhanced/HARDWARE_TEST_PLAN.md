@@ -27,12 +27,12 @@ Do not change the core version, CUE/BIN content, region, BIOS file (or HLE choic
 3. Join the room from the second console using the six-character invite code.
 4. Mark both players Ready. Confirm the room becomes launch-ready with two players; a four-seat room is not required.
 5. Press START in the room on both consoles and confirm the CUE picker appears.
-6. On the host console, select the Crash Bash CUE and press CROSS. Confirm RetroArch starts hosting and publishes its private relay session.
+6. On the host console, select the Crash Bash CUE and press CROSS. Confirm the API locks the ready room before RetroArch starts hosting and publishes its private relay session.
 7. On the client console, select the same CUE and press CROSS once. Confirm the companion finds the host through the RetroArch public lobby and starts RetroArch with `--connect` and `--mitm-session`, without manual Host List selection.
 8. From the companion's home menu, also test **OPEN CRASH BASH ONLINE**.
 9. Temporarily test without the RetroArch package installed and confirm the launcher reports the missing app rather than crashing.
 
-Pass criteria: both players see the same room membership and Ready state; the host starts Netplay; the client resolves the exact host entry, receives the relay endpoint only through its authenticated room token, and automatically joins. The missing-package path is handled cleanly. The Vercel companion does not carry game frames; actual synchronization is provided by RetroArch Netplay.
+Pass criteria: both players see the same room membership and Ready state; only the host can lock the room for launch; late joins are rejected; the client resolves the exact host entry, receives the relay endpoint only through its authenticated room token, and automatically joins. Started seats remain reserved for the match window. The missing-package path is handled cleanly. The Vercel companion does not carry game frames; actual synchronization is provided by RetroArch Netplay.
 
 ## Test 1 — Single-console baseline
 
