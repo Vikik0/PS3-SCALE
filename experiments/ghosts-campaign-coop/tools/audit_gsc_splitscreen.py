@@ -11,6 +11,7 @@ MATCHERS = {
     "issplitscreen": re.compile(r"\bissplitscreen\s*\(", re.I),
     "issplitscreenplayer": re.compile(r"\bissplitscreenplayer\s*\(", re.I),
     "issplitscreenplayerprimary": re.compile(r"\bissplitscreenplayerprimary\s*\(", re.I),
+    "primary_player_ref": re.compile(r"\blevel\.player\b", re.I),
     "playerpiggyback": re.compile(r"\blevel\.playerpiggyback\b", re.I),
     "playengineeffects": re.compile(r"\blevel\.playengineeffects\b", re.I),
     "getplayerfromclientnum": re.compile(r"\bgetplayerfromclientnum\s*\(", re.I),
