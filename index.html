@@ -3,85 +3,227 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#071019">
-<title>Crash Bash Enhanced — Online</title>
+<meta name="theme-color" content="#111512">
+<title>Crash Bash Enhanced — Online Lobby</title>
 <style>
-:root{color-scheme:dark;--bg:#071019;--panel:#101e2a;--panel2:#142a37;--line:#23404e;--mint:#46d6b2;--text:#f4f8fa;--muted:#91a8b4;--orange:#ff9a55;--danger:#ff817b}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 70% 0%,#173b43 0%,transparent 42%),var(--bg);color:var(--text);font:15px/1.5 Inter,system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
-.wrap{max-width:1120px;margin:auto;padding:30px 22px 64px}.top{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:28px}
-.brand{display:flex;align-items:center;gap:14px}.logo{width:48px;height:48px;border-radius:15px;background:linear-gradient(145deg,#46d6b2,#1c776c);display:grid;place-items:center;color:#06151b;font-weight:950;font-size:21px;box-shadow:0 10px 34px #46d6b233}
-h1{font-size:20px;letter-spacing:.08em;margin:0} .sub{color:var(--muted);font-size:12px;letter-spacing:.12em}
-.pill{border:1px solid var(--line);border-radius:999px;padding:7px 12px;color:var(--muted);font-size:12px;display:flex;align-items:center;gap:8px}.dot{width:7px;height:7px;border-radius:50%;background:var(--orange)}.dot.ok{background:var(--mint)}
-.hero{display:grid;grid-template-columns:1.4fr .8fr;gap:18px;margin-bottom:18px}.panel{background:linear-gradient(155deg,#122431,#0d1923);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:0 20px 60px #0003}
-.eyebrow{font-size:11px;letter-spacing:.18em;color:var(--mint);font-weight:800}.hero h2{font-size:clamp(28px,5vw,48px);line-height:1.06;margin:12px 0}.hero p{max-width:620px;color:var(--muted);margin:0}
-.stat{display:flex;flex-direction:column;justify-content:space-between;min-height:205px}.stat strong{font-size:35px;letter-spacing:-.04em}.stat small{color:var(--muted)}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.panel h3{margin:0 0 7px;font-size:18px}.hint{color:var(--muted);font-size:13px;margin:0 0 18px}
-.field{display:flex;gap:9px;margin:12px 0}.field input{min-width:0;flex:1;background:#07141d;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:13px 14px;font:inherit;outline:none}.field input:focus{border-color:var(--mint)}
-button{border:0;border-radius:12px;padding:12px 16px;font:700 13px inherit;cursor:pointer;transition:.15s}button:disabled{opacity:.45;cursor:not-allowed}.primary{background:var(--mint);color:#06151b}.secondary{background:#1b3341;color:var(--text);border:1px solid #2b4b59}.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}.warn{color:var(--orange)}
-.check{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:13px;margin:12px 0 16px}.check input{accent-color:var(--mint)}
-.rooms{display:flex;flex-direction:column;gap:9px}.room{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px;border:1px solid var(--line);border-radius:13px;background:#0a1720}.room b{letter-spacing:.12em}.room small{display:block;color:var(--muted)}
-.empty{padding:24px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px}
-.room-view{display:none;margin-top:18px}.room-view.active{display:block}.slots{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}.slot{padding:17px;border:1px solid var(--line);background:#0a1720;border-radius:14px}.slot .num{color:var(--mint);font-size:11px;letter-spacing:.16em}.slot strong{display:block;margin:6px 0}.slot small{color:var(--muted)}
-.actions{display:flex;flex-wrap:wrap;gap:9px}.notice{padding:12px 14px;border-radius:12px;background:#102d2b;border:1px solid #24584d;color:#b7f2df;font-size:13px;margin-top:15px}.notice.warnbox{background:#30241a;border-color:#62472f;color:#ffd2a8}
-footer{color:#647d89;text-align:center;font-size:12px;margin-top:30px}.footerline{height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent);margin:24px 0}
-@media(max-width:760px){.hero,.grid{grid-template-columns:1fr}.wrap{padding:18px 14px 44px}.top{align-items:flex-start}.pill{font-size:10px}.panel{padding:19px}.slots{grid-template-columns:1fr 1fr}}
+:root{color-scheme:dark;--gold:#f2ee36;--orange:#ff9c27;--red:#ed4426;--green:#13c94d;--blue:#124db4;--ink:#111512;--panel:#151d19;--line:#4e5728;--text:#fff4b8;--muted:#b5b99a}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#343a2a 0%,#171b17 48%,#080a09 100%);color:var(--text);font:15px/1.4 "Trebuchet MS",Arial,sans-serif}
+.wrap{width:min(1080px,calc(100% - 24px));margin:22px auto 40px}
+.top{display:flex;align-items:center;justify-content:center;position:relative;min-height:66px;margin:0 auto 12px;padding:8px 18px;border:4px solid var(--gold);background:#20231b;box-shadow:0 0 0 3px #111,0 8px 24px #0009}
+.brand{display:flex;align-items:center;gap:12px;font-weight:1000;font-size:clamp(18px,3vw,28px);letter-spacing:.05em;color:var(--orange);text-shadow:2px 3px 0 #8f1e0d,-1px -1px 0 #ffdf35}
+.brand-icon{width:38px;height:38px;display:grid;place-items:center;background:linear-gradient(145deg,#ffe94b,#f28a16);border:2px solid #8d3b10;color:#9c1e10;font-size:18px;transform:rotate(-4deg);text-shadow:none}
+.health{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:11px;letter-spacing:.08em;color:#d9e8b0;display:flex;align-items:center;gap:7px}
+.dot{width:8px;height:8px;border-radius:50%;background:#dc542c}.dot.ok{background:#27e45b;box-shadow:0 0 8px #27e45b}
+.stage{position:relative;border:5px solid var(--gold);box-shadow:0 0 0 3px #111,0 18px 44px #000a;background:#101b1b;overflow:hidden}
+.stage-title{height:65px;display:flex;align-items:center;justify-content:center;border-top:4px solid var(--gold);border-bottom:4px solid var(--gold);background:linear-gradient(90deg,#111c17,#20261c,#111c17);font-family:Impact,"Arial Black",sans-serif;font-size:clamp(23px,4vw,36px);letter-spacing:.07em;text-align:center;color:#ffb52e;text-shadow:2px 3px 0 #a41d12,-1px -1px 0 #fff05a;padding:5px 12px}
+.stage-body{min-height:430px;display:grid;grid-template-columns: .92fr 1.08fr;gap:18px;padding:18px;background:radial-gradient(ellipse at 28% 56%,#11a33d 0%,#08744c 28%,transparent 57%),radial-gradient(ellipse at 75% 15%,#1769dc 0%,#123e8d 30%,transparent 62%),linear-gradient(135deg,#102c20,#07162a 72%,#0d231a)}
+.art{position:relative;min-height:380px;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+.art-glow{position:absolute;width:82%;height:45%;bottom:8%;border-radius:50%;background:radial-gradient(ellipse,#b7ef36aa 0%,#22a75a55 52%,transparent 74%);filter:blur(12px)}
+.robot{position:absolute;width:58%;height:75%;left:3%;bottom:4%;opacity:.92;filter:drop-shadow(0 10px 9px #001b22aa)}
+.robot-head{position:absolute;width:38%;height:20%;left:31%;top:7%;border-radius:45% 45% 35% 35%;background:linear-gradient(130deg,#d5e3e8,#627f9b 65%,#314f73);border:4px solid #294c72}
+.robot-eye{position:absolute;width:13%;height:13%;top:42%;border-radius:50%;background:#a9f2db;box-shadow:inset 0 0 0 4px #173e5d}.robot-eye.left{left:35%}.robot-eye.right{right:35%}
+.robot-body{position:absolute;width:45%;height:42%;left:27%;top:29%;border-radius:22% 22% 16% 16%;background:linear-gradient(115deg,#8ba9c3,#42648d 55%,#253e66);border:5px solid #294c72}
+.robot-arm{position:absolute;width:20%;height:43%;top:31%;border-radius:40px;background:linear-gradient(90deg,#a8c5d1,#4a6b91);border:4px solid #294c72}
+.robot-arm.left{left:8%;transform:rotate(24deg)}.robot-arm.right{right:8%;transform:rotate(-24deg)}
+.robot-leg{position:absolute;width:18%;height:25%;bottom:0;border-radius:16px;background:linear-gradient(90deg,#a8c5d1,#4a6b91);border:4px solid #294c72}
+.robot-leg.left{left:29%}.robot-leg.right{right:29%}
+.mascot{position:absolute;z-index:2;width:190px;height:275px;left:50%;bottom:7%;transform:translateX(-50%);filter:drop-shadow(0 9px 7px #00120c99)}
+.mascot-hair{position:absolute;top:0;left:16%;width:68%;height:30%;background:#ef4b22;clip-path:polygon(50% 0,63% 25%,100% 4%,82% 49%,100% 70%,66% 68%,50% 100%,35% 69%,0 82%,20% 47%,0 20%,39% 28%);z-index:3}
+.mascot-face{position:absolute;top:18%;left:25%;width:50%;height:28%;border-radius:42% 42% 48% 48%;background:linear-gradient(135deg,#ffd36a,#f28b2d);border:4px solid #9d3617;z-index:4}
+.mascot-eyes{position:absolute;top:24%;left:31%;width:38%;height:12%;display:flex;justify-content:space-between;z-index:5}
+.mascot-eyes i{width:16px;height:21px;border-radius:50%;background:white;border:2px solid #3a261a;box-shadow:inset 0 -5px #222}
+.mascot-smile{position:absolute;left:37%;top:38%;width:26%;height:9%;border-bottom:4px solid #5a2114;border-radius:50%;z-index:5}
+.mascot-body{position:absolute;top:43%;left:30%;width:40%;height:31%;border-radius:28% 28% 18% 18%;background:linear-gradient(90deg,#f47a1d,#e9411e);border:4px solid #8f3218}
+.mascot-belt{position:absolute;top:62%;left:30%;width:40%;height:10%;background:#1556b6;border-top:3px solid #77b8f5;border-bottom:3px solid #092f79;z-index:5}
+.mascot-legs{position:absolute;left:31%;bottom:0;width:38%;height:28%;display:flex;justify-content:space-between}
+.mascot-legs i{display:block;width:37%;height:100%;background:linear-gradient(90deg,#1649a5,#082c71);border-radius:8px 8px 15px 15px;position:relative}
+.mascot-legs i:after{content:"";position:absolute;bottom:0;left:-20%;width:140%;height:25%;border-radius:8px;background:#7d3c27;border:3px solid #f2d6a0}
+.menu-area{display:flex;align-items:center;justify-content:center;min-width:0}
+.menu-screen{width:100%;max-width:460px;padding:18px;border:4px solid var(--gold);background:linear-gradient(145deg,#111a18dd,#10151ddd);box-shadow:0 8px 18px #0008}
+.menu-list{display:flex;flex-direction:column;gap:3px}
+.menu-option{width:100%;min-height:48px;border:0;background:transparent;color:#ffc536;font:1000 clamp(19px,3vw,27px)/1.1 Impact,"Arial Black",sans-serif;letter-spacing:.06em;text-align:center;text-shadow:2px 2px 0 #8d2411,-1px -1px 0 #fff05a;padding:7px 8px;cursor:pointer}
+.menu-option:hover,.menu-option:focus-visible{outline:2px solid var(--gold);background:#f0d92b22;color:#fff06b;transform:translateX(2px)}
+.group{padding:5px 0 8px;border-bottom:3px solid var(--gold);margin-bottom:6px}
+.group:last-of-type{border-bottom:0}
+.group-label{font:1000 14px Impact,"Arial Black",sans-serif;letter-spacing:.12em;color:#ffcf2e;margin:0 0 2px 8px;text-shadow:1px 1px #8d2411}
+.group .menu-option{min-height:39px;font-size:clamp(17px,2.6vw,24px)}
+.code-row{display:flex;gap:7px;margin:6px 0 8px}
+.code-row input,.name-row input{min-width:0;flex:1;background:#08130f;border:2px solid #9b982b;color:#fff4b8;padding:10px;border-radius:0;font:700 15px "Trebuchet MS",Arial,sans-serif;outline:none}
+.code-row input:focus,.name-row input:focus{border-color:#fff36a}
+.small-button{border:2px solid var(--gold);background:#20291b;color:#ffe35b;font:900 13px Impact,"Arial Black",sans-serif;letter-spacing:.06em;padding:9px 12px;cursor:pointer}
+.name-row{display:flex;align-items:center;gap:8px;margin-top:12px;color:#e5e8b6;font-size:12px}
+.name-row input{max-width:170px;padding:7px 9px;font-size:13px}
+.notice{padding:10px 12px;margin-top:10px;border:2px solid #d3c62c;background:#26271b;color:#fff0a2;font-size:12px;text-align:center}
+.notice.warnbox{border-color:#d78b2d;color:#ffd0a0}
+.stage-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;border-top:3px solid var(--gold);background:#10140f;color:#f4df52;font:900 10px Impact,"Arial Black",sans-serif;letter-spacing:.08em}
+.stage-footer .muted{color:#aab08a}
+.panel{border:3px solid var(--gold);background:linear-gradient(145deg,#151c16,#0e1410);padding:16px;margin-top:16px;box-shadow:0 8px 22px #0008}
+.room-view{display:none}.room-view.active{display:block}
+.room-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.room-code{font:1000 26px Impact,"Arial Black",sans-serif;letter-spacing:.18em;color:#ffca34;text-shadow:2px 2px #8d2411}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.slot{padding:12px;border:2px solid #77732a;background:#0b1610}
+.slot .num{color:#e7dc45;font:900 11px Impact,"Arial Black",sans-serif;letter-spacing:.14em}
+.slot strong{display:block;margin:5px 0;color:#fff2b3}.slot small{color:#b6c19b}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.action-button{border:2px solid var(--gold);background:#26311e;color:#ffe35b;font:900 13px Impact,"Arial Black",sans-serif;letter-spacing:.05em;padding:10px 13px;cursor:pointer}
+.action-button.primary{background:linear-gradient(#ffe34b,#e88a17);color:#7c230e;text-shadow:1px 1px #fff3a1}
+.rooms-panel h3{margin:0 0 5px;font:1000 18px Impact,"Arial Black",sans-serif;color:#ffca34;letter-spacing:.06em}
+.rooms-panel .hint{color:#b5b99a;font-size:12px;margin:0 0 10px}
+.rooms{display:flex;flex-direction:column;gap:7px}
+.room-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 11px;border:1px solid #69672b;background:#0b1610}
+.room-row b{font:900 14px Impact,"Arial Black",sans-serif;letter-spacing:.12em;color:#ffe34b}
+.room-row small{display:block;color:#b6c19b;font-size:11px}
+.empty{padding:16px;text-align:center;color:#b6c19b;border:1px dashed #69672b}
+[hidden]{display:none!important}
+@media(max-width:720px){.wrap{width:calc(100% - 12px);margin:8px auto 24px}.top{justify-content:flex-start;padding-right:112px}.health{font-size:9px}.stage-body{grid-template-columns:1fr;gap:8px;padding:10px;min-height:0}.art{min-height:190px}.robot{width:40%;height:90%;left:8%}.mascot{height:180px;width:125px;bottom:0}.mascot-eyes i{width:12px;height:15px}.menu-screen{max-width:none;padding:12px}.stage-title{height:54px}.stage-footer{font-size:8px}.slots{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="brand"><div class="logo">CB</div><div><h1>CRASH BASH</h1><div class="sub">ENHANCED ONLINE · PS3 PROJECT</div></div></div>
-    <div class="pill"><span id="healthDot" class="dot"></span><span id="healthText">CHECKING SERVICE</span><span>·</span><b>NO PSN</b></div>
+    <div class="brand"><span class="brand-icon">CB</span><span>PLAY CRASH BASH ONLINE</span></div>
+    <div class="health"><span id="healthDot" class="dot"></span><span id="healthText">CHECKING</span><span>· NO PSN</span></div>
   </header>
 
-  <section class="hero">
-    <div class="panel">
-      <div class="eyebrow">FOUR-PLAYER ROOM LOBBY</div>
-      <h2>Find your<br><span style="color:var(--mint)">next match.</span></h2>
-      <p>Create a four-player room, join a public battle or enter a friend's code. This is a room-lobby prototype only; it does not connect to crashbash.app or start a shared game session.</p>
-    </div>
-    <div class="panel stat">
-      <div><div class="eyebrow">SERVICE STATUS</div><strong id="serviceStatus">Checking…</strong><small id="serviceDetail">Connecting to lobby API</small></div>
-      <div><div class="eyebrow">ROOM CAPACITY</div><strong>4 <small style="font-size:15px">PLAYERS</small></strong><small>Independent guest identities · no PSN sign-in</small></div>
-    </div>
-  </section>
+  <main class="stage">
+    <div class="stage-title" id="screenTitle">SELECT GAME TYPE</div>
+    <div class="stage-body">
+      <div class="art" aria-hidden="true">
+        <div class="art-glow"></div>
+        <div class="robot">
+          <div class="robot-head"><i class="robot-eye left"></i><i class="robot-eye right"></i></div>
+          <div class="robot-arm left"></div><div class="robot-arm right"></div>
+          <div class="robot-body"></div><div class="robot-leg left"></div><div class="robot-leg right"></div>
+        </div>
+        <div class="mascot">
+          <div class="mascot-hair"></div><div class="mascot-face"></div>
+          <div class="mascot-eyes"><i></i><i></i></div><div class="mascot-smile"></div>
+          <div class="mascot-body"></div><div class="mascot-belt"></div>
+          <div class="mascot-legs"><i></i><i></i></div>
+        </div>
+      </div>
 
-  <main class="grid">
-    <section class="panel">
-      <h3>Create a room</h3><p class="hint">Start a private or public four-player room.</p>
-      <div class="field"><input id="displayName" maxlength="20" placeholder="Your player name" value="Guest"></div>
-      <label class="check"><input id="privateRoom" type="checkbox"> Private room (hidden from public list)</label>
-      <button id="createBtn" class="primary" onclick="createRoom()">CREATE ROOM</button>
-    </section>
-    <section class="panel">
-      <h3>Join a room</h3><p class="hint">Enter a six-character invite code, or join any open public battle.</p>
-      <div class="field"><input id="joinCode" maxlength="6" placeholder="ABC234" autocomplete="off"><button id="joinBtn" class="secondary" onclick="joinRoom()">BATTLE BY CODE</button></div><button id="anyBtn" class="primary" onclick="anyBattle()">ANY BATTLE</button>
-      <p class="hint" id="joinHint">Room codes use six letters and numbers.</p>
-    </section>
+      <div class="menu-area">
+        <section id="mainMenu" class="menu-screen">
+          <div class="menu-list">
+            <button class="menu-option" onclick="showUnavailable('ADVENTURE MODE')">ADVENTURE MODE</button>
+            <button class="menu-option" onclick="showScreen('battle')">BATTLE MODE</button>
+            <button class="menu-option" onclick="showUnavailable('TOURNAMENT')">TOURNAMENT</button>
+            <button class="menu-option" onclick="showScreen('options')">OPTIONS</button>
+          </div>
+          <div class="name-row"><label for="displayName">PLAYER NAME</label><input id="displayName" maxlength="20" value="Guest" autocomplete="nickname"></div>
+        </section>
+
+        <section id="battleMenu" class="menu-screen" hidden>
+          <div class="group">
+            <div class="group-label">JOIN</div>
+            <button class="menu-option" onclick="anyBattle()">ANY BATTLE</button>
+            <button class="menu-option" onclick="focusCode()">BATTLE BY CODE</button>
+            <div class="code-row"><input id="joinCode" maxlength="6" placeholder="ABC234" autocomplete="off" aria-label="Six-character battle code"><button id="joinBtn" class="small-button" onclick="joinRoom()">JOIN</button></div>
+            <div id="joinHint" class="muted" style="font-size:11px;text-align:center">Enter the six-character code from your friend.</div>
+          </div>
+          <div class="group">
+            <div class="group-label">CREATE</div>
+            <button id="publicBtn" class="menu-option" onclick="createPublicRoom()">PUBLIC BATTLE</button>
+            <button id="privateBtn" class="menu-option" onclick="createPrivateRoom()">PRIVATE BATTLE</button>
+          </div>
+          <div class="group">
+            <div class="group-label">OFFLINE</div>
+            <button class="menu-option" onclick="showUnavailable('SOLO VS CPU')">SOLO VS CPU</button>
+            <button class="menu-option" onclick="showUnavailable('LOCAL BATTLE')">LOCAL BATTLE</button>
+          </div>
+          <button class="small-button" onclick="showScreen('main')">BACK TO MENU</button>
+        </section>
+
+        <section id="optionsMenu" class="menu-screen" hidden>
+          <div class="group">
+            <div class="group-label">CONTROLS</div>
+            <div class="menu-option" style="font-size:17px;cursor:default">ARROWS / WASD — MOVE</div>
+            <div class="menu-option" style="font-size:17px;cursor:default">ENTER / SPACE — SELECT</div>
+            <div class="menu-option" style="font-size:17px;cursor:default">ESC / BACKSPACE — BACK</div>
+          </div>
+          <div class="notice">This project currently provides a four-seat lobby. The game-session transport is not connected.</div>
+          <button class="small-button" onclick="showScreen('main')">BACK TO MENU</button>
+        </section>
+        <div id="modeNotice" class="notice" hidden></div>
+      </div>
+    </div>
+    <div class="stage-footer"><span>MOVE: ARROWS / WASD · SELECT: ENTER / SPACE</span><span class="muted">4 PLAYER LOBBY · NO PSN</span><span>BACK: ESC</span></div>
   </main>
 
-  <section class="panel" style="margin-top:18px">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><div><h3 style="margin:0">Public rooms</h3><p class="hint" style="margin:4px 0 0">Public rooms with at least one open seat.</p></div><button class="ghost" onclick="loadRooms()">REFRESH</button></div>
-    <div id="roomsList" class="rooms"><div class="empty">Loading rooms…</div></div>
-  </section>
-
   <section id="roomView" class="panel room-view">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-      <div><div class="eyebrow">YOUR ROOM</div><h3 id="roomTitle" style="font-size:26px;letter-spacing:.12em;margin:3px 0">------</h3><p class="hint" style="margin:0">Share this code with your friend.</p></div>
-      <button class="secondary" onclick="copyCode()">COPY INVITE CODE</button>
+    <div class="room-head">
+      <div><div class="group-label">YOUR BATTLE ROOM</div><div id="roomTitle" class="room-code">------</div></div>
+      <button class="action-button" onclick="copyCode()">COPY INVITE CODE</button>
     </div>
     <div id="slots" class="slots"></div>
-    <div class="actions"><button id="readyBtn" class="primary" onclick="toggleReady()">I'M READY</button><button class="ghost" onclick="refreshRoom()">REFRESH ROOM</button><button class="ghost" onclick="leaveRoom()">LEAVE ROOM</button></div>
-    <div id="roomNotice" class="notice warnbox">Waiting for players. The room lobby is not connected to a game session.</div>
+    <div class="actions">
+      <button id="readyBtn" class="action-button primary" onclick="toggleReady()">I'M READY</button>
+      <button class="action-button" onclick="refreshRoom()">REFRESH</button>
+      <button class="action-button" onclick="leaveRoom()">LEAVE ROOM</button>
+    </div>
+    <div id="roomNotice" class="notice warnbox">Waiting for players. This is a room lobby, not a shared game session.</div>
   </section>
 
-  <div class="footerline"></div>
-  <footer>CRASH BASH ENHANCED · INDEPENDENT ONLINE IDENTITY · NOT AN OFFICIAL ACTIVISION OR SONY PRODUCT</footer>
+  <section class="panel rooms-panel" id="publicRoomsPanel" hidden>
+    <div class="room-head"><div><h3>PUBLIC BATTLES</h3><p class="hint">Open public rooms with at least one free seat.</p></div><button class="action-button" onclick="loadRooms()">REFRESH</button></div>
+    <div id="roomsList" class="rooms"><div class="empty">Loading rooms…</div></div>
+  </section>
 </div>
+
 <script>
-const state={token:"",code:"",player:null,room:null,ready:false,poll:null,heartbeat:null,cursor:0};
+const state={token:"",code:"",player:null,room:null,ready:false,poll:null,heartbeat:null,screen:"main",menuIndex:0};
 const $=id=>document.getElementById(id);
-function setHealth(ok,text,detail){$("healthDot").className="dot"+(ok?" ok":"");$("healthText").textContent=text;$("serviceStatus").textContent=ok?"ONLINE":"OFFLINE";$("serviceDetail").textContent=detail;}
+const screenIds={main:"mainMenu",battle:"battleMenu",options:"optionsMenu"};
+function setHealth(ok,text){$("healthDot").className="dot"+(ok?" ok":"");$("healthText").textContent=text;}
+function activeMenuButtons(){
+  const root=$(screenIds[state.screen]);
+  return root?[...root.querySelectorAll("button.menu-option,button.small-button")].filter(button=>!button.disabled):[];
+}
+function focusMenu(index=0){
+  const buttons=activeMenuButtons();
+  if(!buttons.length)return;
+  state.menuIndex=(index+buttons.length)%buttons.length;
+  buttons.forEach((button,i)=>button.classList.toggle("selected",i===state.menuIndex));
+  buttons[state.menuIndex].focus({preventScroll:true});
+}
+function showScreen(screen){
+  if(!screenIds[screen])return;
+  state.screen=screen;
+  Object.entries(screenIds).forEach(([key,id])=>$(id).hidden=key!==screen);
+  $("modeNotice").hidden=true;
+  $("screenTitle").textContent=screen==="main"?"SELECT GAME TYPE":screen==="battle"?"CREATE OR JOIN A BATTLE":"OPTIONS";
+  $("publicRoomsPanel").hidden=screen!=="battle";
+  if(screen==="battle")loadRooms();
+  setTimeout(()=>focusMenu(0),0);
+}
+function showUnavailable(mode){
+  $("modeNotice").hidden=false;
+  $("modeNotice").textContent=mode+" is not part of this lobby build. The PS3 package runs the original disc through PCSX-ReARMed; this browser page currently manages rooms only.";
+}
+function focusCode(){ $("joinCode").focus(); }
+function backScreen(){
+  if(state.room){leaveRoom();return;}
+  if(state.screen==="battle"||state.screen==="options")showScreen("main");
+}
+document.addEventListener("keydown",event=>{
+  if(event.target && (event.target.tagName==="INPUT"||event.target.tagName==="TEXTAREA")) {
+    if(event.key==="Escape"){event.preventDefault();backScreen();}
+    return;
+  }
+  if(event.key==="ArrowDown"||event.key==="ArrowUp"){
+    event.preventDefault();
+    focusMenu(state.menuIndex+(event.key==="ArrowDown"?1:-1));
+  }else if(event.key==="Enter"||event.key===" "){
+    const buttons=activeMenuButtons();
+    if(buttons.length){event.preventDefault();buttons[state.menuIndex].click();}
+  }else if(event.key==="Escape"||event.key==="Backspace"){
+    event.preventDefault();backScreen();
+  }
+});
+function displayName(){return $("displayName").value.trim().slice(0,20)||"Guest";}
 async function api(path,method="GET",body=null,auth=true){
   const headers={"Content-Type":"application/json"};
   if(auth&&state.token)headers.Authorization="Bearer "+state.token;
@@ -91,21 +233,20 @@ async function api(path,method="GET",body=null,auth=true){
   return data;
 }
 async function checkHealth(){
-  try{const h=await api("/api/health");const ok=h.ok&&h.storageConfigured&&h.tokenConfigured;setHealth(ok,ok?"LOBBY READY":"API REACHABLE",ok?"Private room storage configured":"Cloud storage setup incomplete");}
-  catch(e){setHealth(false,"SERVICE OFFLINE",e.message);}
+  try{const h=await api("/api/health");const ok=h.ok&&h.storageConfigured&&h.tokenConfigured;setHealth(ok,ok?"LOBBY READY":"API SETUP INCOMPLETE");}
+  catch(e){setHealth(false,"SERVICE OFFLINE");}
 }
-function displayName(){return $("displayName").value.trim().slice(0,20)||"Guest";}
+function createPublicRoom(){$("privateRoom").checked=false;createRoom();}
+function createPrivateRoom(){$("privateRoom").checked=true;createRoom();}
 async function createRoom(){
-  $("createBtn").disabled=true;
+  $("publicBtn").disabled=true;$("privateBtn").disabled=true;
   try{const data=await api("/api/rooms","POST",{action:"create",displayName:displayName(),isPrivate:$("privateRoom").checked},false);enterRoom(data);}
-  catch(e){alert(e.message);}
-  finally{$("createBtn").disabled=false;}
+  catch(e){showUnavailable(e.message);}
+  finally{$("publicBtn").disabled=false;$("privateBtn").disabled=false;}
 }
 async function anyBattle(){
-  $("anyBtn").disabled=true;
   try{const data=await api("/api/rooms","POST",{action:"any",displayName:displayName()},false);enterRoom(data);}
   catch(e){$("joinHint").textContent=e.message;}
-  finally{$("anyBtn").disabled=false;}
 }
 async function joinRoom(){
   $("joinBtn").disabled=true;
@@ -114,59 +255,75 @@ async function joinRoom(){
   finally{$("joinBtn").disabled=false;}
 }
 function enterRoom(data){
-  state.token=data.token;state.code=data.room.code;state.player=data.player;state.ready=false;state.cursor=0;
+  state.token=data.token;state.code=data.room.code;state.player=data.player;state.ready=false;
   sessionStorage.setItem("cb_token",state.token);sessionStorage.setItem("cb_code",state.code);
-  $("roomView").classList.add("active");$("roomTitle").textContent=state.code;$("roomNotice").textContent="Room created. Waiting for up to three more players. Game-session transport is not connected.";
-  refreshRoom();
-  clearInterval(state.poll);
-  state.poll=setInterval(refreshRoom,5000);
-  clearInterval(state.heartbeat);
-  state.heartbeat=setInterval(()=>api("/api/rooms","POST",{action:"heartbeat",ready:state.ready}).catch(()=>{}),20000);
+  $("roomView").classList.add("active");$("roomTitle").textContent=state.code;
+  $("roomNotice").textContent="Room created. Waiting for up to three more players. Game-session transport is not connected.";
   $("roomView").scrollIntoView({behavior:"smooth",block:"center"});
+  refreshRoom();
+  clearInterval(state.poll);state.poll=setInterval(refreshRoom,5000);
+  clearInterval(state.heartbeat);state.heartbeat=setInterval(()=>api("/api/rooms","POST",{action:"heartbeat",ready:state.ready}).catch(()=>{}),20000);
 }
 async function refreshRoom(){
   if(!state.token||!state.code)return;
-  try{
-    const data=await api("/api/rooms?code="+encodeURIComponent(state.code));
-    state.room=data.room;renderRoom();
-  }catch(e){$("roomNotice").textContent=e.message;}
+  try{const data=await api("/api/rooms?code="+encodeURIComponent(state.code));state.room=data.room;renderRoom();}
+  catch(e){$("roomNotice").textContent=e.message;}
 }
 function renderRoom(){
   const room=state.room;if(!room)return;
   $("slots").innerHTML="";
   for(let i=0;i<(room.maxPlayers||4);i++){
-    const p=room.players[i];
-    const node=document.createElement("div");node.className="slot";
+    const p=room.players[i];const node=document.createElement("div");node.className="slot";
     node.innerHTML='<div class="num">PLAYER '+(i+1)+'</div><strong></strong><small></small>';
-    node.querySelector("strong").textContent=p?p.name:"Waiting for player…";
-    node.querySelector("small").textContent=p?(p.ready?"READY":"NOT READY"):"Invite a friend to join";
+    node.querySelector("strong").textContent=p?p.name:"WAITING FOR PLAYER";
+    node.querySelector("small").textContent=p?(p.ready?"READY":"NOT READY"):"OPEN SEAT";
     $("slots").appendChild(node);
   }
   const allReady=room.players.length===(room.maxPlayers||4)&&room.players.every(p=>p.ready);
-  $("roomNotice").textContent=allReady?"All seats are ready. This lobby still needs a compatible game-session transport.":room.players.length>1?"Players joined. Mark ready when prepared.":"Waiting for more players.";
+  $("roomNotice").textContent=allReady?"All four seats are ready. Gameplay is not connected to this lobby.":room.players.length>1?"Players joined. Mark ready when prepared.":"Waiting for more players.";
   $("roomNotice").className="notice"+(allReady?"":" warnbox");
   $("readyBtn").textContent=state.ready?"CANCEL READY":"I'M READY";
 }
 async function toggleReady(){
   state.ready=!state.ready;
   try{const data=await api("/api/rooms","POST",{action:"heartbeat",ready:state.ready});if(state.room)state.room.players=data.players;renderRoom();}
-  catch(e){state.ready=!state.ready;alert(e.message);}
+  catch(e){state.ready=!state.ready;$("roomNotice").textContent=e.message;}
 }
 async function leaveRoom(){
   try{await api("/api/rooms","POST",{action:"leave"});}catch{}
   clearInterval(state.poll);clearInterval(state.heartbeat);
   state.token="";state.code="";state.room=null;state.player=null;state.ready=false;
   sessionStorage.removeItem("cb_token");sessionStorage.removeItem("cb_code");
-  $("roomView").classList.remove("active");loadRooms();
+  $("roomView").classList.remove("active");showScreen("battle");
 }
-async function copyCode(){try{await navigator.clipboard.writeText(state.code);$("roomNotice").textContent="Invite code copied: "+state.code;}catch{$("roomNotice").textContent="Room code: "+state.code;}}
+async function copyCode(){
+  try{await navigator.clipboard.writeText(state.code);$("roomNotice").textContent="Invite code copied: "+state.code;}
+  catch{$("roomNotice").textContent="Room code: "+state.code;}
+}
 async function loadRooms(){
-  try{const data=await api("/api/rooms", "GET", null, false);const root=$("roomsList");root.innerHTML="";
-    if(!data.rooms.length){root.innerHTML='<div class="empty">No public rooms yet. Create one and invite a friend.</div>';return;}
-    for(const r of data.rooms){const row=document.createElement("div");row.className="room";const info=document.createElement("div");const b=document.createElement("b");b.textContent=r.code;const small=document.createElement("small");small.textContent=r.host+" · "+r.players+"/"+r.maxPlayers+" players";info.append(b,small);const btn=document.createElement("button");btn.className="secondary";btn.textContent="JOIN";btn.onclick=()=>{$("joinCode").value=r.code;joinRoom();};row.append(info,btn);root.appendChild(row);}
+  try{
+    const data=await api("/api/rooms","GET",null,false);const root=$("roomsList");root.innerHTML="";
+    if(!data.rooms.length){root.innerHTML='<div class="empty">No public battles are waiting. Create one and invite a friend.</div>';return;}
+    for(const r of data.rooms){
+      const row=document.createElement("div");row.className="room-row";const info=document.createElement("div");
+      const b=document.createElement("b");b.textContent=r.code;const small=document.createElement("small");
+      small.textContent=r.host+" · "+r.players+"/"+r.maxPlayers+" PLAYERS";info.append(b,small);
+      const btn=document.createElement("button");btn.className="action-button";btn.textContent="JOIN";
+      btn.onclick=()=>{$("joinCode").value=r.code;joinRoom();};row.append(info,btn);root.appendChild(row);
+    }
   }catch(e){$("roomsList").innerHTML='<div class="empty">'+e.message+'</div>';}
 }
-(async()=>{await checkHealth();await loadRooms();const token=sessionStorage.getItem("cb_token");const code=sessionStorage.getItem("cb_code");if(token&&code){state.token=token;state.code=code;state.player={name:displayName()};$("roomView").classList.add("active");$("roomTitle").textContent=code;refreshRoom();state.poll=setInterval(refreshRoom,3000);state.heartbeat=setInterval(()=>api("/api/rooms","POST",{action:"heartbeat",ready:state.ready}).catch(()=>{}),20000);}})();
+(async()=>{
+  await checkHealth();
+  const token=sessionStorage.getItem("cb_token"),code=sessionStorage.getItem("cb_code");
+  if(token&&code){
+    state.token=token;state.code=code;state.player={name:displayName()};
+    $("roomView").classList.add("active");$("roomTitle").textContent=code;refreshRoom();
+    state.poll=setInterval(refreshRoom,3000);
+    state.heartbeat=setInterval(()=>api("/api/rooms","POST",{action:"heartbeat",ready:state.ready}).catch(()=>{}),20000);
+  }
+  showScreen("main");
+})();
 </script>
 </body>
 </html>
