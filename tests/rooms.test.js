@@ -102,18 +102,18 @@ test("a four-seat room becomes ready only when all four players are ready", asyn
 
 test("four-seat retro lobby UI renders and its inline script parses", () => {
   const html = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
-  const script = html.match(/<script>([\\s\\S]*?)<\\/script>/);
+  const script = html.match(/<script>([\s\S]*?)<\/script>/);
   assert.ok(script, "inline lobby script exists");
   assert.doesNotThrow(() => new Function(script[1]), "inline lobby JavaScript must parse");
-  assert.match(html, /room\\.maxPlayers\\|\\|4/);
+  assert.match(html, /room\.maxPlayers\|\|4/);
   assert.match(html, /ANY BATTLE/);
   assert.match(html, /BATTLE BY CODE/);
   assert.match(html, /ADVENTURE MODE/);
   assert.match(html, /id="privateRoom"/);
   assert.match(html, /id="publicBtn"/);
   assert.match(html, /id="privateBtn"/);
-  assert.match(html, /room\\.players\\.length>1\\?"Players joined/);
-  assert.doesNotMatch(html, /\\bboth\\?/);
+  assert.match(html, /room\.players\.length>1\?"Players joined/);
+  assert.doesNotMatch(html, /\bboth\?/);
 });
 
 test("four-player signaling routes offers to the requested room member only", async () => {
