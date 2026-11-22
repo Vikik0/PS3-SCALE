@@ -38,6 +38,7 @@ RELATED_TARGETS = (
     "drillthrough_plate_sound",
     "stop_current_car_watcher",
     "clockwork_drill_plant_sound",
+    "clockwork_apply_vault_blast",
 )
 PRIMARY_ONLY_TARGETS = ("switchmsg",)
 COORDINATION_TARGETS = (
@@ -324,6 +325,18 @@ def audit(
         ) >= 2
         and "maps\\\\clockwork_audio::drill_pullout" not in literal_body("handle_misc_drill_details")
     )
+    vault_blast_targets_both_local_players = (
+        _has(body("new_trench_setup"), r"thread\\s+clockwork_apply_vault_blast\\s*\\(\\s*level\\.player")
+        and _has(body("new_trench_setup"), r"thread\\s+clockwork_apply_vault_blast\\s*\\(\\s*level\\.playengineeffects")
+        and "level.playengineeffects playrumbleonentity" in body("new_trench_setup")
+    )
+    vault_blast_helper_is_player_scoped = (
+        signatures.get("clockwork_apply_vault_blast") == [["player", "blast_origin"]]
+        and "level.player" not in body("clockwork_apply_vault_blast")
+        and "player dodamage" in body("clockwork_apply_vault_blast")
+        and "player shellshock" in body("clockwork_apply_vault_blast")
+        and "player pushplayervector" in body("clockwork_apply_vault_blast")
+    )
 
     checks = {
         "all_required_functions_found": not missing,
@@ -346,6 +359,8 @@ def audit(
         "post_drill_animation_uses_returned_owner": post_drill_animation_uses_returned_owner,
         "drill_plant_audio_uses_actual_owner": player_scoped_drill_plant_audio,
         "drill_pullout_audio_uses_actual_owner": player_scoped_drill_pullout_audio,
+        "vault_blast_targets_both_local_players": vault_blast_targets_both_local_players,
+        "vault_blast_helper_uses_explicit_player": vault_blast_helper_is_player_scoped,
     }
 
     if reference_source is not None:
