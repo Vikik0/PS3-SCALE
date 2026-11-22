@@ -21,11 +21,10 @@ all: $(BUILD)/ghosts_coop.fake.sprx
 $(BUILD):
 	mkdir -p $@
 
-$(BUILD)/module.o: module.c ../local_input.h ../mission_rules.h | $(BUILD)
+$(BUILD)/module.o: module.c script_override.h ../local_input.h ../mission_rules.h | $(BUILD)
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD)/script_override.o: script_override.c script_override.h | $(BUILD)
-	$(PPU_CC) $(CFLAGS) -c $< -o $@
 	$(PPU_CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD)/exports.o: exports.S | $(BUILD)
