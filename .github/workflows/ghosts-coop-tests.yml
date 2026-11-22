@@ -106,6 +106,13 @@ jobs:
             experiments/ghosts-campaign-coop/compiled/iw6/ghc_campaign_local_session.gscbin
             experiments/ghosts-campaign-coop/client/ps3/gsc/ghc_campaign_local_session.gsc
             experiments/ghosts-campaign-coop/client/ps3/gsc/ghc_campaign_local_session.manifest.json
+      - name: Upload pinned GSC Tool for offline retail-source validation
+        uses: actions/upload-artifact@v6
+        with:
+          name: ghosts-gsc-tool-1.6.2-linux-amd64
+          path: .gsc-tool/gsc-tool
+          if-no-files-found: error
+          retention-days: 7
 
   protocol-header:
     runs-on: ubuntu-latest
