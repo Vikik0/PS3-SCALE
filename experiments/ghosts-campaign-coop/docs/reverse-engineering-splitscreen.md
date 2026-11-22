@@ -66,3 +66,13 @@ The current PRX input poll uses `cellPadGetInfo2` and `cellPadGetData` without i
 - IW6 PS4 decompilation, server client lifecycle and split-screen state: https://github.com/lizardpeter/ghosts-decomp/blob/main/analysis/iw6_ds_ps4/pseudocode/server_mp/sv_client_mp.cpp.c
 - IW6 PS4/XB3 decompilation, single-local-client split-screen stubs: https://github.com/lizardpeter/ghosts-decomp/blob/main/analysis/iw6_ds_ps4/pseudocode/client/splitscreen.cpp.c
 - IW6 PS4/XB3 client header noting one local client: https://github.com/lizardpeter/ghosts-decomp/blob/main/include/client/client.h
+
+## Cross-build native local-player function inventory
+
+To make the requested reuse approach concrete, the project now has a paired Ghidra/Python workflow:
+
+- tools/ghidra/ExportGhostsPpuFunctionInventory.java exports a read-only normalized function inventory from one decrypted PPU ELF.
+- tools/compare_ppu_function_inventories.py matches Campaign and Multiplayer function fingerprints and ranks Multiplayer-only names associated with local clients, controllers, players, cameras, viewports, HUD, connect/begin and input.
+
+Run it on the exact TU 1.16 Campaign and Multiplayer images, not on disc 1.00 or PS4/PC references. The resulting candidates are for manual call-graph review only. The comparator does not approve a function for copying or create a hook.
+
