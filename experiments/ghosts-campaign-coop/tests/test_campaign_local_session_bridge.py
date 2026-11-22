@@ -241,12 +241,16 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
     def test_manifest_pins_source_and_compiled_gsc_artifact(self):
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
         source_hash = hashlib.sha256(BRIDGE.read_bytes()).hexdigest()
-        if manifest.get("source_sha256"):
-            self.assertEqual(manifest["source_sha256"], source_hash)
-        if manifest.get("compiled_gscbin_bytes"):
-            self.assertGreater(manifest["compiled_gscbin_bytes"], 0)
-        if manifest.get("compiled_gscbin_sha256"):
-            self.assertEqual(len(manifest["compiled_gscbin_sha256"]), 64)
+        self.assertEqual(
+            manifest["source_sha256"],
+            "315e8bde2f9b31496271f432fe6d3045213b6e7be6cdaf0306e8707f108ca13e",
+        )
+        self.assertEqual(source_hash, manifest["source_sha256"])
+        self.assertEqual(manifest["compiled_gscbin_bytes"], 2365)
+        self.assertEqual(
+            manifest["compiled_gscbin_sha256"],
+            "5dc36d7e2305803b3bfa73f1f649192fdcd85f15d2a9b38678c963d0cb594474",
+        )
         self.assertIn("not injected or runtime-tested", manifest["status"])
 
     def test_bridge_does_not_fake_or_spawn_a_second_player(self):
