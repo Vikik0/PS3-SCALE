@@ -26,11 +26,11 @@ PICK_TARGET_HELPER = r'''clockwork_pick_enemy_target( ai )
     if ( isdefined( level.player ) && isplayer( level.player ) && isalive( level.player ) )
         target_player = level.player;
 
-    if ( isdefined( level.playengineeffects ) )
+    if ( issplitscreen() && isdefined( level.playengineeffects ) )
     {
         secondary_player = level.playengineeffects;
 
-        if ( isdefined( secondary_player ) && isplayer( secondary_player ) && isalive( secondary_player ) && secondary_player != target_player )
+        if ( isdefined( secondary_player ) && isplayer( secondary_player ) && isalive( secondary_player ) && secondary_player != target_player && secondary_player issplitscreenplayer() && !secondary_player issplitscreenplayerprimary() )
         {
             if ( !isdefined( target_player ) )
                 target_player = secondary_player;
@@ -104,7 +104,7 @@ def patch_source(source: str, expected_body_sha256: str = EXPECTED_DISCOVERY_BOD
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("source", type=Path, help="Stage 6 maps__clockwork_interior.gsc source")
+    parser.add_argument("source", type=Path, help="Stage 2-patched Clockwork maps__clockwork_interior.gsc source")
     parser.add_argument("output", type=Path, help="new source path; input is never overwritten")
     parser.add_argument("--report-json", type=Path)
     args = parser.parse_args(argv)
