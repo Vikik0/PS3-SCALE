@@ -26,13 +26,13 @@ Do not change the core version, CUE/BIN content, region, BIOS file (or HLE choic
 2. Launch the native lobby companion on the first console and create a public or private room.
 3. Join the room from the second console using the six-character invite code.
 4. Mark both players Ready. Confirm the room becomes launch-ready with two players; a four-seat room is not required.
-5. Press START in the room on either console. Confirm it opens the installed Crash Bash Online RetroArch app.
-6. From the companion's home menu, also test **OPEN CRASH BASH ONLINE**.
-7. Temporarily test without the RetroArch package installed and confirm the launcher reports the missing app rather than crashing.
+5. Press START in the room on both consoles and confirm the CUE picker appears.
+6. On the host console, select the Crash Bash CUE and press CROSS. Confirm RetroArch starts hosting and publishes its private relay session.
+7. On the client console, select the same CUE and press CROSS once. Confirm the companion finds the host through the RetroArch public lobby and starts RetroArch with `--connect` and `--mitm-session`, without manual Host List selection.
+8. From the companion's home menu, also test **OPEN CRASH BASH ONLINE**.
+9. Temporarily test without the RetroArch package installed and confirm the launcher reports the missing app rather than crashing.
 
-Pass criteria: both players see the same room membership and Ready state, the CUE picker finds the local disc, the room host starts RetroArch with Netplay hosting enabled, the client opens the RetroArch menu, and the missing-package path is handled cleanly.
-
-The host's Netplay nickname is `CB-ROOMCODE-HOST`. On the client, open **Netplay Host List** and select that exact nickname. Client selection remains manual; the lobby does not pass a transport endpoint or room ID into Netplay and does not synchronize game state itself.
+Pass criteria: both players see the same room membership and Ready state; the host starts Netplay; the client resolves the exact host entry, receives the relay endpoint only through its authenticated room token, and automatically joins. The missing-package path is handled cleanly. The Vercel companion does not carry game frames; actual synchronization is provided by RetroArch Netplay.
 
 ## Test 1 — Single-console baseline
 
@@ -51,7 +51,7 @@ If the game fails locally, stop here. Netplay testing cannot be meaningful until
 1. Connect both PS3s to the same router, preferably by Ethernet.
 2. Load the exact same CUE file and byte-identical referenced BIN tracks on both consoles.
 3. On the host, start a Netplay session.
-4. On the client, refresh the Netplay Host List and join the host.
+4. On the client, select the same CUE and press CROSS once. Confirm the companion resolves the host and launches RetroArch with the correct direct or relay endpoint.
 5. Start a two-player Crash Bash match and play for at least 15 minutes.
 6. Repeat once with the other console hosting.
 
@@ -64,7 +64,7 @@ Record whether input delay is acceptable. Lockstep is expected to wait for the s
 1. Keep the same package, exact CUE/BIN content, BIOS file (or HLE choice) and core settings.
 2. Put the consoles on different internet connections.
 3. Leave the package's public lobby, NAT traversal and Madrid relay defaults enabled.
-4. Host from one console and join from the other through the host list.
+4. On the host, start Netplay. On the client, select the same CUE and press CROSS once; wait for automatic relay discovery and connection.
 5. Play for at least 15 minutes.
 6. If the room is visible but the connection fails, repeat with a host-side TCP port-forward for port `55435`.
 
