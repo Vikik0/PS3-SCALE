@@ -1,3 +1,5 @@
+struct timeval;
+#include <sys/time.h>
 #include "online.h"
 #include "json_min.h"
 #include <curl/curl.h>
