@@ -112,3 +112,13 @@ It models the shared-interaction rules needed by the first Clockwork drill adapt
 
 This prevents Player 2 from completing, cancelling or stealing Player 1's drill action. The portable state machine is testable now, but the retail Clockwork GSC has not yet been rewritten to call it.
 
+## Native function discovery tooling
+
+Added a Ghidra exporter and Python comparator for the exact next research step: finding the existing Multiplayer local-client/player lifecycle and comparing it with Campaign.
+
+- tools/ghidra/ExportGhostsPpuFunctionInventory.java exports normalized function fingerprints and direct call targets from one decrypted PPU ELF.
+- tools/compare_ppu_function_inventories.py compares Campaign and Multiplayer inventories, then ranks Multiplayer-only function names related to local clients, controllers, players, views, cameras, HUD and input.
+- tests/test_compare_ppu_function_inventories.py covers shared fingerprints, Multiplayer-only leads, duplicate signatures and malformed inputs.
+
+The Ghidra exporter is read-only and requires manual execution on both exact TU 1.16 images. The Python comparator is covered by the normal host test suite. Neither tool proposes a hook address.
+
