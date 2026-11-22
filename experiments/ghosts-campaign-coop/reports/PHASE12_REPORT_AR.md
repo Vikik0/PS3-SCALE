@@ -44,9 +44,9 @@ client/ps3/gsc/ghc_campaign_local_session.gsc
 
 ### 3. الاختبارات والبناء
 
-نجح GitHub Actions run 45031356086 في الوظائف الخمس:
+نجح GitHub Actions run 45031722833 في الوظائف الخمس:
 
-- 158 اختبار Python ناجح.
+- 160 اختبار Python ناجح.
 - اختبارات C الخاصة بالبروتوكول ومنطق ملكية التفاعلات ناجحة.
 - محاكي Runtime اجتاز 10,025 فحصاً.
 - ترجمة وفك ترجمة Registry shim وجسر Local-session باستخدام GSC Tool 1.6.2.364.
@@ -61,7 +61,7 @@ client/ps3/gsc/ghc_campaign_local_session.gsc
 
 3072ee96a5207d4787164991aadf3a0cdde87facdf6b5e8cd17f74f6b8bcb055
 
-حزمة البناء موجودة ضمن GitHub Actions artifact باسم ghosts-campaign-gsc-session-bridge، رقم 14757777369.
+حزمة البناء موجودة ضمن GitHub Actions artifact باسم ghosts-campaign-gsc-session-bridge، رقم 14758260998.
 
 ### 4. ما لم يصبح جاهزاً بعد
 
