@@ -166,7 +166,12 @@ def _compare_reference_baseline(inventory: dict[str, dict]) -> dict:
     }
 
 
-def audit(path: Path, *, require_reference_baseline: bool = False) -> dict:
+def audit(
+    path: Path,
+    *,
+    reference_source: Path | None = None,
+    require_reference_baseline: bool = False,
+) -> dict:
     path = Path(path)
     if not path.is_file():
         raise FileNotFoundError(f"Clockwork GSC source was not found: {path}")
@@ -174,6 +179,24 @@ def audit(path: Path, *, require_reference_baseline: bool = False) -> dict:
         raise ValueError("input must be a decompiled .gsc source file")
 
     inventory = _function_inventory(path)
+    if reference_source is not None:
+        reference_source = Path(reference_source)
+        if not reference_source.is_file():
+            raise FileNotFoundError(f"original Clockwork reference GSC was not found: {reference_source}")
+        if reference_source.suffix.lower() != ".gsc":
+            raise ValueError("reference input must be a decompiled .gsc source file")
+        reference_baseline = _compare_reference_baseline(_function_inventory(reference_source))
+        reference_baseline["provided"] = True
+        reference_baseline["reference_source_file"] = reference_source.name
+    else:
+        reference_baseline = {
+            "reference_fastfile_sha256": REFERENCE_FASTFILE_SHA256,
+            "provided": False,
+            "reference_source_file": None,
+            "function_comparisons": {},
+            "matches": False,
+            "mismatches": list(REFERENCE_FUNCTIONS),
+        }
     missing = [name for name in CORE_TARGETS if not _rows_for(inventory, name)]
     roots = [name for name in (*CORE_TARGETS, *RELATED_TARGETS) if _rows_for(inventory, name)]
     closures = {name: _call_closure(inventory, name) for name in roots}
@@ -200,8 +223,6 @@ def audit(path: Path, *, require_reference_baseline: bool = False) -> dict:
     begin_in_entry = any(row["adapter_calls"]["begin"] for row in drill_spot_rows)
     complete_in_closure = any(row["adapter_calls"]["complete"] for row in closure_rows)
     cancel_in_closure = any(row["adapter_calls"]["cancel"] for row in closure_rows)
-    reference_baseline = _compare_reference_baseline(inventory)
-
     checks = {
         "all_core_drill_functions_found": not missing,
         "begin_called_from_handle_drill_spot": begin_in_entry,
@@ -213,6 +234,8 @@ def audit(path: Path, *, require_reference_baseline: bool = False) -> dict:
 
     if missing:
         status = "SOURCE_INCOMPLETE"
+    elif require_reference_baseline and not reference_baseline["provided"]:
+        status = "SOURCE_REFERENCE_MISSING"
     elif require_reference_baseline and not reference_baseline["matches"]:
         status = "SOURCE_BASELINE_MISMATCH"
     elif all(checks.values()):
@@ -223,6 +246,7 @@ def audit(path: Path, *, require_reference_baseline: bool = False) -> dict:
     return {
         "status": status,
         "source_file": path.name,
+        "reference_source_file": reference_baseline["reference_source_file"],
         "required_core_functions": list(CORE_TARGETS),
         "related_functions": list(RELATED_TARGETS),
         "target_functions": {
@@ -255,14 +279,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("source", type=Path, help="user-owned decompiled maps__clockwork_interior.gsc")
     parser.add_argument("--json-out", type=Path, help="optional path for the JSON audit report")
     parser.add_argument(
+        "--reference-source",
+        type=Path,
+        help="original, unmodified Clockwork GSC used to verify the six-function reference baseline",
+    )
+    parser.add_argument(
         "--strict",
         action="store_true",
-        help="require both the adapter checks and the exact six-function reference baseline",
+        help="require adapter checks plus --reference-source matching the six-function Clockwork baseline",
     )
     args = parser.parse_args(argv)
 
     try:
-        report = audit(args.source, require_reference_baseline=args.strict)
+        report = audit(
+            args.source,
+            reference_source=args.reference_source,
+            require_reference_baseline=args.strict,
+        )
     except (OSError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
