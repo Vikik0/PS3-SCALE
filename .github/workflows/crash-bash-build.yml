@@ -10,6 +10,7 @@ on:
       - "Crash-Bash-Enhanced/tests/**"
       - "Crash-Bash-Enhanced/scripts/**"
       - "Crash-Bash-Enhanced/pkgfiles/**"
+      - "Crash-Bash-Enhanced/sfo.xml"
       - "api/**"
       - "tests/**"
       - "index.html"
@@ -25,6 +26,7 @@ on:
       - "Crash-Bash-Enhanced/tests/**"
       - "Crash-Bash-Enhanced/scripts/**"
       - "Crash-Bash-Enhanced/pkgfiles/**"
+      - "Crash-Bash-Enhanced/sfo.xml"
       - "api/**"
       - "tests/**"
       - "index.html"
@@ -49,6 +51,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check PS3 package build script syntax
         run: bash -n Crash-Bash-Enhanced/scripts/build_online_pkg_clean.sh
+      - name: Validate PS3 package metadata
+        run: python3 Crash-Bash-Enhanced/scripts/test_package_metadata.py
       - name: Run protocol tests
         run: sh Crash-Bash-Enhanced/scripts/test_host.sh
 
