@@ -51,8 +51,14 @@ disc_source = (root / "source/disc_browser.c").read_text(encoding="utf-8")
 launch_args = (root / "source/game_launch_args.c").read_text(encoding="utf-8")
 assert "#define SCREEN_DISC_SELECT 3" in source
 assert "cb_disc_scan(discs, CB_DISC_MAX, &scanned)" in source
-assert "cb_launch_game(discs[disc_selected].path, 1, netplay_nickname" in source
-assert "cb_launch_game(discs[disc_selected].path, 0, netplay_nickname" in source
+assert re.search(
+    r"cb_launch_game\\(discs\\[disc_selected\\]\\.path,\\s*1,\\s*netplay_nickname",
+    source,
+), "Host launch must pass the selected disc and host role."
+assert re.search(
+    r"cb_launch_game\\(discs\\[disc_selected\\]\\.path,\\s*0,\\s*netplay_nickname",
+    source,
+), "Client launch must pass the selected disc and client role."
 assert "if ((screen == SCREEN_ROOM || screen == SCREEN_DISC_SELECT)" in source
 assert "CB-%.12s-HOST" in source
 assert "No CUE files were found." in source
@@ -64,7 +70,6 @@ assert "endpoint->mitm_session[0]" in launch_args
 assert "cb_online_get_netplay_endpoint(&session, &endpoint" in source
 assert "cb_online_mark_game_started(&session" in source
 assert "cb_online_cancel_game_start(&session" in source
-assert "NETPLAY_DISCOVERY_MAX_ATTEMPTS" in source
 assert "NETPLAY_DISCOVERY_MAX_ATTEMPTS" in source
 assert "CB-%.12s-HOST" in source
 assert "Netplay Host List" not in source
