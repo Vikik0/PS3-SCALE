@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tools.clockwork_drill_adapter_audit import audit
+from tools.clockwork_drill_adapter_audit import audit, main
 
 
 class ClockworkDrillAdapterAuditTests(unittest.TestCase):
@@ -130,6 +130,33 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
         self.assertEqual(report["status"], "SOURCE_INCOMPLETE")
         self.assertEqual(report["checks"]["both_drill_functions_found"], False)
         self.assertEqual(report["target_functions"]["handle_drilling"], [])
+
+    def test_missing_abort_cleanup_keeps_adapter_blocked(self):
+        report = audit(self.write_source(
+            'handle_drill_spot( player, spot )\n'
+            '{\n'
+            '    if ( !ghc_campaign_drill_begin( player, spot ) ) return;\n'
+            '    thread handle_drilling( player, spot );\n'
+            '}\n'
+            'handle_drilling( player, spot )\n'
+            '{\n'
+            '    ghc_campaign_drill_complete( player, spot );\n'
+            '    ghc_campaign_drill_cancel( player, spot );\n'
+            '}\n'
+        ))
+
+        self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
+        self.assertFalse(report["checks"]["abort_player_helper_referenced_in_source"])
+
+    def test_json_output_cannot_overwrite_input_gsc(self):
+        source = self.write_source(
+            'handle_drill_spot()\n{\n level.player usebuttonpressed( "use" );\n}\n'
+            'handle_drilling()\n{\n}\n'
+        )
+        original = source.read_text(encoding="utf-8")
+        result = main([str(source), "--json-out", str(source)])
+        self.assertEqual(result, 1)
+        self.assertEqual(source.read_text(encoding="utf-8"), original)
 
     def test_non_gsc_input_is_rejected(self):
         other = self.root / "source.txt"
