@@ -20,7 +20,7 @@ assert "Your room ended or your seat expired." in source
 
 heartbeat = re.search(
     r"if \(\(screen == SCREEN_ROOM \|\| screen == SCREEN_DISC_SELECT\)\s*"
-    r"&& \+\+poll_frames >= ROOM_HEARTBEAT_FRAMES\)"
+    r"&&\s*\+\+poll_frames >= ROOM_HEARTBEAT_FRAMES\)"
     r"(.*?)(?=\n            if \(screen == SCREEN_ROOM\) draw_room)",
     source,
     re.S,
