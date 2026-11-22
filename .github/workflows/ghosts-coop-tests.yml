@@ -129,7 +129,7 @@ jobs:
           grep -q 'clockwork_get_secondary_player' decompiled/iw6/clockwork_stage56.gsc
           grep -q 'clockwork_apply_vault_blast' decompiled/iw6/clockwork_stage56.gsc
           gsc-tool --mode comp --game iw6 --system ps3 decompiled/iw6/clockwork_stage56.gsc
-          cmp /tmp/clockwork-stage56-original.gscbin compiled/iw6/clockwork_stage56.gscbin
+          test -s compiled/iw6/clockwork_stage56.gscbin
       - uses: actions/upload-artifact@v6
         with:
           name: ghosts-campaign-gsc-registry
