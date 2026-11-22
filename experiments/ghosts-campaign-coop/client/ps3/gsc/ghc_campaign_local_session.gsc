@@ -29,7 +29,10 @@ main()
         && ghc_campaign_native_pair_is_current()
         && level.player == level.ghc_campaign_player_0
         && level.playengineeffects == level.ghc_campaign_player_1 )
+    {
+        ghc_campaign_start_session_monitor();
         return 1;
+    }
 
     if ( isdefined( level.ghc_campaign_drill_state_initialized )
         && level.ghc_campaign_drill_state_initialized )
@@ -63,7 +66,10 @@ main()
         if ( issplitscreen() && isdefined( var_1 ) && var_1.size >= 2 )
         {
             if ( ghc_campaign_bind_native_local_pair() )
+            {
+                ghc_campaign_start_session_monitor();
                 return 1;
+            }
         }
 
         wait 0.05;
@@ -73,7 +79,60 @@ main()
     if ( isdefined( var_1 ) )
         level.playerpiggyback = var_1;
 
-    return ghc_campaign_bind_native_local_pair();
+    if ( ghc_campaign_bind_native_local_pair() )
+    {
+        ghc_campaign_start_session_monitor();
+        return 1;
+    }
+
+    return 0;
+}
+ghc_campaign_start_session_monitor()
+{
+    if ( isdefined( level.ghc_campaign_session_monitor_active )
+        && level.ghc_campaign_session_monitor_active )
+        return 1;
+
+    level.ghc_campaign_session_monitor_active = 1;
+    thread ghc_campaign_watch_native_session();
+    return 1;
+}
+
+/*
+ * Watch the exact engine-owned primary/secondary pair after binding.
+ * Eight consecutive failed checks (2 seconds at 250 ms) are required
+ * before invalidating the session, avoiding a one-frame entity-array
+ * transition from clearing valid Campaign aliases.
+ *
+ * This monitor never creates or rebinds a player. After status 8, the
+ * verified bridge main() must be called again to attempt a bounded rebind.
+ */
+ghc_campaign_watch_native_session()
+{
+    var_0 = 0;
+
+    while ( isdefined( level.ghc_campaign_session_ready )
+        && level.ghc_campaign_session_ready )
+    {
+        if ( ghc_campaign_native_pair_is_current()
+            && level.player == level.ghc_campaign_player_0
+            && level.playengineeffects == level.ghc_campaign_player_1 )
+            var_0 = 0;
+        else
+        {
+            var_0++;
+
+            if ( var_0 >= 8 )
+            {
+                ghc_campaign_invalidate_local_session();
+                break;
+            }
+        }
+
+        wait 0.25;
+    }
+
+    level.ghc_campaign_session_monitor_active = undefined;
 }
 
 ghc_campaign_bind_native_local_pair()
