@@ -34,11 +34,23 @@ make -C client/ps3/probes/pad_probe PS3DEV="$PS3DEV" PS3DK="$PS3DK"
 
 ## التشغيل على الجهاز
 
-1. انسخ ملف الوضع المناسب إلى /dev_hdd0/tmp/ghosts_probe_mode.txt.
+1. انسخ build/ghosts_campaign_pad_probe.fake.sprx إلى:
+   /dev_hdd0/tmp/ghosts_campaign_pad_probe.fake.sprx
 2. صِل وحدتي التحكم قبل تشغيل اللعبة.
-3. ادخل Campaign أو Multiplayer Offline.
-4. حمّل PRX داخل PID اللعبة عبر webMAN/PS3MAPI.
-5. انتظر 30 ثانية ثم انسخ السجل المناسب إلى الكمبيوتر.
+3. انسخ ملف الوضع المناسب إلى /dev_hdd0/tmp/ghosts_probe_mode.txt.
+4. ادخل Campaign أو Multiplayer Offline فعلياً.
+5. افتح رابط PID الحالي من متصفح الكمبيوتر:
+   http://PS3_IP/ps3mapi.ps3?PROCESS+GETCURRENTPID
+   يجب تنفيذ ذلك وأنت داخل اللعبة، لا من XMB. سجّل رقم PID الذي يرجع.
+6. حمّل وحدة التشخيص داخل عملية اللعبة:
+   http://PS3_IP/ps3mapi.ps3?MODULE+LOAD+PID_HERE+/dev_hdd0/tmp/ghosts_campaign_pad_probe.fake.sprx
+   استبدل PID_HERE بالرقم الذي ظهر في الخطوة السابقة.
+7. تحقق من أن الوحدة حُمّلت:
+   http://PS3_IP/ps3mapi.ps3?MODULE+GETALLPRXID+PID_HERE
+   ثم استخدم MODULE+GETNAME أو MODULE+GETFILENAME مع PID ومعرّف الوحدة للتأكد من اسم ghosts_pad_probe.
+8. انتظر 30 ثانية حتى ينتهي أخذ العينات، ثم انسخ ملف السجل المناسب إلى الكمبيوتر.
+9. أزل الوحدة بعد نسخ السجل:
+   http://PS3_IP/ps3mapi.ps3?MODULE+UNLOAD+PID_HERE+PRX_ID
 
 ملف Campaign:
 - mode_files/ghosts_probe_mode_CAMPAIGN.txt
@@ -48,7 +60,9 @@ make -C client/ps3/probes/pad_probe PS3DEV="$PS3DEV" PS3DK="$PS3DK"
 - mode_files/ghosts_probe_mode_MULTIPLAYER.txt
 - الناتج: /dev_hdd0/tmp/ghosts_multiplayer_pad_probe.log
 
-إذا كان ملف الوضع مفقوداً أو لا يحتوي إحدى الكلمتين بالضبط، لا تبدأ الوحدة sampling وتكتب سبب الرفض إلى ghosts_pad_probe_error.log.
+**تنبيه:** رد MODULE LOAD قد يرجع HTTP 200 حتى لو لم تنجح عملية التحميل؛ لذلك لا تعتمد عليه وحده. افحص قائمة الوحدات واسم الوحدة عبر GETALLPRXID وGETNAME/GETFILENAME.
+
+إذا كان ملف الوضع مفقوداً أو لا يحتوي إحدى الكلمتين بالضبط، لا تبدأ الوحدة sampling وتكتب سبب الرفض إلى ghosts_pad_probe_error.log. لا تشغّل ملف CAMPAIGN وأنت داخل Multiplayer أو العكس.
 
 ## المقارنة
 
