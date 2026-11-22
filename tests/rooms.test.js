@@ -2,6 +2,8 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 
 process.env.BLOB_READ_WRITE_TOKEN = "test-blob-token";
 process.env.CB_TOKEN_SECRET_V2 = "test-only-guest-token-secret-with-more-than-forty-characters";
@@ -95,4 +97,13 @@ test("a four-seat room becomes ready only when all four players are ready", asyn
   assert.equal(lastReady.statusCode, 200);
   const room = await call("GET", {}, tokens[0], { code });
   assert.equal(room.body.room.status, "ready");
+});
+
+
+test("four-seat lobby UI renders without stale two-player state", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
+  assert.match(html, /room\.maxPlayers\|\|4/);
+  assert.match(html, /ANY BATTLE/);
+  assert.match(html, /room\.players\.length>1\?"Players joined/);
+  assert.doesNotMatch(html, /\bboth\?/);
 });
