@@ -51,6 +51,7 @@ make -C client/ps3/probes/pad_probe PS3DEV="$PS3DEV" PS3DK="$PS3DK"
 8. انتظر 30 ثانية حتى ينتهي أخذ العينات، ثم انسخ ملف السجل المناسب إلى الكمبيوتر.
 9. أزل الوحدة بعد نسخ السجل:
    http://PS3_IP/ps3mapi.ps3?MODULE+UNLOAD+PID_HERE+PRX_ID
+10. افحص GETALLPRXID مرة أخرى وتأكد أن PRX_ID اختفى. إذا بقيت الوحدة في القائمة، لا تحاول إجبار إزالتها؛ انتظر ثانية وأعد طلب UNLOAD. الوحدة الآن ترفض الإيقاف (STOP_FAIL) إذا لم تستطع انتظار انتهاء Thread القراءة بأمان.
 
 ملف Campaign:
 - mode_files/ghosts_probe_mode_CAMPAIGN.txt
