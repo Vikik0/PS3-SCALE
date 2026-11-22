@@ -1,9 +1,12 @@
+import hashlib
+import json
 import unittest
 from pathlib import Path
 
 
 PROJECT = Path(__file__).resolve().parents[1]
 BRIDGE = PROJECT / "client" / "ps3" / "gsc" / "ghc_campaign_local_session.gsc"
+MANIFEST = PROJECT / "client" / "ps3" / "gsc" / "ghc_campaign_local_session.manifest.json"
 
 
 def function_body(source: str, name: str) -> str:
@@ -88,6 +91,17 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertIn("level.ghc_campaign_clockwork_p2_loadout_applied", body)
         self.assertIn("return 1", body)
         self.assertNotIn("level.ghc_campaign_player_0", body)
+
+    def test_manifest_pins_source_and_compiled_gsc_artifact(self):
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        source_hash = hashlib.sha256(BRIDGE.read_bytes()).hexdigest()
+        self.assertEqual(manifest["source_sha256"], source_hash)
+        self.assertEqual(manifest["compiled_gscbin_bytes"], 823)
+        self.assertEqual(
+            manifest["compiled_gscbin_sha256"],
+            "c66b51728f25e98d8517dfa2ebfbe29f8f9c6231ac89786e2de51771b484e831",
+        )
+        self.assertIn("not injected or runtime-tested", manifest["status"])
 
     def test_bridge_does_not_fake_or_spawn_a_second_player(self):
         lowered = self.source.lower()
