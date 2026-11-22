@@ -107,6 +107,16 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertNotIn("level.ghc_campaign_player_0", body)
 
 
+    def test_rebind_releases_only_active_drill_locks_before_clearing_player_handles(self):
+        body = function_body(self.source, "main")
+        guard = body.index("level.ghc_campaign_drill_state_initialized")
+        abort_zero = body.index("ghc_campaign_drill_abort_slot( 0 )")
+        abort_one = body.index("ghc_campaign_drill_abort_slot( 1 )")
+        clear_handles = body.index("level.ghc_campaign_player_0 = undefined")
+        self.assertLess(guard, abort_zero)
+        self.assertLess(abort_zero, abort_one)
+        self.assertLess(abort_one, clear_handles)
+
     def test_native_pair_binding_initializes_shared_drill_state_once(self):
         bind = function_body(self.source, "ghc_campaign_bind_native_local_pair")
         init = function_body(self.source, "ghc_campaign_drill_state_init")
@@ -156,6 +166,8 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertIn("ghc_campaign_drill_set_active_spot_for_player( var_0, -1 )", abort_slot)
         self.assertNotIn("set_complete", abort_slot)
         self.assertIn("ghc_campaign_drill_owner_for_spot( var_1 ) != var_0", abort_slot)
+        self.assertIn("level.ghc_campaign_drill_state_initialized", abort_slot)
+        self.assertNotIn("level.ghc_campaign_session_ready", abort_slot)
 
     def test_slot_lookup_remains_available_for_cleanup_after_session_flag_drops(self):
         body = function_body(self.source, "ghc_campaign_drill_player_slot")
