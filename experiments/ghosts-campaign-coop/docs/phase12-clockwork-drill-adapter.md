@@ -8,7 +8,8 @@ Continue the local-first design: reuse the two native split-screen players that 
 
 Updated client/ps3/gsc/ghc_campaign_local_session.gsc:
 
-- Startup clears stale Campaign aliases and retries native identity binding for up to 200 × 0.05 seconds.
+- Startup reuses an already-ready session only if both stored entities are still native split-screen players, primary/secondary roles are unchanged, and the Campaign aliases still point to those same entities.
+- If any identity check fails, it releases active drill ownership, clears stale Campaign aliases and retries native identity binding for up to 200 × 0.05 seconds.
 - Each retry refreshes getentarray("player", "classname"), checks issplitscreen(), and attempts the full primary/secondary identity bind.
 - It does not return early merely because two player entities exist; it waits for issplitscreenplayer() and issplitscreenplayerprimary() to report a valid pair.
 - It binds level.player to the native primary and level.playengineeffects to the native secondary only after exact-pair validation.
@@ -56,7 +57,7 @@ GitHub Actions run 45031356086 passed all five jobs on commit 94ef85ef349fcaa41b
 - PS3DK: PRX bootstrap, Pad Probe and PRX importer build/validation passed.
 - Cloudflare Worker: lobby tests and dry-run bundle passed.
 
-The local-session GSCBIN is 1,798 bytes with SHA-256 dc846bbe1e3256f1fb8aae20913722335afe17105b61607322e890d892751a1f. Its source SHA-256 is 560417dcadd38187537c117dadff8f674021c664d9f94b79cd485096cb506a8f. The verified CI artifact is ghosts-campaign-gsc-session-bridge (artifact ID 14757777369).
+The local-session GSCBIN is 1,891 bytes with SHA-256 7a1be335a18217b457781a976ea8757d96e571eec9170101b2bff723c4003079. Its source SHA-256 is 3072ee96a5207d4787164991aadf3a0cdde87facdf6b5e8cd17f74f6b8bcb055. The verified CI artifact is ghosts-campaign-gsc-session-bridge (artifact ID 14757777369).
 
 ## What remains unimplemented
 
