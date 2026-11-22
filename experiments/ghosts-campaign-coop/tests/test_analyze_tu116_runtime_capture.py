@@ -197,6 +197,43 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
         self.assertEqual(list(self.output_dir.glob(".ghosts-capture-stage-*")), [])
         self.assertEqual(list(self.output_dir.glob(".ghosts-capture-backup-*")), [])
 
+    def test_output_promotion_rolls_back_if_a_rename_fails(self):
+        self.output_dir.mkdir()
+        stage_dir = self.root / "staged"
+        stage_dir.mkdir()
+        staged = {name: stage_dir / name for name in analyzer.OUTPUT_NAMES}
+        final = {name: self.output_dir / name for name in analyzer.OUTPUT_NAMES}
+        for name, path in staged.items():
+            path.write_bytes(("new-" + name).encode("utf-8"))
+
+        previous = {
+            "campaign_tu116_runtime.elf": b"old-campaign",
+            "multiplayer_tu116_runtime.elf": b"old-multiplayer",
+        }
+        for name, value in previous.items():
+            final[name].write_bytes(value)
+        unrelated = self.output_dir / "operator-notes.txt"
+        unrelated.write_text("keep", encoding="utf-8")
+
+        real_replace = analyzer.os.replace
+        calls = 0
+
+        def fail_fourth_replace(source, destination):
+            nonlocal calls
+            calls += 1
+            if calls == 4:
+                raise OSError("simulated promotion failure")
+            return real_replace(source, destination)
+
+        with patch.object(analyzer.os, "replace", side_effect=fail_fourth_replace):
+            with self.assertRaisesRegex(OSError, "simulated promotion failure"):
+                analyzer._commit_staged_outputs(staged, final, overwrite=True)
+
+        for name, value in previous.items():
+            self.assertEqual(final[name].read_bytes(), value)
+        self.assertEqual(unrelated.read_text(encoding="utf-8"), "keep")
+        self.assertEqual(list(self.output_dir.glob(".ghosts-capture-backup-*")), [])
+
     def test_reports_use_final_paths_not_temporary_stage_paths(self):
         self.run_analyzer()
         summary = __import__("json").loads(
