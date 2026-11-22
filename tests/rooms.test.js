@@ -141,6 +141,7 @@ test("four-seat retro lobby UI renders and its inline script parses", () => {
   assert.match(html, /sessionStorage\.setItem\("cb_player_id",state\.player\.id\)/);
   assert.match(html, /data\.room\.selfPlayerId/);
   assert.match(html, /function expireRoomSession\(/);
+  assert.match(html, /room\.players\.length>=2&&room\.players\.every\(p=>p\.ready\)/);
   assert.match(html, /room\.players\.length>1\?"Players joined/);
   assert.doesNotMatch(html, /\bboth\?/);
 });
@@ -478,4 +479,21 @@ test("expired-room cleanup never deletes a concurrently refreshed room", async (
   assert.equal(secondListing.statusCode, 200);
   assert.equal(secondListing.body.rooms.length, 1);
   assert.equal(secondListing.body.rooms[0].code, code);
+});
+
+
+test("a two-player room becomes ready when both players are ready", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const joined = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+
+  const hostReady = await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  assert.equal(hostReady.statusCode, 200);
+  let room = await call("GET", {}, host.body.token, { code: host.body.room.code });
+  assert.equal(room.body.room.status, "waiting");
+
+  const guestReady = await call("POST", { action: "heartbeat", ready: true }, joined.body.token);
+  assert.equal(guestReady.statusCode, 200);
+  room = await call("GET", {}, host.body.token, { code: host.body.room.code });
+  assert.equal(room.body.room.status, "ready");
+  assert.equal(room.body.room.players.length, 2);
 });
