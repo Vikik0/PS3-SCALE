@@ -130,7 +130,7 @@ static void activate_selection(void)
             snprintf(g_status, sizeof(g_status),
                      "No CUE found. Copy Crash Bash to a PSXISO folder.");
         } else {
-            cb_launch_game(discs[0].path, 0, "CrashBashPlayer",
+            cb_launch_game(discs[0].path, 0, "CrashBashPlayer", NULL,
                            g_status, sizeof(g_status));
         }
         break;
