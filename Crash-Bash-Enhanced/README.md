@@ -54,6 +54,10 @@ The [official RetroArch PS1 guide](https://retroarch.com/ps1.html) identifies PC
 
 A successful CI build confirms compilation, package creation, SELF/SFO validation and checksum verification. It does **not** prove that a match runs at full speed or stays synchronized on physical PS3 consoles. Two-console LAN and internet tests, followed by four-player testing, remain necessary. See [HARDWARE_TEST_PLAN.md](HARDWARE_TEST_PLAN.md).
 
+## PS3 launch fix
+
+The XMB entry now launches the static-core RetroArch executable directly through a finalized NPDRM EBOOT. The earlier Salamander second-stage spawn has been removed. See [LAUNCH_FIX.md](LAUNCH_FIX.md) for the rationale and the remaining physical-console validation steps.
+
 ## Build and CI
 
 The workflow is `.github/workflows/crash-bash-build.yml`. It uses pinned revisions of PCSX-ReARMed, RetroArch, RetroArch assets and core metadata.
