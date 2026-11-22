@@ -5,7 +5,7 @@ module.exports = function handler(_req, res) {
   return res.status(200).json({
     ok: true,
     service: "Crash Bash Enhanced lobby",
-    version: "0.5.0",
+    version: "0.6.0",
     roomTtlMinutes: 30,
     playerTtlMinutes: 10,
     minimumReadyPlayers: 2,
@@ -13,12 +13,13 @@ module.exports = function handler(_req, res) {
     roomListing: "cursor-paginated",
     expiredRoomCleanup: "conditional",
     nativeDiscPicker: "psxiso-hdd-usb",
-    nativeLaunchModes: ["retroarch-host", "retroarch-client-menu"],
+    nativeLaunchModes: ["retroarch-host", "retroarch-auto-connect"],
+    automaticHostDiscovery: "retroarch-public-lobby-relay",
     psnRequired: false,
     maxPlayersPerRoom: 4,
     storageConfigured: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
     tokenConfigured: Boolean(process.env.CB_TOKEN_SECRET_V2 || process.env.CB_TOKEN_SECRET),
-    gameplayTransport: "not connected yet",
-    note: "This endpoint verifies the four-seat room lobby only. It does not connect to crashbash.app or claim that Crash Bash gameplay is online."
+    gameplayTransport: "retroarch-netplay",
+    note: "The Vercel API performs room matchmaking and authenticated host-relay discovery. Actual synchronized play still requires PS3 hardware validation."
   });
 };
