@@ -71,7 +71,7 @@ The following counts are from the 378 decompiled files in the three principal so
 The expanded audit is reproducible against local exports without uploading game scripts:
 
 ~~~powershell
-python tools/audit_gsc_splitscreen.py --group campaign "D:\Ghosts\analysis\clockwork_decompiled" --group common "D:\Ghosts\analysis\common_decompiled" --group multiplayer "D:\Ghosts\analysis\patch_mp_decompiled" --output "D:\Ghosts\analysis\phase9_gsc_audit.json" --max-hits 5000
+python tools/audit_gsc_splitscreen.py --group "campaign=D:\Ghosts\analysis\clockwork_decompiled" --group "common=D:\Ghosts\analysis\common_decompiled" --group "multiplayer=D:\Ghosts\analysis\patch_mp_decompiled" --output "D:\Ghosts\analysis\phase9_gsc_audit.json" --max-hits 5000
 ~~~
 
 
