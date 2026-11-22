@@ -13,8 +13,8 @@ RA_COMMIT="8ede0d8aea9308e72d4f2b58c3074934803a6452"
 ASSETS_COMMIT="8c918e2872482139273374ef4cc6c7aff34d7585"
 LIBRETRO_SUPER_COMMIT="55e50a81195eaf8dd1b7720a601282459832ced1"
 
-APP_ID="CBASH0001"
-CONTENT_ID="UP0001-CBASH0001_00-0000000000000001"
+APP_ID="CBON00001"
+CONTENT_ID="UP0001-CBON00001_00-0000000000000001"
 APP_TITLE="Crash Bash Online"
 
 test -n "${PS3DEV:-}"
@@ -125,7 +125,7 @@ if text.count(old) != 1:
 text = text.replace(old, f'#define EMULATOR_CONTENT_DIR "{app_id}"', 1)
 if text.count("   if (*argc >= 1)\n   {\n      char path[PATH_MAX_LENGTH] = {0};\n      strlcpy(path, argv[0], sizeof(path));\n      if (path_is_valid(path))\n         path_set(RARCH_PATH_CORE, path);\n   }") != 1:
     raise SystemExit("Could not uniquely identify the PS3 static-core boot path")
-text = text.replace("   if (*argc >= 1)\n   {\n      char path[PATH_MAX_LENGTH] = {0};\n      strlcpy(path, argv[0], sizeof(path));\n      if (path_is_valid(path))\n         path_set(RARCH_PATH_CORE, path);\n   }", "   (void)argc;\n   (void)argv;\n   {\n      char path[PATH_MAX_LENGTH] = {0};\n      strlcpy(path, \"/dev_hdd0/game/CBASH0001/USRDIR/EBOOT.BIN\",\n            sizeof(path));\n      if (path_is_valid(path))\n      {\n         RARCH_LOG(\"[PS3] Direct static-core EBOOT selected: %s\\n\", path);\n         path_set(RARCH_PATH_CORE, path);\n      }\n      else\n         RARCH_ERR(\"[PS3] Direct static-core EBOOT is missing: %s\\n\", path);\n   }", 1)
+text = text.replace("   if (*argc >= 1)\n   {\n      char path[PATH_MAX_LENGTH] = {0};\n      strlcpy(path, argv[0], sizeof(path));\n      if (path_is_valid(path))\n         path_set(RARCH_PATH_CORE, path);\n   }", "   (void)argc;\n   (void)argv;\n   {\n      char path[PATH_MAX_LENGTH] = {0};\n      strlcpy(path, \"/dev_hdd0/game/CBON00001/USRDIR/EBOOT.BIN\",\n            sizeof(path));\n      if (path_is_valid(path))\n      {\n         RARCH_LOG(\"[PS3] Direct static-core EBOOT selected: %s\\n\", path);\n         path_set(RARCH_PATH_CORE, path);\n      }\n      else\n         RARCH_ERR(\"[PS3] Direct static-core EBOOT is missing: %s\\n\", path);\n   }", 1)
 platform.write_text(text)
 
 paths = root / "frontend/drivers/platform_ps3_paths.c"
@@ -177,9 +177,7 @@ PY
 
 PKGDIR="$RA/pkg/psl1ght/pkg"
 USRDIR="$PKGDIR/USRDIR"
-CORE_SELF="$USRDIR/cores/pcsx_rearmed_libretro_psl1ght.SELF"
-mkdir -p "$USRDIR/cores" "$USRDIR/info" "$USRDIR/assets" \
-    "$USRDIR/licenses" "$USRDIR/system"
+mkdir -p "$USRDIR/info" "$USRDIR/assets" "$USRDIR/licenses" "$USRDIR/system"
 
 cat > "$USRDIR/system/README-BIOS.txt" <<'EOF'
 Place a PlayStation BIOS dumped from your own console in this folder.
@@ -191,11 +189,10 @@ echo "== Link the static PCSX-ReARMed core into RetroArch"
 cp "$CORE_ARCHIVE" "$RA/libretro_psl1ght.a"
 make -C "$RA" -f Makefile.psl1ght clean
 rm -f "$RA/retroarch_psl1ght.elf" "$RA/retroarch_psl1ght.self" \
-    "$USRDIR/cores/CORE.SELF" "$CORE_SELF" "$USRDIR/EBOOT.BIN"
-make -C "$RA" -f Makefile.psl1ght -j"$JOBS" create-core CONTENTID="$CONTENT_ID"
-test -s "$USRDIR/cores/CORE.SELF"
-mv "$USRDIR/cores/CORE.SELF" "$CORE_SELF"
-test -s "$CORE_SELF"
+    "$RA/build/retroarch_psl1ght.elf" "$USRDIR/EBOOT.BIN"
+# Build the stripped/SPRX-linked ELF needed for the direct EBOOT. Do not copy
+# a second RetroArch SELF into USRDIR/cores: it is not a standalone libretro core.
+make -C "$RA" -f Makefile.psl1ght -j"$JOBS" all CONTENTID="$CONTENT_ID"
 test -s "$RA/retroarch_psl1ght.elf"
 test -s "$RA/build/retroarch_psl1ght.elf"
 
@@ -207,8 +204,8 @@ test -s "$USRDIR/EBOOT.BIN"
 
 # Fail the build if the libretro entry points are not linked into the EBOOT.
 NM="$(command -v ppu-nm || command -v nm)"
-"$NM" -g "$RA/retroarch_psl1ght.elf" | grep -E '[[:space:]][Tt][[:space:]]+retro_run' >/dev/null
-"$NM" -g "$RA/retroarch_psl1ght.elf" | grep -E '[[:space:]][Tt][[:space:]]+retro_get_system_info' >/dev/null
+"$NM" -g "$RA/build/retroarch_psl1ght.elf" | grep -E '[[:space:]][Tt][[:space:]]+retro_run' >/dev/null
+"$NM" -g "$RA/build/retroarch_psl1ght.elf" | grep -E '[[:space:]][Tt][[:space:]]+retro_get_system_info' >/dev/null
 
 echo "== Install pinned core metadata, menu assets and licenses"
 wget -qO "$USRDIR/info/pcsx_rearmed_libretro.info" \
@@ -235,7 +232,7 @@ if (width, height) != (320, 176):
     raise SystemExit(f"ICON0.PNG must be 320x176, got {width}x{height}")
 PY
 
-sfo --title "$APP_TITLE" --appid "$APP_ID" -f "$PS3DEV/bin/sfo.xml" "$PKGDIR/PARAM.SFO"
+sfo --title "$APP_TITLE" --appid "$APP_ID" -f "$ROOT/sfo.xml" "$PKGDIR/PARAM.SFO"
 
 # Validate the app identity and both launchable PS3 SELF files before packaging.
 python3 - "$PKGDIR/PARAM.SFO" "$APP_ID" "$APP_TITLE" "$USRDIR/EBOOT.BIN" "$CORE_SELF" <<'PY'
@@ -289,9 +286,9 @@ GETTING THE GAME
 2. Copy both files to /dev_hdd0/PSXISO/ or to a /PSXISO/ folder on USB.
 3. Keep the BIN filename referenced by the CUE file exactly correct.
 4. A BIOS dumped from your own PS1 is recommended. If you use one, place the
-   same BIOS file in /dev_hdd0/game/CBASH0001/USRDIR/system/ on each console.
+   same BIOS file in /dev_hdd0/game/CBON00001/USRDIR/system/ on each console.
 5. Settings and logs are kept in the app-specific profile under
-   /dev_hdd0/home/<user-id>/retroarch/CBASH0001/.
+   /dev_hdd0/home/<user-id>/retroarch/CBON00001/.
 
 LOCAL PLAY
 1. Launch Crash Bash Online from the PS3 XMB.
@@ -359,7 +356,7 @@ Netplay: RetroArch Netplay, PSN-independent
 Synchronization: lockstep (one savestate; PS1 state size 0x440000 bytes)
 Configured maximum: 1 host + 3 remote clients (4 total; hardware test pending)
 PCSX-ReARMed Multitap: Port 1
-PS3 user profile: /dev_hdd0/home/<user-id>/retroarch/CBASH0001/
+PS3 user profile: /dev_hdd0/home/<user-id>/retroarch/CBON00001/
 Cover art: custom ICON0.PNG
 Game data and BIOS: not included
 EOF
