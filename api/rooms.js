@@ -83,6 +83,10 @@ function activePlayers(room, now = Date.now()) {
 function prunePlayers(room, now = Date.now()) {
   const previous = room.players || [];
   const active = activePlayers(room, now);
+  const hostIsActive = active.some((player) => player.id === room.hostPlayerId);
+  if (!room.hostPlayerId || !hostIsActive) {
+    room.hostPlayerId = active[0]?.id || "";
+  }
   if (active.length !== previous.length) {
     active.forEach((player) => { player.ready = false; });
     const activeIds = new Set(active.map((player) => player.id));
@@ -137,7 +141,8 @@ async function listRooms() {
           await deleteExpiredRoom(code, record.etag);
           return null;
         }
-        const staleReadyRoom = room.status === "ready" && active.length < MAX_PLAYERS;
+        const staleReadyRoom = room.status === "ready" &&
+          (active.length < 2 || active.length !== (room.players || []).length);
         if (!room.isPrivate && (room.status === "waiting" || staleReadyRoom) && active.length < MAX_PLAYERS) {
           return publicRoom(room);
         }
@@ -208,6 +213,7 @@ module.exports = async function handler(req, res) {
         room: {
           code: record.room.code,
           status: record.room.status === "ready" && (active.length < 2 || active.length !== (record.room.players || []).length) ? "waiting" : record.room.status,
+          hostPlayerId: record.room.hostPlayerId || active[0]?.id || "",
           isPrivate: record.room.isPrivate,
           players: active.map(({ id, name, ready }) => ({ id, name, ready: inactiveSeats ? false : ready })),
           selfPlayerId: claims.sub,
@@ -239,6 +245,7 @@ module.exports = async function handler(req, res) {
           maxPlayers: MAX_PLAYERS,
           createdAt: now,
           updatedAt: now,
+          hostPlayerId: playerId,
           players: [{ id: playerId, name, ready: false, joinedAt: now, lastSeen: now }],
           signals: [],
           nextSignalId: 1
@@ -263,7 +270,6 @@ module.exports = async function handler(req, res) {
         const outcome = await mutateRoom(candidate.code, (room) => {
           const now = Date.now();
           prunePlayers(room, now);
-          if (room.status === "ready" && room.players.length < MAX_PLAYERS) room.status = "waiting";
           if (room.isPrivate || room.status !== "waiting" || room.players.length >= MAX_PLAYERS) {
             return { write: false, skip: true };
           }
@@ -296,7 +302,6 @@ module.exports = async function handler(req, res) {
           return { write: false, status: 410, body: { error: "This battle room has expired. Create a new room." } };
         }
         prunePlayers(room, now);
-        if (room.status === "ready" && room.players.length < MAX_PLAYERS) room.status = "waiting";
         if (room.status !== "waiting" || room.players.length >= MAX_PLAYERS) {
           return { write: false, status: 409, body: { error: "Room is full or already playing." } };
         }
@@ -420,6 +425,9 @@ module.exports = async function handler(req, res) {
         }
         const now = Date.now();
         room.players = prunePlayers(room, now).filter((entry) => entry.id !== currentPlayer.id);
+        if (room.hostPlayerId === currentPlayer.id) {
+          room.hostPlayerId = room.players[0]?.id || "";
+        }
         room.players.forEach((entry) => { entry.ready = false; });
         room.signals = (room.signals || []).filter((signal) =>
           signal.from !== currentPlayer.id &&
