@@ -109,7 +109,7 @@ static void draw_rooms(const CBOnlineRoom *rooms, int count, int selected, int p
     }
     draw_rect(58, 438, 720, 32, 0x0b1720ff);
     draw_text(72, 444, 13, 0x9bb4c2ff, status);
-    draw_text(56, 474, 12, 0x6d8794ff, "UP/DOWN SELECT  CROSS JOIN  TRIANGLE CREATE  L1 PRIVACY  R1 CODE  SQUARE REFRESH  CIRCLE BACK");
+    draw_text(56, 474, 12, 0x6d8794ff, "UP/DOWN SELECT  L2 ANY BATTLE  CROSS JOIN  TRIANGLE CREATE  L1 PRIVACY  R1 CODE  SQUARE REFRESH");
     tiny3d_Flip();
 }
 
@@ -143,26 +143,29 @@ static void draw_room(const CBOnlineRoomView *view, const CBOnlineSession *sessi
     tiny3d_Project2D();
     draw_rect(24, 22, 800, 468, 0x101e2aff);
     draw_rect(24, 22, 800, 5, 0x46d6b2ff);
-    draw_text(56, 44, 26, 0xf5fbffff, "ROOM LOBBY");
-    draw_text(56, 86, 16, 0x61d9baff, view->is_private ? "PRIVATE INVITE CODE" : "PUBLIC ROOM CODE");
-    draw_text(300, 78, 30, 0xf5fbffff, session->code);
+    draw_text(56, 44, 26, 0xf5fbffff, "BATTLE ROOM");
+    draw_text(56, 86, 16, 0x61d9baff, view->is_private ? "PRIVATE BATTLE CODE" : "PUBLIC BATTLE CODE");
+    draw_text(330, 78, 30, 0xf5fbffff, session->code);
     for (i = 0; i < CB_ONLINE_PLAYER_MAX; i++) {
         char slot[80];
-        int y = 154 + i * 92;
-        draw_rect(58, y, 720, 72, 0x172a36ff);
+        int col = i % 2;
+        int row = i / 2;
+        int x = 58 + col * 365;
+        int y = 140 + row * 88;
+        draw_rect((float)x, (float)y, 350, 72, 0x172a36ff);
         if (i < view->player_count) {
-            snprintf(slot, sizeof(slot), "PLAYER %d   %s", i + 1, view->players[i].name);
-            draw_text(82, y + 12, 18, 0xf0f6f8ff, slot);
-            draw_text(82, y + 42, 14, view->players[i].ready ? 0x7ce0a8ff : 0xffc18aff, view->players[i].ready ? "READY" : "NOT READY");
+            snprintf(slot, sizeof(slot), "PLAYER %d   %.20s", i + 1, view->players[i].name);
+            draw_text((float)x + 18, (float)y + 10, 16, 0xf0f6f8ff, slot);
+            draw_text((float)x + 18, (float)y + 40, 14, view->players[i].ready ? 0x7ce0a8ff : 0xffc18aff, view->players[i].ready ? "READY" : "NOT READY");
         } else {
-            snprintf(slot, sizeof(slot), "PLAYER %d   WAITING FOR A FRIEND", i + 1);
-            draw_text(82, y + 22, 17, 0x9bb4c2ff, slot);
+            snprintf(slot, sizeof(slot), "PLAYER %d   OPEN SEAT", i + 1);
+            draw_text((float)x + 18, (float)y + 23, 16, 0x9bb4c2ff, slot);
         }
     }
-    if (view->is_ready) draw_text(58, 360, 17, 0x7ce0a8ff, "BOTH PLAYERS READY - LOBBY CHECK PASSED");
-    else draw_text(58, 360, 16, 0x9bb4c2ff, "Waiting for both players to mark READY.");
-    draw_rect(58, 408, 720, 38, 0x0b1720ff);
-    draw_text(72, 416, 14, 0x9bb4c2ff, status);
+    if (view->is_ready) draw_text(58, 338, 16, 0x7ce0a8ff, "ALL FOUR PLAYERS READY");
+    else draw_text(58, 338, 15, 0x9bb4c2ff, "Waiting for players to join and mark READY.");
+    draw_rect(58, 390, 720, 38, 0x0b1720ff);
+    draw_text(72, 398, 14, 0x9bb4c2ff, status);
     draw_text(56, 474, 12, 0x6d8794ff, "CROSS TOGGLE READY  SQUARE REFRESH  CIRCLE LEAVE ROOM");
     tiny3d_Flip();
 }
@@ -185,7 +188,7 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
     unsigned int poll_frames = 0;
     u16 old_up = 0, old_down = 0, old_left = 0, old_right = 0;
     u16 old_cross = 0, old_circle = 0, old_triangle = 0, old_square = 0;
-    u16 old_l1 = 0, old_r1 = 0;
+    u16 old_l1 = 0, old_l2 = 0, old_r1 = 0;
 
     memset(&session, 0, sizeof(session));
     memset(&view, 0, sizeof(view));
@@ -233,7 +236,7 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
         padData data;
         u16 up = 0, down = 0, left = 0, right = 0;
         u16 cross = 0, circle = 0, triangle = 0, square = 0;
-        u16 l1 = 0, r1 = 0;
+        u16 l1 = 0, l2 = 0, r1 = 0;
         sysUtilCheckCallback();
 
         if (ioPadGetInfo(&info) == 0) {
@@ -245,7 +248,7 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                     left = data.BTN_LEFT; right = data.BTN_RIGHT;
                     cross = data.BTN_CROSS; circle = data.BTN_CIRCLE;
                     triangle = data.BTN_TRIANGLE; square = data.BTN_SQUARE;
-                    l1 = data.BTN_L1; r1 = data.BTN_R1;
+                    l1 = data.BTN_L1; l2 = data.BTN_L2; r1 = data.BTN_R1;
                     break;
                 }
             }
@@ -259,6 +262,12 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                 snprintf(status, status_size, "New room privacy: %s.", private_create ? "private" : "public");
             }
             if (r1 && !old_r1) { screen = SCREEN_JOIN_CODE; code_cursor = 0; }
+            if (l2 && !old_l2) {
+                if (cb_online_join_any_room(guest_name, &session, &view, error, sizeof(error)) == 0) {
+                    ready = 0; screen = SCREEN_ROOM; poll_frames = 0;
+                    snprintf(status, status_size, "Joined public battle %.6s.", session.code);
+                } else snprintf(status, status_size, "Any battle: %.120s", error);
+            }
             if (cross && !old_cross && room_count > 0) {
                 if (cb_online_join_room(rooms[selected].code, guest_name, &session, &view, error, sizeof(error)) == 0) {
                     ready = 0; screen = SCREEN_ROOM; poll_frames = 0;
@@ -328,7 +337,7 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
 
         old_up = up; old_down = down; old_left = left; old_right = right;
         old_cross = cross; old_circle = circle; old_triangle = triangle; old_square = square;
-        old_l1 = l1; old_r1 = r1;
+        old_l1 = l1; old_l2 = l2; old_r1 = r1;
     }
 
     if (session.token[0]) cb_online_leave_room(&session, error, sizeof(error));
