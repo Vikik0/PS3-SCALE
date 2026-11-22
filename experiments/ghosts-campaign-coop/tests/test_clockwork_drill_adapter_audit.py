@@ -166,7 +166,7 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
 
     def test_vault_blast_must_target_secondary_local_player(self):
         source = passing_source().replace(
-            '            thread clockwork_apply_vault_blast( level.playengineeffects, var_3 );\\n',
+            'clockwork_apply_vault_blast( level.playengineeffects, var_3 );',
             '',
         )
         report = audit(self.write_source(source))
@@ -174,9 +174,8 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
 
     def test_vault_blast_helper_must_not_fall_back_to_level_player(self):
         source = passing_source().replace(
-            '    var_0 = player.health - 5;\\n',
-            '    level.player dodamage( 10, blast_origin.origin );\\n'
-            '    var_0 = player.health - 5;\\n',
+            'var_0 = player.health - 5;',
+            'level.player dodamage( 10, blast_origin.origin ); var_0 = player.health - 5;',
         )
         report = audit(self.write_source(source))
         self.assertFalse(report["checks"]["vault_blast_helper_uses_explicit_player"])
