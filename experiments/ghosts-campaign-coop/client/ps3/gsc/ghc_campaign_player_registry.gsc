@@ -8,8 +8,18 @@
 
 main()
 {
-    if ( !isdefined( level.playerpiggyback ) )
-        level waittill( "level.players initialized" );
+    /*
+     * Do not wait on an undocumented level notification. The shared
+     * Campaign loader owns level.playerpiggyback; poll it for a bounded
+     * interval, then return an explicit missing-array status.
+     */
+    for ( var_0 = 0; var_0 < 200; var_0++ )
+    {
+        if ( isdefined( level.playerpiggyback ) )
+            break;
+
+        wait 0.05;
+    }
 
     return ghc_campaign_player_registry_init();
 }
