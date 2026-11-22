@@ -40,6 +40,18 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertIn("var_0 < 200", self.source)
         self.assertIn("wait 0.05", self.source)
 
+    def test_startup_retries_identity_binding_until_native_flags_are_ready(self):
+        body = function_body(self.source, "main")
+        self.assertIn("var_0 < 200", body)
+        self.assertIn("if ( ghc_campaign_bind_native_local_pair() )", body)
+        self.assertIn("return 1", body)
+        self.assertLess(
+            body.index("if ( ghc_campaign_bind_native_local_pair() )"),
+            body.index("wait 0.05"),
+        )
+        self.assertIn("level.playerpiggyback = undefined", body)
+        self.assertIn("return ghc_campaign_bind_native_local_pair()", body)
+
     def test_campaign_aliases_are_bound_only_after_exact_native_pair_validation(self):
         body = function_body(self.source, "ghc_campaign_bind_native_local_pair")
         self.assertIn("if ( var_0 != 2 )", body)
