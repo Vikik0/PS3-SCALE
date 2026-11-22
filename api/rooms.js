@@ -147,6 +147,9 @@ module.exports = async function handler(req, res) {
       }
       const record = await readRoom(code);
       if (!record) return reply(res, 404, { error: "Room not found." });
+      if (!Number.isFinite(record.room.updatedAt) || Date.now() - record.room.updatedAt > ROOM_TTL_MS) {
+        return reply(res, 410, { error: "This battle room has expired. Create a new room." });
+      }
       const active = activePlayers(record.room);
       const player = active.find((entry) => entry.id === claims.sub);
       if (!player) {
@@ -241,6 +244,9 @@ module.exports = async function handler(req, res) {
       const playerId = crypto.randomUUID();
       const outcome = await mutateRoom(code, (room) => {
         const now = Date.now();
+        if (!Number.isFinite(room.updatedAt) || now - room.updatedAt > ROOM_TTL_MS) {
+          return { write: false, status: 410, body: { error: "This battle room has expired. Create a new room." } };
+        }
         room.players = activePlayers(room, now);
         if (room.status === "ready" && room.players.length < MAX_PLAYERS) room.status = "waiting";
         if (room.status !== "waiting" || room.players.length >= MAX_PLAYERS) {
@@ -266,6 +272,10 @@ module.exports = async function handler(req, res) {
     const code = claims.room;
     const record = await readRoom(code);
     if (!record) return reply(res, 404, { error: "Room not found." });
+    if (action !== "leave" &&
+        (!Number.isFinite(record.room.updatedAt) || Date.now() - record.room.updatedAt > ROOM_TTL_MS)) {
+      return reply(res, 410, { error: "This battle room has expired. Create a new room." });
+    }
     const player = findPlayer(record.room, claims.sub);
     if (!player) return reply(res, 403, { error: "You are not a member of this room." });
 
