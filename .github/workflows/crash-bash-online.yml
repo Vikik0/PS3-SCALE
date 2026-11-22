@@ -1,0 +1,82 @@
+name: Crash Bash Online — 4P foundation build
+
+on:
+  push:
+    branches: [crash-bash-online-dev]
+    paths:
+      - "crash-bash-online/**"
+      - ".github/workflows/crash-bash-online.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ps3-package:
+    name: Build custom PS3 PKG
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    container:
+      image: ghcr.io/02900/ps3-toolchain-tiny3d:latest
+    steps:
+      - name: Check out project workspace
+        uses: actions/checkout@v4
+
+      - name: Install legacy Cg shader compiler
+        run: |
+          set -eu
+          if ! command -v cgc >/dev/null 2>&1; then
+            apt-get update
+            apt-get install -y nvidia-cg-toolkit
+          fi
+          command -v cgc
+          command -v cgcomp
+
+      - name: Verify PS3 toolchain
+        run: |
+          set -eu
+          echo "PS3DEV=$PS3DEV"
+          echo "PSL1GHT=$PSL1GHT"
+          export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH"
+          for tool in ppu-gcc spu-gcc spu-strip make_self_npdrm sprxlinker sfo pkg; do
+            command -v "$tool"
+          done
+          test -f "$PSL1GHT/ppu/include/rsx/rsx_function_macros.h"
+          grep -q '"memory"' "$PSL1GHT/ppu/include/rsx/rsx_function_macros.h"
+
+      - name: Fetch pinned PSXonPS3 source
+        run: |
+          set -eu
+          git clone --depth 1 --branch ps3 https://github.com/Calyps0man/pcsx_rearmed_for_ps3.git /tmp/pcsx
+          git -C /tmp/pcsx fetch --depth 1 origin cce9fc67f46a495d4746aa49cff8e3367a9a315e
+          git -C /tmp/pcsx checkout cce9fc67f46a495d4746aa49cff8e3367a9a315e
+
+      - name: Apply and verify four-player foundation
+        run: |
+          set -eu
+          python3 crash-bash-online/patches/apply_four_player_foundation.py /tmp/pcsx
+          grep -q '#define PORTS 4' /tmp/pcsx/ps3/src/input.c
+          grep -q 'pcsx_rearmed_multitap.*port 1' /tmp/pcsx/ps3/src/main.c
+          grep -q 'APP_ID.*CRSHBASH1' /tmp/pcsx/ps3/src/common.h
+
+      - name: Build Crash Bash Online foundation PKG
+        run: |
+          set -eu
+          export PATH="$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin:$PATH"
+          export JOBS=2
+          cd /tmp/pcsx/ps3
+          chmod +x build.sh
+          ./build.sh crash-bash-online
+          test -s build/crash-bash-online.pkg
+          MAGIC="$(od -An -tx1 -N4 build/crash-bash-online.pkg | tr -d ' \n')"
+          test "$MAGIC" = "7f504b47"
+          sha256sum build/crash-bash-online.pkg
+
+      - name: Upload PKG and build log
+        uses: actions/upload-artifact@v4
+        with:
+          name: Crash-Bash-Online-4P-Foundation
+          if-no-files-found: error
+          path: |
+            /tmp/pcsx/ps3/build/crash-bash-online.pkg
+            /tmp/pcsx/ps3/build/core.log
