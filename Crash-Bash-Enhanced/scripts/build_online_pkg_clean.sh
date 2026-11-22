@@ -206,10 +206,10 @@ test -s "$RA/build/retroarch_psl1ght.elf"
 make_self_npdrm "$RA/build/retroarch_psl1ght.elf" "$USRDIR/EBOOT.BIN" "$CONTENT_ID"
 test -s "$USRDIR/EBOOT.BIN"
 
-# Fail the build if the libretro entry points are not linked into the EBOOT.
+# Verify static-core symbols in the unstripped ELF before ppu-strip removes its symbol table.
 NM="$(command -v ppu-nm || command -v nm)"
-"$NM" -g "$RA/build/retroarch_psl1ght.elf" | grep -E '[[:space:]][Tt][[:space:]]+retro_run' >/dev/null
-"$NM" -g "$RA/build/retroarch_psl1ght.elf" | grep -E '[[:space:]][Tt][[:space:]]+retro_get_system_info' >/dev/null
+"$NM" -g "$RA/retroarch_psl1ght.elf" | grep -E '[[:space:]][Tt][[:space:]]+retro_run' >/dev/null
+"$NM" -g "$RA/retroarch_psl1ght.elf" | grep -E '[[:space:]][Tt][[:space:]]+retro_get_system_info' >/dev/null
 
 echo "== Install pinned core metadata, menu assets and licenses"
 wget -qO "$USRDIR/info/pcsx_rearmed_libretro.info" \
