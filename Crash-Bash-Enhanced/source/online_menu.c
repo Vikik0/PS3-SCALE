@@ -257,8 +257,8 @@ static void draw_disc_select(const CBGameDisc *discs, int count, int selected,
             u32 foreground = i == selected ? 0xffffffff : 0xc2d0d8ff;
             snprintf(line, sizeof(line), "%c  %.52s",
                      i == selected ? '>' : ' ', discs[i].name);
-            draw_rect(58, 122 + i * 25, 720, 22, background);
-            draw_text(76, 124 + i * 25, 14, foreground, line);
+            draw_rect(58, 118 + i * 23, 720, 22, background);
+            draw_text(76, 120 + i * 23, 14, foreground, line);
         }
         if (selected >= 0 && selected < count) {
             draw_text(58, 430, 11, 0x9bb4c2ff, discs[selected].path);
