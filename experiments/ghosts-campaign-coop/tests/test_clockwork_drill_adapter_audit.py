@@ -5,6 +5,97 @@ from pathlib import Path
 from tools.clockwork_drill_adapter_audit import audit, main
 
 
+def passing_source():
+    return r'''
+handle_drill_spot( var_0, var_1, var_2, var_3 )
+{
+    drill_player = common_scripts\utility::flag_wait( var_1 );
+    if ( !isdefined( drill_player ) )
+        drill_player = level.player;
+    if ( drill_player != level.player )
+        drill_player = level.player;
+    level.ghc_clockwork_drill_activator = drill_player;
+    thread watch_for_drill_trigger( var_1 );
+    thread handle_drilling( var_2, var_1, drill_player );
+    if ( !isalive( drill_player ) )
+    {
+        common_scripts\utility::flag_clear( var_1 );
+        thread watch_for_drill_trigger( var_1 );
+        maps\_utility::enable_trigger_with_targetname( var_0 );
+    }
+    drill_player.ghc_clockwork_frag_ammo = 1;
+    drill_player.ghc_clockwork_flash_ammo = 1;
+    drill_player unlink();
+}
+handle_drilling( var_0, var_1, player )
+{
+    if ( player adsbuttonpressed( "ads" ) )
+        player attackbuttonpressed();
+}
+handle_misc_drill_details( player )
+{
+    thread watch_for_air_drop_death( player );
+    player.ghc_aiming_at_ally = 0;
+}
+watch_for_air_drop_death( player )
+{
+    player.ghc_aiming_at_ally = 1;
+}
+restore_footstep_notetrack_scripts( player )
+{
+    player.ghc_clockwork_frag_ammo;
+    player.ghc_clockwork_flash_ammo;
+}
+drillthrough_plate_sound( var_0, var_1, player )
+{
+    player attackbuttonpressed();
+}
+stop_current_car_watcher( player, var_0, var_1 )
+{
+    player playsound( "drill" );
+}
+watch_for_drill_trigger( var_0 )
+{
+    var_1 = common_scripts\utility::flag_wait( var_0 );
+    if ( isdefined( var_1 ) && isplayer( var_1 ) )
+        level.ghc_clockwork_drill_activator = var_1;
+}
+clockwork_setup_player_two( player )
+{
+    if ( !player issplitscreenplayer() || player issplitscreenplayerprimary() )
+        return;
+    player takeallweapons();
+    player giveweapon( "gm6+scopegm6_sp+silencer03_sp" );
+    player giveweapon( "cz805bren+reflex_sp+silencer_sp" );
+    player giveweapon( "fraggrenade" );
+    player giveweapon( "flash_grenade" );
+}
+handle_drill_ammo_counter()
+{
+    level.player getcurrentweapon();
+    level.playengineeffects getcurrentweapon();
+    setsaveddvar( "ammoCounterHide", "1" );
+}
+clockwork_watch_player_pair()
+{
+    level.playengineeffects;
+    clockwork_setup_player_two( level.playengineeffects );
+    thread handle_misc_drill_details( level.playengineeffects );
+}
+switchmsg()
+{
+    level.player giveweapon( "drill_press" );
+    level.ghc_clockwork_drill_available = 1;
+    level.playengineeffects giveweapon( "drill_press" );
+}
+new_trench_setup()
+{
+    level.ghc_clockwork_drill_available = 0;
+    level.playengineeffects takeweapon( "drill_press" );
+}
+'''
+
+
 class ClockworkDrillAdapterAuditTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -15,296 +106,114 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
         self.temp.cleanup()
 
     def write_source(self, content):
-        if "handle_misc_drill_details(" not in content:
-            content += (
-                "\nhandle_misc_drill_details()\n"
-                "{\n"
-                "}\n"
-            )
         self.source.write_text(content, encoding="utf-8")
         return self.source
 
-    def test_original_single_player_drill_is_blocked_and_reports_dependencies(self):
-        report = audit(self.write_source(
-            'handle_drill_spot()\n'
-            '{\n'
-            '    if ( level.player usebuttonpressed( "use" ) )\n'
-            '    {\n'
-            '        level.player setactionslot( 1, "weapon" );\n'
-            '        thread handle_drilling();\n'
-            '    }\n'
-            '}\n'
-            'handle_drilling()\n'
-            '{\n'
-            '    if ( level.player adsbuttonpressed( "ads" ) )\n'
-            '        level.player takeweapon( "drill" );\n'
-            '}\n'
-        ))
-
-        self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
-        self.assertEqual(report["call_graph"]["handle_drill_spot"], [
-            "handle_drill_spot", "handle_drilling"
-        ])
-        self.assertEqual(
-            report["unscoped_level_player_functions"],
-            ["handle_drill_spot", "handle_drilling"],
-        )
-        entry = report["target_functions"]["handle_drill_spot"][0]
-        self.assertEqual(entry["level_player_refs"], 2)
-        self.assertIn("input", entry["player_method_categories"])
-        self.assertIn("hud_interaction", entry["player_method_categories"])
-
-    def test_player_scoped_adapter_passes_static_source_gate(self):
-        report = audit(self.write_source(
-            'handle_drill_spot( player, spot )\n'
-            '{\n'
-            '    if ( !ghc_campaign_drill_begin( player, spot ) )\n'
-            '        return;\n'
-            '    thread handle_drilling( player, spot );\n'
-            '}\n'
-            'handle_drilling( player, spot )\n'
-            '{\n'
-            '    if ( player adsbuttonpressed( "ads" ) )\n'
-            '        ghc_campaign_drill_complete( player, spot );\n'
-            '    else\n'
-            '        ghc_campaign_drill_cancel( player, spot );\n'
-            '}\n'
-            'cleanup_drill( player )\n'
-            '{\n'
-            '    ghc_campaign_drill_abort_player( player );\n'
-            '}\n'
-        ))
-
+    def test_complete_player_routing_source_passes_static_gate(self):
+        report = audit(self.write_source(passing_source()))
         self.assertEqual(report["status"], "SOURCE_ADAPTER_READY_FOR_MANUAL_REVIEW")
         self.assertTrue(all(report["checks"].values()))
-        self.assertEqual(
-            report["target_functions"]["handle_drill_spot"][0]["parameters"],
-            ["player", "spot"],
-        )
         self.assertEqual(report["unscoped_level_player_functions"], [])
+        self.assertIn("clockwork_watch_player_pair", report["coordination_functions"])
 
-    def test_transitive_helper_with_global_player_reference_blocks_adapter(self):
-        report = audit(self.write_source(
-            'handle_drill_spot( player, spot )\n'
-            '{\n'
-            '    if ( !ghc_campaign_drill_begin( player, spot ) ) return;\n'
-            '    thread handle_drilling( player, spot );\n'
-            '}\n'
-            'handle_drilling( player, spot )\n'
-            '{\n'
-            '    thread update_drill( player, spot );\n'
-            '}\n'
-            'update_drill( player, spot )\n'
-            '{\n'
-            '    level.player setactionslot( 1, "drill" );\n'
-            '    ghc_campaign_drill_complete( player, spot );\n'
-            '    ghc_campaign_drill_cancel( player, spot );\n'
-            '}\n'
-        ))
-
+    def test_original_single_player_method_reference_blocks_player_scoping(self):
+        source = passing_source().replace(
+            '    level.ghc_clockwork_drill_activator = drill_player;\n',
+            '    level.player getcurrentweapon();\n'
+            '    level.ghc_clockwork_drill_activator = drill_player;\n',
+        )
+        report = audit(self.write_source(source))
         self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
-        self.assertEqual(report["unscoped_level_player_functions"], ["update_drill"])
-        self.assertIn("update_drill", report["call_graph"]["handle_drill_spot"])
+        self.assertIn("handle_drill_spot", report["unscoped_level_player_functions"])
 
-    def test_comments_and_string_literals_do_not_fake_adapter_markers(self):
-        report = audit(self.write_source(
-            'handle_drill_spot( player, spot )\n'
-            '{\n'
-            '    // ghc_campaign_drill_begin( player, spot );\n'
-            '    iprintln( "ghc_campaign_drill_begin( player, spot )" );\n'
-            '    thread handle_drilling( player, spot );\n'
-            '}\n'
-            'handle_drilling( player, spot )\n'
-            '{\n'
-            '    ghc_campaign_drill_complete( player, spot );\n'
-            '    ghc_campaign_drill_cancel( player, spot );\n'
-            '}\n'
-        ))
-
+    def test_comments_and_string_literals_do_not_fake_trigger_activator_capture(self):
+        source = passing_source().replace(
+            '    var_1 = common_scripts\\utility::flag_wait( var_0 );\n',
+            '    // flag_wait( var_0 );\n'
+            '    iprintln( "flag_wait( var_0 )" );\n',
+        )
+        report = audit(self.write_source(source))
         self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
-        self.assertFalse(report["checks"]["begin_called_from_handle_drill_spot"])
-        self.assertEqual(report["adapter_marker_locations"]["begin"], [])
+        self.assertFalse(report["checks"]["trigger_activator_capture_present"])
 
-    def test_missing_target_function_is_reported_as_incomplete_source(self):
-        report = audit(self.write_source(
-            'handle_drill_spot()\n'
-            '{\n'
-            '    level.player usebuttonpressed( "use" );\n'
-            '}\n'
-        ))
-
+    def test_missing_core_function_is_reported_as_incomplete_source(self):
+        source = passing_source()
+        start = source.index("handle_drilling(")
+        end = source.index("\nhandle_misc_drill_details(", start)
+        source = source[:start] + source[end + 1:]
+        report = audit(self.write_source(source))
         self.assertEqual(report["status"], "SOURCE_INCOMPLETE")
-        self.assertEqual(report["checks"]["all_core_drill_functions_found"], False)
+        self.assertFalse(report["checks"]["all_required_functions_found"])
         self.assertEqual(report["target_functions"]["handle_drilling"], [])
 
-    def test_missing_abort_cleanup_keeps_adapter_blocked(self):
-        report = audit(self.write_source(
-            'handle_drill_spot( player, spot )\n'
-            '{\n'
-            '    if ( !ghc_campaign_drill_begin( player, spot ) ) return;\n'
-            '    thread handle_drilling( player, spot );\n'
-            '}\n'
-            'handle_drilling( player, spot )\n'
-            '{\n'
-            '    ghc_campaign_drill_complete( player, spot );\n'
-            '    ghc_campaign_drill_cancel( player, spot );\n'
-            '}\n'
-        ))
-
+    def test_missing_death_disconnect_recovery_blocks_adapter(self):
+        source = passing_source().replace(
+            '        common_scripts\\utility::flag_clear( var_1 );\n'
+            '        thread watch_for_drill_trigger( var_1 );\n'
+            '        maps\\_utility::enable_trigger_with_targetname( var_0 );\n',
+            '',
+        )
+        report = audit(self.write_source(source))
         self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
-        self.assertFalse(report["checks"]["abort_player_helper_referenced_in_source"])
+        self.assertFalse(report["checks"]["death_disconnect_reopens_drill_trigger"])
+
+    def test_primary_alias_fallback_and_identity_checks_are_allowed(self):
+        report = audit(self.write_source(passing_source()))
+        row = report["target_functions"]["handle_drill_spot"][0]
+        self.assertEqual(row["allowed_primary_alias_refs"], row["level_player_refs"])
+        self.assertEqual(row["unsafe_level_player_refs"], 0)
+
+    def test_logan_only_switchmsg_is_reported_but_not_treated_as_p2_scope_leak(self):
+        report = audit(self.write_source(passing_source()))
+        self.assertIn("switchmsg", report["primary_only_function_details"])
+        self.assertGreater(
+            report["primary_only_function_details"]["switchmsg"][0]["level_player_refs"],
+            0,
+        )
+        self.assertNotIn("switchmsg", report["unscoped_level_player_functions"])
+
+    def test_related_support_functions_are_player_scoped(self):
+        source = passing_source().replace(
+            '    player attackbuttonpressed();\n}\nstop_current_car_watcher',
+            '    level.player attackbuttonpressed();\n}\nstop_current_car_watcher',
+        )
+        report = audit(self.write_source(source))
+        self.assertIn("drillthrough_plate_sound", report["related_function_details"])
+        self.assertIn("drillthrough_plate_sound", report["unscoped_level_player_functions"])
 
     def test_json_output_cannot_overwrite_input_gsc(self):
-        source = self.write_source(
-            'handle_drill_spot()\n{\n level.player usebuttonpressed( "use" );\n}\n'
-            'handle_drilling()\n{\n}\n'
-        )
+        source = self.write_source(passing_source())
         original = source.read_text(encoding="utf-8")
         result = main([str(source), "--json-out", str(source)])
         self.assertEqual(result, 1)
         self.assertEqual(source.read_text(encoding="utf-8"), original)
 
-    def test_primary_alias_fallback_and_identity_checks_are_allowed(self):
-        report = audit(self.write_source(
-            'handle_drill_spot( player, spot )\n'
-            '{\n'
-            '    if ( !isdefined( player ) ) player = level.player;\n'
-            '    if ( player != level.player )\n'
-            '        player = level.player;\n'
-            '    ghc_campaign_drill_begin( player, spot );\n'
-            '    thread handle_drilling( player, spot );\n'
-            '}\n'
-            'handle_drilling( player, spot )\n'
-            '{\n'
-            '    ghc_campaign_drill_complete( player, spot );\n'
-            '    ghc_campaign_drill_cancel( player, spot );\n'
-            '}\n'
-            'cleanup_drill( player )\n'
-            '{\n'
-            '    ghc_campaign_drill_abort_player( player );\n'
-            '}\n'
-        ))
-
-        self.assertEqual(report["status"], "SOURCE_ADAPTER_READY_FOR_MANUAL_REVIEW")
-        self.assertEqual(report["unscoped_level_player_functions"], [])
-        row = report["target_functions"]["handle_drill_spot"][0]
-        self.assertEqual(row["allowed_primary_alias_refs"], row["level_player_refs"])
-        self.assertEqual(row["unsafe_level_player_refs"], 0)
-
-    def test_primary_player_method_access_still_blocks_drill_adapter(self):
-        report = audit(self.write_source(
-            'handle_drill_spot( player, spot )\n'
-            '{\n'
-            '    if ( !isdefined( player ) ) player = level.player;\n'
-            '    if ( player != level.player ) player = level.player;\n'
-            '    level.player getcurrentweapon();\n'
-            '    ghc_campaign_drill_begin( player, spot );\n'
-            '    thread handle_drilling( player, spot );\n'
-            '}\n'
-            'handle_drilling( player, spot )\n'
-            '{\n'
-            '    ghc_campaign_drill_complete( player, spot );\n'
-            '    ghc_campaign_drill_cancel( player, spot );\n'
-            '}\n'
-            'cleanup_drill( player )\n'
-            '{\n'
-            '    ghc_campaign_drill_abort_player( player );\n'
-            '}\n'
-        ))
-
-        self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
-        row = report["target_functions"]["handle_drill_spot"][0]
-        self.assertGreater(row["unsafe_level_player_refs"], 0)
-        self.assertIn("handle_drill_spot", report["unscoped_level_player_functions"])
-
-    def test_logan_only_switchmsg_is_reported_but_not_treated_as_p2_scope_leak(self):
-        report = audit(self.write_source(
-            'handle_drill_spot( player, spot )\n'
-            '{\n'
-            '    ghc_campaign_drill_begin( player, spot );\n'
-            '}\n'
-            'handle_drilling( player, spot )\n'
-            '{\n'
-            '    ghc_campaign_drill_complete( player, spot );\n'
-            '    ghc_campaign_drill_cancel( player, spot );\n'
-            '}\n'
-            'cleanup_drill( player )\n'
-            '{\n'
-            '    ghc_campaign_drill_abort_player( player );\n'
-            '}\n'
-            'switchmsg()\n'
-            '{\n'
-            '    level.player giveweapon( "drill_press" );\n'
-            '}\n'
-        ))
-
-        self.assertEqual(report["status"], "SOURCE_ADAPTER_READY_FOR_MANUAL_REVIEW")
-        self.assertIn("switchmsg", report["primary_only_function_details"])
-        self.assertGreater(report["primary_only_level_player_refs"], 0)
-        self.assertNotIn("switchmsg", report["unscoped_level_player_functions"])
-
-    def test_related_drill_support_functions_are_audited_as_independent_roots(self):
-        report = audit(self.write_source(
-            'handle_drill_spot( player, spot )\n'
-            '{\n'
-            '    ghc_campaign_drill_begin( player, spot );\n'
-            '    thread handle_drilling( player, spot );\n'
-            '}\n'
-            'handle_drilling( player, spot )\n'
-            '{\n'
-            '    ghc_campaign_drill_complete( player, spot );\n'
-            '    ghc_campaign_drill_cancel( player, spot );\n'
-            '}\n'
-            'drillthrough_plate_sound()\n'
-            '{\n'
-            '    level.player maps\\\\::play_sound( "drill" );\n'
-            '}\n'
-        ))
-
-        self.assertIn("drillthrough_plate_sound", report["related_function_details"])
-        self.assertIn("drillthrough_plate_sound", report["call_graph"])
-        self.assertIn("drillthrough_plate_sound", report["unscoped_level_player_functions"])
-        self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
-
-    def test_strict_mode_rejects_a_source_that_does_not_match_the_clockwork_reference(self):
-        report = audit(self.write_source(
-            'handle_drill_spot( player, spot )\n'
-            '{\n'
-            '    ghc_campaign_drill_begin( player, spot );\n'
-            '}\n'
-            'handle_drilling( player, spot )\n'
-            '{\n'
-            '    ghc_campaign_drill_complete( player, spot );\n'
-            '    ghc_campaign_drill_cancel( player, spot );\n'
-            '}\n'
-            'cleanup_drill( player )\n'
-            '{\n'
-            '    ghc_campaign_drill_abort_player( player );\n'
-            '}\n'
-        ), reference_source=self.source, require_reference_baseline=True)
-
+    def test_strict_mode_rejects_a_reference_source_with_the_wrong_hash(self):
+        source = self.write_source(passing_source())
+        report = audit(
+            source,
+            reference_source=source,
+            require_reference_baseline=True,
+        )
         self.assertEqual(report["status"], "SOURCE_BASELINE_MISMATCH")
-        self.assertFalse(report["reference_baseline"]["matches"])
-        self.assertIn("handle_drill_spot", report["reference_baseline"]["mismatches"])
+        self.assertFalse(report["reference_baseline"]["source_hash_matches"])
 
     def test_strict_mode_requires_an_original_reference_source(self):
-        report = audit(self.write_source(
-            'handle_drill_spot()\n{\n}\n'
-            'handle_drilling()\n{\n}\n'
-        ), require_reference_baseline=True)
+        report = audit(
+            self.write_source(passing_source()),
+            require_reference_baseline=True,
+        )
         self.assertEqual(report["status"], "SOURCE_REFERENCE_MISSING")
         self.assertFalse(report["reference_baseline"]["provided"])
 
     def test_missing_misc_drill_details_is_reported_as_incomplete_source(self):
-        self.source.write_text(
-            'handle_drill_spot()\n{\n}\n'
-            'handle_drilling()\n{\n}\n',
-            encoding="utf-8",
-        )
-        report = audit(self.source)
+        source = passing_source()
+        start = source.index("handle_misc_drill_details(")
+        end = source.index("\nwatch_for_air_drop_death(", start)
+        source = source[:start] + source[end + 1:]
+        report = audit(self.write_source(source))
         self.assertEqual(report["status"], "SOURCE_INCOMPLETE")
         self.assertIn("handle_misc_drill_details", report["required_core_functions"])
-        self.assertEqual(report["target_functions"]["handle_misc_drill_details"], [])
 
     def test_non_gsc_input_is_rejected(self):
         other = self.root / "source.txt"
