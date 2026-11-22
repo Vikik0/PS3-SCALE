@@ -136,6 +136,84 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
         self.assertNotEqual(existing.read_text(encoding="utf-8"), "old")
         self.assertEqual(unrelated.read_text(encoding="utf-8"), "keep")
 
+    def test_second_mode_verification_failure_leaves_no_partial_outputs(self):
+        calls = []
+
+        def fail_second(self_file, dump_dir, map_file, output_elf, mode, *, overwrite=False):
+            calls.append(mode)
+            if mode == "campaign":
+                Path(output_elf).write_bytes(b"staged-campaign-elf")
+                return {"status": "PASS_METADATA", "mode": mode}
+            raise ValueError("multiplayer dump is invalid")
+
+        with patch.object(analyzer, "verify_dump", side_effect=fail_second):
+            with self.assertRaisesRegex(ValueError, "multiplayer dump is invalid"):
+                analyzer.analyze(
+                    self.campaign_self,
+                    self.campaign_dumps,
+                    self.multiplayer_self,
+                    self.multiplayer_dumps,
+                    self.output_dir,
+                    map_file=self.map_file,
+                )
+
+        self.assertEqual(calls, ["campaign", "multiplayer"])
+        self.assertFalse(any((self.output_dir / name).exists() for name in analyzer.OUTPUT_NAMES))
+        self.assertEqual(list(self.output_dir.glob(".ghosts-capture-stage-*")), [])
+
+    def test_failed_overwrite_preserves_previous_outputs_and_unrelated_files(self):
+        self.output_dir.mkdir()
+        previous = {
+            "campaign_tu116_runtime.elf": b"old-campaign",
+            "capture_summary.json": b"old-summary",
+        }
+        for name, content in previous.items():
+            (self.output_dir / name).write_bytes(content)
+        unrelated = self.output_dir / "operator-notes.txt"
+        unrelated.write_text("keep", encoding="utf-8")
+
+        def fail_second(self_file, dump_dir, map_file, output_elf, mode, *, overwrite=False):
+            if mode == "campaign":
+                Path(output_elf).write_bytes(b"new-staged-campaign")
+                return {"status": "PASS_METADATA", "mode": mode}
+            raise ValueError("late verification failure")
+
+        with patch.object(analyzer, "verify_dump", side_effect=fail_second):
+            with self.assertRaisesRegex(ValueError, "late verification failure"):
+                analyzer.analyze(
+                    self.campaign_self,
+                    self.campaign_dumps,
+                    self.multiplayer_self,
+                    self.multiplayer_dumps,
+                    self.output_dir,
+                    map_file=self.map_file,
+                    overwrite=True,
+                )
+
+        for name, content in previous.items():
+            self.assertEqual((self.output_dir / name).read_bytes(), content)
+        self.assertEqual(unrelated.read_text(encoding="utf-8"), "keep")
+        self.assertEqual(list(self.output_dir.glob(".ghosts-capture-stage-*")), [])
+        self.assertEqual(list(self.output_dir.glob(".ghosts-capture-backup-*")), [])
+
+    def test_reports_use_final_paths_not_temporary_stage_paths(self):
+        self.run_analyzer()
+        summary = __import__("json").loads(
+            (self.output_dir / "capture_summary.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            summary["outputs"]["campaign_tu116_runtime.elf"],
+            str(self.output_dir / "campaign_tu116_runtime.elf"),
+        )
+        self.assertNotIn(".ghosts-capture-stage-", str(summary))
+        verification = __import__("json").loads(
+            (self.output_dir / "campaign_dump_verification.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            verification["reconstructed_elf"]["output_elf"],
+            str(self.output_dir / "campaign_tu116_runtime.elf"),
+        )
+
     def test_invalid_capture_inputs_fail_before_analysis(self):
         with patch.object(analyzer, "verify_dump") as verify:
             with self.assertRaises(FileNotFoundError):
