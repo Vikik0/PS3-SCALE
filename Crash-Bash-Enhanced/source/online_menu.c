@@ -266,9 +266,11 @@ static void draw_disc_select(const CBGameDisc *discs, int count, int selected,
     }
 
     if (is_host) {
-        draw_text(58, 398, 13, 0x7ce0a8ff, "HOST: RetroArch will start the game and create the Netplay session.");
+        snprintf(line, sizeof(line), "HOST: Netplay starts automatically as CB-%.6s-HOST.", session ? session->code : "");
+        draw_text(58, 398, 13, 0x7ce0a8ff, line);
     } else {
-        draw_text(58, 398, 13, 0xffc18aff, "PLAYER: RetroArch opens its menu; choose Netplay Host List and find your room host.");
+        snprintf(line, sizeof(line), "PLAYER: Open Netplay Host List and select CB-%.6s-HOST.", session ? session->code : "");
+        draw_text(58, 398, 13, 0xffc18aff, line);
     }
     draw_text(58, 450, 13, 0x9bb4c2ff, status ? status : "");
     draw_text(56, 474, 12, 0x6d8794ff, "UP/DOWN SELECT  CROSS LAUNCH  SQUARE RESCAN  CIRCLE BACK");
