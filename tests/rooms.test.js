@@ -499,3 +499,28 @@ test("a two-player room becomes ready when both players are ready", async () => 
   assert.equal(room.body.room.status, "ready");
   assert.equal(room.body.room.players.length, 2);
 });
+
+
+test("room view clears ready flags when a disconnected seat is detected", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const code = host.body.room.code;
+  const tokens = [host.body.token];
+  for (const displayName of ["B", "C", "D"]) {
+    const joined = await call("POST", { action: "join", code, displayName });
+    tokens.push(joined.body.token);
+  }
+  await Promise.all(tokens.map((token) =>
+    call("POST", { action: "heartbeat", ready: true }, token)
+  ));
+
+  const pathname = "cb-rooms/" + code + ".json";
+  const stored = JSON.parse(blobs.get(pathname).body);
+  stored.players[3].lastSeen = Date.now() - 11 * 60 * 1000;
+  blobs.set(pathname, { body: JSON.stringify(stored), etag: String(++etagSequence) });
+
+  const room = await call("GET", {}, host.body.token, { code });
+  assert.equal(room.statusCode, 200);
+  assert.equal(room.body.room.status, "waiting");
+  assert.equal(room.body.room.players.length, 3);
+  assert.equal(room.body.room.players.filter((player) => player.ready).length, 0);
+});
