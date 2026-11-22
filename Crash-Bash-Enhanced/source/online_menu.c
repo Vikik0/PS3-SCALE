@@ -439,12 +439,17 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                 }
             }
             if (cross && !old_cross && disc_count > 0) {
-                int is_host = session_is_room_host(&session, &view);
-                make_netplay_nickname(netplay_nickname, sizeof(netplay_nickname),
-                                      &session, &view, is_host);
-                cb_launch_game(discs[disc_selected].path, is_host, netplay_nickname,
-                               error, sizeof(error));
-                snprintf(status, status_size, "%.120s", error);
+                if (!view.is_ready) {
+                    screen = SCREEN_ROOM;
+                    snprintf(status, status_size, "Room changed. All active players must be READY again.");
+                } else {
+                    int is_host = session_is_room_host(&session, &view);
+                    make_netplay_nickname(netplay_nickname, sizeof(netplay_nickname),
+                                          &session, &view, is_host);
+                    cb_launch_game(discs[disc_selected].path, is_host, netplay_nickname,
+                                   error, sizeof(error));
+                    snprintf(status, status_size, "%.120s", error);
+                }
             }
             if (circle && !old_circle) screen = SCREEN_ROOM;
             draw_disc_select(discs, disc_count, disc_selected, &session,
@@ -463,13 +468,16 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
             if (start && !old_start && screen == SCREEN_ROOM) {
                 if (!view.is_ready) {
                     snprintf(status, status_size, "At least two players must join and all must be READY.");
-                } else if (cb_disc_scan(discs, CB_DISC_MAX, (size_t *)&disc_count) != 0) {
-                    disc_count = 0;
-                    snprintf(status, status_size, "Could not scan the PS3 disc folders.");
-                    screen = SCREEN_DISC_SELECT;
                 } else {
-                    disc_selected = 0;
-                    screen = SCREEN_DISC_SELECT;
+                    size_t scanned = 0;
+                    if (cb_disc_scan(discs, CB_DISC_MAX, &scanned) != 0) {
+                        disc_count = 0;
+                        snprintf(status, status_size, "Could not scan the PS3 disc folders.");
+                    } else {
+                        disc_count = (int)scanned;
+                        disc_selected = 0;
+                        screen = SCREEN_DISC_SELECT;
+                    }
                     if (disc_count == 0) {
                         snprintf(status, status_size, "Copy the Crash Bash CUE file to a PSXISO folder, then rescan.");
                     } else {
@@ -494,7 +502,8 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                 ready = 0; screen = SCREEN_ROOMS; poll_frames = 0; room_list_poll_frames = 0;
                 load_rooms(rooms, &room_count, &selected, status, status_size);
             }
-            if (screen == SCREEN_ROOM && ++poll_frames >= ROOM_HEARTBEAT_FRAMES) {
+            if ((screen == SCREEN_ROOM || screen == SCREEN_DISC_SELECT) &&
+                ++poll_frames >= ROOM_HEARTBEAT_FRAMES) {
                 poll_frames = 0;
                 if (cb_online_set_ready(&session, ready, &view, error, sizeof(error)) != 0) {
                     if (session_is_gone(error)) {
@@ -504,7 +513,10 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                 }
             }
             if (screen == SCREEN_ROOM) draw_room(&view, &session, status);
-            else draw_rooms(rooms, room_count, selected, private_create, status);
+            else if (screen == SCREEN_DISC_SELECT) {
+                draw_disc_select(discs, disc_count, disc_selected, &session,
+                                 session_is_room_host(&session, &view), status);
+            } else draw_rooms(rooms, room_count, selected, private_create, status);
         }
 
         old_up = up; old_down = down; old_left = left; old_right = right;
