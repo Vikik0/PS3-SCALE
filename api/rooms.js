@@ -86,13 +86,17 @@ function activePlayers(room, now = Date.now()) {
 function prunePlayers(room, now = Date.now()) {
   const previous = room.players || [];
   const active = activePlayers(room, now);
-  const hostIsActive = active.some((player) => player.id === room.hostPlayerId);
-  if (!room.hostPlayerId || !hostIsActive) {
-    const nextHostId = active[0]?.id || "";
-    if (nextHostId && nextHostId !== room.hostPlayerId) {
-      room.netplayId = crypto.randomBytes(6).toString("hex").toUpperCase();
+  // Once RetroArch has started, its relay identity must remain pinned to the
+  // original host. A lobby-seat timeout cannot migrate an active Netplay host.
+  if (!room.gameStartedAt) {
+    const hostIsActive = active.some((player) => player.id === room.hostPlayerId);
+    if (!room.hostPlayerId || !hostIsActive) {
+      const nextHostId = active[0]?.id || "";
+      if (nextHostId && nextHostId !== room.hostPlayerId) {
+        room.netplayId = crypto.randomBytes(6).toString("hex").toUpperCase();
+      }
+      room.hostPlayerId = nextHostId;
     }
-    room.hostPlayerId = nextHostId;
   }
   if (active.length !== previous.length) {
     active.forEach((player) => { player.ready = false; });
