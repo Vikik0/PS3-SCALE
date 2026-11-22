@@ -44,24 +44,24 @@ client/ps3/gsc/ghc_campaign_local_session.gsc
 
 ### 3. الاختبارات والبناء
 
-نجح GitHub Actions run 45032170463 في الوظائف الخمس:
+نجح GitHub Actions run 45032413465 في الوظائف الخمس:
 
-- 162 اختبار Python ناجح.
+- 163 اختبار Python ناجح.
 - اختبارات C الخاصة بالبروتوكول ومنطق ملكية التفاعلات ناجحة.
 - محاكي Runtime اجتاز 10,025 فحصاً.
 - ترجمة وفك ترجمة Registry shim وجسر Local-session باستخدام GSC Tool 1.6.2.364.
 - بناء وفحص PRX وPad Probe وPRX importer باستخدام PS3DK.
 - اختبارات Cloudflare Worker وتجميعه التجريبي ناجحة.
 
-ملف GSCBIN الناتج للجسر حجمه 2,239 بايت، وبصمة SHA-256:
+ملف GSCBIN الناتج للجسر حجمه 2,256 بايت، وبصمة SHA-256:
 
-a06ed224cd9bb1fc24ecccba46f38da87263abc4137ffdbdb27c2bbc8696240f
+a62cbbe3dda27e97d28879d58c3a69e92602dbf5bdb7e3c6f355fb742852a378
 
 وبصمة مصدر GSC:
 
-73e6e6185ca31738de6b525b7919ff612fce663cc6d9215dcb25a4b1c36552d1
+d805c387115a40531f6e5a09f5e4fcd99f4006510243c54774deba4f08e4a1d2
 
-حزمة البناء موجودة ضمن GitHub Actions artifact باسم ghosts-campaign-gsc-session-bridge، رقم 14758431413.
+حزمة البناء موجودة ضمن GitHub Actions artifact باسم ghosts-campaign-gsc-session-bridge، رقم 14758331303.
 
 ### 4. ما لم يصبح جاهزاً بعد
 
