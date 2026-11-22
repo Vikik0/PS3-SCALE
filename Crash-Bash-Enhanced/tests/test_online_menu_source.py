@@ -43,3 +43,5 @@ assert "START CRASH BASH" in main_source
 assert "cb_launch_game(g_status, sizeof(g_status))" in main_source
 assert "/dev_hdd0/game/CBON00001/USRDIR/EBOOT.BIN" in launcher
 assert "sysProcessExitSpawn2(" in launcher
+assert "TRAINING ARENA" not in main_source
+assert "OFFLINE ARENA TEST" not in main_source
