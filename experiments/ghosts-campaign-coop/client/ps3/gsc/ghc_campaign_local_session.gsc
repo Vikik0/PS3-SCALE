@@ -1,0 +1,180 @@
+/*
+ * Ghosts Campaign local-session bridge for IW6 / PS3.
+ *
+ * Reuses the engine-created local split-screen players from the native
+ * Multiplayer path. It does not create clients, clone actors, poll pads,
+ * write game memory, or alter the EBOOT.
+ *
+ * Run only after the engine has entered a real two-player split-screen
+ * session. On success, Campaign's shared aliases are bound by native
+ * primary/secondary identity rather than getentarray order.
+ */
+
+main()
+{
+    level.ghc_campaign_session_ready = 0;
+    level.ghc_campaign_session_status = 0;
+    level.ghc_campaign_player_0 = undefined;
+    level.ghc_campaign_player_1 = undefined;
+
+    /*
+     * Campaign's shared loader may enumerate players before the second
+     * native local player has completed its begin lifecycle. Refresh the
+     * entity list for a bounded period, using the same native player
+     * entities that Multiplayer registers after its connect/begin path.
+     */
+    for ( var_0 = 0; var_0 < 200; var_0++ )
+    {
+        var_1 = getentarray( "player", "classname" );
+
+        if ( issplitscreen() && isdefined( var_1 ) && var_1.size >= 2 )
+        {
+            level.playerpiggyback = var_1;
+            return ghc_campaign_bind_native_local_pair();
+        }
+
+        wait 0.05;
+    }
+
+    var_1 = getentarray( "player", "classname" );
+    if ( isdefined( var_1 ) )
+        level.playerpiggyback = var_1;
+
+    return ghc_campaign_bind_native_local_pair();
+}
+
+ghc_campaign_bind_native_local_pair()
+{
+    level.ghc_campaign_session_ready = 0;
+    level.ghc_campaign_session_status = 0;
+    level.ghc_campaign_player_0 = undefined;
+    level.ghc_campaign_player_1 = undefined;
+
+    /*
+     * Status:
+     * 0 = not checked, 1 = ready, 2 = player array missing,
+     * 3 = native split-screen inactive, 4 = duplicate primary,
+     * 5 = duplicate secondary, 6 = not exactly two native players,
+     * 7 = one of the two native identities is missing.
+     */
+    if ( !isdefined( level.playerpiggyback ) )
+    {
+        level.ghc_campaign_session_status = 2;
+        return 0;
+    }
+
+    if ( !issplitscreen() )
+    {
+        level.ghc_campaign_session_status = 3;
+        return 0;
+    }
+
+    var_0 = 0;
+    for ( var_1 = 0; var_1 < level.playerpiggyback.size; var_1++ )
+    {
+        var_2 = level.playerpiggyback[var_1];
+
+        if ( !isdefined( var_2 ) || !var_2 issplitscreenplayer() )
+            continue;
+
+        var_0++;
+
+        if ( var_2 issplitscreenplayerprimary() )
+        {
+            if ( isdefined( level.ghc_campaign_player_0 ) )
+            {
+                level.ghc_campaign_session_status = 4;
+                return 0;
+            }
+
+            level.ghc_campaign_player_0 = var_2;
+        }
+        else
+        {
+            if ( isdefined( level.ghc_campaign_player_1 ) )
+            {
+                level.ghc_campaign_session_status = 5;
+                return 0;
+            }
+
+            level.ghc_campaign_player_1 = var_2;
+        }
+    }
+
+    if ( var_0 != 2 )
+    {
+        level.ghc_campaign_session_status = 6;
+        return 0;
+    }
+
+    if ( !isdefined( level.ghc_campaign_player_0 )
+        || !isdefined( level.ghc_campaign_player_1 ) )
+    {
+        level.ghc_campaign_session_status = 7;
+        return 0;
+    }
+
+    /*
+     * This is the actual Campaign-side reuse point:
+     * preserve the native primary/secondary players and bind the shared
+     * Campaign aliases to those exact engine-owned entities.
+     */
+    level.player = level.ghc_campaign_player_0;
+    level.playengineeffects = level.ghc_campaign_player_1;
+    level.ghc_campaign_player_0.unique_id = "player0";
+    level.ghc_campaign_player_1.unique_id = "player1";
+
+    level.ghc_campaign_session_ready = 1;
+    level.ghc_campaign_session_status = 1;
+    level notify( "ghc_campaign_players_ready" );
+    return 1;
+}
+
+ghc_campaign_player_for_slot( var_0 )
+{
+    if ( !isdefined( level.ghc_campaign_session_ready )
+        || !level.ghc_campaign_session_ready )
+        return undefined;
+
+    if ( var_0 == 0 )
+        return level.ghc_campaign_player_0;
+
+    if ( var_0 == 1 )
+        return level.ghc_campaign_player_1;
+
+    return undefined;
+}
+
+/*
+ * Clockwork's original setup_combat() equips Logan with this exact kit.
+ * Call this helper immediately after the original P1 setup_combat() hook.
+ * P1's original function is left untouched; only the validated P2 entity
+ * receives the matching campaign loadout.
+ */
+ghc_campaign_apply_clockwork_player_two_loadout()
+{
+    if ( !isdefined( level.ghc_campaign_session_ready )
+        || !level.ghc_campaign_session_ready )
+        return 0;
+
+    if ( isdefined( level.ghc_campaign_clockwork_p2_loadout_applied )
+        && level.ghc_campaign_clockwork_p2_loadout_applied )
+        return 1;
+
+    var_0 = ghc_campaign_player_for_slot( 1 );
+    if ( !isdefined( var_0 )
+        || !var_0 issplitscreenplayer()
+        || var_0 issplitscreenplayerprimary() )
+        return 0;
+
+    var_0 setviewmodel( "viewhands_fed_army_arctic" );
+    var_0 takeallweapons();
+    var_0 giveweapon( "gm6+scopegm6_sp+silencer03_sp" );
+    var_0 giveweapon( "cz805bren+reflex_sp+silencer_sp" );
+    var_0 switchtoweaponimmediate( "cz805bren+reflex_sp+silencer_sp" );
+    var_0 setoffhandprimaryclass( "frag" );
+    var_0 setoffhandsecondaryclass( "flash" );
+
+    level.ghc_campaign_clockwork_p2_loadout_applied = 1;
+    return 1;
+}
