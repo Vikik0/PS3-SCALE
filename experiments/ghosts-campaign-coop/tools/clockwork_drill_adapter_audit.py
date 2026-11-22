@@ -35,10 +35,13 @@ CORE_TARGETS = (
 
 # These adjacent functions own weapon switching, post-drill restoration and audio.
 RELATED_TARGETS = (
-    "switchmsg",
     "restore_footstep_notetrack_scripts",
     "drillthrough_plate_sound",
 )
+
+# The drill pickup cutscene is intentionally Logan-only. It keeps its stock
+# level.player references while also granting the drill_press to the secondary.
+PRIMARY_ONLY_TARGETS = ("switchmsg",)
 
 ADAPTER_MARKERS = {
     "begin": "ghc_campaign_drill_begin",
@@ -199,6 +202,9 @@ def audit(
         }
     missing = [name for name in CORE_TARGETS if not _rows_for(inventory, name)]
     roots = [name for name in (*CORE_TARGETS, *RELATED_TARGETS) if _rows_for(inventory, name)]
+    primary_only_rows = {
+        name: _rows_for(inventory, name) for name in PRIMARY_ONLY_TARGETS
+    }
     closures = {name: _call_closure(inventory, name) for name in roots}
     closure_functions = sorted({name for closure in closures.values() for name in closure})
     closure_rows = [
@@ -249,6 +255,13 @@ def audit(
         "reference_source_file": reference_baseline["reference_source_file"],
         "required_core_functions": list(CORE_TARGETS),
         "related_functions": list(RELATED_TARGETS),
+        "primary_only_functions": list(PRIMARY_ONLY_TARGETS),
+        "primary_only_function_details": primary_only_rows,
+        "primary_only_level_player_refs": sum(
+            row["level_player_refs"]
+            for rows in primary_only_rows.values()
+            for row in rows
+        ),
         "target_functions": {
             name: _rows_for(inventory, name) for name in CORE_TARGETS
         },
