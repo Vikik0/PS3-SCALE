@@ -63,12 +63,13 @@ SAFE_PRIMARY_ALIAS_PATTERNS = (
 )
 
 
-def _function_inventory(path: Path) -> tuple[dict[str, dict], dict[str, str]]:
+def _function_inventory(path: Path) -> tuple[dict[str, dict], dict[str, str], dict[str, str]]:
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     ranges = function_ranges(lines)
     names = {name for name, _, _ in ranges}
     inventory: dict[str, dict] = {}
     bodies: dict[str, str] = {}
+    literal_bodies: dict[str, str] = {}
 
     for name, start, end in ranges:
         signature = strip_comments_and_strings(lines[start - 1]).strip()
@@ -114,6 +115,7 @@ def _function_inventory(path: Path) -> tuple[dict[str, dict], dict[str, str]]:
             "local_calls": calls,
         }
         bodies[name] = clean_body
+        literal_bodies[name] = re.sub(r"//[^\\n]*|/\\*.*?\\*/", "", "\\n".join(body_lines), flags=re.S)
 
         if name in inventory:
             existing = inventory[name]
@@ -124,7 +126,7 @@ def _function_inventory(path: Path) -> tuple[dict[str, dict], dict[str, str]]:
         else:
             inventory[name] = row
 
-    return inventory, bodies
+    return inventory, bodies, literal_bodies
 
 
 def _rows_for(inventory: dict[str, dict], name: str) -> list[dict]:
@@ -194,7 +196,7 @@ def audit(
     if path.suffix.lower() != ".gsc":
         raise ValueError("input must be a decompiled .gsc source file")
 
-    inventory, bodies = _function_inventory(path)
+    inventory, bodies, literal_bodies = _function_inventory(path)
     missing = [
         name for name in (*CORE_TARGETS, *RELATED_TARGETS, *COORDINATION_TARGETS)
         if not _rows_for(inventory, name)
@@ -211,6 +213,9 @@ def audit(
 
     def body(name: str) -> str:
         return bodies.get(name, "")
+
+    def literal_body(name: str) -> str:
+        return literal_bodies.get(name, "")
 
     signatures = {
         name: [row["parameters"] for row in _rows_for(inventory, name)]
@@ -231,7 +236,7 @@ def audit(
         and "takeallweapons" in body("clockwork_setup_player_two")
     )
     secondary_loadout = all(
-        token in body("clockwork_setup_player_two")
+        token in literal_body("clockwork_setup_player_two")
         for token in (
             "gm6+scopegm6_sp+silencer03_sp",
             "cz805bren+reflex_sp+silencer_sp",
@@ -247,7 +252,7 @@ def audit(
     ammo_counter = (
         "level.player" in body("handle_drill_ammo_counter")
         and "level.playengineeffects" in body("handle_drill_ammo_counter")
-        and "ammoCounterHide" in body("handle_drill_ammo_counter")
+        and "ammoCounterHide" in literal_body("handle_drill_ammo_counter")
     )
     player_scoped_signatures = (
         signatures.get("handle_drilling") == [["var_0", "var_1", "player"]]
@@ -277,11 +282,11 @@ def audit(
     )
     p2_drill_press_grant = (
         "level.ghc_clockwork_drill_available = 1" in body("switchmsg")
-        and "level.playengineeffects giveweapon( \"drill_press\" )" in body("switchmsg")
+        and "level.playengineeffects giveweapon( \"drill_press\" )" in literal_body("switchmsg")
     )
     p2_drill_press_cleanup = (
         "level.ghc_clockwork_drill_available = 0" in body("new_trench_setup")
-        and "level.playengineeffects takeweapon( \"drill_press\" )" in body("new_trench_setup")
+        and "level.playengineeffects takeweapon( \"drill_press\" )" in literal_body("new_trench_setup")
     )
     primary_only_switchmsg = (
         bool(_rows_for(inventory, "switchmsg"))
@@ -312,7 +317,7 @@ def audit(
             raise FileNotFoundError(f"original Clockwork reference GSC was not found: {reference_source}")
         if reference_source.suffix.lower() != ".gsc":
             raise ValueError("reference input must be a decompiled .gsc source file")
-        reference_inventory, _ = _function_inventory(reference_source)
+        reference_inventory, _, _ = _function_inventory(reference_source)
         reference_baseline = _compare_reference_baseline(reference_inventory, reference_source)
         reference_baseline["provided"] = True
         reference_baseline["reference_source_file"] = reference_source.name
