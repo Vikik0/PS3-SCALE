@@ -256,7 +256,7 @@ def audit(
         and "ammoCounterHide" in literal_body("handle_drill_ammo_counter")
     )
     ammo_counter_restores_original = (
-        _has(body("handle_drill_ammo_counter"), r"getdvar\s*\(\s*\"ammoCounterHide\"")
+        _has(literal_body("handle_drill_ammo_counter"), r"getdvar\s*\(\s*\"ammoCounterHide\"")
         and _has(literal_body("handle_drill_ammo_counter"), r"setsaveddvar\s*\(\s*\"ammoCounterHide\"\s*,\s*var_0\s*\)")
     )
     player_scoped_signatures = (
