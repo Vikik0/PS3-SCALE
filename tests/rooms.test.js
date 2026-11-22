@@ -252,12 +252,10 @@ test("a ready public room reopens when a disconnected seat expires", async () =>
   const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
   const code = host.body.room.code;
   const tokens = [host.body.token];
-  const playerIds = [host.body.player.id];
 
   for (const displayName of ["B", "C", "D"]) {
     const joined = await call("POST", { action: "join", code, displayName });
     tokens.push(joined.body.token);
-    playerIds.push(joined.body.player.id);
   }
   await Promise.all(tokens.map((token) =>
     call("POST", { action: "heartbeat", ready: true }, token)
