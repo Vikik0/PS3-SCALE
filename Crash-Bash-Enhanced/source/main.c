@@ -22,7 +22,7 @@ static char g_guest_name[32] = "Guest-00000000";
 static char g_status[120] = "Ready. PSN is not required.";
 static const char *g_menu[MENU_COUNT] = {
     "GUEST PROFILE", "NETWORK CHECK", "ONLINE ROOMS",
-    "START CRASH BASH", "EXIT"
+    "OPEN CRASH BASH ONLINE", "EXIT"
 };
 
 static void on_sysutil(u64 status, u64 param, void *userdata)
