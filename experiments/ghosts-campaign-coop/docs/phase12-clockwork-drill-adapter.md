@@ -48,16 +48,16 @@ The existing C state machine in client/ps3/campaign_interaction.c remains the ho
 
 ## Build verification
 
-GitHub Actions run 45031722833 passed all five jobs on commit 94ef85ef349fcaa41b2fbb8c4c4105b1964c06a4:
+GitHub Actions run 45032056333 passed all five jobs on commit 94ef85ef349fcaa41b2fbb8c4c4105b1964c06a4:
 
-- Python: 160 tests passed.
+- Python: 162 tests passed.
 - Protocol/runtime C tests: passed, including Campaign interaction ownership.
 - Host runtime simulator: passed its 10,025 checks.
 - GSC Tool 1.6.2.364: Campaign registry shim and local-session bridge compiled and round-trip decompiled.
 - PS3DK: PRX bootstrap, Pad Probe and PRX importer build/validation passed.
 - Cloudflare Worker: lobby tests and dry-run bundle passed.
 
-The local-session GSCBIN is 1,891 bytes with SHA-256 7a1be335a18217b457781a976ea8757d96e571eec9170101b2bff723c4003079. Its source SHA-256 is 3072ee96a5207d4787164991aadf3a0cdde87facdf6b5e8cd17f74f6b8bcb055. The verified CI artifact is ghosts-campaign-gsc-session-bridge (artifact ID 14758260998).
+The local-session GSCBIN is 2,239 bytes with SHA-256 a06ed224cd9bb1fc24ecccba46f38da87263abc4137ffdbdb27c2bbc8696240f. Its source SHA-256 is 73e6e6185ca31738de6b525b7919ff612fce663cc6d9215dcb25a4b1c36552d1. The verified CI artifact is ghosts-campaign-gsc-session-bridge (artifact ID 14757916996).
 
 ## What remains unimplemented
 
