@@ -125,7 +125,7 @@ if text.count(old) != 1:
 text = text.replace(old, f'#define EMULATOR_CONTENT_DIR "{app_id}"', 1)
 if text.count("   if (*argc >= 1)\n   {\n      char path[PATH_MAX_LENGTH] = {0};\n      strlcpy(path, argv[0], sizeof(path));\n      if (path_is_valid(path))\n         path_set(RARCH_PATH_CORE, path);\n   }") != 1:
     raise SystemExit("Could not uniquely identify the PS3 static-core boot path")
-text = text.replace("   if (*argc >= 1)\n   {\n      char path[PATH_MAX_LENGTH] = {0};\n      strlcpy(path, argv[0], sizeof(path));\n      if (path_is_valid(path))\n         path_set(RARCH_PATH_CORE, path);\n   }", "   (void)argc;\n   (void)argv;\n   {\n      char path[PATH_MAX_LENGTH] = {0};\n      strlcpy(path, \"/dev_hdd0/game/CBON00001/USRDIR/EBOOT.BIN\",\n            sizeof(path));\n      if (path_is_valid(path))\n      {\n         RARCH_LOG(\"[PS3] Direct static-core EBOOT selected: %s\\n\", path);\n         path_set(RARCH_PATH_CORE, path);\n      }\n      else\n         RARCH_ERR(\"[PS3] Direct static-core EBOOT is missing: %s\\n\", path);\n   }", 1)
+text = text.replace("   if (*argc >= 1)\n   {\n      char path[PATH_MAX_LENGTH] = {0};\n      strlcpy(path, argv[0], sizeof(path));\n      if (path_is_valid(path))\n         path_set(RARCH_PATH_CORE, path);\n   }", "   (void)argc;\n   (void)argv;\n   {\n      char path[PATH_MAX_LENGTH] = {0};\n      strlcpy(path, \"/dev_hdd0/game/CBON00001/USRDIR/cores/pcsx_rearmed_libretro_psl1ght.SELF\",\n            sizeof(path));\n      if (path_is_valid(path))\n      {\n         RARCH_LOG(\"[PS3] Static core metadata identity selected: %s\\n\", path);\n         path_set(RARCH_PATH_CORE, path);\n      }\n      else\n         RARCH_ERR(\"[PS3] Static core metadata identity is missing: %s\\n\", path);\n   }", 1)
 platform.write_text(text)
 
 paths = root / "frontend/drivers/platform_ps3_paths.c"
@@ -177,7 +177,8 @@ PY
 
 PKGDIR="$RA/pkg/psl1ght/pkg"
 USRDIR="$PKGDIR/USRDIR"
-mkdir -p "$USRDIR/info" "$USRDIR/assets" "$USRDIR/licenses" "$USRDIR/system"
+CORE_SELF="$USRDIR/cores/pcsx_rearmed_libretro_psl1ght.SELF"
+mkdir -p "$USRDIR/cores" "$USRDIR/info" "$USRDIR/assets" "$USRDIR/licenses" "$USRDIR/system"
 
 cat > "$USRDIR/system/README-BIOS.txt" <<'EOF'
 Place a PlayStation BIOS dumped from your own console in this folder.
@@ -189,10 +190,13 @@ echo "== Link the static PCSX-ReARMed core into RetroArch"
 cp "$CORE_ARCHIVE" "$RA/libretro_psl1ght.a"
 make -C "$RA" -f Makefile.psl1ght clean
 rm -f "$RA/retroarch_psl1ght.elf" "$RA/retroarch_psl1ght.self" \
-    "$RA/build/retroarch_psl1ght.elf" "$USRDIR/EBOOT.BIN"
-# Build the stripped/SPRX-linked ELF needed for the direct EBOOT. Do not copy
-# a second RetroArch SELF into USRDIR/cores: it is not a standalone libretro core.
-make -C "$RA" -f Makefile.psl1ght -j"$JOBS" all CONTENTID="$CONTENT_ID"
+    "$RA/build/retroarch_psl1ght.elf" "$USRDIR/cores/CORE.SELF" "$CORE_SELF" "$USRDIR/EBOOT.BIN"
+# Create the core-info identity SELF so RetroArch can match the
+# pcsx_rearmed_libretro.info metadata. XMB still launches EBOOT.BIN directly;
+# this alias is not used as a second-stage executable.
+make -C "$RA" -f Makefile.psl1ght -j"$JOBS" create-core CONTENTID="$CONTENT_ID"
+mv "$USRDIR/cores/CORE.SELF" "$CORE_SELF"
+test -s "$CORE_SELF"
 test -s "$RA/retroarch_psl1ght.elf"
 test -s "$RA/build/retroarch_psl1ght.elf"
 
@@ -235,13 +239,13 @@ PY
 sfo --title "$APP_TITLE" --appid "$APP_ID" -f "$ROOT/sfo.xml" "$PKGDIR/PARAM.SFO"
 
 # Validate the actual SFO fields, the PowerPC64 ELF used for EBOOT, and its NPDRM identity.
-python3 - "$PKGDIR/PARAM.SFO" "$APP_ID" "$APP_TITLE" "$CONTENT_ID" "$USRDIR/EBOOT.BIN" "$RA/build/retroarch_psl1ght.elf" <<'PY'
+python3 - "$PKGDIR/PARAM.SFO" "$APP_ID" "$APP_TITLE" "$CONTENT_ID" "$USRDIR/EBOOT.BIN" "$RA/build/retroarch_psl1ght.elf" "$CORE_SELF" <<'PY'
 from pathlib import Path
 import re
 import struct
 import sys
 
-sfo_path, app_id, title, content_id, eboot_path, elf_path = sys.argv[1:]
+sfo_path, app_id, title, content_id, eboot_path, elf_path, core_self_path = sys.argv[1:]
 if not re.fullmatch(r"[A-Z]{4}[0-9]{5}", app_id):
     raise SystemExit(f"Invalid PS3 TITLE_ID format: {app_id!r}; expected four letters and five digits")
 if content_id != f"UP0001-{app_id}_00-0000000000000001":
