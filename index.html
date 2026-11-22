@@ -211,7 +211,8 @@ function backScreen(){
 }
 document.addEventListener("keydown",event=>{
   if(event.target && (event.target.tagName==="INPUT"||event.target.tagName==="TEXTAREA")) {
-    if(event.key==="Escape"){event.preventDefault();backScreen();}
+    if(event.key==="Enter" && event.target.id==="joinCode"){event.preventDefault();joinRoom();}
+    else if(event.key==="Escape"){event.preventDefault();backScreen();}
     return;
   }
   if(event.key==="ArrowDown"||event.key==="ArrowUp"){
