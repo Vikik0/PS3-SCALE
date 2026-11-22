@@ -53,10 +53,18 @@ assert "#define SCREEN_DISC_SELECT 3" in source
 assert "cb_disc_scan(discs, CB_DISC_MAX, &scanned)" in source
 assert "cb_launch_game(discs[disc_selected].path, is_host, netplay_nickname" in source
 assert "if ((screen == SCREEN_ROOM || screen == SCREEN_DISC_SELECT)" in source
-assert "CB-%.6s-HOST" in source
+assert "CB-%.12s-HOST" in source
 assert "No CUE files were found." in source
 assert '"/dev_hdd0/PSXISO"' in disc_source
 assert '"/dev_usb000/PSXISO"' in disc_source
-assert "is_host ? \"--host\" : \"--menu\"" in launch_args
+assert 'argv[used++] = "--connect";' in launch_args
+assert 'argv[used++] = "--mitm-session";' in launch_args
+assert "endpoint->mitm_session[0]" in launch_args
+assert "cb_online_get_netplay_endpoint(&session, &endpoint" in source
+assert "NETPLAY_DISCOVERY_MAX_ATTEMPTS" in source
+assert "CB-%.12s-HOST" in source
+assert "Netplay Host List" not in source
 assert "CB_GAME_NETPLAY_PORT" in launch_args
 assert "host_player_id" in online_source
+assert 'get_string_field(json, tokens, count, room, "netplayId"' in online_source
+assert "cb_online_get_netplay_endpoint" in online_source
