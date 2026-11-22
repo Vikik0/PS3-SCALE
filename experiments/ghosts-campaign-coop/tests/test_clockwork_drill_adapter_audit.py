@@ -131,6 +131,52 @@ clockwork_apply_vault_blast( player, blast_origin )
     if ( isdefined( player ) && isplayer( player ) && isalive( player ) )
         player pushplayervector( ( 0, 0, 0 ), 1 );
 }
+setup_interior_cqb()
+{
+    level.player switchtoweapon( "cz805bren+reflex_sp+silencer_sp" );
+    level.playengineeffects switchtoweapon( "cz805bren+reflex_sp+silencer_sp" );
+    level.playengineeffects setactionslot( 1, "nightvision" );
+    level.playengineeffects thread maps\\_nightvision::nightvision_off();
+    level.playengineeffects nightvisiongogglesforceon();
+}
+setup_interior()
+{
+    level.player switchtoweapon( "cz805bren+reflex_sp+silencer_sp" );
+    level.playengineeffects switchtoweapon( "cz805bren+reflex_sp+silencer_sp" );
+}
+vault_nag()
+{
+    level.player thread maps\\_utility::display_hint_timeout( "disable_nvg", 5 );
+    level.playengineeffects thread maps\\_utility::display_hint_timeout( "disable_nvg", 5 );
+    while ( level.player isswitchingweapon()
+        || level.playengineeffects isswitchingweapon() )
+        wait 0.01;
+}
+vault_props()
+{
+    level.ghc_clockwork_p2_grenade_owner = level.playengineeffects;
+    level.playengineeffects_grenades = level.playengineeffects getweaponammoclip( "fraggrenade" );
+    level.playengineeffects_flashbangs = level.playengineeffects getweaponammoclip( "flash_grenade" );
+    level.playengineeffects takeweapon( "fraggrenade" );
+}
+animate_vault_door()
+{
+    level.playengineeffects thread maps\\_utility::display_hint( "disable_nvg" );
+    if ( level.playengineeffects == level.ghc_clockwork_p2_grenade_owner )
+    {
+        level.playengineeffects giveweapon( "fraggrenade" );
+        level.ghc_clockwork_p2_grenades_removed = 0;
+    }
+}
+handle_cqb_allies()
+{
+    level.playengineeffects allowsprint( 1 );
+    level.playengineeffects allowjump( 1 );
+}
+cqb_dog()
+{
+    level.playengineeffects notify( "dog_attack_override" );
+}
 '''
 
 
@@ -179,6 +225,31 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
         )
         report = audit(self.write_source(source))
         self.assertFalse(report["checks"]["vault_blast_helper_uses_explicit_player"])
+
+    def test_secondary_interior_loadout_and_nvg_are_routed(self):
+        source = passing_source().replace(
+            'level.playengineeffects switchtoweapon( "cz805bren+reflex_sp+silencer_sp" );',
+            '',
+            1,
+        )
+        report = audit(self.write_source(source))
+        self.assertFalse(report["checks"]["secondary_interior_loadout_and_nvg"])
+
+    def test_secondary_vault_grenades_are_restored_to_the_same_entity(self):
+        source = passing_source().replace(
+            'level.playengineeffects == level.ghc_clockwork_p2_grenade_owner',
+            'level.playengineeffects != level.ghc_clockwork_p2_grenade_owner',
+        )
+        report = audit(self.write_source(source))
+        self.assertFalse(report["checks"]["secondary_vault_grenade_roundtrip"])
+
+    def test_secondary_vault_hints_and_cqb_controls_are_routed(self):
+        source = passing_source().replace(
+            'level.playengineeffects allowsprint( 1 );',
+            '',
+        )
+        report = audit(self.write_source(source))
+        self.assertFalse(report["checks"]["secondary_cqb_controls_and_dog_override"])
 
     def test_comments_and_string_literals_do_not_fake_trigger_activator_capture(self):
         source = passing_source().replace(
