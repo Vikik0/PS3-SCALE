@@ -297,3 +297,10 @@ int ps3scale_webman_start_app(const char *title_id)
 {
     char request_path[64];
     char response[1024];
+
+    if (ps3scale_webman_build_app_start_path(title_id, request_path,
+                                             sizeof(request_path)) != 0)
+        return PS3SCALE_WEBMAN_ERROR_INVALID_REQUEST;
+
+    return webman_http_get(request_path, response, sizeof(response), 0);
+}
