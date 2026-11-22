@@ -3,6 +3,7 @@
 #include <string.h>
 
 #ifdef __PSL1GHT__
+#include <sys/time.h>
 #include <arpa/inet.h>
 #include <net/net.h>
 #include <netinet/in.h>
