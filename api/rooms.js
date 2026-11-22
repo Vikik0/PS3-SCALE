@@ -351,7 +351,11 @@ module.exports = async function handler(req, res) {
         room.updatedAt = now;
         return {
           status: 200,
-          body: { ok: true, players: active.map(({ id, name, ready }) => ({ id, name, ready })) }
+          body: {
+            ok: true,
+            hostPlayerId: room.hostPlayerId || active[0]?.id || "",
+            players: active.map(({ id, name, ready }) => ({ id, name, ready }))
+          }
         };
       });
       if (!outcome.found) return reply(res, 404, { error: "Room not found." });
