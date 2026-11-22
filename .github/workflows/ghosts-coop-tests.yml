@@ -62,12 +62,28 @@ jobs:
           assert len(binary) == manifest["compiled_gscbin_bytes"], "compiled GSCBIN size does not match manifest"
           print(f"Registry manifest verified: source={source_hash}, binary_bytes={len(binary)}")
           PY
+      - name: Compile and round-trip the IW6 PS3 Campaign local-session bridge
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          gsc-tool --mode comp --game iw6 --system ps3 client/ps3/gsc/ghc_campaign_local_session.gsc
+          test -s compiled/iw6/ghc_campaign_local_session.gscbin
+          gsc-tool --mode decomp --game iw6 --system ps3 compiled/iw6/ghc_campaign_local_session.gscbin
+          test -s decompiled/iw6/ghc_campaign_local_session.gsc
+          grep -q 'issplitscreenplayerprimary' decompiled/iw6/ghc_campaign_local_session.gsc
+          grep -q 'level.playengineeffects' decompiled/iw6/ghc_campaign_local_session.gsc
+          grep -q 'cz805bren' decompiled/iw6/ghc_campaign_local_session.gsc
       - uses: actions/upload-artifact@v6
         with:
           name: ghosts-campaign-gsc-registry
           path: |
             experiments/ghosts-campaign-coop/compiled/iw6/ghc_campaign_player_registry.gscbin
             experiments/ghosts-campaign-coop/client/ps3/gsc/ghc_campaign_player_registry.manifest.json
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ghosts-campaign-gsc-session-bridge
+          path: |
+            experiments/ghosts-campaign-coop/compiled/iw6/ghc_campaign_local_session.gscbin
+            experiments/ghosts-campaign-coop/client/ps3/gsc/ghc_campaign_local_session.gsc
 
   protocol-header:
     runs-on: ubuntu-latest
