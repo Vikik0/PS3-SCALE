@@ -1,0 +1,248 @@
+{
+  "title": "Ghosts Campaign/Multiplayer GSC player lifecycle evidence",
+  "tool": "GSC Tool 1.6.2.364",
+  "decompile_counts": {
+    "clockwork_campaign": {
+      "decompiled": 109,
+      "expected_candidates": 109,
+      "complete": true
+    },
+    "common": {
+      "decompiled": 150,
+      "expected_candidates": 150,
+      "complete": true
+    },
+    "patch_common": {
+      "decompiled": 2,
+      "expected_candidates": 2,
+      "complete": true
+    },
+    "patch_common_mp": {
+      "decompiled": 119,
+      "expected_candidates": 119,
+      "complete": true
+    }
+  },
+  "key_evidence": [
+    {
+      "group": "clockwork_campaign",
+      "script_id": "maps/clockwork.gsc",
+      "lines": "21,29",
+      "finding": "Loads the shared _load script and passes level.playerpiggyback to the night-vision helper."
+    },
+    {
+      "group": "common",
+      "script_id": "1002.gsc",
+      "lines": "117,1430-1448",
+      "finding": "init_level_flags enumerates existing player entities, sets level.player to index 0, and conditionally sets level.playengineeffects to index 1."
+    },
+    {
+      "group": "common",
+      "script_id": "1002.gsc",
+      "lines": "119-122",
+      "finding": "The Campaign/shared load script applies a split-screen-specific cg_fovScale value."
+    },
+    {
+      "group": "common",
+      "script_id": "981.gsc",
+      "lines": "1134-1149",
+      "finding": "The shared health overlay changes size and primary-player offset when split-screen is active."
+    },
+    {
+      "group": "patch_common",
+      "script_id": "1002.gsc",
+      "lines": "1431-1449",
+      "finding": "init_level_flags is byte-for-byte identical to the base common version."
+    },
+    {
+      "group": "common",
+      "script_id": "animscripts/init.gsc",
+      "lines": "323-336",
+      "finding": "firstinit calls maps/_load::init_level_flags."
+    },
+    {
+      "group": "clockwork_campaign",
+      "script_id": "animscripts/dog/dog_init.gsc",
+      "lines": "17-21",
+      "finding": "Clockwork dog initialization calls animscripts/init::firstinit."
+    },
+    {
+      "group": "clockwork_campaign",
+      "script_id": "animscripts/dog/dog_combat.gsc",
+      "lines": "1612-1628",
+      "finding": "The dog knockdown view path uses is_controlling_uav and client-specific hide operations when the second-player alias exists."
+    },
+    {
+      "group": "common",
+      "script_id": "1063.gsc",
+      "lines": "16-32,815-843,6626-6668,6760-6768",
+      "finding": "Shared helpers distinguish split-screen from coop mode, select players from the player array, map player1/player2 map markers, and retrieve the other player."
+    },
+    {
+      "group": "common",
+      "script_id": "962.gsc",
+      "lines": "4-30,82-116",
+      "finding": "Co-op HUD initialization iterates the player array and uses get_other_player for friendly-location HUD elements."
+    },
+    {
+      "group": "common",
+      "script_id": "954.gsc",
+      "lines": "238-242",
+      "finding": "Autosave logic also waits on the secondary player alias when the coop/split-screen branch is active."
+    },
+    {
+      "group": "common",
+      "script_id": "1120.gsc",
+      "lines": "99-105",
+      "finding": "Missile targeting creates a separate attractor for the secondary player alias in the coop/split-screen branch."
+    },
+    {
+      "group": "common",
+      "script_id": "981.gsc",
+      "lines": "315-326",
+      "finding": "Shared difficulty logic compares the primary and secondary players' gameskill values."
+    },
+    {
+      "group": "patch_common_mp",
+      "script_id": "1467.gsc",
+      "lines": "16-29,100-110",
+      "finding": "Engine callback wrappers dispatch player connect/disconnect to the registered playerlogic callbacks."
+    },
+    {
+      "group": "patch_common_mp",
+      "script_id": "1505.gsc",
+      "lines": "4-18",
+      "finding": "Multiplayer spawn logic initializes level.playerpiggyback as an empty array."
+    },
+    {
+      "group": "patch_common_mp",
+      "script_id": "1500.gsc",
+      "lines": "800-811,992-1068,1124-1147,1171-1304",
+      "finding": "Multiplayer script-side client ID allocation, player lookup, connection, array insertion, and disconnect removal."
+    },
+    {
+      "group": "patch_common_mp",
+      "script_id": "1495.gsc",
+      "lines": "205-240,275-301,343-350",
+      "finding": "Multiplayer distinguishes primary and secondary split-screen players for audio/dialogue behavior."
+    },
+    {
+      "group": "patch_common_mp",
+      "script_id": "1501.gsc",
+      "lines": "192-195",
+      "finding": "Multiplayer records the isSplitscreen property for players."
+    }
+  ],
+  "audit_counts": {
+    "clockwork_campaign": {
+      "files": 109,
+      "playerpiggyback_refs": 7,
+      "playengineeffects_refs": 3,
+      "issplitscreen_refs": 0,
+      "issplitscreenplayer_refs": 0,
+      "issplitscreenplayerprimary_refs": 0,
+      "coop_mode_refs": 1,
+      "player_entity_array_queries": 2,
+      "hideonclient_refs": 4,
+      "setplayertocamera_refs": 23
+    },
+    "common": {
+      "files": 150,
+      "playerpiggyback_refs": 111,
+      "playengineeffects_refs": 8,
+      "issplitscreen_refs": 5,
+      "coop_mode_refs": 22,
+      "get_other_player_refs": 7,
+      "coop_game_refs": 5,
+      "player1_marker_refs": 3,
+      "player2_marker_refs": 3,
+      "player_array_initializer_refs": 1,
+      "second_player_alias_refs": 1
+    },
+    "patch_common_mp": {
+      "files": 119,
+      "playerpiggyback_refs": 265,
+      "clientid_refs": 106,
+      "issplitscreen_refs": 1,
+      "issplitscreenplayer_refs": 21,
+      "issplitscreenplayerprimary_refs": 12,
+      "splitexitsright_refs": 33,
+      "callback_playerconnect_refs": 2,
+      "callback_playerdisconnect_refs": 1,
+      "codecallback_playerconnect_refs": 1,
+      "player_array_reset_refs": 1,
+      "player_array_append_refs": 1,
+      "getlowestavailableclientid_refs": 2,
+      "getplayerfromclientnum_refs": 1,
+      "player_entity_array_queries": 1
+    }
+  },
+  "interpretation": {
+    "campaign_shared_scripts_can_represent_second_player_entity": true,
+    "campaign_native_second_local_client_creation_proven": false,
+    "controller_port_1_to_player_2_mapping_proven": false,
+    "independent_player_2_camera_proven": false,
+    "player_2_hud_and_player_state_ownership_proven": false,
+    "player1_player2_teleport_helper_callsite_found": false,
+    "gsc_player_creation_call_found_in_clockwork_campaign": false,
+    "coop_dvar_alone_creates_local_client": false
+  },
+  "next_gates": [
+    "Collect simultaneous pad-port samples in Campaign and Multiplayer with Pad Probe v4.",
+    "Capture TU 1.16 Campaign and Multiplayer runtime PT_LOAD segments through the manual PS3MAPI scripts.",
+    "Verify both captures against the exact installed SELF headers.",
+    "Compare runtime ELFs to identify native local-client creation, controller mapping, player entity creation, and independent view contexts.",
+    "Only then consider a Campaign-specific hook or mission adapter."
+  ],
+  "registry_shim_compile": {
+    "source": "client/ps3/gsc/ghc_campaign_player_registry.gsc",
+    "compiler": "GSC Tool 1.6.2.364",
+    "target": "IW6/PS3",
+    "round_trip_decompile_succeeded": true,
+    "compiled_bytes": 457,
+    "compiled_sha256": "27eab77b588ab79dd3627ca64d6454911a98712fcc6123eb999d60e44c56b375",
+    "matches_verified_phase7_artifact": true,
+    "injected_or_hardware_tested": false,
+    "source_sha256": "ea943514d1a285875e8d772d70d67e20d7f41a2fe382e74da57f9bb50e8488af",
+    "status_codes": {
+      "0": "not checked",
+      "1": "ready",
+      "2": "player array missing",
+      "3": "split-screen inactive",
+      "4": "duplicate primary",
+      "5": "duplicate secondary",
+      "6": "player count is not exactly two"
+    },
+    "manifest_hash_and_size_verified_in_ci": true
+  },
+  "pad_probe_v4_ci": {
+    "workflow_run_id": 45023069795,
+    "all_jobs_passed": true,
+    "host_tests": "124/124",
+    "prx_gen_check_passed": true,
+    "artifact_id": 14754149725,
+    "artifact_bytes": 101363,
+    "artifact_sha256": "d8739f2b345ddadcfb154b89fa7baacf7b5934d1728e2752cb0c3bfcbc2b960e",
+    "prx_bytes": 145384,
+    "prx_sha256": "1f627b62bd48eb2f87fde95d34f7d91c07f3e5a008f5a4c0a81c472021d284c9",
+    "fake_sprx_bytes": 147304,
+    "fake_sprx_sha256": "4de0ea6f49629818e4fd69d4f3e44e9357fff4f7481ad87ba07888e9542b574a",
+    "elf_bytes": 111416,
+    "elf_sha256": "42befdeb3e5f4901fe7089ad5288819c451b02989a6358ea94ba601cfaaea246",
+    "hardware_loaded": false
+  },
+  "final_ci": {
+    "workflow_run_id": 45023769195,
+    "all_five_jobs_passed": true,
+    "host_tests": "129/129",
+    "gsc_registry_compile_and_manifest_check_passed": true
+  },
+  "pad_probe_mode_provenance": {
+    "parsed_fields": [
+      "MODE_SOURCE",
+      "MODE_LABEL_IS_OPERATOR_SELECTED"
+    ],
+    "labels_are_auto_detected": false,
+    "combined_operator_selected_true_only_if_both_logs_marked": true
+  }
+}

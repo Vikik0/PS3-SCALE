@@ -1,0 +1,138 @@
+# PS3 EBOOT analysis workflow (read-only)
+
+## Purpose
+
+The next technical blocker is identifying the real Ghosts PS3 executable layout before any Campaign hook is considered. This workflow makes the binary identity, load map, PPU OPD table and candidate offsets inspectable without guessing an image base.
+
+## SELF-container preflight (before ELF analysis)
+
+Run the read-only container inspector against the exact installed files:
+
+```powershell
+python tools/ps3_self_inspect.py `"EBOOT.BIN`" `"default.self`" `"default_mp.self`" --output self-container-report.json
+```
+
+The report records each file's SHA-256, SELF header version/key revision/type, app-info fields, embedded ELF class/endianness/machine/entry point, program-header count, and encrypted container segment ranges. It deliberately does not decrypt segments or infer the Title ID/TU from SELF metadata.
+
+To confirm the installed update identity, inspect the update folder's own `PARAM.SFO` (one directory above `USRDIR`):
+
+```powershell
+python tools/ps3_sfo_inspect.py `"PARAM.SFO`"
+```
+
+The base-disc `PS3_GAME/PARAM.SFO` and the installed update's `/dev_hdd0/game/BLUS31270/PARAM.SFO` are different inputs. Do not use the former to claim that TU 1.16 is installed. `APP_VER` and `VERSION` are reported as source fields; they are not silently interpreted as a Title Update number.
+
+A SELF report showing ELF64 big-endian PowerPC64 is only a container/architecture check. The embedded executable segments remain encrypted. Continue with the decrypted-ELF workflow below only after a valid local decrypted ELF is available.
+
+## Input requirements
+
+- Use a decrypted ELF64, big-endian, PowerPC64 image obtained from the user's own legally obtained game copy.
+- A retail \`EBOOT.BIN\` is normally a signed/encrypted SELF container, not a plain ELF. This tool does not decrypt SELF files or supply keys.
+- Keep the executable local. Do not commit it, upload it to GitHub, or put game bytes in an issue or pull request.
+- Record the exact Title ID and Title Update. The current target is CEX 4.93 + TU 1.16. The CLI metadata is operator-supplied and is not inferred from the ELF.
+
+A decrypted executable can be produced through a user-controlled local analysis workflow. RPCS3 is one optional route, not a requirement for playing the mod on a PS3. If the user does not want RPCS3, skip that route and continue with static FastFile/GSC analysis; do not ask them to install it. The public PS3 RE references below describe decrypted-ELF analysis; choose a method appropriate to the user's own setup. No game dump or decryption key is included here.
+
+## Run the read-only inspector
+
+From \`experiments/ghosts-campaign-coop\`:
+
+\`\`\`powershell
+python tools/ps3_elf_inspect.py "<local path>\\EBOOT.ELF" --title-id BLUS31270 --output eboot-report.json
+\`\`\`
+
+Replace \`BLUS31270\` with the actual installed Title ID. If the image base is independently known from a matching executable profile, it can be supplied explicitly:
+
+\`\`\`powershell
+python tools/ps3_elf_inspect.py "<local path>\\EBOOT.ELF" --title-id BLUS31270 --image-base 0x10000 --output eboot-report.json
+\`\`\`
+
+Do not pass a guessed image base. Without it, the tool tests the reported candidate offsets as direct virtual addresses only.
+
+The report contains:
+
+- SHA-256 and file size, so this exact executable can be identified in later notes;
+- ELF class, endianness, machine and entry point;
+- each \`PT_LOAD\` segment, permissions, file offset and virtual-address range;
+- the section containing the ELF entry point, used as the OPD candidate range;
+- PS3 PPU OPD entries (\`u32 code\`, \`u32 TOC\`), the entry descriptor and the most common module TOC (\`r2\`);
+- whether each public TU 1.16 candidate address maps into a `PT_LOAD` memory segment, including zero-filled BSS (with no fabricated file bytes);
+- reported `G_Client`, `G_Entity` and `scrVmPub_t` data-address leads plus the reported client/entity strides;
+- a small byte window for each mapped candidate and nearby OPD navigation hints.
+
+A mapped address is not proof that the candidate is the named function, that its calling convention is correct, or that it is safe in Campaign. OPD entries are address-taken function descriptors, not a complete list of every function.
+
+## Optional Ghidra function seeding
+
+1. Import the same local ELF into Ghidra as \`PowerPC:BE:64:default\`.
+2. Read \`elf.opd.section_address\` and \`elf.opd.section_size\` from the JSON report.
+3. Run \`tools/ghidra/SeedGhostsOpdFunctions.java\` with those two values as script arguments, for example \`0x00FF93B8 0x0004D7E0\` only if those are the values reported by this exact ELF.
+4. Let Ghidra auto-analysis complete, then save the project locally. The script only seeds function starts from OPD descriptors; it does not patch or export the binary.
+5. Run `tools/ghidra/FindGhostsSplitScreenBuiltins.java`. It searches loaded memory blocks for the IW6 split-screen/player builtin names and prints recorded cross-references and containing functions. A missing string or xref is inconclusive; names may be stripped, hashed or stored outside the loaded ELF.
+
+The two Ghidra scripts are manual analysis helpers and are not compiled by GitHub CI because the Ghidra runtime is not part of the build. Verify them against the installed Ghidra version before running. The PS3 PPU function-descriptor layout and OPD-based function discovery are described in the public [ps3recomp PPU loader](https://github.com/sp00nznet/ps3recomp/blob/master/tools/ppu_loader.py) and [PS3 PPC reverse-engineering workflow](https://github.com/Mercenaries-Fan-Build/notes-on-the-released-game/blob/main/docs/ps3_ppc_re_workflow.md). Those are methodology references, not Ghosts offsets or proof of Ghosts runtime behavior.
+
+## What to inspect after import
+
+Use the exact EBOOT and build identity to investigate the following groups. Do not assume an offset from another platform is valid:
+
+1. **Local-player/session setup:** the code that creates local slots, binds controllers and enters a local player into the world in an existing offline two-player mode.
+2. **Client/player ownership:** the relationship between client slot, \`gclient\`, player state, player entity and command buffer.
+3. **View ownership:** per-player camera/refdef, viewport, HUD client number and audio listener.
+4. **Campaign entry:** compare the above state during Campaign startup with the state from the known-working local mode.
+5. **Lifecycle:** join, disconnect, death, respawn, checkpoint reload, mission restart and map transition.
+
+The first viable Campaign implementation must preserve Logan as player 1 and create a real second local player/client lifecycle. A clone/corpse entity is not enough.
+
+## Stop conditions
+
+Stop before any hook or patch if:
+
+- the file is still SELF rather than decrypted ELF;
+- the machine type or endianness does not match PPU;
+- the actual Title ID/TU is unknown or mismatched;
+- the OPD range cannot be established;
+- a candidate does not map into an executable segment;
+- the candidate's function boundary, call convention or runtime context is unknown.
+
+No EBOOT, SPRX or PKG should be built for installation until a candidate is verified against the exact target executable and the hook can be tested safely.
+
+## Exact TU 1.16 SELF audit result
+
+The installed update's own PARAM.SFO reports TITLE_ID=BLUS31270, APP_VER=01.16, CATEGORY=GD, and VERSION=01.00. The base-disc SFO remains a separate CATEGORY=DG, APP_VER=01.00 record. Use the installed-update SFO as the TU identity evidence.
+
+The uploaded TU files differ from the disc samples:
+
+| File | TU size | Disc size | TU ELF entry | Disc ELF entry |
+|---|---:|---:|---:|---:|
+| EBOOT.BIN | 41,488 | 73,704 | 0x20080 | 0x20080 |
+| default.self | 4,291,568 | 8,072,104 | 0x7E9508 | 0x7A8F28 |
+| default_mp.self | 6,265,632 | 9,195,256 | 0xA75E38 | 0x8B9738 |
+
+Each TU file is SELF v2, key revision 28, ELF64 big-endian PowerPC64, with eight program headers. The primary executable segments (0–4) are marked encrypted. No function offsets, OPD ranges, or hooks may be inferred from these metadata alone.
+
+### Decrypted ELF acquisition
+
+One optional route is RPCS3's debug option, which can save a decrypted PPU executable as exec.elf in its cache under ppu_progs/<TITLE_ID>-<hash>-<filename>/. The RPCS3 source implements this dump path and logs the saved path. This route is not mandatory and the user has chosen not to install RPCS3 at this stage. If a decrypted ELF becomes available through another user-controlled route, retain its exact build identity and ensure it belongs to the installed TU 1.16 default.self; a dump from the disc 1.00 file is not interchangeable. The corresponding default_mp.self dump is the comparison target for an existing local split-screen path.
+
+This remains a future engineering gate, not a user action required now. Until the decrypted TU ELF is available, continue only with metadata, FastFile, GSC, simulator and toolchain work; do not invent executable offsets or build an installable game hook.
+
+## Campaign vs Multiplayer function inventory comparison
+
+For the native local-player reuse route, analyze the exact TU 1.16 Campaign and Multiplayer decrypted PPU images separately:
+
+1. Import the Campaign ELF into Ghidra as PowerPC:BE:64:default and complete auto-analysis.
+2. Run tools/ghidra/ExportGhostsPpuFunctionInventory.java with an output path such as campaign-functions.csv.
+3. Repeat with the exact matching Multiplayer ELF and save multiplayer-functions.csv.
+4. From the project root, run:
+
+~~~powershell
+python tools/compare_ppu_function_inventories.py --campaign "D:\Ghosts\analysis\campaign-functions.csv" --multiplayer "D:\Ghosts\analysis\multiplayer-functions.csv" --output "D:\Ghosts\analysis\campaign-multiplayer-functions.json"
+~~~
+
+The exporter records function entry, body size, instruction count, a normalized instruction fingerprint and direct call targets. The comparator identifies fingerprints present in both builds and Multiplayer-only function leads, then ranks names containing local/client/controller/player/view/camera/viewport/HUD/connect/spawn/input terms.
+
+This is intended to narrow the manual reverse-engineering search toward the native local-player/session path. Fingerprints normalize long absolute addresses and auto-generated labels, so collisions and missed matches are possible. A Multiplayer-only match is not proof that the function creates a local client, and a matching function is not automatically safe to transplant. Verify the exact function body, TOC, imports, globals, calling convention and runtime lifecycle before proposing any Campaign hook.
+
+The scripts do not patch, export, or modify either executable. The Ghidra script is not run in GitHub CI because Ghidra is not installed in the build environment; the Python comparator is covered by host tests.
+

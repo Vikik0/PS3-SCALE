@@ -1,0 +1,16 @@
+{
+  "name": "ghosts-coop-lobby",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Free-tier matchmaking and P2P signalling worker for Ghosts Campaign Co-op",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "wrangler deploy --dry-run",
+    "test": "node tests/smoke.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  },
+  "type": "module"
+}

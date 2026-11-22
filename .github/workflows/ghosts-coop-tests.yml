@@ -1,0 +1,309 @@
+name: Ghosts Co-op prototype tests
+
+on:
+  push:
+    branches:
+      - feature/ghosts-campaign-coop-prototype-0.2
+    paths:
+      - "experiments/ghosts-campaign-coop/**"
+      - ".github/workflows/ghosts-coop-tests.yml"
+  pull_request:
+    paths:
+      - "experiments/ghosts-campaign-coop/**"
+      - ".github/workflows/ghosts-coop-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  server-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Python modules
+        working-directory: experiments/ghosts-campaign-coop
+        run: python -m compileall -q server tests tools
+      - name: Run server and network tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: python -m unittest discover -s tests -v
+
+  gsc-script-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned GSC Tool
+        uses: xensik/setup-gsc-tool@0bf1f42d7a1fe13dc8af7cdf6b89757e250a255d
+        with:
+          version: "1.6.2"
+          path: ".gsc-tool"
+      - name: Compile and round-trip the IW6 PS3 Campaign registry shim
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          gsc-tool --mode comp --game iw6 --system ps3 client/ps3/gsc/ghc_campaign_player_registry.gsc
+          test -s compiled/iw6/ghc_campaign_player_registry.gscbin
+          gsc-tool --mode decomp --game iw6 --system ps3 compiled/iw6/ghc_campaign_player_registry.gscbin
+          test -s decompiled/iw6/ghc_campaign_player_registry.gsc
+          grep -q 'issplitscreenplayerprimary' decompiled/iw6/ghc_campaign_player_registry.gsc
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path("client/ps3/gsc/ghc_campaign_player_registry.manifest.json").read_text())
+          source_hash = hashlib.sha256(Path("client/ps3/gsc/ghc_campaign_player_registry.gsc").read_bytes()).hexdigest()
+          binary = Path("compiled/iw6/ghc_campaign_player_registry.gscbin").read_bytes()
+          if manifest.get("source_sha256"):
+              assert source_hash == manifest["source_sha256"], "registry source hash does not match manifest"
+          if manifest.get("compiled_gscbin_sha256"):
+              assert hashlib.sha256(binary).hexdigest() == manifest["compiled_gscbin_sha256"], "compiled GSCBIN hash does not match manifest"
+          if manifest.get("compiled_gscbin_bytes"):
+              assert len(binary) == manifest["compiled_gscbin_bytes"], "compiled GSCBIN size does not match manifest"
+          print(f"Registry build observed: source={source_hash}, binary_sha256={hashlib.sha256(binary).hexdigest()}, binary_bytes={len(binary)}")
+          PY
+      - name: Compile and round-trip the IW6 PS3 Campaign local-session bridge
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          gsc-tool --mode comp --game iw6 --system ps3 client/ps3/gsc/ghc_campaign_local_session.gsc
+          test -s compiled/iw6/ghc_campaign_local_session.gscbin
+          gsc-tool --mode decomp --game iw6 --system ps3 compiled/iw6/ghc_campaign_local_session.gscbin
+          test -s decompiled/iw6/ghc_campaign_local_session.gsc
+          grep -q 'issplitscreenplayerprimary' decompiled/iw6/ghc_campaign_local_session.gsc
+          grep -q 'level.playengineeffects' decompiled/iw6/ghc_campaign_local_session.gsc
+          grep -q 'cz805bren' decompiled/iw6/ghc_campaign_local_session.gsc
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path("client/ps3/gsc/ghc_campaign_local_session.manifest.json").read_text())
+          source = Path("client/ps3/gsc/ghc_campaign_local_session.gsc").read_bytes()
+          binary = Path("compiled/iw6/ghc_campaign_local_session.gscbin").read_bytes()
+          source_hash = hashlib.sha256(source).hexdigest()
+          binary_hash = hashlib.sha256(binary).hexdigest()
+          if manifest.get("source_sha256"):
+              assert source_hash == manifest["source_sha256"], "session bridge source hash mismatch"
+          if manifest.get("compiled_gscbin_sha256"):
+              assert binary_hash == manifest["compiled_gscbin_sha256"], "session bridge bytecode hash mismatch"
+          if manifest.get("compiled_gscbin_bytes"):
+              assert len(binary) == manifest["compiled_gscbin_bytes"], "session bridge bytecode size mismatch"
+          print(f"Session bridge build observed: source_sha256={source_hash}, binary_sha256={binary_hash}, binary_bytes={len(binary)}")
+          PY
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ghosts-campaign-gsc-registry
+          path: |
+            experiments/ghosts-campaign-coop/compiled/iw6/ghc_campaign_player_registry.gscbin
+            experiments/ghosts-campaign-coop/client/ps3/gsc/ghc_campaign_player_registry.manifest.json
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ghosts-campaign-gsc-session-bridge
+          path: |
+            experiments/ghosts-campaign-coop/compiled/iw6/ghc_campaign_local_session.gscbin
+            experiments/ghosts-campaign-coop/client/ps3/gsc/ghc_campaign_local_session.gsc
+            experiments/ghosts-campaign-coop/client/ps3/gsc/ghc_campaign_local_session.manifest.json
+      - name: Upload pinned GSC Tool for offline retail-source validation
+        uses: actions/upload-artifact@v6
+        with:
+          name: ghosts-gsc-tool-1.6.2-linux-amd64
+          path: .gsc-tool/gsc-tool
+          if-no-files-found: error
+          retention-days: 7
+
+  protocol-header:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile PS3 protocol header contract
+        working-directory: experiments/ghosts-campaign-coop
+        run: cc -std=c11 -Wall -Wextra -Werror -fsyntax-only tests/protocol_header_smoke.c
+      - name: Build and run portable PS3 GHC2 codec
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/ghc_protocol.c tests/protocol_c_test.c -o /tmp/ghc-protocol-test
+          /tmp/ghc-protocol-test
+      - name: Build and run PS3 WebSocket frame codec tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/ghc_websocket.c tests/websocket_frame_test.c -o /tmp/ghc-websocket-test
+          /tmp/ghc-websocket-test
+      - name: Build and run downed/revive rules tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/mission_rules.c tests/mission_rules_test.c -o /tmp/mission-rules-test
+          /tmp/mission-rules-test
+      - name: Build and run local controller input decoder tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/local_input.c tests/local_input_test.c -o /tmp/local-input-test
+          /tmp/local-input-test
+      - name: Build and run local player readiness gate tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/local_player_gate.c tests/local_player_gate_test.c -o /tmp/local-player-gate-test
+          /tmp/local-player-gate-test
+      - name: Build and run Campaign interaction ownership tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/campaign_interaction.c tests/campaign_interaction_test.c -o /tmp/campaign-interaction-test
+          /tmp/campaign-interaction-test
+      - name: Build and run lobby JSON contract tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/ghc_lobby_json.c tests/lobby_json_test.c -o /tmp/ghc-lobby-json-test
+          /tmp/ghc-lobby-json-test
+      - name: Build and run STUN binding parser tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/ghc_stun.c tests/stun_test.c -o /tmp/ghc-stun-test
+          /tmp/ghc-stun-test
+      - name: Build and run game payload protocol tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/ghc_game_protocol.c tests/game_protocol_test.c -o /tmp/ghc-game-protocol-test
+          /tmp/ghc-game-protocol-test
+      - name: Build and run the host-only Ghosts runtime contract simulator
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/local_input.c client/ps3/local_player_gate.c client/ps3/mission_rules.c tests/ghosts_runtime_sim_test.c -o /tmp/ghosts-runtime-sim-test
+          /tmp/ghosts-runtime-sim-test
+
+  ps3-prx-bootstrap:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xz-utils libgmp10 libssl3 zlib1g
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/ps3-stage/ps3dev/ppu
+          key: ps3dk-ppu-v0.28.0-${{ runner.os }}-x86_64
+      - name: Download pinned PS3DK PPU toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="${RUNNER_TEMP}/ps3-stage"
+          ps3dev="$stage/ps3dev"
+          mkdir -p "$ps3dev"
+          if [ ! -x "$ps3dev/ppu/bin/powerpc64-ps3-elf-gcc" ]; then
+            curl -fL --retry 3 \
+              https://github.com/FirebirdTA01/PS3DK/releases/download/v0.28.0/ps3dev-ppu.tar.xz \
+              -o "$RUNNER_TEMP/ps3dev-ppu.tar.xz"
+            echo "0d1335730489f6c5e44cbaae9c23a08a34b76ec59bae6106b96b335093401e61  $RUNNER_TEMP/ps3dev-ppu.tar.xz" | sha256sum -c -
+            tar -xJf "$RUNNER_TEMP/ps3dev-ppu.tar.xz" -C "$stage"
+          fi
+          test -x "$ps3dev/ppu/bin/powerpc64-ps3-elf-gcc"
+          echo "PS3DEV=$ps3dev" >> "$GITHUB_ENV"
+          echo "PS3DK=$ps3dev/ps3dk" >> "$GITHUB_ENV"
+      - name: Download pinned PS3DK host tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/ps3-host-tools"
+          curl -fL --retry 3 \
+            https://github.com/FirebirdTA01/PS3DK/releases/download/v0.28.0/ps3-sdk-tools-v0.28.0-linux-x86_64.tar.xz \
+            -o "$RUNNER_TEMP/ps3-host-tools.tar.xz"
+          echo "8708f219b4cb504e4fa345d4fe85dc6d2de8b0270a7a4cf5b147dc91fe260b84  $RUNNER_TEMP/ps3-host-tools.tar.xz" | sha256sum -c -
+          tar -xJf "$RUNNER_TEMP/ps3-host-tools.tar.xz" -C "$RUNNER_TEMP/ps3-host-tools"
+          tool_bin="$(find "$RUNNER_TEMP/ps3-host-tools" -type f -name prx-gen -printf '%h\n' -quit)"
+          test -n "$tool_bin"
+          mkdir -p "$PS3DEV/bin"
+          cp -a "$tool_bin/." "$PS3DEV/bin/"
+          chmod +x "$PS3DEV/bin/prx-gen" "$PS3DEV/bin/fself"
+          "$PS3DEV/bin/prx-gen" --version
+      - name: Prepare the PS3 PRX runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch v0.28.0 https://github.com/FirebirdTA01/PS3DK.git "$RUNNER_TEMP/PS3DK-src"
+          mkdir -p "$PS3DK/ppu/lib"
+          mkdir -p "$PS3DK/ppu/include"
+          cp -a "$RUNNER_TEMP/PS3DK-src/sdk/include/." "$PS3DK/ppu/include/"
+          "$PS3DEV/ppu/bin/powerpc64-ps3-elf-gcc" -c -mcpu=cell \
+            -o "$PS3DK/ppu/lib/lv2-prx-crt.o" \
+            "$RUNNER_TEMP/PS3DK-src/runtime/lv2/crt/lv2-prx.S"
+          cp "$RUNNER_TEMP/PS3DK-src/runtime/lv2/crt/lv2-prx.ld" "$PS3DK/ppu/lib/"
+          cp "$RUNNER_TEMP/PS3DK-src/runtime/lv2/crt/lv2-prx.specs" "$PS3DK/ppu/lib/"
+          echo "PS3DK_SRC=$RUNNER_TEMP/PS3DK-src" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build required PS3 Cell import stub archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          source "$RUNNER_TEMP/PS3DK-src/scripts/env.sh"
+          cargo build --release --manifest-path "$PS3_TOOLCHAIN_ROOT/tools/nidgen/Cargo.toml"
+          nidgen="$PS3_TOOLCHAIN_ROOT/tools/target/release/nidgen"
+          "$nidgen" verify "$GITHUB_WORKSPACE/experiments/ghosts-campaign-coop/client/ps3/prx/exports.yml"
+          probe_out="$RUNNER_TEMP/ps3-stubs/ghosts_coop_import"
+          mkdir -p "$probe_out"
+          "$nidgen" archive --input "$GITHUB_WORKSPACE/experiments/ghosts-campaign-coop/client/ps3/prx/exports.yml" --toolchain-bin "$PS3DEV/ppu/bin" --out-dir "$probe_out"
+          mkdir -p "$GITHUB_WORKSPACE/experiments/ghosts-campaign-coop/client/ps3/prx/build"
+          cp "$probe_out/libghosts_coop_stub.a" "$GITHUB_WORKSPACE/experiments/ghosts-campaign-coop/client/ps3/prx/build/"
+          install -m 0644 "$probe_out/libghosts_coop_stub.a" "$PS3DK/ppu/lib/"
+          for name in libsysmodule_stub libnet_stub libssl_stub libhttp_stub libhttp_util_stub libio_stub libfs_stub liblv2_stub; do
+            input="$PS3_TOOLCHAIN_ROOT/tools/nidgen/nids/extracted/$name.yaml"
+            out="$RUNNER_TEMP/ps3-stubs/$name"
+            mkdir -p "$out"
+            "$nidgen" archive --input "$input" --toolchain-bin "$PS3DEV/ppu/bin" --out-dir "$out"
+            archive="$(find "$out" -maxdepth 1 -type f -name 'lib*_stub.a' -print -quit)"
+            test -n "$archive"
+            install -m 0644 "$archive" "$PS3DK/ppu/lib/"
+          done
+      - name: Build and validate CEX-compatible PRX bootstrap
+        run: make -C experiments/ghosts-campaign-coop/client/ps3/prx PS3DEV="$PS3DEV" PS3DK="$PS3DK"
+      - name: Build and validate read-only Campaign/Multiplayer pad probe
+        run: make -C experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe PS3DEV="$PS3DEV" PS3DK="$PS3DK"
+      - name: Link and validate a PRX importer against Ghosts exports
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe="$RUNNER_TEMP/ghosts-input-probe"
+          mkdir -p "$probe"
+          "$PS3DEV/ppu/bin/powerpc64-ps3-elf-gcc" -O2 -Wall -Wextra -Werror -std=gnu11 -mcpu=cell -mhard-float -fno-stack-protector -fno-builtin -I"$PS3DK/ppu/include" -c experiments/ghosts-campaign-coop/tests/prx_import_probe.c -o "$probe/probe.o"
+          "$PS3DEV/ppu/bin/powerpc64-ps3-elf-gcc" -nostdlib -nostartfiles -specs="$PS3DK/ppu/lib/lv2-prx.specs" -Wl,-q -Wl,--no-warn-rwx-segments -Wl,-T,"$PS3DK/ppu/lib/lv2-prx.ld" "$probe/probe.o" "$PS3DK/ppu/lib/lv2-prx-crt.o" -L"$PS3DK/ppu/lib" -lghosts_coop_stub -lgcc -o "$probe/ghosts_input_probe.elf"
+          "$PS3DEV/bin/prx-gen" build "$probe/ghosts_input_probe.elf" -o "$probe/ghosts_input_probe.prx" --name ghosts_input_probe --version 0.1
+          "$PS3DEV/bin/prx-gen" check "$probe/ghosts_input_probe.prx"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ghosts-coop-prx-bootstrap
+          path: |
+            experiments/ghosts-campaign-coop/client/ps3/prx/build/ghosts_coop.prx
+            experiments/ghosts-campaign-coop/client/ps3/prx/build/ghosts_coop.fake.sprx
+            experiments/ghosts-campaign-coop/client/ps3/prx/build/ghosts_coop.elf
+            experiments/ghosts-campaign-coop/client/ps3/prx/build/libghosts_coop_stub.a
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ghosts-campaign-pad-probe
+          path: |
+            experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/README_AR.md
+            experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/mode_files/ghosts_probe_mode_CAMPAIGN.txt
+            experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/mode_files/ghosts_probe_mode_MULTIPLAYER.txt
+            experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/build/ghosts_campaign_pad_probe.prx
+            experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/build/ghosts_campaign_pad_probe.fake.sprx
+            experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/build/ghosts_campaign_pad_probe.elf
+
+  worker-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: experiments/ghosts-campaign-coop/worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: experiments/ghosts-campaign-coop/worker/package.json
+      - name: Install Cloudflare Worker tooling
+        run: npm install --no-audit --no-fund
+      - name: Run Durable Object lobby integration tests
+        run: npm test
+      - name: Bundle Worker without deploying
+        run: npx wrangler deploy --dry-run --outdir "$RUNNER_TEMP/ghosts-worker-dist"

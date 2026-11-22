@@ -1,0 +1,51 @@
+name: Ghosts Co-op lobby deployment
+
+on:
+  push:
+    branches:
+      - feature/ghosts-campaign-coop-prototype-0.2
+    paths:
+      - "experiments/ghosts-campaign-coop/worker/**"
+      - ".github/workflows/ghosts-lobby-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Cloudflare deployment credentials
+        id: credentials
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [[ -n "$CLOUDFLARE_API_TOKEN" && -n "$CLOUDFLARE_ACCOUNT_ID" ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Cloudflare deployment skipped. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID as repository Actions secrets to enable it."
+          fi
+      - uses: actions/checkout@v4
+        if: steps.credentials.outputs.configured == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.credentials.outputs.configured == 'true'
+        with:
+          node-version: "22"
+      - name: Install Worker tooling
+        if: steps.credentials.outputs.configured == 'true'
+        working-directory: experiments/ghosts-campaign-coop/worker
+        run: npm install --no-audit --no-fund
+      - name: Deploy free-tier matchmaking Worker
+        if: steps.credentials.outputs.configured == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: experiments/ghosts-campaign-coop/worker
+        run: npx wrangler deploy
+      - name: Confirm deployment is waiting for account connection
+        if: steps.credentials.outputs.configured != 'true'
+        run: echo "Source and CI are ready; production deployment is waiting for Cloudflare account credentials."

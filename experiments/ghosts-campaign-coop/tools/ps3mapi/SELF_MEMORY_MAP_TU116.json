@@ -1,0 +1,50 @@
+{
+  "campaign": {
+    "file": "default.self",
+    "entry_point": "0x7E9508",
+    "pt_load_segments": [
+      {
+        "segment_index": 0,
+        "virtual_address": "0x10000",
+        "file_size": 8135720,
+        "file_size_hex": "0x7c2428",
+        "memory_size": 8135720,
+        "memory_size_hex": "0x7c2428",
+        "alignment": 65536
+      },
+      {
+        "segment_index": 1,
+        "virtual_address": "0x7e0000",
+        "file_size": 119264,
+        "file_size_hex": "0x1d1e0",
+        "memory_size": 31551768,
+        "memory_size_hex": "0x1e17118",
+        "alignment": 65536
+      }
+    ]
+  },
+  "multiplayer": {
+    "file": "default_mp.self",
+    "entry_point": "0xA75E38",
+    "pt_load_segments": [
+      {
+        "segment_index": 0,
+        "virtual_address": "0x10000",
+        "file_size": 10783784,
+        "file_size_hex": "0xa48c28",
+        "memory_size": 10783784,
+        "memory_size_hex": "0xa48c28",
+        "alignment": 65536
+      },
+      {
+        "segment_index": 1,
+        "virtual_address": "0xa60000",
+        "file_size": 932304,
+        "file_size_hex": "0xe39d0",
+        "memory_size": 31434904,
+        "memory_size_hex": "0x1dfa898",
+        "alignment": 65536
+      }
+    ]
+  }
+}
