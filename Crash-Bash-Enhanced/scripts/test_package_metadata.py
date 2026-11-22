@@ -32,8 +32,27 @@ assert 'CORE_SELF="$USRDIR/cores/pcsx_rearmed_libretro_psl1ght.SELF"' in script
 assert "create-core CONTENTID=" in script, "The core-info identity SELF must be created"
 
 prototype_makefile = (ROOT / "Makefile").read_text()
+prototype_sfo = ET.parse(ROOT / "sfo.xml").getroot()
+prototype_sfo_values = {
+    node.attrib["name"]: (node.text or "").strip()
+    for node in prototype_sfo.findall("value")
+}
 prototype_app_id = re.search(r"^APPID := ([A-Z0-9]+)$", prototype_makefile, re.M)
+prototype_content_id = re.search(r"^CONTENTID := ([A-Z0-9_-]+)$", prototype_makefile, re.M)
+prototype_title = re.search(r"^TITLE := (.+)$", prototype_makefile, re.M)
 assert prototype_app_id and re.fullmatch(r"[A-Z]{4}[0-9]{5}", prototype_app_id.group(1))
+assert prototype_content_id and prototype_content_id.group(1).startswith(
+    f"UP0001-{prototype_app_id.group(1)}_00-"
+), "Native lobby Content ID must match its app ID"
+assert prototype_title and prototype_sfo_values.get("TITLE") == prototype_title.group(1)
+assert prototype_sfo_values.get("TITLE_ID") == prototype_app_id.group(1), (
+    "Native lobby SFO TITLE_ID must match its Makefile APPID"
+)
+prototype_online = (ROOT / "source/online.c").read_text()
+assert f"/dev_hdd0/game/{prototype_app_id.group(1)}/USRDIR/cacert.pem" in prototype_online, (
+    "Native lobby CA bundle path must match its installed app ID"
+)
+assert prototype_app_id.group(1) != app_id, "Native lobby prototype and RetroArch app must have distinct IDs"
 
 for relative in (
     "README.md",
