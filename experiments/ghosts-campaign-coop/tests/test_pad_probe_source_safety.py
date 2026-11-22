@@ -30,7 +30,7 @@ class PadProbeSourceSafetyTests(unittest.TestCase):
         self.assertIn("-lfs_stub", makefile)
         self.assertIn("-lio_stub", makefile)
         self.assertIn("-llv2_stub", makefile)
-        self.assertIn("prx-gen check", makefile)
+        self.assertIn("$(PRX_GEN) check", makefile)
 
 if __name__ == "__main__":
     unittest.main()
