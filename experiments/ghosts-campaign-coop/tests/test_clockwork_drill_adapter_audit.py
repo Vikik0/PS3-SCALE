@@ -164,6 +164,32 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertEqual(source.read_text(encoding="utf-8"), original)
 
+    def test_logan_only_switchmsg_is_reported_but_not_treated_as_p2_scope_leak(self):
+        report = audit(self.write_source(
+            'handle_drill_spot( player, spot )\n'
+            '{\n'
+            '    ghc_campaign_drill_begin( player, spot );\n'
+            '}\n'
+            'handle_drilling( player, spot )\n'
+            '{\n'
+            '    ghc_campaign_drill_complete( player, spot );\n'
+            '    ghc_campaign_drill_cancel( player, spot );\n'
+            '}\n'
+            'cleanup_drill( player )\n'
+            '{\n'
+            '    ghc_campaign_drill_abort_player( player );\n'
+            '}\n'
+            'switchmsg()\n'
+            '{\n'
+            '    level.player giveweapon( "drill_press" );\n'
+            '}\n'
+        ))
+
+        self.assertEqual(report["status"], "SOURCE_ADAPTER_READY_FOR_MANUAL_REVIEW")
+        self.assertIn("switchmsg", report["primary_only_function_details"])
+        self.assertGreater(report["primary_only_level_player_refs"], 0)
+        self.assertNotIn("switchmsg", report["unscoped_level_player_functions"])
+
     def test_related_drill_support_functions_are_audited_as_independent_roots(self):
         report = audit(self.write_source(
             'handle_drill_spot( player, spot )\n'
