@@ -27,7 +27,7 @@ class PadProbeSourceSafetyTests(unittest.TestCase):
 
     def test_build_checks_prx_and_links_required_read_only_imports(self):
         makefile = (PROBE / "Makefile").read_text(encoding="utf-8")
-        self.assertIn("-lfs_stub", makefile)
+        self.assertIn("-lsys_fs_stub", makefile)
         self.assertIn("-lio_stub", makefile)
         self.assertIn("-llv2_stub", makefile)
         self.assertIn("$(PRX_GEN) check", makefile)
