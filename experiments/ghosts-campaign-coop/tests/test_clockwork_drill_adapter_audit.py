@@ -127,9 +127,9 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
 
     def test_comments_and_string_literals_do_not_fake_trigger_activator_capture(self):
         source = passing_source().replace(
-            '    drill_trigger waittill( "trigger", drill_activator );\\n',
-            '    // drill_trigger waittill( "trigger", drill_activator );\\n'
-            '    iprintln( "drill_trigger waittill( trigger, drill_activator )" );\\n',
+            '    drill_trigger waittill( "trigger", drill_activator );\n',
+            '    // drill_trigger waittill( "trigger", drill_activator );\n'
+            '    iprintln( "drill_trigger waittill( trigger, drill_activator )" );\n',
         )
         report = audit(self.write_source(source))
         self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
@@ -147,9 +147,9 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
 
     def test_missing_death_disconnect_recovery_blocks_adapter(self):
         source = passing_source().replace(
-            '        common_scripts\\\\utility::flag_clear( var_1 );\\n'
-            '        wait 0.1;\\n'
-            '        maps\\\\_utility::enable_trigger_with_targetname( var_0 );\\n',
+            '        common_scripts\\\\utility::flag_clear( var_1 );\n'
+            '        wait 0.1;\n'
+            '        maps\\\\_utility::enable_trigger_with_targetname( var_0 );\n',
             '',
         )
         report = audit(self.write_source(source))
