@@ -38,7 +38,7 @@ prototype_sfo_values = {
     for node in prototype_sfo.findall("value")
 }
 prototype_app_id = re.search(r"^APPID := ([A-Z0-9]+)$", prototype_makefile, re.M)
-prototype_content_id = re.search(r"^CONTENTID := ([A-Z0-9_-]+)$", prototype_makefile, re.M)
+prototype_content_id = re.search(r"^CONTENTID := (.+)$", prototype_makefile, re.M)
 prototype_title = re.search(r"^TITLE := (.+)$", prototype_makefile, re.M)
 assert prototype_app_id and re.fullmatch(r"[A-Z]{4}[0-9]{5}", prototype_app_id.group(1))
 assert prototype_content_id and prototype_content_id.group(1) == (
