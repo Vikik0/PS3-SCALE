@@ -103,12 +103,12 @@ Once that native path is proven:
 Added a portable contract in client/ps3/campaign_interaction.h and campaign_interaction.c, with host tests in tests/campaign_interaction_test.c.
 
 It models the shared-interaction rules needed by the first Clockwork drill adaptation:
-- one active interaction per local player;
-- different players may operate different drill spots at the same time;
-- one drill spot has only one owner;
-- only the owner may complete or cancel that spot;
-- completion is shared and cannot be committed twice;
-- cancel, death or disconnect releases the owner's lock without marking the objective complete.
+- the two drill spots are sequential stages on one vault door;
+- only one player may own the active drill stage globally because both stages reuse shared mission flags, the same vault rig and the same drill-progress state;
+- Stage 2 cannot begin until Stage 1 is complete;
+- the owner may change between Stage 1 and Stage 2;
+- only the current owner may complete or cancel the active stage;
+- cancel, death or disconnect releases the active stage without marking it complete, allowing either validated local player to retry.
 
 This prevents Player 2 from completing, cancelling or stealing Player 1's drill action. The portable state machine is testable now, but the retail Clockwork GSC has not yet been rewritten to call it.
 
@@ -127,7 +127,7 @@ The Ghidra exporter is read-only and requires manual execution on both exact TU 
 The two-spot Clockwork ownership state now lives directly inside ghc_campaign_local_session.gsc and is initialized once after the validated native player pair is bound.
 
 The bridge exposes:
-- ghc_campaign_drill_begin(player, spot): claim spot 0 or 1 for the validated player, only if that player is not already using another spot and the spot is neither owned nor complete.
+- ghc_campaign_drill_begin(player, spot): claim the current sequential stage for the validated player, only if no other stage is active, the requested stage is not complete, and Stage 1 has completed before Stage 2 is claimed.
 - ghc_campaign_drill_finish(player, spot, completed): owner-only finish; marks shared completion only when completed is true, then releases the spot.
 - ghc_campaign_drill_complete(player, spot) and ghc_campaign_drill_cancel(player, spot): explicit finish/cancel wrappers.
 - ghc_campaign_drill_abort_player(player): releases that player's active spot on death/disconnect/cutscene exit without marking it complete.
