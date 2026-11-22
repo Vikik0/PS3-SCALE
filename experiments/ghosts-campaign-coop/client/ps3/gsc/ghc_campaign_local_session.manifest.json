@@ -5,9 +5,9 @@
   "platform": "PS3",
   "compiler": "GSC Tool 1.6.2.364",
   "compile_command": "gsc-tool --mode comp --game iw6 --system ps3 ghc_campaign_local_session.gsc",
-  "source_sha256": null,
-  "compiled_gscbin_sha256": null,
-  "compiled_gscbin_bytes": null,
-  "status": "source updated with centralized stale-session invalidation; awaiting pinned GSC Tool CI rebuild; not injected or runtime-tested",
-  "behavior": "Reuses only engine-created native split-screen players; validates the exact live primary/secondary pair against the current player entity array before session reuse and Campaign actions; safely releases active drill ownership before rebinding; binds Campaign aliases by native identity; exposes Player 2 loadout and two-spot drill ownership helpers; never spawns or clones a player."
+  "source_sha256": "d805c387115a40531f6e5a09f5e4fcd99f4006510243c54774deba4f08e4a1d2",
+  "compiled_gscbin_sha256": "a62cbbe3dda27e97d28879d58c3a69e92602dbf5bdb7e3c6f355fb742852a378",
+  "compiled_gscbin_bytes": 2256,
+  "status": "compiled and round-trip decompiled with GSC Tool 1.6.2.364; centralized stale-session invalidation source and bytecode hashes verified from CI artifact; not injected or runtime-tested",
+  "behavior": "Reuses only engine-created native split-screen players; validates exact live primary/secondary pair against the current player entity array before session reuse and Campaign actions; centralizes stale-pair invalidation with status 8 and releases both active drill locks; safely releases active drill ownership before rebinding; binds Campaign aliases by native identity; exposes Player 2 loadout and two-spot drill ownership helpers; never spawns or clones a player."
 }
