@@ -15,6 +15,12 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
         self.temp.cleanup()
 
     def write_source(self, content):
+        if "handle_misc_drill_details(" not in content:
+            content += (
+                "\\nhandle_misc_drill_details()\\n"
+                "{\\n"
+                "}\\n"
+            )
         self.source.write_text(content, encoding="utf-8")
         return self.source
 
@@ -157,6 +163,61 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
         result = main([str(source), "--json-out", str(source)])
         self.assertEqual(result, 1)
         self.assertEqual(source.read_text(encoding="utf-8"), original)
+
+    def test_related_drill_support_functions_are_audited_as_independent_roots(self):
+        report = audit(self.write_source(
+            'handle_drill_spot( player, spot )\\n'
+            '{\\n'
+            '    ghc_campaign_drill_begin( player, spot );\\n'
+            '    thread handle_drilling( player, spot );\\n'
+            '}\\n'
+            'handle_drilling( player, spot )\\n'
+            '{\\n'
+            '    ghc_campaign_drill_complete( player, spot );\\n'
+            '    ghc_campaign_drill_cancel( player, spot );\\n'
+            '}\\n'
+            'drillthrough_plate_sound()\\n'
+            '{\\n'
+            '    level.player maps\\\\::play_sound( "drill" );\\n'
+            '}\\n'
+        ))
+
+        self.assertIn("drillthrough_plate_sound", report["related_function_details"])
+        self.assertIn("drillthrough_plate_sound", report["call_graph"])
+        self.assertIn("drillthrough_plate_sound", report["unscoped_level_player_functions"])
+        self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
+
+    def test_strict_mode_rejects_a_source_that_does_not_match_the_clockwork_reference(self):
+        report = audit(self.write_source(
+            'handle_drill_spot( player, spot )\\n'
+            '{\\n'
+            '    ghc_campaign_drill_begin( player, spot );\\n'
+            '}\\n'
+            'handle_drilling( player, spot )\\n'
+            '{\\n'
+            '    ghc_campaign_drill_complete( player, spot );\\n'
+            '    ghc_campaign_drill_cancel( player, spot );\\n'
+            '}\\n'
+            'cleanup_drill( player )\\n'
+            '{\\n'
+            '    ghc_campaign_drill_abort_player( player );\\n'
+            '}\\n'
+        ), require_reference_baseline=True)
+
+        self.assertEqual(report["status"], "SOURCE_BASELINE_MISMATCH")
+        self.assertFalse(report["reference_baseline"]["matches"])
+        self.assertIn("handle_drill_spot", report["reference_baseline"]["mismatches"])
+
+    def test_missing_misc_drill_details_is_reported_as_incomplete_source(self):
+        self.source.write_text(
+            'handle_drill_spot()\\n{\\n}\\n'
+            'handle_drilling()\\n{\\n}\\n',
+            encoding="utf-8",
+        )
+        report = audit(self.source)
+        self.assertEqual(report["status"], "SOURCE_INCOMPLETE")
+        self.assertIn("handle_misc_drill_details", report["required_core_functions"])
+        self.assertEqual(report["target_functions"]["handle_misc_drill_details"], [])
 
     def test_non_gsc_input_is_rejected(self):
         other = self.root / "source.txt"
