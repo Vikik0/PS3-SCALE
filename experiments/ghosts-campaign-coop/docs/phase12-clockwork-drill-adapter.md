@@ -14,6 +14,7 @@ Updated client/ps3/gsc/ghc_campaign_local_session.gsc:
 - It does not return early merely because two player entities exist; it waits for issplitscreenplayer() and issplitscreenplayerprimary() to report a valid pair.
 - It binds level.player to the native primary and level.playengineeffects to the native secondary only after exact-pair validation.
 - A rebind releases any active drill ownership for slots 0 and 1 before clearing the previous player references. Completed drill state remains shared and is not reset by a rebind.
+- Every successful native-pair bind resets `ghc_campaign_clockwork_p2_loadout_applied` before marking the session ready. A replacement secondary entity therefore receives its own Clockwork loadout; the previous pair's idempotency flag cannot suppress loadout application after controller disconnect/rebind.
 
 ## Clockwork two-spot ownership
 
@@ -57,7 +58,7 @@ GitHub Actions run 45032662329 passed all five jobs on commit 94ef85ef349fcaa41b
 - PS3DK: PRX bootstrap, Pad Probe and PRX importer build/validation passed.
 - Cloudflare Worker: lobby tests and dry-run bundle passed.
 
-The local-session GSCBIN is 2,365 bytes with SHA-256 5dc36d7e2305803b3bfa73f1f649192fdcd85f15d2a9b38678c963d0cb594474. Its source SHA-256 is 315e8bde2f9b31496271f432fe6d3045213b6e7be6cdaf0306e8707f108ca13e. The verified CI artifact is ghosts-campaign-gsc-session-bridge (artifact ID 14757832985).
+The previous local-session GSCBIN was 2,365 bytes with SHA-256 `5dc36d7e2305803b3bfa73f1f649192fdcd85f15d2a9b38678c963d0cb594474`. The source and compiled artifact hashes are pinned in `client/ps3/gsc/ghc_campaign_local_session.manifest.json` and refreshed after each verified source change. The verified CI artifact is `ghosts-campaign-gsc-session-bridge`.
 
 ## What remains unimplemented
 
