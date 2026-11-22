@@ -175,7 +175,7 @@ body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#343
 <input id="privateRoom" type="checkbox" hidden>
 
 <script>
-const state={token:"",code:"",player:null,room:null,ready:false,poll:null,heartbeat:null,screen:"main",menuIndex:0};
+const state={token:"",code:"",player:null,room:null,ready:false,poll:null,heartbeat:null,heartbeatInFlight:false,screen:"main",menuIndex:0};
 const $=id=>document.getElementById(id);
 const screenIds={main:"mainMenu",battle:"battleMenu",options:"optionsMenu"};
 function setHealth(ok,text){$("healthDot").className="dot"+(ok?" ok":"");$("healthText").textContent=text;}
@@ -231,7 +231,11 @@ async function api(path,method="GET",body=null,auth=true){
   if(auth&&state.token)headers.Authorization="Bearer "+state.token;
   const response=await fetch(path,{method,headers,body:body?JSON.stringify(body):undefined,cache:"no-store"});
   const data=await response.json().catch(()=>({error:"Invalid server response"}));
-  if(!response.ok)throw new Error(data.error||"Request failed");
+  if(!response.ok){
+    const error=new Error(data.error||"Request failed");
+    error.status=response.status;
+    throw error;
+  }
   return data;
 }
 async function checkHealth(){
@@ -256,20 +260,63 @@ async function joinRoom(){
   catch(e){$("joinHint").textContent=e.message;}
   finally{$("joinBtn").disabled=false;}
 }
-function enterRoom(data){
-  state.token=data.token;state.code=data.room.code;state.player=data.player;state.ready=false;
-  sessionStorage.setItem("cb_token",state.token);sessionStorage.setItem("cb_code",state.code);
+function clearRoomTimers(){
+  clearInterval(state.poll);clearInterval(state.heartbeat);
+  state.poll=null;state.heartbeat=null;state.heartbeatInFlight=false;
+}
+function clearSavedRoomSession(){
+  sessionStorage.removeItem("cb_token");
+  sessionStorage.removeItem("cb_code");
+  sessionStorage.removeItem("cb_player_id");
+}
+function expireRoomSession(message){
+  clearRoomTimers();
+  state.token="";state.code="";state.room=null;state.player=null;state.ready=false;
+  clearSavedRoomSession();
+  $("roomView").classList.remove("active");
+  showScreen("battle");
+  $("joinHint").textContent=message||"Your room session expired. Join or create another battle.";
+}
+function startRoomTimers(pollMs=5000){
+  clearRoomTimers();
+  state.poll=setInterval(()=>{refreshRoom();},pollMs);
+  state.heartbeat=setInterval(()=>{sendHeartbeat();},20000);
+}
+async function enterRoom(data){
+  state.token=data.token;state.code=data.room.code;state.player=data.player;state.ready=Boolean(data.player.ready);
+  sessionStorage.setItem("cb_token",state.token);
+  sessionStorage.setItem("cb_code",state.code);
+  sessionStorage.setItem("cb_player_id",state.player.id);
   $("roomView").classList.add("active");$("roomTitle").textContent=state.code;
   $("roomNotice").textContent="Room created. Waiting for up to three more players. Game-session transport is not connected.";
   $("roomView").scrollIntoView({behavior:"smooth",block:"center"});
-  refreshRoom();
-  clearInterval(state.poll);state.poll=setInterval(refreshRoom,5000);
-  clearInterval(state.heartbeat);state.heartbeat=setInterval(()=>api("/api/rooms","POST",{action:"heartbeat",ready:state.ready}).catch(()=>{}),20000);
+  await refreshRoom();
+  if(state.token)startRoomTimers(5000);
 }
 async function refreshRoom(){
-  if(!state.token||!state.code)return;
-  try{const data=await api("/api/rooms?code="+encodeURIComponent(state.code));state.room=data.room;renderRoom();}
-  catch(e){$("roomNotice").textContent=e.message;}
+  if(!state.token||!state.code)return false;
+  try{
+    const data=await api("/api/rooms?code="+encodeURIComponent(state.code));
+    state.room=data.room;
+    const playerId=state.player?.id||data.room.selfPlayerId||sessionStorage.getItem("cb_player_id");
+    const me=data.room.players.find(player=>player.id===playerId);
+    if(!me){
+      expireRoomSession("Your seat is no longer active. Create or join a battle again.");
+      return false;
+    }
+    state.player=me;
+    state.ready=Boolean(me.ready);
+    sessionStorage.setItem("cb_player_id",me.id);
+    renderRoom();
+    return true;
+  }catch(e){
+    if([401,403,404].includes(e.status)){
+      expireRoomSession(e.message||"Your room session expired. Join or create another battle.");
+    }else{
+      $("roomNotice").textContent="Connection issue: "+e.message+" — retrying automatically.";
+    }
+    return false;
+  }
 }
 function renderRoom(){
   const room=state.room;if(!room)return;
@@ -286,16 +333,43 @@ function renderRoom(){
   $("roomNotice").className="notice"+(allReady?"":" warnbox");
   $("readyBtn").textContent=state.ready?"CANCEL READY":"I'M READY";
 }
+async function sendHeartbeat(){
+  if(!state.token||!state.code||state.heartbeatInFlight)return false;
+  state.heartbeatInFlight=true;
+  try{
+    const data=await api("/api/rooms","POST",{action:"heartbeat",ready:state.ready});
+    state.room={...(state.room||{}),players:data.players};
+    const me=data.players.find(player=>player.id===state.player?.id);
+    if(!me){
+      expireRoomSession("Your seat is no longer active. Create or join a battle again.");
+      return false;
+    }
+    state.player=me;
+    state.ready=Boolean(me.ready);
+    renderRoom();
+    return true;
+  }catch(e){
+    if([401,403,404].includes(e.status)){
+      expireRoomSession(e.message||"Your room session expired. Join or create another battle.");
+    }else{
+      $("roomNotice").textContent="Connection issue: "+e.message+" — retrying automatically.";
+    }
+    return false;
+  }finally{
+    state.heartbeatInFlight=false;
+  }
+}
 async function toggleReady(){
-  state.ready=!state.ready;
-  try{const data=await api("/api/rooms","POST",{action:"heartbeat",ready:state.ready});if(state.room)state.room.players=data.players;renderRoom();}
-  catch(e){state.ready=!state.ready;$("roomNotice").textContent=e.message;}
+  const previous=state.ready;
+  state.ready=!previous;
+  const updated=await sendHeartbeat();
+  if(!updated&&state.token){state.ready=previous;renderRoom();}
 }
 async function leaveRoom(){
   try{await api("/api/rooms","POST",{action:"leave"});}catch{}
-  clearInterval(state.poll);clearInterval(state.heartbeat);
+  clearRoomTimers();
   state.token="";state.code="";state.room=null;state.player=null;state.ready=false;
-  sessionStorage.removeItem("cb_token");sessionStorage.removeItem("cb_code");
+  clearSavedRoomSession();
   $("roomView").classList.remove("active");showScreen("battle");
 }
 async function copyCode(){
@@ -313,18 +387,22 @@ async function loadRooms(){
       const btn=document.createElement("button");btn.className="action-button";btn.textContent="JOIN";
       btn.onclick=()=>{$("joinCode").value=r.code;joinRoom();};row.append(info,btn);root.appendChild(row);
     }
-  }catch(e){$("roomsList").innerHTML='<div class="empty">'+e.message+'</div>';}
+  }catch(e){const empty=document.createElement("div");empty.className="empty";empty.textContent=e.message;$("roomsList").replaceChildren(empty);}
 }
 (async()=>{
   await checkHealth();
-  const token=sessionStorage.getItem("cb_token"),code=sessionStorage.getItem("cb_code");
-  if(token&&code){
-    state.token=token;state.code=code;state.player={name:displayName()};
-    $("roomView").classList.add("active");$("roomTitle").textContent=code;refreshRoom();
-    state.poll=setInterval(refreshRoom,3000);
-    state.heartbeat=setInterval(()=>api("/api/rooms","POST",{action:"heartbeat",ready:state.ready}).catch(()=>{}),20000);
-  }
   showScreen("main");
+  const token=sessionStorage.getItem("cb_token");
+  const code=sessionStorage.getItem("cb_code");
+  const playerId=sessionStorage.getItem("cb_player_id");
+  if(token&&code){
+    state.token=token;state.code=code;state.player={id:playerId||"",name:displayName()};
+    $("roomView").classList.add("active");$("roomTitle").textContent=code;
+    const restored=await refreshRoom();
+    if(restored&&state.token)startRoomTimers(3000);
+  }else if(token||code||playerId){
+    clearSavedRoomSession();
+  }
 })();
 </script>
 </body>
