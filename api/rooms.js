@@ -443,17 +443,17 @@ module.exports = async function handler(req, res) {
       if (!activePlayer) {
         return reply(res, 403, { error: "Your room seat has expired. Rejoin the room." });
       }
-      if (record.room.status !== "ready" ||
-          active.length < 2 ||
-          active.length !== (record.room.players || []).length ||
-          !active.every((entry) => entry.ready)) {
-        return reply(res, 409, {
-          ready: false,
-          state: "room_not_ready",
-          error: "Every active player must be READY before Netplay can start."
-        });
-      }
       if (!record.room.gameStartedAt) {
+        if (record.room.status !== "ready" ||
+            active.length < 2 ||
+            active.length !== (record.room.players || []).length ||
+            !active.every((entry) => entry.ready)) {
+          return reply(res, 409, {
+            ready: false,
+            state: "room_not_ready",
+            error: "Every active player must be READY before Netplay can start."
+          });
+        }
         return reply(res, 200, { ready: false, state: "waiting_for_host_start" });
       }
 
@@ -595,22 +595,25 @@ module.exports = async function handler(req, res) {
           return { write: false, status: 403, body: { error: "You are no longer in this room." } };
         }
         const now = Date.now();
+        const matchStarted = Boolean(room.gameStartedAt);
         room.players = prunePlayers(room, now).filter((entry) => entry.id !== currentPlayer.id);
-        if (room.hostPlayerId === currentPlayer.id) {
-          room.hostPlayerId = room.players[0]?.id || "";
-          if (room.hostPlayerId) {
-            room.netplayId = crypto.randomBytes(6).toString("hex").toUpperCase();
+        if (!matchStarted) {
+          if (room.hostPlayerId === currentPlayer.id) {
+            room.hostPlayerId = room.players[0]?.id || "";
+            if (room.hostPlayerId) {
+              room.netplayId = crypto.randomBytes(6).toString("hex").toUpperCase();
+            }
           }
+          room.players.forEach((entry) => { entry.ready = false; });
+          room.status = room.players.length === 0 ? "closed" : "waiting";
         }
-        room.players.forEach((entry) => { entry.ready = false; });
         room.signals = (room.signals || []).filter((signal) =>
           signal.from !== currentPlayer.id &&
           signal.to !== currentPlayer.id &&
           room.players.some((entry) => entry.id === signal.from) &&
           room.players.some((entry) => entry.id === signal.to)
         );
-        room.status = room.players.length === 0 ? "closed" : "waiting";
-        room.updatedAt = Date.now();
+        room.updatedAt = now;
         return { status: 200, body: { ok: true } };
       });
       if (!outcome.found) return reply(res, 404, { error: "Room not found." });
