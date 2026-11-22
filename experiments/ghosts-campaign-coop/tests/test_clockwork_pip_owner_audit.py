@@ -20,6 +20,7 @@ pip_enable( player )
     {
         if ( isdefined( level.pintoscreenedge_player ) && level.pintoscreenedge_player == player )
         {
+            level.pintoscreenedge notify( "stop_interference" );
             level.pintoscreenedge.enable = 0;
             return;
         }
