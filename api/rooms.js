@@ -79,7 +79,8 @@ function tokenClaims(req) {
 }
 
 function activePlayers(room, now = Date.now()) {
-  return (room.players || []).filter((player) => now - player.lastSeen <= PLAYER_TTL_MS);
+  const ttl = room.gameStartedAt ? ROOM_TTL_MS : PLAYER_TTL_MS;
+  return (room.players || []).filter((player) => now - player.lastSeen <= ttl);
 }
 
 function prunePlayers(room, now = Date.now()) {
@@ -149,7 +150,8 @@ async function listRooms() {
         }
         const staleReadyRoom = room.status === "ready" &&
           (active.length < 2 || active.length !== (room.players || []).length);
-        if (!room.isPrivate && (room.status === "waiting" || staleReadyRoom) && active.length < MAX_PLAYERS) {
+        if (!room.gameStartedAt && !room.isPrivate &&
+            (room.status === "waiting" || staleReadyRoom) && active.length < MAX_PLAYERS) {
           return publicRoom(room);
         }
       } catch {
@@ -337,7 +339,7 @@ module.exports = async function handler(req, res) {
         const outcome = await mutateRoom(candidate.code, (room) => {
           const now = Date.now();
           prunePlayers(room, now);
-          if (room.isPrivate || room.status !== "waiting" || room.players.length >= MAX_PLAYERS) {
+          if (room.gameStartedAt || room.isPrivate || room.status !== "waiting" || room.players.length >= MAX_PLAYERS) {
             return { write: false, skip: true };
           }
           room.players.push({ id: playerId, name, ready: false, joinedAt: now, lastSeen: now });
@@ -369,7 +371,7 @@ module.exports = async function handler(req, res) {
           return { write: false, status: 410, body: { error: "This battle room has expired. Create a new room." } };
         }
         prunePlayers(room, now);
-        if (room.status !== "waiting" || room.players.length >= MAX_PLAYERS) {
+        if (room.gameStartedAt || room.status !== "waiting" || room.players.length >= MAX_PLAYERS) {
           return { write: false, status: 409, body: { error: "Room is full or already playing." } };
         }
         room.players.push({ id: playerId, name, ready: false, joinedAt: now, lastSeen: now });
@@ -399,6 +401,42 @@ module.exports = async function handler(req, res) {
     const player = findPlayer(record.room, claims.sub);
     if (!player) return reply(res, 403, { error: "You are not a member of this room." });
 
+    if (action === "game_start" || action === "game_start_cancel") {
+      const starting = action === "game_start";
+      const outcome = await mutateRoom(code, (room) => {
+        const now = Date.now();
+        const active = prunePlayers(room, now);
+        const currentPlayer = active.find((entry) => entry.id === claims.sub);
+        if (!currentPlayer) {
+          return { write: false, status: 403, body: { error: "Your room seat has expired. Rejoin the room." } };
+        }
+        const hostPlayerId = active.some((entry) => entry.id === room.hostPlayerId)
+          ? room.hostPlayerId
+          : active[0]?.id;
+        if (claims.sub !== hostPlayerId) {
+          return { write: false, status: 403, body: { error: "Only the current room host can start the Netplay session." } };
+        }
+
+        if (starting) {
+          if (room.status !== "ready" ||
+              active.length < 2 ||
+              active.length !== (room.players || []).length ||
+              !active.every((entry) => entry.ready)) {
+            return { write: false, status: 409, body: { error: "Every active player must be READY before starting Netplay." } };
+          }
+          if (!room.gameStartedAt) room.gameStartedAt = now;
+          room.updatedAt = now;
+          return { status: 200, body: { ok: true, gameStartedAt: room.gameStartedAt } };
+        }
+
+        delete room.gameStartedAt;
+        room.updatedAt = now;
+        return { status: 200, body: { ok: true, gameStartCancelled: true } };
+      });
+      if (!outcome.found) return reply(res, 404, { error: "Room not found." });
+      return reply(res, outcome.outcome.status || 200, outcome.outcome.body);
+    }
+
     if (action === "netplay") {
       const active = activePlayers(record.room);
       const activePlayer = active.find((entry) => entry.id === claims.sub);
@@ -414,6 +452,9 @@ module.exports = async function handler(req, res) {
           state: "room_not_ready",
           error: "Every active player must be READY before Netplay can start."
         });
+      }
+      if (!record.room.gameStartedAt) {
+        return reply(res, 200, { ready: false, state: "waiting_for_host_start" });
       }
 
       const hostPlayerId = active.some((entry) => entry.id === record.room.hostPlayerId)
