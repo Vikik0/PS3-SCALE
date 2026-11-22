@@ -157,3 +157,20 @@ Do not mechanically replace level.player with level.playerpiggyback. The correct
 - shared state that must aggregate both players (difficulty, checkpoints, down/death state).
 
 The reusable GSC scanner now reports primary_player_ref separately from playerpiggyback and playengineeffects so this audit can be repeated as scripts are revised.
+
+
+### Highest-density Clockwork function clusters
+
+A function-level pass over the highest-density scripts gives a first review queue:
+
+| Script | Function | Direct level.player refs | Likely review focus |
+|---|---|---:|---|
+| maps/clockwork_interior.gsc | handle_drill_spot | 34 | interactive object ownership and player proximity |
+| maps/clockwork_exfil.gsc | in_spawnspectator | 25 | spectator/spawn state and per-player view |
+| maps/clockwork_code.gsc | hold_count_check | 20 | hold/use interaction and shared objective state |
+| maps/clockwork_intro.gsc | player_intro_anim | 18 | scripted animation and synchronization |
+| maps/clockwork_defend.gsc | listen_for_use_multi_turret | 16 | turret interaction ownership |
+| maps/clockwork_audio.gsc | get_closest_speaker_nodes | 14 | player-relative audio selection |
+| maps/ally_attack_dog.gsc | dog_player | 11 | player/dog combat ownership |
+
+These are triage counts, not a final patch list. Each function needs review of its caller, event lifetime, and whether the operation is intentionally tied to the story's primary player.
