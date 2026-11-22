@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "../mission_rules.h"
 #include "../local_input.h"
+#include "script_override.h"
 
 #define SYS_PRX_RESIDENT 0
 
@@ -21,6 +22,7 @@ int module_start(size_t args, void *argp)
     (void)argp;
     ghc_mission_init(&g_mission, 0);
     ghc_local_input_snapshot_clear(&g_local_input);
+    (void)ghc_script_override_reload();
     ghc_local_input_tracker_reset(&g_local_tracker);
     (void)ghc_local_input_tracker_update(
         &g_local_input, &g_local_tracker, GHC_LOCAL_STICK_DEADZONE_DEFAULT, &g_local_frame
