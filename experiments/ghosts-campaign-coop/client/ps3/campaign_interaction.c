@@ -30,6 +30,8 @@ GhcCampaignInteractionStatus ghc_campaign_interaction_begin(
     uint8_t spot
 )
 {
+    uint32_t i;
+
     if (!state) return GHC_CAMPAIGN_INTERACTION_INVALID_ARGUMENT;
     if (!session_ready) return GHC_CAMPAIGN_INTERACTION_SESSION_NOT_READY;
     if (!valid_player(player_slot)) return GHC_CAMPAIGN_INTERACTION_INVALID_PLAYER_SLOT;
@@ -40,6 +42,14 @@ GhcCampaignInteractionStatus ghc_campaign_interaction_begin(
         return GHC_CAMPAIGN_INTERACTION_PLAYER_BUSY;
     if (state->owner_by_spot[spot] != GHC_CAMPAIGN_INTERACTION_NO_OWNER)
         return GHC_CAMPAIGN_INTERACTION_ALREADY_OWNED;
+
+    for (i = 0; i < GHC_CAMPAIGN_INTERACTION_PLAYER_COUNT; ++i) {
+        if (state->active_spot_by_player[i] != GHC_CAMPAIGN_INTERACTION_NO_SPOT)
+            return GHC_CAMPAIGN_INTERACTION_BUSY;
+    }
+
+    if (spot == 1u && (state->completed_mask & 0x01u) == 0u)
+        return GHC_CAMPAIGN_INTERACTION_PREREQUISITE_NOT_COMPLETE;
 
     state->owner_by_spot[spot] = player_slot;
     state->active_spot_by_player[player_slot] = spot;
