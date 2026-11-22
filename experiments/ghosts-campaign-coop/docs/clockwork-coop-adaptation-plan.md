@@ -88,3 +88,17 @@ The first mission behavior to adapt after the native gate passes is the drill in
 
 This vertical slice is intentionally smaller than a blanket 644-reference conversion. It proves the native identity bridge and one per-player gameplay interaction before broader mission refactoring.
 
+## Phase 12 — GSC-side drill ownership adapter
+
+The local-session bridge now exposes a two-spot GSC ownership contract in ghc_campaign_local_session.gsc:
+
+- ghc_campaign_drill_begin(player, spot) accepts only one of the two validated native Campaign player entities, and only while the native pair is ready.
+- ghc_campaign_drill_complete(player, spot) commits the shared spot-complete flag only for the player who owns that interaction.
+- ghc_campaign_drill_cancel(player, spot) releases the lock without completing the spot.
+- ghc_campaign_drill_abort_player(player) and ghc_campaign_drill_abort_slot(slot) release the owner lock on interruption/death/disconnect. Slot-based cleanup remains available even after the session-ready flag is dropped.
+- The claim/finish critical sections contain no wait/yield. GSC's serialized script execution therefore prevents two button events from interleaving the owner check and assignment.
+
+The original Clockwork handle_drill_spot and handle_drilling source files are not in the public repository. Do not patch them by line number from the old reference matrix. The helper is ready for a source-level adapter, but the retail mission function still needs to be wired to pass its actual activating player and the actual drill-spot index, then restore that same player's stance, weapon locks, animation link and action slot on every exit path.
+
+The portable C ownership state machine remains the host-test oracle for these rules. It is not injected into the game and does not replace the GSC helper.
+
