@@ -15,6 +15,8 @@ struct timeval;
 #define MENU_ROOM_LIMIT 8
 #define ROOM_HEARTBEAT_FRAMES 300
 #define ROOM_LIST_REFRESH_FRAMES 600
+#define NETPLAY_DISCOVERY_POLL_FRAMES 120
+#define NETPLAY_DISCOVERY_MAX_ATTEMPTS 60
 #define SCREEN_ROOMS 0
 #define SCREEN_ROOM 1
 #define SCREEN_JOIN_CODE 2
@@ -226,8 +228,11 @@ static void make_netplay_nickname(char *output, size_t output_size,
             break;
         }
     }
-    if (is_host) snprintf(output, output_size, "CB-%.6s-HOST", session->code);
-    else snprintf(output, output_size, "CB-%.6s-P%d", session->code, player_number);
+    {
+        const char *room_id = view->netplay_id[0] ? view->netplay_id : session->code;
+        if (is_host) snprintf(output, output_size, "CB-%.12s-HOST", room_id);
+        else snprintf(output, output_size, "CB-%.12s-P%d", room_id, player_number);
+    }
 }
 
 static void draw_disc_select(const CBGameDisc *discs, int count, int selected,
@@ -266,11 +271,9 @@ static void draw_disc_select(const CBGameDisc *discs, int count, int selected,
     }
 
     if (is_host) {
-        snprintf(line, sizeof(line), "HOST: Netplay starts automatically as CB-%.6s-HOST.", session ? session->code : "");
-        draw_text(58, 398, 13, 0x7ce0a8ff, line);
+        draw_text(58, 398, 13, 0x7ce0a8ff, "HOST: Start the match; RetroArch publishes a private relay.");
     } else {
-        snprintf(line, sizeof(line), "PLAYER: Open Netplay Host List and select CB-%.6s-HOST.", session ? session->code : "");
-        draw_text(58, 398, 13, 0xffc18aff, line);
+        draw_text(58, 398, 13, 0xffc18aff, "PLAYER: The lobby finds the host and joins automatically.");
     }
     draw_text(58, 450, 13, 0x9bb4c2ff, status ? status : "");
     draw_text(56, 474, 12, 0x6d8794ff, "UP/DOWN SELECT  CROSS LAUNCH  SQUARE RESCAN  CIRCLE BACK");
@@ -283,6 +286,7 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
     CBOnlineSession session;
     CBOnlineRoomView view;
     CBGameDisc discs[CB_DISC_MAX];
+    CBOnlineNetplayEndpoint endpoint;
     char error[160] = "";
     char netplay_nickname[32] = "";
     char join_code[7] = "AAAAAA";
@@ -294,6 +298,9 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
     int code_cursor = 0;
     int disc_count = 0;
     int disc_selected = 0;
+    int netplay_waiting = 0;
+    int netplay_wait_attempts = 0;
+    unsigned int netplay_poll_frames = 0;
     int curl_initialized = 0;
     int lobby_ready = 0;
     unsigned int poll_frames = 0;
@@ -304,6 +311,7 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
 
     memset(&session, 0, sizeof(session));
     memset(&view, 0, sizeof(view));
+    memset(&endpoint, 0, sizeof(endpoint));
     memset(rooms, 0, sizeof(rooms));
 
     if (ensure_lobby(network_state, online_state, status, status_size) == 0) lobby_ready = 1;
@@ -440,7 +448,7 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                     snprintf(status, status_size, "Disc scan failed.");
                 }
             }
-            if (cross && !old_cross && disc_count > 0) {
+            if (cross && !old_cross && disc_count > 0 && !netplay_waiting) {
                 if (!view.is_ready) {
                     screen = SCREEN_ROOM;
                     snprintf(status, status_size, "Room changed. All active players must be READY again.");
@@ -448,12 +456,22 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                     int is_host = session_is_room_host(&session, &view);
                     make_netplay_nickname(netplay_nickname, sizeof(netplay_nickname),
                                           &session, &view, is_host);
-                    cb_launch_game(discs[disc_selected].path, is_host, netplay_nickname,
-                                   error, sizeof(error));
-                    snprintf(status, status_size, "%.120s", error);
+                    if (is_host) {
+                        cb_launch_game(discs[disc_selected].path, 1, netplay_nickname,
+                                       NULL, error, sizeof(error));
+                        snprintf(status, status_size, "%.120s", error);
+                    } else {
+                        netplay_waiting = 1;
+                        netplay_wait_attempts = 0;
+                        netplay_poll_frames = NETPLAY_DISCOVERY_POLL_FRAMES - 1;
+                        snprintf(status, status_size, "Finding the host relay. The game will launch automatically.");
+                    }
                 }
             }
-            if (circle && !old_circle) screen = SCREEN_ROOM;
+            if (circle && !old_circle) {
+                netplay_waiting = 0;
+                screen = SCREEN_ROOM;
+            }
             draw_disc_select(discs, disc_count, disc_selected, &session,
                              session_is_room_host(&session, &view), status);
         } else {
@@ -478,6 +496,9 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                     } else {
                         disc_count = (int)scanned;
                         disc_selected = 0;
+                        netplay_waiting = 0;
+                        netplay_wait_attempts = 0;
+                        netplay_poll_frames = 0;
                         screen = SCREEN_DISC_SELECT;
                     }
                     if (disc_count == 0) {
@@ -512,6 +533,50 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                         return_to_rooms(&session, &view, &ready, &screen, &poll_frames,
                                         rooms, &room_count, &selected, status, status_size);
                     } else snprintf(status, status_size, "Heartbeat: %.120s", error);
+                }
+            }
+            if (screen == SCREEN_DISC_SELECT && netplay_waiting &&
+                ++netplay_poll_frames >= NETPLAY_DISCOVERY_POLL_FRAMES) {
+                int endpoint_result;
+                netplay_poll_frames = 0;
+                if (!view.is_ready) {
+                    netplay_waiting = 0;
+                    snprintf(status, status_size, "Room changed. All active players must be READY again.");
+                    screen = SCREEN_ROOM;
+                } else {
+                    endpoint_result = cb_online_get_netplay_endpoint(&session, &endpoint,
+                                                                      error, sizeof(error));
+                    if (endpoint_result == 0) {
+                        netplay_waiting = 0;
+                        make_netplay_nickname(netplay_nickname, sizeof(netplay_nickname),
+                                              &session, &view, 0);
+                        snprintf(status, status_size, "Host found: %.42s / %.32s. Connecting...",
+                                 endpoint.game_name, endpoint.core_name);
+                        cb_launch_game(discs[disc_selected].path, 0, netplay_nickname,
+                                       &endpoint, error, sizeof(error));
+                        snprintf(status, status_size, "%.120s", error);
+                    } else if (endpoint_result == 1) {
+                        netplay_wait_attempts++;
+                        if (netplay_wait_attempts >= NETPLAY_DISCOVERY_MAX_ATTEMPTS) {
+                            netplay_waiting = 0;
+                            snprintf(status, status_size, "Host was not found after 2 minutes. Check that the host started Netplay.");
+                        } else {
+                            snprintf(status, status_size, "Waiting for host relay... attempt %d/%d",
+                                     netplay_wait_attempts, NETPLAY_DISCOVERY_MAX_ATTEMPTS);
+                        }
+                    } else if (session_is_gone(error)) {
+                        netplay_waiting = 0;
+                        return_to_rooms(&session, &view, &ready, &screen, &poll_frames,
+                                        rooms, &room_count, &selected, status, status_size);
+                    } else {
+                        netplay_wait_attempts++;
+                        snprintf(status, status_size, "Host lookup retry %d: %.90s",
+                                 netplay_wait_attempts, error);
+                        if (netplay_wait_attempts >= NETPLAY_DISCOVERY_MAX_ATTEMPTS) {
+                            netplay_waiting = 0;
+                            snprintf(status, status_size, "Could not locate the host. Return to the room and try again.");
+                        }
+                    }
                 }
             }
             if (screen == SCREEN_ROOM) draw_room(&view, &session, status);
