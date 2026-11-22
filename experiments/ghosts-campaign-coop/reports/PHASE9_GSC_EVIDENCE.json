@@ -126,9 +126,12 @@
       "files": 109,
       "playerpiggyback_refs": 7,
       "playengineeffects_refs": 3,
+      "issplitscreen_refs": 0,
       "issplitscreenplayer_refs": 0,
       "issplitscreenplayerprimary_refs": 0,
-      "getentarray_player_queries": 2,
+      "coop_mode_refs": 1,
+      "player_entity_array_queries": 2,
+      "hideonclient_refs": 4,
       "setplayertocamera_refs": 23
     },
     "common": {
@@ -136,21 +139,30 @@
       "playerpiggyback_refs": 111,
       "playengineeffects_refs": 8,
       "issplitscreen_refs": 5,
+      "coop_mode_refs": 22,
       "get_other_player_refs": 7,
       "coop_game_refs": 5,
       "player1_marker_refs": 3,
-      "player2_marker_refs": 3
+      "player2_marker_refs": 3,
+      "player_array_initializer_refs": 1,
+      "second_player_alias_refs": 1
     },
     "patch_common_mp": {
       "files": 119,
       "playerpiggyback_refs": 265,
       "clientid_refs": 106,
+      "issplitscreen_refs": 1,
       "issplitscreenplayer_refs": 21,
       "issplitscreenplayerprimary_refs": 12,
       "splitexitsright_refs": 33,
       "callback_playerconnect_refs": 2,
+      "callback_playerdisconnect_refs": 1,
+      "codecallback_playerconnect_refs": 1,
+      "player_array_reset_refs": 1,
+      "player_array_append_refs": 1,
       "getlowestavailableclientid_refs": 2,
-      "getplayerfromclientnum_refs": 1
+      "getplayerfromclientnum_refs": 1,
+      "player_entity_array_queries": 1
     }
   },
   "interpretation": {
