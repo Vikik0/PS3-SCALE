@@ -62,6 +62,7 @@ const blobMock = {
 const blobModulePath = require.resolve("@vercel/blob");
 require.cache[blobModulePath] = { id: blobModulePath, filename: blobModulePath, loaded: true, exports: blobMock };
 const handler = require("../api/rooms");
+const originalFetch = global.fetch;
 
 function response() {
   return {
@@ -77,6 +78,7 @@ async function call(method, body = {}, token = "", query = {}) {
   return res;
 }
 test.beforeEach(() => { blobs.clear(); etagSequence = 0; refreshOnNextRead = ""; });
+test.afterEach(() => { global.fetch = originalFetch; });
 
 test("a public room supports four human seats and rejects a fifth", async () => {
   const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
@@ -575,4 +577,95 @@ test("an expired host seat is promoted before the remaining player heartbeats", 
   const room = await call("GET", {}, guest.body.token, { code: host.body.room.code });
   assert.equal(room.body.room.hostPlayerId, guest.body.player.id);
   assert.equal(room.body.room.status, "waiting");
+});
+
+
+test("Netplay relay lookup is private to room members and resolves the matching host", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: true });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  const code = host.body.room.code;
+  const details = await call("GET", {}, guest.body.token, { code });
+  const netplayId = details.body.room.netplayId;
+
+  assert.match(netplayId, /^[A-F0-9]{12}$/);
+  const publicListing = await call("GET");
+  assert.equal(publicListing.body.rooms.some((entry) => entry.code === code), false);
+  assert.equal(publicListing.body.rooms.some((entry) => entry.netplayId === netplayId), false);
+
+  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+
+  let requestedUrl = "";
+  global.fetch = async (url, options) => {
+    requestedUrl = url;
+    assert.equal(options.headers.Accept, "application/json");
+    return {
+      ok: true,
+      status: 200,
+      async json() {
+        return [
+          { fields: { username: "some-other-room-HOST", connectable: true, ip: "203.0.113.2", port: 55435 } },
+          {
+            fields: {
+              username: "CB-" + netplayId + "-HOST",
+              connectable: true,
+              host_method: 3,
+              mitm_ip: "madrid.relay.retroarch.com",
+              mitm_port: 55435,
+              mitm_session: "AbCdEf0123456789",
+              game_name: "Crash Bash",
+              core_name: "PCSX-ReARMed",
+              core_version: "r23l",
+              retroarch_version: "1.22.2",
+              updated: new Date().toISOString()
+            }
+          }
+        ];
+      }
+    };
+  };
+
+  const lookup = await call("POST", { action: "netplay" }, guest.body.token);
+  assert.equal(requestedUrl, "http://lobby.libretro.com/list");
+  assert.equal(lookup.statusCode, 200);
+  assert.equal(lookup.body.ready, true);
+  assert.equal(lookup.body.mode, "relay");
+  assert.equal(lookup.body.address, "madrid.relay.retroarch.com");
+  assert.equal(lookup.body.port, 55435);
+  assert.equal(lookup.body.mitmSession, "AbCdEf0123456789");
+  assert.equal(lookup.body.hostNickname, "CB-" + netplayId + "-HOST");
+  assert.equal(lookup.body.gameName, "Crash Bash");
+  assert.equal(lookup.body.coreName, "PCSX-ReARMed");
+});
+
+test("Netplay endpoint lookup waits until the room is ready", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  let fetched = false;
+  global.fetch = async () => {
+    fetched = true;
+    throw new Error("The lobby should not be queried before the room is ready.");
+  };
+
+  const lookup = await call("POST", { action: "netplay" }, host.body.token);
+  assert.equal(lookup.statusCode, 409);
+  assert.equal(lookup.body.state, "room_not_ready");
+  assert.equal(fetched, false);
+});
+
+test("Netplay endpoint lookup reports a waiting state before the host announces", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    async json() { return []; }
+  });
+
+  const lookup = await call("POST", { action: "netplay" }, guest.body.token);
+  assert.equal(lookup.statusCode, 200);
+  assert.equal(lookup.body.ready, false);
+  assert.equal(lookup.body.state, "waiting_for_host");
 });
