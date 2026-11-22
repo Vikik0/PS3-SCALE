@@ -27,8 +27,16 @@ const blobMock = {
     blobs.set(pathname, { body: String(body), etag: String(++etagSequence) });
     return {};
   },
-  async list({ prefix }) {
-    return { blobs: [...blobs.keys()].filter((p) => p.startsWith(prefix)).map((pathname) => ({ pathname })) };
+  async list({ prefix, limit = 100, cursor }) {
+    const all = [...blobs.keys()].filter((p) => p.startsWith(prefix));
+    const offset = cursor ? Number(cursor) : 0;
+    const page = all.slice(offset, offset + limit);
+    const next = offset + page.length;
+    return {
+      blobs: page.map((pathname) => ({ pathname })),
+      cursor: next < all.length ? String(next) : undefined,
+      hasMore: next < all.length
+    };
   },
   async del(pathname) { blobs.delete(pathname); }
 };
@@ -383,4 +391,38 @@ test("public room discovery does not stop at the old forty-room cutoff", async (
   const listing = await call("GET");
   assert.equal(listing.statusCode, 200);
   assert.equal(listing.body.rooms.length, 45);
+});
+
+
+test("public room discovery follows Blob pagination beyond one hundred rooms", async () => {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const now = Date.now();
+  for (let index = 0; index < 120; index += 1) {
+    const code = "AAAA" + chars[Math.floor(index / 32)] + chars[index % 32];
+    const room = {
+      code,
+      status: "waiting",
+      isPrivate: false,
+      maxPlayers: 4,
+      createdAt: now - index,
+      updatedAt: now,
+      players: [{
+        id: "player-" + index,
+        name: "Host " + index,
+        ready: false,
+        joinedAt: now,
+        lastSeen: now
+      }],
+      signals: [],
+      nextSignalId: 1
+    };
+    blobs.set("cb-rooms/" + code + ".json", {
+      body: JSON.stringify(room),
+      etag: String(++etagSequence)
+    });
+  }
+
+  const listing = await call("GET");
+  assert.equal(listing.statusCode, 200);
+  assert.equal(listing.body.rooms.length, 120);
 });
