@@ -20,6 +20,20 @@ RetroArch's current Netplay FAQ cautions that PSX netplay is generally unsuitabl
 
 Do not change the core version, CUE/BIN content, region, BIOS file (or HLE choice), Multitap option or synchronization mode between consoles during a test. The package stores its settings and logs under `/dev_hdd0/home/<user-id>/retroarch/CBON00001/`.
 
+## Test 0 — Native lobby handoff
+
+1. Install both the RetroArch game package (`CBON00001`) and the native lobby companion (`CBEN00001`) on two compatible PS3 consoles.
+2. Launch the native lobby companion on the first console and create a public or private room.
+3. Join the room from the second console using the six-character invite code.
+4. Mark both players Ready. Confirm the room becomes launch-ready with two players; a four-seat room is not required.
+5. Press START in the room on either console. Confirm it opens the installed Crash Bash Online RetroArch app.
+6. From the companion's home menu, also test **OPEN CRASH BASH ONLINE**.
+7. Temporarily test without the RetroArch package installed and confirm the launcher reports the missing app rather than crashing.
+
+Pass criteria: both players see the same room membership and Ready state, the native companion launches the separate RetroArch app, and the missing-package path is handled cleanly.
+
+This is a matchmaking handoff only. After RetroArch opens, players still load the same CUE/BIN and manually host/join through RetroArch Netplay. The room code is not yet passed into Netplay, and the lobby does not synchronize game state.
+
 ## Test 1 — Single-console baseline
 
 1. Launch Crash Bash Online from the XMB.
