@@ -164,6 +164,23 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
         self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
         self.assertIn("handle_drill_spot", report["unscoped_level_player_functions"])
 
+    def test_vault_blast_must_target_secondary_local_player(self):
+        source = passing_source().replace(
+            '            thread clockwork_apply_vault_blast( level.playengineeffects, var_3 );\\n',
+            '',
+        )
+        report = audit(self.write_source(source))
+        self.assertFalse(report["checks"]["vault_blast_targets_both_local_players"])
+
+    def test_vault_blast_helper_must_not_fall_back_to_level_player(self):
+        source = passing_source().replace(
+            '    var_0 = player.health - 5;\\n',
+            '    level.player dodamage( 10, blast_origin.origin );\\n'
+            '    var_0 = player.health - 5;\\n',
+        )
+        report = audit(self.write_source(source))
+        self.assertFalse(report["checks"]["vault_blast_helper_uses_explicit_player"])
+
     def test_comments_and_string_literals_do_not_fake_trigger_activator_capture(self):
         source = passing_source().replace(
             '    drill_trigger waittill( "trigger", drill_activator );\n',
