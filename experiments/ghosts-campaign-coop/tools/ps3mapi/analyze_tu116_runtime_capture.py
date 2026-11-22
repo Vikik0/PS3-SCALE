@@ -168,7 +168,9 @@ def analyze(
         == "BOTH_CONTROLLERS_SIMULTANEOUSLY_VISIBLE_IN_BOTH"
     )
 
-    if pad_gate_passed:
+    if not dump_checks_passed:
+        status = "CAPTURE_VERIFICATION_FAILED"
+    elif pad_gate_passed:
         status = "CAPTURE_READY_FOR_ENGINE_REVIEW"
     elif campaign_log is None:
         status = "ELF_ANALYSIS_READY_PAD_EVIDENCE_MISSING"
