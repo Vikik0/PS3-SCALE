@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define GHC_CAMPAIGN_INTERACTION_PLAYER_COUNT 2u
-#define GHC_CAMPAIGN_INTERACTION_SPOT_COUNT 8u
+#define GHC_CAMPAIGN_INTERACTION_SPOT_COUNT 2u
 #define GHC_CAMPAIGN_INTERACTION_NO_OWNER 0xffu
 #define GHC_CAMPAIGN_INTERACTION_NO_SPOT 0xffu
 
@@ -18,7 +18,9 @@ typedef enum {
     GHC_CAMPAIGN_INTERACTION_ALREADY_COMPLETE = 6,
     GHC_CAMPAIGN_INTERACTION_NOT_OWNER = 7,
     GHC_CAMPAIGN_INTERACTION_PLAYER_BUSY = 8,
-    GHC_CAMPAIGN_INTERACTION_NO_ACTIVE_INTERACTION = 9
+    GHC_CAMPAIGN_INTERACTION_NO_ACTIVE_INTERACTION = 9,
+    GHC_CAMPAIGN_INTERACTION_BUSY = 10,
+    GHC_CAMPAIGN_INTERACTION_PREREQUISITE_NOT_COMPLETE = 11
 } GhcCampaignInteractionStatus;
 
 typedef struct {
@@ -29,10 +31,10 @@ typedef struct {
 } GhcCampaignInteractionState;
 
 /*
- * Portable ownership contract for shared Campaign interactions such as
- * Clockwork drill spots. Each local player may own one interaction at a
- * time; different players may operate different spots simultaneously.
- * Completion is shared and can be committed only by the current owner.
+ * Clockwork has two sequential drill stages on one vault door, not two
+ * independent simultaneous stations. Only one player may own the active
+ * drill stage globally. Stage 1 (spot 0) must complete before Stage 2
+ * (spot 1) can begin. The owner may change between stages.
  */
 void ghc_campaign_interaction_reset(GhcCampaignInteractionState *state);
 
@@ -55,7 +57,7 @@ GhcCampaignInteractionStatus ghc_campaign_interaction_cancel(
     uint8_t spot
 );
 
-/* Release an owner's current interaction on death/disconnect/cutscene exit. */
+/* Release the current owner on death/disconnect/cutscene exit, without completion. */
 GhcCampaignInteractionStatus ghc_campaign_interaction_abort_player(
     GhcCampaignInteractionState *state,
     uint8_t player_slot
