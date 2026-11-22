@@ -64,3 +64,10 @@ python tools/ps3_zone_pool_inspect.py "C:\Ghosts\analysis\clockwork.raw.zone" --
 ~~~
 
 The inspector locates the pool by scoring the next 32 bytes after the tag strings, because the retail trailer length varies. It reports the MapEnts pool record and its pointer verbatim; it does not interpret the pointer or decode entity data.
+
+
+## PS3 MapEnts layout probe
+
+A PS3-specific IW6 MapEnts reference was recovered in the IW4Studio MapConverter.IW6.PS3 research script. It documents a 0x80-byte MapEnts header, entity text at header + 0x80, numEntityChars at +8, SpawnList count at +0x70, and 0x20-byte SpawnPointEntityRecord entries. The script-string table uses the count at 0x28 and 32-bit slots beginning at 0x3C (zero means empty; 0xFFFFFFFF means the next inline string). These are layout references only; the map-specific hard-coded offsets in that script belong to mp_swamp and were not reused for Clockwork.
+
+The new experimental ps3_zone_mapents_probe.py implements that 32-bit layout and validates the entity-string length, script-string indexes, and spawn-record sequence. It passes synthetic fixtures, but the fully inner-inflated Clockwork zone produced zero MapEnts entity-string candidates. The pool entry therefore remains unresolved and no spawn-point coordinates are claimed. The next input needed for this path may be a separate map-data asset or a runtime/dumped MapEnts region, not another guess at the mp_swamp offsets.
