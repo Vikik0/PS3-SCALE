@@ -52,11 +52,11 @@ launch_args = (root / "source/game_launch_args.c").read_text(encoding="utf-8")
 assert "#define SCREEN_DISC_SELECT 3" in source
 assert "cb_disc_scan(discs, CB_DISC_MAX, &scanned)" in source
 assert re.search(
-    r"cb_launch_game\\(discs\\[disc_selected\\]\\.path,\\s*1,\\s*netplay_nickname",
+    r"cb_launch_game\(discs\[disc_selected\]\.path,\s*1,\s*netplay_nickname",
     source,
 ), "Host launch must pass the selected disc and host role."
 assert re.search(
-    r"cb_launch_game\\(discs\\[disc_selected\\]\\.path,\\s*0,\\s*netplay_nickname",
+    r"cb_launch_game\(discs\[disc_selected\]\.path,\s*0,\s*netplay_nickname",
     source,
 ), "Client launch must pass the selected disc and client role."
 assert "if ((screen == SCREEN_ROOM || screen == SCREEN_DISC_SELECT)" in source
