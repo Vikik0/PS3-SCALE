@@ -107,3 +107,54 @@ test("four-seat lobby UI renders without stale two-player state", () => {
   assert.match(html, /room\.players\.length>1\?"Players joined/);
   assert.doesNotMatch(html, /\bboth\?/);
 });
+
+
+test("four-player signaling routes offers to the requested room member only", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const code = host.body.room.code;
+  const tokens = [host.body.token];
+  const playerIds = [host.body.player.id];
+  for (const displayName of ["Player Two", "Player Three", "Player Four"]) {
+    const joined = await call("POST", { action: "join", code, displayName });
+    tokens.push(joined.body.token);
+    playerIds.push(joined.body.player.id);
+  }
+
+  const offer = await call("POST", {
+    action: "signal",
+    toPlayerId: playerIds[3],
+    type: "offer",
+    payload: { sdp: "test-offer" }
+  }, tokens[0]);
+  assert.equal(offer.statusCode, 202);
+
+  const targetPoll = await call("POST", { action: "poll", since: 0 }, tokens[3]);
+  assert.equal(targetPoll.statusCode, 200);
+  assert.equal(targetPoll.body.signals.length, 1);
+  assert.equal(targetPoll.body.signals[0].from, playerIds[0]);
+  assert.deepEqual(targetPoll.body.signals[0].payload, { sdp: "test-offer" });
+
+  const unrelatedPoll = await call("POST", { action: "poll", since: 0 }, tokens[1]);
+  assert.equal(unrelatedPoll.statusCode, 200);
+  assert.equal(unrelatedPoll.body.signals.length, 0);
+});
+
+test("room signaling rejects missing, self and unknown recipients", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const code = host.body.room.code;
+  const joined = await call("POST", { action: "join", code, displayName: "Player Two" });
+  const hostId = host.body.player.id;
+
+  const missing = await call("POST", { action: "signal", type: "offer", payload: {} }, host.body.token);
+  assert.equal(missing.statusCode, 400);
+
+  const self = await call("POST", {
+    action: "signal", toPlayerId: hostId, type: "offer", payload: {}
+  }, host.body.token);
+  assert.equal(self.statusCode, 404);
+
+  const unknown = await call("POST", {
+    action: "signal", toPlayerId: "not-a-room-player", type: "offer", payload: {}
+  }, joined.body.token);
+  assert.equal(unknown.statusCode, 404);
+});
