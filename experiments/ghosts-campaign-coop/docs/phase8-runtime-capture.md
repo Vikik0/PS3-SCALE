@@ -15,6 +15,7 @@ Added under tools/ps3mapi:
 - reconstruct_elf_from_ps3mapi_dumps.py — rebuilds a minimal ELF64 BE PPU analysis image from the SELF headers and process dumps.
 - scan_runtime_strings.py — finds client/split-screen/controller/camera/HUD-related ASCII strings in the reconstructed ELF.
 - compare_runtime_strings.py — compares string leads between Campaign and Multiplayer.
+- diff_runtime_elfs.py — compares overlapping file-backed PT_LOAD bytes at matching virtual addresses, with block hashes and a clear limit that changed blocks are not function boundaries.
 
 ### Capture identity
 
@@ -49,6 +50,7 @@ New host tests cover:
 - refusal to overwrite SELF or existing output files;
 - mode-specific dump filenames without manual renaming;
 - simultaneous controller-port detection;
+- runtime ELF binary-diff ranges and non-executable-segment handling;
 - probe source safety (cellPadGetInfo2 only, no pad-data polling or memory writes).
 
 Host and CI tests validate the tooling and build. They do not replace an actual PS3 load test.
@@ -83,3 +85,8 @@ Before a hook is considered, analysis must establish:
 - Hesh remains an NPC and Logan remains player one.
 
 **Phase 8 status:** the capture pipeline and read-only probe are prepared in source and CI. No PS3 hardware logs or TU 1.16 runtime dumps have been received in this phase, so no native player-two hook or playable Campaign co-op build is claimed.
+
+
+## 6. CI artifact package
+
+The PS3DK build job packages the diagnostic PRX, fake-signed SPRX, analysis ELF, Arabic usage notes, and both mode-selection text files as the ghosts-campaign-pad-probe artifact. The PRX passed prx-gen build/check in CI. This proves the module compiles and its imports are structurally valid; it does not prove that it has been loaded on a PS3.
