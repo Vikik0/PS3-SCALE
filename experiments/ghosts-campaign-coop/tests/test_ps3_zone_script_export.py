@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from tools.ps3_zone_script_export import ZoneScanError, export_zone, scan_zone
+from ps3_zone_script_export import ZoneScanError, export_zone, scan_zone
 
 def make_long_asset(name: str, stack: bytes, bytecode: bytes) -> bytes:
     compressed = zlib.compress(stack)
