@@ -141,3 +141,12 @@ Reads the 8-byte asset-pool records from an outer-decompressed raw zone. It scan
 ~~~powershell
 python tools/ps3_zone_pool_inspect.py "C:\Ghosts\analysis\clockwork.raw.zone" --report-json "C:\Ghosts\analysis\clockwork-pool.json" --records-csv "C:\Ghosts\analysis\clockwork-pool.csv"
 ~~~
+
+
+### 4. tools/ps3_zone_mapents_probe.py
+
+Experimental PS3 MapEnts candidate scanner. It reads the inline script-string table, searches for the 0x80-byte PS3 MapEnts header followed by a length-matching entity string, and validates 0x20-byte spawn records when a spawn-list offset is resolvable. It does not apply map-specific offsets from other missions. Clockwork currently yields zero entity-string candidates, so no spawn coordinates are exported.
+
+~~~powershell
+python tools/ps3_zone_mapents_probe.py "C:\Ghosts\analysis\clockwork.zone" --report-json "C:\Ghosts\analysis\clockwork-mapents.json" --spawn-csv "C:\Ghosts\analysis\clockwork-spawns.csv"
+~~~
