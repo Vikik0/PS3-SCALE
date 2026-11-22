@@ -174,3 +174,6 @@ A function-level pass over the highest-density scripts gives a first review queu
 | maps/ally_attack_dog.gsc | dog_player | 11 | player/dog combat ownership |
 
 These are triage counts, not a final patch list. Each function needs review of its caller, event lifetime, and whether the operation is intentionally tied to the story's primary player.
+
+
+Clockwork's main map script also passes the entire level.playerpiggyback array into the night-vision initialization helper (maps/clockwork.gsc, line 29), which is explicitly a multi-player-friendly call site. A separate numeric Clockwork script asset 1218 initializes level.player from the first player entity only (1218.gsc, lines 4–9). Together these show mixed handling: some mission systems already accept the player array, while other initialization and gameplay code remains primary-player-centric.
