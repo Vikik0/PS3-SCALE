@@ -62,7 +62,7 @@ The XMB entry now launches the static-core RetroArch executable directly through
 
 The workflow is `.github/workflows/crash-bash-build.yml`. It uses pinned revisions of PCSX-ReARMed, RetroArch, RetroArch assets and core metadata.
 
-The build script is `scripts/build_online_pkg.sh`. It:
+The build script is `scripts/build_online_pkg_clean.sh`. It:
 
 - Patches the PCSX-ReARMed Multitap default to Port 1.
 - Enables RetroArch Netplay lockstep, NAT traversal and the Madrid relay.
