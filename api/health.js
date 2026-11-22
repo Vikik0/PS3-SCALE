@@ -5,9 +5,12 @@ module.exports = function handler(_req, res) {
   return res.status(200).json({
     ok: true,
     service: "Crash Bash Enhanced lobby",
-    version: "0.3.0",
+    version: "0.4.0",
     roomTtlMinutes: 30,
     playerTtlMinutes: 10,
+    minimumReadyPlayers: 2,
+    roomListing: "cursor-paginated",
+    expiredRoomCleanup: "conditional",
     psnRequired: false,
     maxPlayersPerRoom: 4,
     storageConfigured: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
