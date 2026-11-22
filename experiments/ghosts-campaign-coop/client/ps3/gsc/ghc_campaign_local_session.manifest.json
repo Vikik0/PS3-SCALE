@@ -8,6 +8,6 @@
   "source_sha256": "3072ee96a5207d4787164991aadf3a0cdde87facdf6b5e8cd17f74f6b8bcb055",
   "compiled_gscbin_sha256": "7a1be335a18217b457781a976ea8757d96e571eec9170101b2bff723c4003079",
   "compiled_gscbin_bytes": 1891,
-  "status": "compiled and round-trip decompiled with GSC Tool 1.6.2.364 after native-pair revalidation and drill-lock cleanup; not injected or runtime-tested",
+  "status": "compiled and round-trip decompiled with GSC Tool 1.6.2.364; source and bytecode hashes verified from CI artifact; not injected or runtime-tested",
   "behavior": "Reuses only engine-created native split-screen players; validates an already-ready pair before idempotent reuse; releases active Clockwork drill ownership before rebinding stale player handles; binds Campaign aliases by primary/secondary identity; exposes Player 2 loadout and two-spot drill ownership helpers; never spawns or clones a player."
 }
