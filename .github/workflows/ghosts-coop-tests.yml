@@ -133,7 +133,11 @@ jobs:
           test -s compiled/iw6/clockwork_stage56.gscbin
           gsc-tool --mode decomp --game iw6 --system ps3 compiled/iw6/clockwork_stage56.gscbin
           test -s decompiled/iw6/clockwork_stage56.gsc
-          cmp /tmp/clockwork-stage56-first-pass.gsc decompiled/iw6/clockwork_stage56.gsc
+          if ! cmp -s /tmp/clockwork-stage56-first-pass.gsc decompiled/iw6/clockwork_stage56.gsc; then
+            echo "Stage 5/6 canonical decompile differs after recompilation:"
+            diff -u /tmp/clockwork-stage56-first-pass.gsc decompiled/iw6/clockwork_stage56.gsc || true
+            exit 1
+          fi
           grep -q 'clockwork_get_secondary_player' decompiled/iw6/clockwork_stage56.gsc
           grep -q 'clockwork_apply_vault_blast' decompiled/iw6/clockwork_stage56.gsc
       - uses: actions/upload-artifact@v6
