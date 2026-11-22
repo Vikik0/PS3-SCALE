@@ -30,7 +30,10 @@ After status 8, the bridge's \`main()\` must be called again to run its existing
 ## Validation
 
 - Five new source-contract tests cover monitor startup, duplicate-thread guard, alias/entity revalidation, two-second debounce, counter reset, cleanup and absence of player-spawn/rebind calls.
-- The bridge remains subject to the pinned GSC Tool 1.6.2.364 compile/decompile round-trip and manifest hash checks.
+- The pinned GSC Tool 1.6.2.364 build compiled and round-trip decompiled the bridge successfully.
+- Source SHA-256: `81126c094e095adc1a462f8ff0e50a220a3ae866ca9c71d80b092e7a6be1fa61`.
+- Compiled GSCBIN: 2,606 bytes; SHA-256 `b0dac7ddb682fdf2836e2e18343b04068e5f57944dbf3f367e736104dab9f15c`.
+- GitHub Actions run `45080651622` passed all five jobs; the Python suite passed 241 tests.
 - Host tests and GSC compile prove source/build consistency only. They do not prove that the monitor is loaded by the retail Campaign VM or that a second local player exists.
 
 ## Current native gate
