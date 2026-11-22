@@ -94,7 +94,7 @@ static void parse_players(const char *json, const cb_json_token *tokens, int cou
         player->ready = cb_json_bool(json, ready_token >= 0 ? &tokens[ready_token] : NULL, 0);
         view->player_count++;
     }
-    view->is_ready = view->player_count == CB_ONLINE_PLAYER_MAX;
+    view->is_ready = view->player_count >= 2;
     for (i = 0; i < view->player_count; i++) if (!view->players[i].ready) view->is_ready = 0;
 }
 static int parse_room_view(const char *json, CBOnlineRoomView *view) {
