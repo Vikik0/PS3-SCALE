@@ -73,6 +73,24 @@
       "finding": "Co-op HUD initialization iterates the player array and uses get_other_player for friendly-location HUD elements."
     },
     {
+      "group": "common",
+      "script_id": "954.gsc",
+      "lines": "238-242",
+      "finding": "Autosave logic also waits on the secondary player alias when the coop/split-screen branch is active."
+    },
+    {
+      "group": "common",
+      "script_id": "1120.gsc",
+      "lines": "99-105",
+      "finding": "Missile targeting creates a separate attractor for the secondary player alias in the coop/split-screen branch."
+    },
+    {
+      "group": "common",
+      "script_id": "981.gsc",
+      "lines": "315-326",
+      "finding": "Shared difficulty logic compares the primary and secondary players' gameskill values."
+    },
+    {
       "group": "patch_common_mp",
       "script_id": "1467.gsc",
       "lines": "16-29,100-110",
@@ -142,7 +160,8 @@
     "independent_player_2_camera_proven": false,
     "player_2_hud_and_player_state_ownership_proven": false,
     "player1_player2_teleport_helper_callsite_found": false,
-    "gsc_player_creation_call_found_in_clockwork_campaign": false
+    "gsc_player_creation_call_found_in_clockwork_campaign": false,
+    "coop_dvar_alone_creates_local_client": false
   },
   "next_gates": [
     "Collect simultaneous pad-port samples in Campaign and Multiplayer with Pad Probe v4.",
