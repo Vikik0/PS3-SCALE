@@ -306,6 +306,7 @@ test("a ready public room reopens when a disconnected seat expires", async () =>
   const finalRoom = await call("GET", {}, host.body.token, { code });
   assert.equal(finalRoom.body.room.players.length, 4);
   assert.equal(finalRoom.body.room.status, "waiting");
+  assert.equal(finalRoom.body.room.players.filter((player) => player.ready).length, 0);
 });
 
 
@@ -354,6 +355,7 @@ test("heartbeat prunes expired seats and returns only active players", async () 
   assert.equal(heartbeat.statusCode, 200);
   assert.equal(heartbeat.body.players.length, 3);
   assert.equal(heartbeat.body.players.some((player) => player.id === playerIds[3]), false);
+  assert.equal(heartbeat.body.players.filter((player) => player.ready).length, 1);
 
   const persisted = JSON.parse(blobs.get(blobPath).body);
   assert.equal(persisted.players.length, 3);
