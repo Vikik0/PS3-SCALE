@@ -37,6 +37,18 @@
       "finding": "init_level_flags enumerates existing player entities, sets level.player to index 0, and conditionally sets level.playengineeffects to index 1."
     },
     {
+      "group": "common",
+      "script_id": "1002.gsc",
+      "lines": "119-122",
+      "finding": "The Campaign/shared load script applies a split-screen-specific cg_fovScale value."
+    },
+    {
+      "group": "common",
+      "script_id": "981.gsc",
+      "lines": "1134-1149",
+      "finding": "The shared health overlay changes size and primary-player offset when split-screen is active."
+    },
+    {
       "group": "patch_common",
       "script_id": "1002.gsc",
       "lines": "1431-1449",
