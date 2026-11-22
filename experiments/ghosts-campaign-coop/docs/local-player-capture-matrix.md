@@ -60,3 +60,21 @@ Do not mark a value as a player slot merely because it changes when a controller
 ## Current status
 
 This matrix is a capture plan, not a completed runtime observation. No PS3 memory capture or Campaign second-player initialization has been performed in CI.
+
+
+## Phase 8 — first runtime evidence capture
+
+Before interpreting native local-client memory, collect a separate pad-port baseline:
+
+1. Load the read-only Pad Probe v4 in Campaign and Multiplayer using distinct mode files.
+2. Compare the two logs with tools/compare_pad_probe_logs.py.
+3. Count port 1 only when port 0 and port 1 are connected in the same sample (mask 0x03). A port 1 sighting at a different time is not simultaneous two-pad evidence.
+4. Keep the result classified as pad-subsystem evidence only; it does not establish a second game client.
+
+Then capture the TU 1.16 Campaign and Multiplayer PT_LOAD ranges using the manual scripts in tools/ps3mapi. Do not use an automatic per-title script because both modes share BLUS31270. Verify each capture against the exact installed SELF with tools/ps3mapi/verify_tu116_dump.py before analyzing the reconstructed ELF.
+
+The capture commands and exact segment sizes are documented in docs/ps3mapi-campaign-dump-plan.md. Raw dumps remain local; share verification JSON, hashes and derived findings first.
+
+## Evidence status
+
+Phase 8 has prepared the scripts, verifier, reconstruction tool, pad probe and host tests. This is not a completed runtime capture. Until the console logs and exact TU 1.16 segment dumps are received, all player-two lifecycle, client/entity ownership, camera, HUD and Campaign hook fields remain **not observed**.
