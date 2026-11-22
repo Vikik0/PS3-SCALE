@@ -68,6 +68,13 @@ These are script-side consumers of a split-screen state. The scanned GSC does no
 
 The following counts are from the 378 decompiled files in the three principal source groups. Counts are token/reference occurrences, not unique players or runtime events.
 
+The expanded audit is reproducible against local exports without uploading game scripts:
+
+~~~powershell
+python tools/audit_gsc_splitscreen.py --group campaign "D:\Ghosts\analysis\clockwork_decompiled" --group common "D:\Ghosts\analysis\common_decompiled" --group multiplayer "D:\Ghosts\analysis\patch_mp_decompiled" --output "D:\Ghosts\analysis\phase9_gsc_audit.json" --max-hits 5000
+~~~
+
+
 | Group | Files | playerpiggyback refs | playengineeffects refs | Split-screen refs | Other useful markers |
 |---|---:|---:|---:|---:|---|
 | Clockwork Campaign | 109 | 7 | 3 | 0 per-player split-screen built-ins | 2 player-entity queries; 23 setplayertocamera calls |
