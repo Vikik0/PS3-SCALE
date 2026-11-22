@@ -132,7 +132,8 @@ assert "sysThreadCreate(&g_game_launch_thread" in src
 assert "profile_arm_worker" in src
 assert "service_profile_arm();" in main
 assert "sysThreadCreate(&g_profile_arm_thread" in src
-assert "find_installed_game(game)" in src
+assert "find_installed_game(&g_profile_arm_game_target)" in src
+assert "find_installed_game(&g_game_launch_target)" in src
 assert "NO EXACT PROFILE. STARTING GAME UNMODIFIED." in src
 assert "STARTING GAME UNMODIFIED" in src
 assert "APP VERSION:" in src
@@ -516,14 +517,15 @@ assert "cache_selected_online_profile" not in src
 assert "cache_all_online_profiles" not in src
 assert "profile_script_state_for_game" in src
 assert "profile ? profile->patches : NULL" in src
-assert "MOUNT THE EXACT GAME VERSION BEFORE ARMING THIS PROFILE." in src
+assert "EXACT GAME VERSION NOT FOUND. RESCAN OR MOUNT THE GAME." in src
 assert "MANUAL-ONLY PROFILE. ONE-LAUNCH APPLY IS NOT SUPPORTED." in src
 assert "B_COMMUNITY_MANUAL" in src
 assert 'profile && strcmp(profile->trust, "B_COMMUNITY") != 0' in src
 assert "WAIT FOR ONLINE DATABASE SYNC TO FINISH BEFORE STARTING." in src
 assert "WAIT FOR ONLINE DATABASE OR GAME ACTION TO FINISH." in src
 assert "WAIT FOR ONLINE DATABASE SYNC TO FINISH BEFORE STARTING." in src
-assert "find_mounted_game(game, &mounted)" in src
+assert "find_mounted_game(&g_profile_arm_game_target, &mounted)" in src
+assert "find_mounted_game(&g_game_launch_target, &mounted)" in src
 assert "if (g_catalog_sync_running || g_catalog_sync_done)" in src
 assert "(!candidate->app_ver[0] ||" in src
 online_ui = section("static void draw_online_database(void)", "static void draw_scan(void)")
@@ -748,8 +750,8 @@ assert '"/dev_usb000/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3"' in src
 assert "rename(temp_path, PS3SCALE_MUSIC1_PATH)" in src
 assert "MUSIC 1 IMPORTED FROM USB" in settings
 sfo = (project_root / "sfo.xml").read_text(encoding="utf-8")
-assert '<value name="APP_VER" type="string">00.28</value>' in sfo
-assert '<value name="VERSION" type="string">00.28</value>' in sfo
+assert '<value name="APP_VER" type="string">00.29</value>' in sfo
+assert '<value name="VERSION" type="string">00.29</value>' in sfo
 
 # Startup failure and package-integrity regression checks.
 startup = section("int main(int argc, char *argv[])", "while (!g_exit_requested)")
