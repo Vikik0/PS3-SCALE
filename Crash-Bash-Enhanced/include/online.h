@@ -7,7 +7,7 @@
 #define CB_ONLINE_TOKEN_MAX 2048
 #define CB_ONLINE_ID_MAX 40
 #ifndef CB_ONLINE_API_BASE
-#define CB_ONLINE_API_BASE "https://crash-bash-enhanced.vercel.app"
+#define CB_ONLINE_API_BASE "https://crash-bash-enhanced-pcidea00-7781.vercel.app"
 #endif
 typedef struct { char code[7]; char host[CB_ONLINE_NAME_MAX]; int players; int max_players; } CBOnlineRoom;
 typedef struct { char id[CB_ONLINE_ID_MAX]; char name[CB_ONLINE_NAME_MAX]; int ready; } CBOnlinePlayer;
