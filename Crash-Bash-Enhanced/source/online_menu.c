@@ -1,3 +1,4 @@
+struct timeval;
 #include "online_menu.h"
 #include "game_launcher.h"
 #include "online.h"
@@ -8,7 +9,6 @@
 #include <io/pad.h>
 #include <sysutil/sysutil.h>
 #include <sys/time.h>
-struct timeval;
 #include <net/net.h>
 
 #define MENU_ROOM_LIMIT 8
