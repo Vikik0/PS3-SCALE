@@ -25,7 +25,7 @@ common/1002.gsc:1430-1448 performs the following sequence:
 4. If the array contains more than one entity, assigns element 1 to level.playengineeffects.
 5. Iterates the player array to start per-player threads.
 
-The same init_level_flags() function in the supplied patch_common/1002.gsc overlay is byte-for-byte identical to the base common/1002.gsc function. The update overlay therefore does not remove this player-array setup.
+The same init_level_flags() function in the supplied patch_common/1002.gsc overlay is byte-for-byte identical to the base common/1002.gsc function. The update overlay therefore does not remove this player-array setup. The same load function also checks issplitscreen() at common/1002.gsc:119-122 and changes cg_fovScale to 0.75 for split-screen. A shared health-overlay helper adjusts its layout for split-screen and the primary player at common/981.gsc:1134-1149.
 
 The animation initialization path also calls maps/_load::init_level_flags() from common/animscripts/init.gsc:323-336; Clockwork's dog initialization enters that path at clockwork/animscripts/dog/dog_init.gsc:20.
 
