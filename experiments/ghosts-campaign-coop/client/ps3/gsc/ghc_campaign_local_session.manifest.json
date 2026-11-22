@@ -8,6 +8,6 @@
   "source_sha256": "560417dcadd38187537c117dadff8f674021c664d9f94b79cd485096cb506a8f",
   "compiled_gscbin_sha256": "dc846bbe1e3256f1fb8aae20913722335afe17105b61607322e890d892751a1f",
   "compiled_gscbin_bytes": 1798,
-  "status": "compiled and round-trip decompiled with GSC Tool 1.6.2.364; source and bytecode hashes verified from CI artifact; not injected or runtime-tested",
-  "behavior": "Reuses only engine-created native split-screen players; retries primary/secondary identity binding during bounded startup; binds Campaign aliases after exact-two-player validation; applies the Clockwork Player 2 starting loadout; initializes two shared drill spots with per-player ownership, owner-only completion/cancel and slot-based abort cleanup; never spawns or clones a player."
+  "status": "compiled and round-trip decompiled with GSC Tool 1.6.2.364; not injected or runtime-tested",
+  "behavior": "Reuses only engine-created native split-screen players; retries native identity binding for a bounded startup window; safely releases active Clockwork drill ownership before rebinding; binds Campaign aliases by primary/secondary identity; exposes Player 2 loadout and two-spot drill ownership helpers; never spawns or clones a player."
 }
