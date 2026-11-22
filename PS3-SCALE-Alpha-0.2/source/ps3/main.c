@@ -61,6 +61,12 @@ typedef enum app_screen {
 } app_screen_t;
 
 static ps3scale_game_list_t g_games;
+/*
+ * Validation scans can contain 256 full game records (~300 KiB). Keep this
+ * scratch list in static storage instead of the main or 32 KiB worker stack.
+ * Profile/game launch tasks serialize access to this buffer.
+ */
+static ps3scale_game_list_t g_validation_scan;
 static int g_selected = 0;
 static int g_library = LIBRARY_ALL;
 static int g_scan_sidebar_selected = LIBRARY_ALL;
@@ -144,6 +150,8 @@ static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 #define PS3SCALE_MUSIC2_PATH PS3SCALE_MUSIC_PATH
 #define PS3SCALE_APOLLO_LOGO_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/apollo-save.png"
 #define PS3SCALE_PREVIEW_DIR "/dev_hdd0/game/PS3SCALE1/USRDIR/previews"
+#define PS3SCALE_COVER_MAX_BYTES (2u * 1024u * 1024u)
+#define PS3SCALE_PREVIEW_MAX_BYTES (4u * 1024u * 1024u)
 #define PS3SCALE_ARTEMIS_USERLIST_DIR "/dev_hdd0/game/ARTPS3001/USRDIR/USERLIST"
 #define PS3SCALE_ARTEMIS_R5_USERLIST_DIR "/dev_hdd0/game/ARTZ00001/USRDIR/USERLIST"
 #define PS3SCALE_ARTEMIS_EBOOT_PATH "/dev_hdd0/game/ARTPS3001/USRDIR/EBOOT.BIN"
@@ -153,10 +161,11 @@ static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 #define PS3SCALE_SUPPORT_OUTBOX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox.txt"
 /* Replace with the URL of the separate PS3 SCALE Supabase project after deployment. */
 #define PS3SCALE_SUPPORT_URL "https://YOUR_PROJECT.supabase.co/functions/v1/ps3scale-support"
-#define PS3SCALE_APP_VERSION "ALPHA 0.28"
+#define PS3SCALE_APP_VERSION "ALPHA 0.29"
 #define PS3SCALE_PS2_CONFIG_INDEX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/ps2_config_index.tsv"
 #define PS3SCALE_PS2_CLASSICS_CONFIG_DIR "/dev_hdd0/game/PS2CONFIG/USRDIR/CONFIG/ENC"
 #define PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT (PS3SCALE_PS2_CONFIG_MAX_BYTES * 2u)
+#define PS3SCALE_GAME_LAUNCH_ERROR_IDENTITY (-20)
 
 static audioPortParam g_audio_params;
 static audioPortConfig g_audio_config;
@@ -308,6 +317,7 @@ static volatile int g_profile_arm_result = -1;
 static int g_profile_arm_thread_started = 0;
 static sys_ppu_thread_t g_profile_arm_thread;
 static ps3scale_profile_t g_profile_arm_target;
+static ps3scale_game_t g_profile_arm_game_target;
 static int g_auto_launch_after_profile_arm = 0;
 static ps3scale_game_t g_auto_launch_target;
 
@@ -1459,6 +1469,17 @@ static void clamp_selection(void)
     else if (g_selected >= (int)count) g_selected = (int)count - 1;
 }
 
+static int image_file_is_safe(const char *path, unsigned long max_bytes)
+{
+    struct stat st;
+
+    if (!path || !path[0] || stat(path, &st) != 0 ||
+        !S_ISREG(st.st_mode) || st.st_size <= 0 ||
+        (unsigned long)st.st_size > max_bytes)
+        return 0;
+    return 1;
+}
+
 static void clear_scan_cover_cache(void)
 {
     size_t i;
@@ -1495,7 +1516,7 @@ static void update_scan_cover_cache(void)
         }
         snprintf(g_scan_cover_paths[i], sizeof(g_scan_cover_paths[i]),
                  "%s", cover);
-        if (cover[0])
+        if (cover[0] && image_file_is_safe(cover, PS3SCALE_COVER_MAX_BYTES))
             g_scan_cover_textures[i] = ya2d_loadPNGfromFile(cover);
     }
 }
@@ -1516,7 +1537,7 @@ static void update_selected_cover(void)
         g_cover_texture = NULL;
     }
     g_cover_path[0] = '\0';
-    if (path[0]) {
+    if (path[0] && image_file_is_safe(path, PS3SCALE_COVER_MAX_BYTES)) {
         snprintf(g_cover_path, sizeof(g_cover_path), "%s", path);
         g_cover_texture = ya2d_loadPNGfromFile(path);
     }
@@ -2583,9 +2604,23 @@ static void open_selected_online_match(void)
 
 static void profile_arm_worker(void *arg)
 {
+    ps3scale_game_t mounted;
+    int game_valid = 0;
     (void)arg;
 
-    if (ps3scale_webman_available() != 0) {
+    /* Re-read the exact Title ID + APP_VER away from the controller thread.
+       A full HDD scan is deliberately never performed on the UI stack. */
+    if (g_profile_arm_game_target.title_id[0] &&
+        g_profile_arm_game_target.app_ver[0]) {
+        if (g_profile_arm_game_target.kind == PS3SCALE_GAME_PS3_HDD)
+            game_valid = find_installed_game(&g_profile_arm_game_target);
+        else
+            game_valid = find_mounted_game(&g_profile_arm_game_target, &mounted);
+    }
+
+    if (!game_valid) {
+        g_profile_arm_result = -102;
+    } else if (ps3scale_webman_available() != 0) {
         g_profile_arm_result = -100;
     } else if (ps3scale_webman_ps3mapi_available() != 0) {
         g_profile_arm_result = -101;
@@ -2642,6 +2677,8 @@ static void service_profile_arm(void)
         set_details_message("WEBMAN MOD NOT RESPONDING. PROFILE NOT ARMED.");
     } else if (result == -101) {
         set_details_message("PS3MAPI NOT ACTIVE. PROFILE NOT ARMED.");
+    } else if (result == -102) {
+        set_details_message("EXACT GAME VERSION NOT FOUND. RESCAN OR MOUNT THE GAME.");
     } else if (result == -2) {
         set_details_message("A USER WEBMAN SCRIPT EXISTS. IT WAS NOT OVERWRITTEN.");
     } else if (result == -3) {
@@ -2686,27 +2723,20 @@ static void confirm_profile_install(void)
         return;
     }
 
-    if (game && game->kind == PS3SCALE_GAME_PS3_HDD) {
-        if (!find_installed_game(game)) {
-            set_details_message("GAME UPDATE CHANGED. RESCAN BEFORE APPLYING PROFILE.");
-            g_profile_confirm_pending = 0;
-            return;
-        }
-    } else {
-        ps3scale_game_t mounted;
-        if (!find_mounted_game(game, &mounted)) {
-            set_details_message("MOUNT THE EXACT GAME VERSION BEFORE ARMING THIS PROFILE.");
-            g_profile_confirm_pending = 0;
-            return;
-        }
+    if (!game || !game->title_id[0] || !game->app_ver[0]) {
+        set_details_message("GAME TITLE ID OR APP VERSION IS MISSING. RESCAN.");
+        g_profile_confirm_pending = 0;
+        return;
     }
+    /* Copy both identities before the worker starts; it owns the disk scan. */
     g_profile_arm_target = *profile;
+    g_profile_arm_game_target = *game;
     g_profile_arm_result = -1;
     g_profile_arm_done = 0;
     g_profile_arm_running = 1;
     g_network_task_running = 1;
     g_profile_confirm_pending = 0;
-    set_details_message("CHECKING WEBMAN AND ARMING PROFILE.");
+    set_details_message("CHECKING GAME VERSION, WEBMAN AND ARMING PROFILE.");
 
     result = sysThreadCreate(&g_profile_arm_thread, profile_arm_worker, NULL,
                              1500, 0x8000, THREAD_JOINABLE,
@@ -2723,18 +2753,17 @@ static void confirm_profile_install(void)
 
 static int find_mounted_game(const ps3scale_game_t *selected, ps3scale_game_t *mounted)
 {
-    ps3scale_game_list_t mounted_list;
     size_t i;
 
     if (!selected || !mounted || !selected->title_id[0])
         return 0;
 
-    ps3scale_game_list_init(&mounted_list);
-    if (ps3scale_scan_device("/dev_bdvd", &mounted_list) <= 0)
+    ps3scale_game_list_init(&g_validation_scan);
+    if (ps3scale_scan_device("/dev_bdvd", &g_validation_scan) <= 0)
         return 0;
 
-    for (i = 0; i < mounted_list.count; i++) {
-        const ps3scale_game_t *candidate = &mounted_list.items[i];
+    for (i = 0; i < g_validation_scan.count; i++) {
+        const ps3scale_game_t *candidate = &g_validation_scan.items[i];
         if (strcmp(candidate->title_id, selected->title_id) != 0)
             continue;
         if (selected->app_ver[0] &&
@@ -2749,19 +2778,18 @@ static int find_mounted_game(const ps3scale_game_t *selected, ps3scale_game_t *m
 
 static int find_installed_game(const ps3scale_game_t *selected)
 {
-    ps3scale_game_list_t installed_list;
     size_t i;
 
     if (!selected || selected->kind != PS3SCALE_GAME_PS3_HDD ||
         !selected->title_id[0] || !selected->app_ver[0])
         return 0;
 
-    ps3scale_game_list_init(&installed_list);
-    if (ps3scale_scan_device("/dev_hdd0", &installed_list) <= 0)
+    ps3scale_game_list_init(&g_validation_scan);
+    if (ps3scale_scan_device("/dev_hdd0", &g_validation_scan) <= 0)
         return 0;
 
-    for (i = 0; i < installed_list.count; i++) {
-        const ps3scale_game_t *candidate = &installed_list.items[i];
+    for (i = 0; i < g_validation_scan.count; i++) {
+        const ps3scale_game_t *candidate = &g_validation_scan.items[i];
         if (candidate->kind != PS3SCALE_GAME_PS3_HDD)
             continue;
         if (strcmp(candidate->title_id, selected->title_id) != 0 ||
@@ -2775,18 +2803,37 @@ static int find_installed_game(const ps3scale_game_t *selected)
 
 static void game_launch_worker(void *arg)
 {
+    ps3scale_game_t mounted;
+    int identity_valid = 1;
     (void)arg;
 
-    if (g_game_launch_profile_armed &&
-        ps3scale_webman_ps3mapi_available() != 0) {
-        /* A missing PS3MAPI endpoint must not block normal game launch.
-           Remove only our own one-launch script, then start the game cleanly. */
-        (void)ps3scale_profile_script_remove(g_game_launch_target.title_id);
-        g_game_launch_profile_skipped = 1;
+    if (g_game_launch_profile_armed) {
+        identity_valid = g_game_launch_target.title_id[0] &&
+                         g_game_launch_target.app_ver[0];
+        if (identity_valid &&
+            g_game_launch_target.kind == PS3SCALE_GAME_PS3_HDD)
+            identity_valid = find_installed_game(&g_game_launch_target);
+        else if (identity_valid)
+            identity_valid = find_mounted_game(&g_game_launch_target, &mounted);
+
+        if (!identity_valid) {
+            /* Never run a profile against a different or unmounted revision. */
+            (void)ps3scale_profile_script_remove(g_game_launch_target.title_id);
+            g_game_launch_result = PS3SCALE_GAME_LAUNCH_ERROR_IDENTITY;
+            goto launch_finished;
+        }
+
+        if (ps3scale_webman_ps3mapi_available() != 0) {
+            /* A missing PS3MAPI endpoint must not block normal game launch.
+               Remove only our own one-launch script, then start cleanly. */
+            (void)ps3scale_profile_script_remove(g_game_launch_target.title_id);
+            g_game_launch_profile_skipped = 1;
+        }
     }
     g_game_launch_result =
         ps3scale_webman_start_game(&g_game_launch_target);
 
+launch_finished:
     g_game_launch_done = 1;
     g_game_launch_running = 0;
     g_network_task_running = 0;
@@ -2811,6 +2858,8 @@ static void service_game_launch(void)
             "PS3MAPI NOT ACTIVE. GAME STARTED WITHOUT PROFILE." :
             "WEBMAN ACCEPTED START REQUEST.");
         g_exit_requested = 1;
+    } else if (g_game_launch_result == PS3SCALE_GAME_LAUNCH_ERROR_IDENTITY) {
+        set_details_message("GAME VERSION CHANGED OR NOT MOUNTED. PROFILE REMOVED; RESCAN.");
     } else if (g_game_launch_result == -2) {
         set_details_message("PS3MAPI NOT ACTIVE. PROFILE WAS NOT APPLIED.");
     } else if (g_game_launch_result == PS3SCALE_WEBMAN_ERROR_NETWORK_INIT) {
@@ -2894,20 +2943,7 @@ static void start_selected_game(void)
             return;
         }
 
-        /* A one-launch patch must still target the exact selected game revision. */
-        if (script_state == 1) {
-            if (game->kind == PS3SCALE_GAME_PS3_HDD) {
-                if (!find_installed_game(game)) {
-                    (void)ps3scale_profile_script_remove(game->title_id);
-                    set_details_message("GAME UPDATE CHANGED. RESCAN BEFORE STARTING PROFILE.");
-                    return;
-                }
-            } else if (!find_mounted_game(game, &mounted)) {
-                (void)ps3scale_profile_script_remove(game->title_id);
-                set_details_message("MOUNT THE EXACT GAME VERSION BEFORE STARTING PROFILE.");
-                return;
-            }
-        }
+        /* The launch worker revalidates the exact identity off the UI thread. */
     }
 
     g_game_launch_target = *game;
@@ -5105,6 +5141,12 @@ static void update_selected_preview(void)
     written = snprintf(after_path, sizeof(after_path),
                        "%s/%s_after.png", PS3SCALE_PREVIEW_DIR, key);
     if (written < 0 || (size_t)written >= sizeof(after_path))
+        return;
+
+    /* Missing or unexpectedly large preview files must not be handed to the
+       PNG decoder on the controller/render thread. Require a bounded real pair. */
+    if (!image_file_is_safe(before_path, PS3SCALE_PREVIEW_MAX_BYTES) ||
+        !image_file_is_safe(after_path, PS3SCALE_PREVIEW_MAX_BYTES))
         return;
 
     g_preview_before_texture = ya2d_loadPNGfromFile(before_path);
