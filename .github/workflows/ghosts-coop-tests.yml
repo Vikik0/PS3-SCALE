@@ -219,6 +219,9 @@ jobs:
         with:
           name: ghosts-campaign-pad-probe
           path: |
+            experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/README_AR.md
+            experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/mode_files/ghosts_probe_mode_CAMPAIGN.txt
+            experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/mode_files/ghosts_probe_mode_MULTIPLAYER.txt
             experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/build/ghosts_campaign_pad_probe.prx
             experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/build/ghosts_campaign_pad_probe.fake.sprx
             experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/build/ghosts_campaign_pad_probe.elf
