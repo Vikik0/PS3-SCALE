@@ -9,19 +9,22 @@ def passing_source():
     return r'''
 handle_drill_spot( var_0, var_1, var_2, var_3 )
 {
-    drill_player = common_scripts\utility::flag_wait( var_1 );
-    if ( !isdefined( drill_player ) )
+    drill_trigger = getent( var_0, "targetname" );
+    drill_trigger waittill( "trigger", drill_activator );
+    if ( isdefined( drill_activator ) && isplayer( drill_activator ) && isalive( drill_activator ) )
+        drill_player = drill_activator;
+    else
         drill_player = level.player;
-    if ( drill_player != level.player )
+    if ( drill_player != level.player && ( !issplitscreen() || drill_player != level.playengineeffects || !drill_player issplitscreenplayer() || drill_player issplitscreenplayerprimary() ) )
         drill_player = level.player;
-    level.ghc_clockwork_drill_activator = drill_player;
-    thread watch_for_drill_trigger( var_1 );
+    level.ghc_clockwork_drill_activator = drill_activator;
+    common_scripts\\utility::flag_set( var_1, drill_player );
     thread handle_drilling( var_2, var_1, drill_player );
     if ( !isalive( drill_player ) )
     {
-        common_scripts\utility::flag_clear( var_1 );
-        thread watch_for_drill_trigger( var_1 );
-        maps\_utility::enable_trigger_with_targetname( var_0 );
+        common_scripts\\utility::flag_clear( var_1 );
+        wait 0.1;
+        maps\\_utility::enable_trigger_with_targetname( var_0 );
     }
     drill_player.ghc_clockwork_frag_ammo = 1;
     drill_player.ghc_clockwork_flash_ammo = 1;
@@ -54,12 +57,6 @@ stop_current_car_watcher( player, var_0, var_1 )
 {
     player playsound( "drill" );
 }
-watch_for_drill_trigger( var_0 )
-{
-    var_1 = common_scripts\utility::flag_wait( var_0 );
-    if ( isdefined( var_1 ) && isplayer( var_1 ) )
-        level.ghc_clockwork_drill_activator = var_1;
-}
 clockwork_setup_player_two( player )
 {
     if ( !player issplitscreenplayer() || player issplitscreenplayerprimary() )
@@ -72,9 +69,11 @@ clockwork_setup_player_two( player )
 }
 handle_drill_ammo_counter()
 {
+    var_0 = getdvar( "ammoCounterHide" );
     level.player getcurrentweapon();
     level.playengineeffects getcurrentweapon();
     setsaveddvar( "ammoCounterHide", "1" );
+    setsaveddvar( "ammoCounterHide", var_0 );
 }
 clockwork_watch_player_pair()
 {
@@ -128,9 +127,9 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
 
     def test_comments_and_string_literals_do_not_fake_trigger_activator_capture(self):
         source = passing_source().replace(
-            '    var_1 = common_scripts\\utility::flag_wait( var_0 );\n',
-            '    // flag_wait( var_0 );\n'
-            '    iprintln( "flag_wait( var_0 )" );\n',
+            '    drill_trigger waittill( "trigger", drill_activator );\\n',
+            '    // drill_trigger waittill( "trigger", drill_activator );\\n'
+            '    iprintln( "drill_trigger waittill( trigger, drill_activator )" );\\n',
         )
         report = audit(self.write_source(source))
         self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
@@ -148,9 +147,9 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
 
     def test_missing_death_disconnect_recovery_blocks_adapter(self):
         source = passing_source().replace(
-            '        common_scripts\\utility::flag_clear( var_1 );\n'
-            '        thread watch_for_drill_trigger( var_1 );\n'
-            '        maps\\_utility::enable_trigger_with_targetname( var_0 );\n',
+            '        common_scripts\\\\utility::flag_clear( var_1 );\\n'
+            '        wait 0.1;\\n'
+            '        maps\\\\_utility::enable_trigger_with_targetname( var_0 );\\n',
             '',
         )
         report = audit(self.write_source(source))
