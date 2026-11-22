@@ -19,6 +19,7 @@ int cb_online_health(char *error, size_t error_size);
 int cb_online_list_rooms(CBOnlineRoom *rooms, size_t capacity, size_t *count, char *error, size_t error_size);
 int cb_online_create_room(const char *display_name, int is_private, CBOnlineSession *session, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_join_room(const char *code, const char *display_name, CBOnlineSession *session, CBOnlineRoomView *view, char *error, size_t error_size);
+int cb_online_join_any_room(const char *display_name, CBOnlineSession *session, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_get_room(CBOnlineSession *session, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_set_ready(CBOnlineSession *session, int ready, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_leave_room(CBOnlineSession *session, char *error, size_t error_size);
