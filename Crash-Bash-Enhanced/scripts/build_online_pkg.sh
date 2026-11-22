@@ -197,10 +197,12 @@ test -s "$USRDIR/cores/CORE.SELF"
 mv "$USRDIR/cores/CORE.SELF" "$CORE_SELF"
 test -s "$CORE_SELF"
 test -s "$RA/retroarch_psl1ght.elf"
+test -s "$RA/build/retroarch_psl1ght.elf"
 
 # Launch the static-core RetroArch executable directly from the PS3 XMB.
+# Reuse PSL1GHT's stripped + SPRX-linked ELF output, not the raw linker ELF.
 # This removes the Salamander second-stage spawn and CORE.SELF discovery path.
-make_self_npdrm "$RA/retroarch_psl1ght.elf" "$USRDIR/EBOOT.BIN" "$CONTENT_ID"
+make_self_npdrm "$RA/build/retroarch_psl1ght.elf" "$USRDIR/EBOOT.BIN" "$CONTENT_ID"
 test -s "$USRDIR/EBOOT.BIN"
 
 # Fail the build if the libretro entry points are not linked into the EBOOT.
