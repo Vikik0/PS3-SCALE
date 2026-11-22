@@ -134,6 +134,11 @@ jobs:
         run: |
           cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/local_player_gate.c tests/local_player_gate_test.c -o /tmp/local-player-gate-test
           /tmp/local-player-gate-test
+      - name: Build and run Campaign interaction ownership tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/campaign_interaction.c tests/campaign_interaction_test.c -o /tmp/campaign-interaction-test
+          /tmp/campaign-interaction-test
       - name: Build and run lobby JSON contract tests
         working-directory: experiments/ghosts-campaign-coop
         run: |
