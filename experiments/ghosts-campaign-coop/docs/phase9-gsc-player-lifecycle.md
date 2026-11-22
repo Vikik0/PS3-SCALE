@@ -108,3 +108,16 @@ The current evidence does **not** prove a playable second Campaign player. It do
 5. Test the native path in a controlled mission while preserving Logan as player one and Hesh as an NPC.
 
 **Status:** Campaign/shared GSC has conditional second-player entity handling; native Campaign local-client creation and controller-to-player binding remain unproven. No hook address, patched EBOOT, installable PKG, or playable co-op build is claimed.
+
+
+## 7. Campaign registry shim compile check
+
+The existing read-only Campaign registry shim at client/ps3/gsc/ghc_campaign_player_registry.gsc was independently compiled with GSC Tool 1.6.2.364 for IW6/PS3 and then round-trip decompiled successfully.
+
+- Compiled GSCBIN: 400 bytes.
+- SHA-256: 0c52cb5712cadce6308b47c9c216ac7c483036bd3084ff35899c096c6d35ee85.
+- The hash and size match the verified Phase 7 registry artifact manifest.
+- The shim assigns slot 0/1 by native split-screen primary identity rather than assuming player-array order.
+- It fails closed unless exactly two native split-screen player entities are already present.
+
+This verifies the script's syntax and compiled artifact only. It has not been injected into the game or run on PS3 hardware.
