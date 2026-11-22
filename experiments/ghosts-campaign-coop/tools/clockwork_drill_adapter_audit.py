@@ -46,6 +46,13 @@ COORDINATION_TARGETS = (
     "handle_drill_ammo_counter",
     "clockwork_watch_player_pair",
     "new_trench_setup",
+    "setup_interior_cqb",
+    "setup_interior",
+    "vault_nag",
+    "vault_props",
+    "animate_vault_door",
+    "handle_cqb_allies",
+    "cqb_dog",
 )
 
 REFERENCE_FASTFILE_SHA256 = "a2ac70c7349047f2eded5f45a5e46ff8278689839fe1655106263520fe639783"
@@ -337,6 +344,31 @@ def audit(
         and "player shellshock" in body("clockwork_apply_vault_blast")
         and "player pushplayervector" in body("clockwork_apply_vault_blast")
     )
+    secondary_interior_loadout_and_nvg = (
+        'level.playengineeffects switchtoweapon( "cz805bren+reflex_sp+silencer_sp" )' in literal_body("setup_interior_cqb")
+        and 'level.playengineeffects switchtoweapon( "cz805bren+reflex_sp+silencer_sp" )' in literal_body("setup_interior")
+        and 'level.playengineeffects setactionslot( 1, "nightvision" )' in literal_body("setup_interior_cqb")
+        and "level.playengineeffects nightvisiongogglesforceon()" in body("setup_interior_cqb")
+        and "level.playengineeffects thread maps\\\\_nightvision::nightvision_off()" in literal_body("setup_interior_cqb")
+    )
+    secondary_vault_hint_and_switch_wait = (
+        'level.playengineeffects thread maps\\\\_utility::display_hint_timeout( "disable_nvg", 5 )' in literal_body("vault_nag")
+        and "level.playengineeffects isswitchingweapon()" in body("vault_nag")
+        and 'level.playengineeffects thread maps\\\\_utility::display_hint( "disable_nvg" )' in literal_body("animate_vault_door")
+    )
+    secondary_vault_grenade_roundtrip = (
+        "level.ghc_clockwork_p2_grenade_owner = level.playengineeffects" in body("vault_props")
+        and "level.playengineeffects_grenades = level.playengineeffects getweaponammoclip" in body("vault_props")
+        and 'level.playengineeffects takeweapon( "fraggrenade" )' in literal_body("vault_props")
+        and "level.playengineeffects == level.ghc_clockwork_p2_grenade_owner" in body("animate_vault_door")
+        and 'level.playengineeffects giveweapon( "fraggrenade" )' in literal_body("animate_vault_door")
+        and "level.ghc_clockwork_p2_grenades_removed = 0" in body("animate_vault_door")
+    )
+    secondary_cqb_controls_and_dog_override = (
+        "level.playengineeffects allowsprint( 1 )" in body("handle_cqb_allies")
+        and "level.playengineeffects allowjump( 1 )" in body("handle_cqb_allies")
+        and 'level.playengineeffects notify( "dog_attack_override" )' in literal_body("cqb_dog")
+    )
 
     checks = {
         "all_required_functions_found": not missing,
@@ -361,6 +393,10 @@ def audit(
         "drill_pullout_audio_uses_actual_owner": player_scoped_drill_pullout_audio,
         "vault_blast_targets_both_local_players": vault_blast_targets_both_local_players,
         "vault_blast_helper_uses_explicit_player": vault_blast_helper_is_player_scoped,
+        "secondary_interior_loadout_and_nvg": secondary_interior_loadout_and_nvg,
+        "secondary_vault_hint_and_switch_wait": secondary_vault_hint_and_switch_wait,
+        "secondary_vault_grenade_roundtrip": secondary_vault_grenade_roundtrip,
+        "secondary_cqb_controls_and_dog_override": secondary_cqb_controls_and_dog_override,
     }
 
     if reference_source is not None:
