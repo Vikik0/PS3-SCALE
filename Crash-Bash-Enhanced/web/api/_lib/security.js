@@ -5,7 +5,7 @@ const crypto = require("node:crypto");
 function getSecret() {
   const secret = process.env.CB_TOKEN_SECRET_V2 || process.env.CB_TOKEN_SECRET;
   if (!secret || secret.length < 40) {
-    throw new Error("CB_TOKEN_SECRET is not configured");
+    throw new Error("Guest-token signing secret is not configured");
   }
   return secret;
 }
