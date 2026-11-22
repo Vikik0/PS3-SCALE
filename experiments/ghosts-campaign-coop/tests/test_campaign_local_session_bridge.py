@@ -92,6 +92,55 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertIn("return 1", body)
         self.assertNotIn("level.ghc_campaign_player_0", body)
 
+
+    def test_native_pair_binding_initializes_shared_drill_state_once(self):
+        bind = function_body(self.source, "ghc_campaign_bind_native_local_pair")
+        init = function_body(self.source, "ghc_campaign_drill_state_init")
+        self.assertIn("ghc_campaign_drill_state_init()", bind)
+        self.assertIn("level.ghc_campaign_drill_state_initialized", init)
+        self.assertIn("return", init)
+        for name in (
+            "level.ghc_campaign_drill_owner_0 = -1",
+            "level.ghc_campaign_drill_owner_1 = -1",
+            "level.ghc_campaign_drill_active_player_0 = -1",
+            "level.ghc_campaign_drill_active_player_1 = -1",
+            "level.ghc_campaign_drill_complete_0 = 0",
+            "level.ghc_campaign_drill_complete_1 = 0",
+        ):
+            self.assertIn(name, init)
+
+    def test_drill_claim_requires_a_validated_player_and_one_of_two_spots(self):
+        body = function_body(self.source, "ghc_campaign_drill_begin")
+        self.assertIn("level.ghc_campaign_session_ready", body)
+        self.assertIn("ghc_campaign_drill_player_slot( var_0 )", body)
+        self.assertIn("var_1 < 0 || var_1 > 1", body)
+        self.assertIn("ghc_campaign_drill_active_spot_for_player", body)
+        self.assertIn("ghc_campaign_drill_is_complete", body)
+        self.assertIn("ghc_campaign_drill_owner_for_spot", body)
+        self.assertIn("ghc_campaign_drill_set_owner_for_spot", body)
+        self.assertIn("ghc_campaign_drill_set_active_spot_for_player", body)
+        self.assertNotIn("wait", body.lower())
+
+    def test_drill_finish_is_owner_only_and_completion_is_shared(self):
+        body = function_body(self.source, "ghc_campaign_drill_finish")
+        self.assertIn("ghc_campaign_drill_player_slot( var_0 )", body)
+        self.assertIn("ghc_campaign_drill_owner_for_spot( var_1 ) != var_3", body)
+        self.assertIn("ghc_campaign_drill_active_spot_for_player( var_3 ) != var_1", body)
+        self.assertIn("if ( var_2 )", body)
+        self.assertIn("ghc_campaign_drill_set_complete_for_spot( var_1, 1 )", body)
+        self.assertIn("ghc_campaign_drill_set_owner_for_spot( var_1, -1 )", body)
+        self.assertIn("ghc_campaign_drill_set_active_spot_for_player( var_3, -1 )", body)
+        self.assertNotIn("wait", body.lower())
+
+    def test_drill_cancel_and_abort_release_without_marking_complete(self):
+        cancel = function_body(self.source, "ghc_campaign_drill_cancel")
+        abort = function_body(self.source, "ghc_campaign_drill_abort_player")
+        self.assertIn("ghc_campaign_drill_finish( var_0, var_1, 0 )", cancel)
+        self.assertIn("ghc_campaign_drill_set_owner_for_spot( var_2, -1 )", abort)
+        self.assertIn("ghc_campaign_drill_set_active_spot_for_player( var_1, -1 )", abort)
+        self.assertNotIn("set_complete", abort)
+        self.assertIn("ghc_campaign_drill_owner_for_spot( var_2 ) != var_1", abort)
+
     def test_manifest_pins_source_and_compiled_gsc_artifact(self):
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
         source_hash = hashlib.sha256(BRIDGE.read_bytes()).hexdigest()
