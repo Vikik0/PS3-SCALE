@@ -1,12 +1,21 @@
-# Build status — PS3 SCALE Alpha 0.28
+# Build status — PS3 SCALE Alpha 0.29
 
 ## Current development head
 
 - Branch: `design/splash-transitions-ui-v6`
 - Pull request: Draft PR #16, targeting `design/settings-support-ui-v5`
-- Application version shown in the UI: `ALPHA 0.28`
-- Package metadata: `APP_VER=00.28`, `VERSION=00.28`
+- Application version shown in the UI: `ALPHA 0.29`
+- Package metadata: `APP_VER=00.29`, `VERSION=00.29`
 - Package title ID: `PS3SCALE1`
+
+## Alpha 0.29 — launch freeze and stack-safety hardening
+
+- Moved exact Title ID + APP_VER revalidation for profile arming and profile-backed launches into background workers. HDD and mounted-disc scans no longer run in the controller input loop.
+- Replaced the 256-entry local scan lists (about 300 KiB each) with one serialized static validation buffer, avoiding PPU stack exhaustion on the main thread and 0x8000-byte workers.
+- If the game identity or update version changes between arming and launch, PS3 SCALE removes only its own pending profile script and refuses the enhanced launch.
+- Added bounded file-size checks before decoding local cover and before/after PNGs; missing, non-regular or oversized images are skipped.
+- Added a dedicated host regression test for worker-only validation, static scan storage and bounded preview loading.
+- GitHub Actions validation: pending for this commit. Physical PS3 Slim / CFW 4.93 / Cobra 8.5 verification remains required.
 
 ## Alpha 0.28 — PS2 ISO format compatibility
 
