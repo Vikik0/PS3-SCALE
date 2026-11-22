@@ -115,7 +115,7 @@ def _function_inventory(path: Path) -> tuple[dict[str, dict], dict[str, str], di
             "local_calls": calls,
         }
         bodies[name] = clean_body
-        literal_bodies[name] = re.sub(r"//[^\\n]*|/\\*.*?\\*/", "", "\\n".join(body_lines), flags=re.S)
+        literal_bodies[name] = re.sub(r"//[^\r\n]*|/\*.*?\*/", "", "\n".join(body_lines), flags=re.S)
 
         if name in inventory:
             existing = inventory[name]
