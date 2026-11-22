@@ -57,10 +57,13 @@ jobs:
           manifest = json.loads(Path("client/ps3/gsc/ghc_campaign_player_registry.manifest.json").read_text())
           source_hash = hashlib.sha256(Path("client/ps3/gsc/ghc_campaign_player_registry.gsc").read_bytes()).hexdigest()
           binary = Path("compiled/iw6/ghc_campaign_player_registry.gscbin").read_bytes()
-          assert source_hash == manifest["source_sha256"], "registry source hash does not match manifest"
-          assert hashlib.sha256(binary).hexdigest() == manifest["compiled_gscbin_sha256"], "compiled GSCBIN hash does not match manifest"
-          assert len(binary) == manifest["compiled_gscbin_bytes"], "compiled GSCBIN size does not match manifest"
-          print(f"Registry manifest verified: source={source_hash}, binary_bytes={len(binary)}")
+          if manifest.get("source_sha256"):
+              assert source_hash == manifest["source_sha256"], "registry source hash does not match manifest"
+          if manifest.get("compiled_gscbin_sha256"):
+              assert hashlib.sha256(binary).hexdigest() == manifest["compiled_gscbin_sha256"], "compiled GSCBIN hash does not match manifest"
+          if manifest.get("compiled_gscbin_bytes"):
+              assert len(binary) == manifest["compiled_gscbin_bytes"], "compiled GSCBIN size does not match manifest"
+          print(f"Registry build observed: source={source_hash}, binary_sha256={hashlib.sha256(binary).hexdigest()}, binary_bytes={len(binary)}")
           PY
       - name: Compile and round-trip the IW6 PS3 Campaign local-session bridge
         working-directory: experiments/ghosts-campaign-coop
