@@ -143,6 +143,7 @@ static int select_mode(void)
     uint64_t read_count = 0;
     int fd = -1;
     uint32_t i;
+    uint32_t length;
 
     zero_bytes(mode, sizeof(mode));
     if (cellFsOpen(MODE_PATH, CELL_FS_O_RDONLY, &fd, NULL, 0) != CELL_FS_SUCCEEDED)
@@ -154,12 +155,15 @@ static int select_mode(void)
     cellFsClose(fd);
     if (read_count >= sizeof(mode)) return 0;
     mode[read_count] = '\0';
-
-    for (i = 0; mode[i]; ++i) {
-        if (mode[i] == '\r' || mode[i] == '\n' || mode[i] == ' ' || mode[i] == '\t') {
-            mode[i] = '\0';
-            break;
-        }
+    length = (uint32_t)read_count;
+    while (length > 0u) {
+        char last = mode[length - 1u];
+        if (last != '\r' && last != '\n' && last != ' ' && last != '\t') break;
+        mode[--length] = '\0';
+    }
+    for (i = 0; i < length; ++i) {
+        if (mode[i] == '\r' || mode[i] == '\n' || mode[i] == ' ' || mode[i] == '\t')
+            return 0;
     }
     if (text_equal(mode, "CAMPAIGN")) {
         g_mode_name = "CAMPAIGN";
