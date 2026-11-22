@@ -131,6 +131,8 @@ ghc_campaign_bind_native_local_pair()
     level.ghc_campaign_player_0.unique_id = "player0";
     level.ghc_campaign_player_1.unique_id = "player1";
 
+    ghc_campaign_drill_state_init();
+
     level.ghc_campaign_session_ready = 1;
     level.ghc_campaign_session_status = 1;
     level notify( "ghc_campaign_players_ready" );
@@ -185,3 +187,215 @@ ghc_campaign_apply_clockwork_player_two_loadout()
     level.ghc_campaign_clockwork_p2_loadout_applied = 1;
     return 1;
 }
+
+/*
+ * Clockwork's first vertical slice has two drill spots. This ownership
+ * state is shared by the mission, while weapon/input/animation/control
+ * operations must always use the player argument passed by the caller.
+ *
+ * GSC script execution is serialized between waits. begin/finish contain
+ * no wait/yield between checking and assigning ownership.
+ */
+ghc_campaign_drill_state_init()
+{
+    if ( isdefined( level.ghc_campaign_drill_state_initialized )
+        && level.ghc_campaign_drill_state_initialized )
+        return;
+
+    level.ghc_campaign_drill_owner_0 = -1;
+    level.ghc_campaign_drill_owner_1 = -1;
+    level.ghc_campaign_drill_active_player_0 = -1;
+    level.ghc_campaign_drill_active_player_1 = -1;
+    level.ghc_campaign_drill_complete_0 = 0;
+    level.ghc_campaign_drill_complete_1 = 0;
+    level.ghc_campaign_drill_state_initialized = 1;
+}
+
+ghc_campaign_drill_player_slot( var_0 )
+{
+    if ( !isdefined( var_0 )
+        || !isdefined( level.ghc_campaign_player_0 )
+        || !isdefined( level.ghc_campaign_player_1 ) )
+        return -1;
+
+    if ( var_0 == level.ghc_campaign_player_0 )
+        return 0;
+
+    if ( var_0 == level.ghc_campaign_player_1 )
+        return 1;
+
+    return -1;
+}
+
+ghc_campaign_drill_owner_for_spot( var_0 )
+{
+    if ( !isdefined( level.ghc_campaign_drill_state_initialized )
+        || !level.ghc_campaign_drill_state_initialized )
+        return -1;
+
+    if ( var_0 == 0 )
+        return level.ghc_campaign_drill_owner_0;
+
+    if ( var_0 == 1 )
+        return level.ghc_campaign_drill_owner_1;
+
+    return -1;
+}
+
+ghc_campaign_drill_is_complete( var_0 )
+{
+    if ( !isdefined( level.ghc_campaign_drill_state_initialized )
+        || !level.ghc_campaign_drill_state_initialized )
+        return 0;
+
+    if ( var_0 == 0 )
+        return level.ghc_campaign_drill_complete_0;
+
+    if ( var_0 == 1 )
+        return level.ghc_campaign_drill_complete_1;
+
+    return 0;
+}
+
+ghc_campaign_drill_active_spot_for_player( var_0 )
+{
+    if ( var_0 == 0 )
+        return level.ghc_campaign_drill_active_player_0;
+
+    if ( var_0 == 1 )
+        return level.ghc_campaign_drill_active_player_1;
+
+    return -1;
+}
+
+ghc_campaign_drill_set_active_spot_for_player( var_0, var_1 )
+{
+    if ( var_0 == 0 )
+    {
+        level.ghc_campaign_drill_active_player_0 = var_1;
+        return 1;
+    }
+
+    if ( var_0 == 1 )
+    {
+        level.ghc_campaign_drill_active_player_1 = var_1;
+        return 1;
+    }
+
+    return 0;
+}
+
+ghc_campaign_drill_set_owner_for_spot( var_0, var_1 )
+{
+    if ( var_0 == 0 )
+    {
+        level.ghc_campaign_drill_owner_0 = var_1;
+        return 1;
+    }
+
+    if ( var_0 == 1 )
+    {
+        level.ghc_campaign_drill_owner_1 = var_1;
+        return 1;
+    }
+
+    return 0;
+}
+
+ghc_campaign_drill_set_complete_for_spot( var_0, var_1 )
+{
+    if ( var_0 == 0 )
+    {
+        level.ghc_campaign_drill_complete_0 = var_1;
+        return 1;
+    }
+
+    if ( var_0 == 1 )
+    {
+        level.ghc_campaign_drill_complete_1 = var_1;
+        return 1;
+    }
+
+    return 0;
+}
+
+ghc_campaign_drill_begin( var_0, var_1 )
+{
+    if ( !isdefined( level.ghc_campaign_session_ready )
+        || !level.ghc_campaign_session_ready )
+        return 0;
+
+    var_2 = ghc_campaign_drill_player_slot( var_0 );
+    if ( var_2 < 0 || var_1 < 0 || var_1 > 1 )
+        return 0;
+
+    if ( ghc_campaign_drill_active_spot_for_player( var_2 ) != -1 )
+        return 0;
+
+    if ( ghc_campaign_drill_is_complete( var_1 ) )
+        return 0;
+
+    if ( ghc_campaign_drill_owner_for_spot( var_1 ) != -1 )
+        return 0;
+
+    ghc_campaign_drill_set_owner_for_spot( var_1, var_2 );
+    ghc_campaign_drill_set_active_spot_for_player( var_2, var_1 );
+    return 1;
+}
+
+ghc_campaign_drill_finish( var_0, var_1, var_2 )
+{
+    var_3 = ghc_campaign_drill_player_slot( var_0 );
+    if ( var_3 < 0 || var_1 < 0 || var_1 > 1 )
+        return 0;
+
+    if ( ghc_campaign_drill_owner_for_spot( var_1 ) != var_3 )
+        return 0;
+
+    if ( ghc_campaign_drill_active_spot_for_player( var_3 ) != var_1 )
+        return 0;
+
+    if ( var_2 )
+        ghc_campaign_drill_set_complete_for_spot( var_1, 1 );
+
+    ghc_campaign_drill_set_owner_for_spot( var_1, -1 );
+    ghc_campaign_drill_set_active_spot_for_player( var_3, -1 );
+    return 1;
+}
+
+ghc_campaign_drill_complete( var_0, var_1 )
+{
+    return ghc_campaign_drill_finish( var_0, var_1, 1 );
+}
+
+ghc_campaign_drill_cancel( var_0, var_1 )
+{
+    return ghc_campaign_drill_finish( var_0, var_1, 0 );
+}
+
+ghc_campaign_drill_abort_slot( var_0 )
+{
+    if ( var_0 < 0 || var_0 > 1 )
+        return 0;
+
+    var_1 = ghc_campaign_drill_active_spot_for_player( var_0 );
+    if ( var_1 < 0 || var_1 > 1 )
+        return 0;
+
+    if ( ghc_campaign_drill_owner_for_spot( var_1 ) != var_0 )
+        return 0;
+
+    ghc_campaign_drill_set_owner_for_spot( var_1, -1 );
+    ghc_campaign_drill_set_active_spot_for_player( var_0, -1 );
+    return 1;
+}
+
+ghc_campaign_drill_abort_player( var_0 )
+{
+    var_1 = ghc_campaign_drill_player_slot( var_0 );
+    if ( var_1 < 0 )
+        return 0;
+
+    return ghc_campaign_drill_abort_slot( var_1 );
+}
+
