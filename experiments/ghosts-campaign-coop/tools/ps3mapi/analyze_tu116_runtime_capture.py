@@ -125,7 +125,7 @@ def _commit_staged_outputs(
                 "analysis output promotion failed and rollback was incomplete; "
                 f"preserve recovery files at {backup_dir}"
             ) from rollback_errors[0]
-        raise exc
+        raise
     finally:
         if not keep_backup:
             shutil.rmtree(backup_dir, ignore_errors=True)
