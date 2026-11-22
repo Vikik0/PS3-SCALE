@@ -9,6 +9,7 @@ This is an emulator-based homebrew package, not a native reimplementation of Cra
 ## What the PKG contains
 
 - A direct NPDRM `EBOOT.BIN` that starts the RetroArch frontend; the PCSX-ReARMed core is statically linked into the same executable, so there is no Salamander second-stage launch.
+- A matching core-info identity SELF at `USRDIR/cores/pcsx_rearmed_libretro_psl1ght.SELF`; it lets RetroArch match the core metadata and is not the XMB launch target.
 - PCSX-ReARMed linked into RetroArch as the PS1 core.
 - RetroArch Netplay with public host announcements, NAT traversal and the Madrid relay endpoint enabled by default.
 - Multitap on PS1 Port 1.
