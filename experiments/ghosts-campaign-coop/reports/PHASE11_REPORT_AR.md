@@ -108,3 +108,20 @@ client/ps3/gsc/ghc_campaign_local_session.gsc
 
 هذه الخطوة مهمة لأنها تنفذ اقتراحك مباشرة: البحث عن منطق اللاعبين المحليين الموجود أصلاً في Multiplayer، ثم تحديد أقل جزء يمكن نقله أو استدعاؤه من Campaign.
 
+## 5. نتيجة البناء والاختبارات الفعلية
+
+نجح GitHub Actions run 45030684277 (Run 756) على commit 20cdecaa34b9f10b7e2a08e9648cdf6858be5e54. الوظائف الخمس كلها انتهت بنجاح:
+
+- Python: **152 اختباراً ناجحاً**.
+- C protocol/runtime: جميع اختبارات البروتوكول نجحت، واختبار ملكية Drill نجح.
+- Host runtime simulator: **10,025 فحصاً، صفر إخفاقات**.
+- GSC Tool 1.6.2: ترجمة وفك ترجمة كل من Registry shim وLocal-session bridge بنجاح.
+- تم التحقق من بصمات مصدر وBytecode الجسر الجديد من خلال manifest.
+- PS3DK: بناء PRX وPad Probe وPRX importer والتحقق منها بنجاح.
+- Worker: اختبارات lobby وbundle dry-run ناجحة.
+
+حزمة الجسر المترجمة محفوظة في GitHub artifact رقم 14757667094، وتحتوي المصدر وGSCBIN والـmanifest. حجم ملف GSCBIN هو 823 بايت، وبصمته SHA-256:
+c66b51728f25e98d8517dfa2ebfbe29f8f9c6231ac89786e2de51771b484e831
+
+هذا يثبت سلامة الترجمة والاختبارات فقط؛ لم يتم تحميل الجسر في اللعبة، ولم يتم إنشاء Local Client ثانٍ في Campaign على جهاز PS3.
+
