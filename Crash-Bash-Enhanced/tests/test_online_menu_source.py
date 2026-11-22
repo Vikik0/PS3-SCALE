@@ -31,3 +31,15 @@ assert "cb_online_get_room(" not in heartbeat.group(1), (
 )
 
 print("Native lobby polling and expired-session recovery checks passed.")
+
+main_source = (root / "source/main.c").read_text(encoding="utf-8")
+online_source = (root / "source/online.c").read_text(encoding="utf-8")
+launcher = (root / "source/game_launcher.c").read_text(encoding="utf-8")
+assert "BTN_START" in source
+assert "cb_launch_game(" in source
+assert "ALL PLAYERS READY - PRESS START TO OPEN CRASH BASH" in source
+assert "view->player_count >= 2" in online_source
+assert "START CRASH BASH" in main_source
+assert "cb_launch_game(g_status, sizeof(g_status))" in main_source
+assert "/dev_hdd0/game/CBON00001/USRDIR/EBOOT.BIN" in launcher
+assert "sysProcessExitSpawn2(" in launcher
