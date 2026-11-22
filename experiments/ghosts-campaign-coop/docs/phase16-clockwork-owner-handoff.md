@@ -47,7 +47,7 @@ The local Stage 3 patch extends the Stage 2 Clockwork source:
 
 ## Remaining player-specific work
 
-The drill PIP is still managed by the stock shared `level.pintoscreenedge` path. The original PIP initialization is tied to `level.player`; Stage 3 does not yet prove that Player 2 receives an independent drill PIP/HUD. This is intentionally left as a separate task rather than changing the shared PIP asset without runtime evidence.
+At the end of Stage 3, the drill PIP still used the stock shared `level.pintoscreenedge` path. Stage 4 subsequently added a player argument to the local PIP helper and routes `drill_player` into it; see Phase 17. Independent per-viewport HUD rendering remains unproven until runtime testing.
 
 The portable C model and GSC bridge remain separate from the local retail-source patch. The bridge is not injected or automatically loaded by the retail Campaign VM, and the local `handle_drill_spot` patch does not yet call the bridge ownership API.
 
