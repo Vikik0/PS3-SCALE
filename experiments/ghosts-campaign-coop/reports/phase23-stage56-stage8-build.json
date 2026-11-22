@@ -1,0 +1,63 @@
+{
+  "source_lineage": "Stage 2 -> reconstructed Stage 5 -> reconstructed Stage 6 -> Stage 8",
+  "historical_stage56_source": "NOT_AVAILABLE; reconstructed from Phase 18/19 documented behavior",
+  "stage2_source": {
+    "bytes": 100132,
+    "sha256": "d2411ee69e328c6932f53ecc5db8e547bad465379a8cd9593fa1f171f0a5c73b"
+  },
+  "stage5_reconstruction": {
+    "source_bytes": 101296,
+    "source_sha256": "4533c0b9ed49977443e00bebf340fe5323b9dab6f424f5f057a91ace25d4d3a6",
+    "gscbin_bytes": 23126,
+    "gscbin_sha256": "b79fc0e2a0d900b4c8244c724d521a2168812f84fc28a2740a9e63d4ad847334",
+    "compile": "PASS",
+    "decompile": "PASS",
+    "recompile": "PASS",
+    "roundtrip_byte_identical": true
+  },
+  "stage6_reconstruction": {
+    "source_bytes": 104487,
+    "source_sha256": "b4f7b92d4499d41bd9b04e4431020d86041b3004fbe9d197fd0d61bdc77aecad",
+    "gscbin_bytes": 23595,
+    "gscbin_sha256": "fbbfcdcc99f55deb908a2e7cd96228693c5372e80cf6b5d90c195106bb8724e1",
+    "compile": "PASS",
+    "decompile": "PASS",
+    "recompile": "PASS",
+    "roundtrip_byte_identical": true,
+    "source_audit": {
+      "status": "PASS",
+      "checks_passed": 13,
+      "checks_total": 13
+    },
+    "host_tests": {
+      "status": "PASS",
+      "passed": 7,
+      "total": 7
+    }
+  },
+  "stage8_on_reconstructed_stage6": {
+    "source_bytes": 105568,
+    "source_sha256": "a2471b5f6d4e02441e038ad939038cb554ae1f09377166ee1bb62fa221ddd800",
+    "gscbin_bytes": 23823,
+    "gscbin_sha256": "438f173d2a44e0851cc8f2d1da5f02177aac61ec29b3376f80b5e76fe19494f1",
+    "compile": "PASS",
+    "decompile": "PASS",
+    "recompile": "PASS",
+    "roundtrip_byte_identical": true,
+    "host_tests": {
+      "status": "PASS",
+      "passed": 11,
+      "total": 11
+    },
+    "native_secondary_identity_guard": true
+  },
+  "historical_build_comparison": {
+    "phase18_stage5_reported_gscbin_bytes": 23168,
+    "phase19_stage6_reported_gscbin_bytes": 23919,
+    "reconstruction_is_historically_byte_identical": false,
+    "reason": "The historical merged source and exact patch diff were not retained; this reconstruction follows documented behavior."
+  },
+  "runtime_validation": "NOT_PERFORMED",
+  "retail_fastfile_rebuild": "NOT_PERFORMED",
+  "pkg_build": "NOT_PERFORMED"
+}
