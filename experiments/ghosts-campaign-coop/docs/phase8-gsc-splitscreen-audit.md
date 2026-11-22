@@ -97,12 +97,12 @@ Reference: patch_common_mp asset 1493, lines 55–69.
 
 The scanner found the following occurrences in the decompiled source sets:
 
-| Source | issplitscreen | issplitscreenplayer | issplitscreenplayerprimary | playerpiggyback | playengineeffects | co-op references |
-|---|---:|---:|---:|---:|---:|---:|
-| common | 5 | 0 | 0 | 111 | 8 | 22 |
-| clockwork | 0 | 0 | 0 | 7 | 3 | 1 |
-| patch_common | 1 | 0 | 0 | 15 | 1 | 2 |
-| patch_common_mp | 1 | 21 | 12 | 265 | 0 | 0 |
+| Source | level.player | issplitscreen | issplitscreenplayer | issplitscreenplayerprimary | playerpiggyback | playengineeffects | co-op references |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| common | 442 | 5 | 0 | 0 | 111 | 8 | 22 |
+| clockwork | 789 | 0 | 0 | 0 | 7 | 3 | 1 |
+| patch_common | 50 | 1 | 0 | 0 | 15 | 1 | 2 |
+| patch_common_mp | 26 | 1 | 21 | 12 | 265 | 0 | 0 |
 
 Counts are static textual occurrences, not runtime call counts. "co-op references" includes the coop dvar, is_coop/is_controlling_uav helpers, and coop_game flags.
 
