@@ -160,6 +160,12 @@ ghc_campaign_bind_native_local_pair()
 
     ghc_campaign_drill_state_init();
 
+    /*
+     * A new native secondary entity needs its own Clockwork loadout.
+     * Do not carry the previous pair's one-time guard across a rebind.
+     */
+    level.ghc_campaign_clockwork_p2_loadout_applied = 0;
+
     level.ghc_campaign_session_ready = 1;
     level.ghc_campaign_session_status = 1;
     level notify( "ghc_campaign_players_ready" );
