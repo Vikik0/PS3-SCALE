@@ -6,7 +6,7 @@ This is an emulator-based homebrew package, not a native reimplementation of Cra
 
 ## What the PKG contains
 
-- A PS3 XMB launcher (Salamander) and RetroArch frontend.
+- A direct NPDRM `EBOOT.BIN` that starts the RetroArch frontend; the PCSX-ReARMed core is statically linked into the same executable, so there is no Salamander second-stage launch.
 - PCSX-ReARMed linked into RetroArch as the PS1 core.
 - RetroArch Netplay with public host announcements, NAT traversal and the Madrid relay endpoint enabled by default.
 - Multitap on PS1 Port 1.
@@ -63,14 +63,14 @@ The build script is `scripts/build_online_pkg.sh`. It:
 - Patches the PCSX-ReARMed Multitap default to Port 1.
 - Enables RetroArch Netplay lockstep, NAT traversal and the Madrid relay.
 - Isolates the PS3 user profile under `retroarch/CBASH0001`.
-- Builds the PS1 core and Salamander EBOOT, then links the real core into RetroArch.
-- Validates the SELF headers and SFO app identity.
+- Builds the PS1 core, links it into RetroArch, and creates a direct NPDRM `EBOOT.BIN` from that executable.
+- Validates the direct EBOOT SELF header, static libretro entry points and SFO app identity.
 - Finalizes the PKG with `package_finalize` and requires header revision `0x8000` before upload.
 - Produces a SHA-256 checksum and build manifest.
 
 Artifacts from workflow runs before the PKG-finalization fix contain revision `0x0000` (debug/non-finalized). Use only an artifact from a run after the finalization fix; the CI workflow now rejects a non-finalized package.
 
-The CI artifact contains:
+The XMB icon uses custom Crash Bash Online cover art.\n\nThe CI artifact contains:
 
 - `Crash-Bash-Online-PS3.pkg`
 - `Crash-Bash-Online-PS3.pkg.sha256`
