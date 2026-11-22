@@ -25,10 +25,18 @@ handle_drill_spot( var_0, var_1, var_2, var_3 )
         common_scripts\\utility::flag_clear( var_1 );
         wait 0.1;
         maps\\_utility::enable_trigger_with_targetname( var_0 );
+        return drill_player;
     }
     drill_player.ghc_clockwork_frag_ammo = 1;
     drill_player.ghc_clockwork_flash_ammo = 1;
     drill_player unlink();
+    return drill_player;
+}
+clockwork_drill_plant_sound( player )
+{
+    wait 0.25;
+    if ( isdefined( player ) && isalive( player ) )
+        player playsound( "clkw_scn_vault_drill_plant" );
 }
 handle_drilling( var_0, var_1, player )
 {
@@ -89,6 +97,10 @@ switchmsg()
 }
 new_trench_setup()
 {
+    drill_player_1 = handle_drill_spot( "drill_spot1", "drill1_start", "drill1_complete", "TAG_FX_XMark_RI" );
+    drill_player_2 = handle_drill_spot( "drill_spot2", "drill2_start", "drill2_complete", "TAG_FX_XMark_LE" );
+    drill_player_1 playerlinktodelta( level.player_approach_weld, "tag_player", 1, 45, 45, 10, 10 );
+    drill_player_2 playerlinktodelta( level.player_approach_weld, "tag_player", 0.5, 90, 20, 10, 10 );
     level.ghc_clockwork_drill_available = 0;
     level.playengineeffects takeweapon( "drill_press" );
 }
