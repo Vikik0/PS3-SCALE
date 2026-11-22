@@ -62,6 +62,9 @@ assert 'argv[used++] = "--connect";' in launch_args
 assert 'argv[used++] = "--mitm-session";' in launch_args
 assert "endpoint->mitm_session[0]" in launch_args
 assert "cb_online_get_netplay_endpoint(&session, &endpoint" in source
+assert "cb_online_mark_game_started(&session" in source
+assert "cb_online_cancel_game_start(&session" in source
+assert "NETPLAY_DISCOVERY_MAX_ATTEMPTS" in source
 assert "NETPLAY_DISCOVERY_MAX_ATTEMPTS" in source
 assert "CB-%.12s-HOST" in source
 assert "Netplay Host List" not in source
