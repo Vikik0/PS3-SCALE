@@ -102,6 +102,10 @@ python tools/ps3mapi/scan_runtime_strings.py "D:\Ghosts\analysis\multiplayer_tu1
 python tools/ps3mapi/compare_runtime_strings.py "D:\Ghosts\analysis\campaign_tu116.elf" "D:\Ghosts\analysis\multiplayer_tu116.elf" --output "D:\Ghosts\analysis\campaign_mp_string_diff.json"
 ~~~
 
+~~~powershell
+python tools/ps3mapi/diff_runtime_elfs.py "D:\Ghosts\analysis\campaign_tu116.elf" "D:\Ghosts\analysis\multiplayer_tu116.elf" --output "D:\Ghosts\analysis\campaign_mp_binary_diff.json"
+~~~
+
 String presence is a navigation lead only. A matching function name or address does not prove that a function is callable from Campaign or safe to hook.
 
 ## Privacy and safety
