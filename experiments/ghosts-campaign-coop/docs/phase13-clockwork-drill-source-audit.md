@@ -20,10 +20,12 @@
 python tools/clockwork_drill_adapter_audit.py "D:\Ghosts\decompiled\maps__clockwork_interior.gsc" --json-out "D:\Ghosts\analysis\clockwork_drill_source_audit.json"
 ```
 
-لإيقاف الأمر برمز خطأ إذا لم يجتز المصدر بوابة الفحص، بما في ذلك مطابقة نطاقات الأسطر وعدد مراجع اللاعب للدوال الست مع مصفوفة Clockwork المرجعية:
+لإيقاف الأمر برمز خطأ إذا لم يجتز المصدر المعدّل بوابة الفحص، مع مقارنة النسخة الأصلية المنفصلة بمصفوفة Clockwork المرجعية:
 
 ```powershell
-python tools/clockwork_drill_adapter_audit.py "D:\Ghosts\decompiled\maps__clockwork_interior.gsc" --strict
+python tools/clockwork_drill_adapter_audit.py "D:\Ghosts\patched\maps__clockwork_interior.gsc" \
+  --reference-source "D:\Ghosts\original\maps__clockwork_interior.gsc" \
+  --json-out "D:\Ghosts\analysis\clockwork_drill_source_audit.json" --strict
 ```
 
 ## نطاق الدوال المرجعية
@@ -45,19 +47,22 @@ python tools/clockwork_drill_adapter_audit.py "D:\Ghosts\decompiled\maps__clockw
 ## ما الذي يفحصه؟
 
 - وجود الدوال الأساسية الثلاث، وفحص الدوال المساندة الثلاث إن كانت موجودة.
-- عدد مراجع `level.player` داخل الدالتين.
+- عدد مراجع `level.player` في الدوال الأساسية والمساندة الست.
 - دوال GSC المحلية التي تستدعيها كل دالة، ثم تتبع سلسلة الاستدعاءات المحلية حتى نهايتها.
 - أي مرجع `level.player` مخفي داخل دالة مساعدة متفرعة من مسار Drill.
 - تمرير اللاعب صراحةً إلى دوال المساعدة ورصد استدعاءات input وweapon وanimation وcontrol وHUD.
 - وجود `ghc_campaign_drill_begin` في مدخل التفاعل، ووجود مساري complete وcancel ضمن سلسلة التفاعل.
 - وجود استدعاء `ghc_campaign_drill_abort_player` في المصدر لتنظيف التفاعل عند الموت أو الانقطاع.
 
+في الفحص الأولي شغّل الأداة على المصدر الأصلي دون `--strict` لتوثيق الاعتمادات. عند إعداد نسخة معدّلة، احتفظ بالأصل دون تغيير، ومرّر النسخة المعدّلة كأول وسيط ومرّر الأصل عبر `--reference-source`. بهذه الطريقة تتم مقارنة هوية المصدر الأصلي مع المصفوفة، بينما يتم فحص ملكية اللاعب ومسارات begin/complete/cancel على النسخة المعدّلة؛ لا نقارن عدد مراجع اللاعب في النسخة المعدّلة بعد تحويلها إلى وسيط صريح مع العدد القديم.
+
 ## تفسير النتيجة
 
 | الحالة | معناها |
 |---|---|
 | `SOURCE_INCOMPLETE` | إحدى الدوال الأساسية الثلاث غير موجودة في الملف المدخل. |
-| `SOURCE_BASELINE_MISMATCH` | وضع `--strict` ووجد أن نطاقات الأسطر أو أعداد مراجع اللاعب لا تطابق مصفوفة Clockwork المرجعية. |
+| `SOURCE_REFERENCE_MISSING` | شُغّل `--strict` دون توفير نسخة GSC الأصلية عبر `--reference-source`. |
+| `SOURCE_BASELINE_MISMATCH` | نسخة `--reference-source` لا تطابق نطاقات الأسطر وأعداد مراجع اللاعب في مصفوفة Clockwork المرجعية. |
 | `BLOCKED_INCOMPLETE_PLAYER_SCOPING` | ما زالت هناك مراجع للاعب الأساسي أو أن أحد مسارات begin/complete/cancel/abort ناقص. |
 | `SOURCE_ADAPTER_READY_FOR_MANUAL_REVIEW` | اجتاز المصدر الفحوص الثابتة الأولية؛ هذا ليس تصريحاً بتطبيق Patch، وما زال يحتاج مراجعة يدوية. |
 
