@@ -1,0 +1,54 @@
+{
+  "stage": 7,
+  "phase": 20,
+  "status": "SOURCE_COMPILED_ROUNDTRIP_VERIFIED",
+  "target": "Call of Duty: Ghosts PS3 / IW6",
+  "gsc_tool": "1.6.2.364",
+  "input_source": {
+    "name": "maps__clockwork_interior_nvg.gsc",
+    "bytes": 45702,
+    "sha256": "6d4617f65e5fd0ba91f85ebf6e2b35a57901cc1ebdce85c8899c8781815cf096"
+  },
+  "patched_source": {
+    "name": "maps__clockwork_interior_nvg.gsc",
+    "bytes": 47250,
+    "sha256": "d7e07d1c7886ecd156a83c2d949525b9d2a348f702d53d09aad1d0d0f37ed16e"
+  },
+  "compiled_gscbin": {
+    "name": "maps__clockwork_interior_nvg.gscbin",
+    "bytes": 12392,
+    "sha256": "575a23c17b4963aaf10e31797e6414f16986dc41094cc510915dfe3cf6d5b1f6"
+  },
+  "roundtrip": {
+    "decompile": "PASS",
+    "recompile": "PASS",
+    "byte_identical": true,
+    "sha256": "575a23c17b4963aaf10e31797e6414f16986dc41094cc510915dfe3cf6d5b1f6"
+  },
+  "static_audit": {
+    "status": "PASS",
+    "passed": 20,
+    "total": 20
+  },
+  "new_unit_tests": {
+    "status": "PASS",
+    "passed": 18,
+    "total": 18
+  },
+  "synthetic_gsc_fixture": {
+    "compile": "PASS",
+    "decompile": "PASS",
+    "roundtrip_byte_identical": true,
+    "bytes": 732,
+    "sha256": "14fc9bb73d0270f15f64d3b4e5766305384b88ad19b0afca3ea636d57fef58d8"
+  },
+  "runtime_validation": "NOT_PERFORMED",
+  "fastfile_rebuild": "NOT_PERFORMED",
+  "pkg_build": "NOT_PERFORMED",
+  "notes": [
+    "The patch preserves the original no-argument player_lever_input entry point.",
+    "The native secondary player alias is validated as a player and watched until the shared lights_on flag.",
+    "Player-specific NVG state is derived from each player's nightvision_effectsoff property.",
+    "No claim is made that Campaign Player 2 creation or split-screen rendering has been proven."
+  ]
+}
