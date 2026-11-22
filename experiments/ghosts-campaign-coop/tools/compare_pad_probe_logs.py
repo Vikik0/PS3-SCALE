@@ -20,11 +20,19 @@ PORT_RE = re.compile(
 )
 
 def parse_log(path: Path) -> dict:
-    data = {"path": str(path), "mode": None, "samples": [], "errors": [], "ports": {}}
+    data = {"path": str(path), "mode": None, "mode_source": None, "mode_label_is_operator_selected": None, "samples": [], "errors": [], "ports": {}}
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         mode_match = MODE_RE.match(line.strip())
         if mode_match:
             data["mode"] = mode_match.group(1).upper()
+            continue
+        source_match = MODE_SOURCE_RE.match(line.strip())
+        if source_match:
+            data["mode_source"] = source_match.group(1).lower()
+            continue
+        operator_match = MODE_OPERATOR_RE.match(line.strip())
+        if operator_match:
+            data["mode_label_is_operator_selected"] = operator_match.group(1) == "1"
             continue
         match = OK_RE.search(line)
         if match:
@@ -85,9 +93,25 @@ def compare(campaign: dict, multiplayer: dict) -> dict:
     return {
         "status": status,
         "mode_labels_match": not mode_mismatch,
+        "mode_label_values_match_expected": not mode_mismatch,
+        "mode_labels_are_operator_selected": (
+            campaign.get("mode_label_is_operator_selected") is True
+            or multiplayer.get("mode_label_is_operator_selected") is True
+        ),
+        "mode_label_provenance": {
+            "campaign": {
+                "source": campaign.get("mode_source"),
+                "operator_selected": campaign.get("mode_label_is_operator_selected"),
+            },
+            "multiplayer": {
+                "source": multiplayer.get("mode_source"),
+                "operator_selected": multiplayer.get("mode_label_is_operator_selected"),
+            },
+        },
         "campaign": campaign,
         "multiplayer": multiplayer,
         "interpretation_limit": (
+            "MODE is an operator-selected label when mode_label_is_operator_selected is true; it is not auto-detected. "
             "A simultaneous 0x03 port mask proves only that the pad subsystem reported ports 0 and 1 "
             "connected in the same sample. It does not prove that the game created a second local client, "
             "player entity, camera, HUD, or independent command stream."
