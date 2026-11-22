@@ -38,7 +38,7 @@ Added as a separate PS3 PRX under client/ps3/probes/pad_probe:
 
 The probe is built separately from the main bootstrap PRX. Its MODE label is explicitly marked as operator-selected in the log; it does not auto-detect Campaign versus Multiplayer. Its output is diagnostic only; it does not create a Local Client, Player Entity, camera, HUD, or input command stream.
 
-The log comparator was strengthened: it now requires port 0 and port 1 to appear together in the same sample (mask 0x03) before reporting simultaneous two-pad visibility. Seeing port 0 in one sample and port 1 in another is not counted as simultaneous.
+The log comparator was strengthened: it now requires port 0 and port 1 to appear together in the same sample (mask 0x03) before reporting simultaneous two-pad visibility. Seeing port 0 in one sample and port 1 in another is not counted as simultaneous. The comparator also records that MODE labels come from the operator-selected mode file; matching labels are not automatic game-mode detection.
 
 ## 3. CI and tests
 
