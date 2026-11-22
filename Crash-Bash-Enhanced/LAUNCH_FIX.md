@@ -15,11 +15,11 @@ That path depended on core discovery, the user profile path, and a second SELF s
 
 The direct EBOOT is generated from PSL1GHT's stripped and SPRX-linked ELF output (the same processed ELF used to create the normal PS3 SELF). It is not wrapped from the raw, unprocessed linker ELF.
 
-The PS3 frontend also sets its active static-core path to the installed app's own `EBOOT.BIN`, and the per-user RetroArch profile's parent directory is created before the app-specific directory.
+The PS3 frontend now uses the renamed PCSX-ReARMed SELF path as the core-info identity, while XMB launches the direct EBOOT.BIN. The per-user RetroArch profile's parent directory is created before the app-specific directory.
 
 The application identifier was corrected to \`CBON00001\`, a valid PS3 \`TITLE_ID\` shape (four letters plus five digits). The same ID is used by \`PARAM.SFO\`, the NPDRM Content ID, the PS3 install path and the isolated user profile. The previous \`CBASH0001\` value had five letters and four digits, so it did not follow the PS3 title-ID format.
 
-The package no longer includes the extra \`CORE.SELF\` copied from the RetroArch frontend. That file was another RetroArch executable, not a standalone PCSX-ReARMed libretro core; the PS1 core is linked into \`EBOOT.BIN\` and does not need a duplicate core file.
+The package retains a renamed SELF identity file at USRDIR/cores/pcsx_rearmed_libretro_psl1ght.SELF so RetroArch can match the installed pcsx_rearmed_libretro.info metadata. It is the same statically linked frontend and is not launched by XMB or spawned as a second stage. The XMB launch target remains the direct USRDIR/EBOOT.BIN.
 
 ## XMB artwork
 
