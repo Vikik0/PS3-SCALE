@@ -2,35 +2,56 @@
   "stage": 8,
   "phase": 21,
   "patcher": "tools/clockwork_ai_target_patch.py",
+  "target_function": "discovery_guys_wakeup",
   "discovery_function_body_sha256": "9003356c9a048664f9d09274d0146043df0fc011caae2a83555b4335ab76f56a",
+  "secondary_player_validation": {
+    "issplitscreen_required": true,
+    "secondary_must_be_player_and_alive": true,
+    "secondary_must_pass_issplitscreenplayer": true,
+    "secondary_must_not_pass_issplitscreenplayerprimary": true
+  },
   "new_host_tests": {
     "status": "PASS",
     "passed": 11,
     "total": 11
   },
-  "synthetic_gsc_fixture": {
+  "uploaded_retail_source": {
+    "bytes": 91543,
+    "sha256": "7fc0f02476d5c9ebbe7c28e68abe762a26a976a28587228c5027d1a5c543e1f1",
+    "decompile_matches_previous_source_byte_identically": true
+  },
+  "uploaded_source_ai_audit": {
+    "status": "PASS",
+    "passed": 5,
+    "total": 5
+  },
+  "stage2_source": {
+    "bytes": 100132,
+    "sha256": "d2411ee69e328c6932f53ecc5db8e547bad465379a8cd9593fa1f171f0a5c73b"
+  },
+  "stage8_on_reconstructed_stage6": {
+    "source_bytes": 105568,
+    "source_sha256": "a2471b5f6d4e02441e038ad939038cb554ae1f09377166ee1bb62fa221ddd800",
+    "compiled_gscbin_bytes": 23823,
+    "compiled_gscbin_sha256": "438f173d2a44e0851cc8f2d1da5f02177aac61ec29b3376f80b5e76fe19494f1",
     "compile": "PASS",
     "decompile": "PASS",
-    "roundtrip_byte_identical": true,
-    "bytes": 296,
-    "sha256": "aa690dbe64532afbe9fd34d60b67441f2de2ed274c0e7de3786b13e732e23cf4"
-  },
-  "stage2_baseline_syntax_proof": {
-    "input_bytes": 100132,
-    "input_sha256": "d2411ee69e328c6932f53ecc5db8e547bad465379a8cd9593fa1f171f0a5c73b",
-    "patched_source_bytes": 101102,
-    "patched_source_sha256": "c24583c9a92fa0ee0710a56a7f5bfb4de6d9d0bcec83d3c02c739280c0526a15",
-    "compiled_gscbin_bytes": 23102,
-    "compiled_gscbin_sha256": "df7112826f2f084d74b8203f39ad57a98510cfb13e09b8cac03d959974c3630d",
+    "recompile": "PASS",
     "roundtrip_byte_identical": true
   },
-  "stage6_combined_source_build": "NOT_PERFORMED_STAGE6_SOURCE_NOT_AVAILABLE_IN_CURRENT_WORKING_INPUTS",
+  "stage6_source_lineage": "Stage 2 -> reconstructed Stage 5 -> reconstructed Stage 6 -> Stage 8",
+  "stage6_historical_artifact": "NOT_RECOVERED; behavior reconstructed from Phase 18/19 docs",
+  "stage56_source_audit": {
+    "status": "PASS",
+    "passed": 13,
+    "total": 13
+  },
+  "stage56_host_tests": {
+    "status": "PASS",
+    "passed": 7,
+    "total": 7
+  },
   "runtime_validation": "NOT_PERFORMED",
-  "fastfile_rebuild": "NOT_PERFORMED",
-  "pkg_build": "NOT_PERFORMED",
-  "notes": [
-    "The patcher verifies only the discovery_guys_wakeup function body and preserves all other source functions.",
-    "The Stage 2 full-file compile is a syntax proof only and must not be mistaken for a combined Stage 6 build.",
-    "The patcher should be run on the user's Stage 6 maps__clockwork_interior.gsc source; it will refuse if the target function has changed."
-  ]
+  "retail_fastfile_rebuild": "NOT_PERFORMED",
+  "pkg_build": "NOT_PERFORMED"
 }
