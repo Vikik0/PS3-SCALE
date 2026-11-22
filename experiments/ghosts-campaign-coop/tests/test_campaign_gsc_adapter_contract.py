@@ -26,6 +26,13 @@ class CampaignGscAdapterContractTests(unittest.TestCase):
         self.assertIn("level.ghc_campaign_player_count != 2", source)
         self.assertIn("return 0", source)
 
+    def test_registry_exposes_distinct_fail_closed_status_codes(self):
+        source = ADAPTER.read_text(encoding="utf-8")
+        self.assertIn("level.ghc_campaign_registry_status = 0", source)
+        for status in range(1, 7):
+            self.assertIn(f"level.ghc_campaign_registry_status = {status}", source)
+        self.assertIn("level.ghc_campaign_registry_status = 1", source)
+
     def test_registry_does_not_attempt_to_spawn_or_clone_a_player(self):
         source = ADAPTER.read_text(encoding="utf-8").lower()
         forbidden = (
