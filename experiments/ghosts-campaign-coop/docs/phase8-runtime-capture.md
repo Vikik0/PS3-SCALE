@@ -121,3 +121,6 @@ The audit found a stronger script-side foundation than the first pass:
 This does not prove Campaign creates a second native local client. The scripts consume the player entities and split-screen state; no script-side native local-client creation routine was found. Also, Multiplayer clientid and getentitynumber bookkeeping must not be confused with local-client slot 0/1.
 
 Full findings and line references are in docs/phase8-gsc-splitscreen-audit.md. The reusable static scanner is tools/audit_gsc_splitscreen.py.
+
+
+The same GSC audit found 789 direct level.player references across 26 Clockwork scripts, with the largest clusters in clockwork_interior, clockwork_exfil, clockwork_code, clockwork_intro, clockwork_defend, and clockwork_audio. This means the mission is not uniformly multi-player-ready: even if the native second client is enabled, selected mission functions will need per-player/global/primary-only classification. Do not mass-replace level.player with the player array.
