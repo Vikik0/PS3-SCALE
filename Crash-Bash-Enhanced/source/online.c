@@ -109,6 +109,8 @@ static int parse_room_view(const char *json, CBOnlineRoomView *view) {
     get_string_field(json, tokens, count, room, "code", view->code, sizeof(view->code));
     get_string_field(json, tokens, count, room, "hostPlayerId",
                      view->host_player_id, sizeof(view->host_player_id));
+    get_string_field(json, tokens, count, room, "netplayId",
+                     view->netplay_id, sizeof(view->netplay_id));
     status = cb_json_object_get(json, tokens, count, room, "status");
     if (status >= 0 && tokens[status].type == CB_JSON_STRING) {
         char status_text[16]; cb_json_string(json, &tokens[status], status_text, sizeof(status_text));
@@ -139,6 +141,8 @@ static int parse_heartbeat(const char *json, CBOnlineRoomView *view) {
     int players; if (count <= 0 || !view) return -1;
     get_string_field(json, tokens, count, 0, "hostPlayerId",
                      view->host_player_id, sizeof(view->host_player_id));
+    get_string_field(json, tokens, count, 0, "netplayId",
+                     view->netplay_id, sizeof(view->netplay_id));
     players = cb_json_object_get(json, tokens, count, 0, "players");
     parse_players(json, tokens, count, players, view); return 0;
 }
@@ -258,4 +262,63 @@ int cb_online_leave_room(CBOnlineSession *session, char *error, size_t error_siz
     char response[CB_HTTP_BUFFER]; if (!session || !session->token[0]) return 0;
     if (http_request("POST", "/api/rooms", "{\"action\":\"leave\"}", session->token, response, sizeof(response), error, error_size) < 0) return -1;
     memset(session, 0, sizeof(*session)); if (error && error_size) error[0] = '\0'; return 0;
+}
+
+int cb_online_get_netplay_endpoint(CBOnlineSession *session,
+                                   CBOnlineNetplayEndpoint *endpoint,
+                                   char *error, size_t error_size) {
+    char response[CB_HTTP_BUFFER];
+    cb_json_token tokens[CB_JSON_TOKEN_COUNT];
+    int count, ready, port, mode;
+
+    if (!session || !session->token[0] || !endpoint) {
+        set_error(error, error_size, "No active room session");
+        return -1;
+    }
+    memset(endpoint, 0, sizeof(*endpoint));
+    if (http_request("POST", "/api/rooms", "{\"action\":\"netplay\"}",
+                     session->token, response, sizeof(response),
+                     error, error_size) < 0) return -1;
+
+    count = cb_json_parse(response, tokens, CB_JSON_TOKEN_COUNT);
+    if (count <= 0) {
+        set_error(error, error_size, "Invalid Netplay endpoint response");
+        return -1;
+    }
+    ready = cb_json_object_get(response, tokens, count, 0, "ready");
+    if (!cb_json_bool(response, ready >= 0 ? &tokens[ready] : NULL, 0)) {
+        if (error && error_size) error[0] = '\0';
+        return 1;
+    }
+
+    if (get_string_field(response, tokens, count, 0, "address",
+                         endpoint->address, sizeof(endpoint->address)) < 0 ||
+        get_string_field(response, tokens, count, 0, "mode",
+                         endpoint->mode, sizeof(endpoint->mode)) < 0) {
+        set_error(error, error_size, "Netplay host address is missing");
+        return -1;
+    }
+    port = cb_json_object_get(response, tokens, count, 0, "port");
+    if (port < 0 || cb_json_int(response, &tokens[port], 0) < 1 ||
+        cb_json_int(response, &tokens[port], 0) > 65535) {
+        set_error(error, error_size, "Netplay host port is invalid");
+        return -1;
+    }
+    snprintf(endpoint->port, sizeof(endpoint->port), "%d",
+             cb_json_int(response, &tokens[port], 0));
+    get_string_field(response, tokens, count, 0, "mitmSession",
+                     endpoint->mitm_session, sizeof(endpoint->mitm_session));
+    get_string_field(response, tokens, count, 0, "gameName",
+                     endpoint->game_name, sizeof(endpoint->game_name));
+    get_string_field(response, tokens, count, 0, "coreName",
+                     endpoint->core_name, sizeof(endpoint->core_name));
+    get_string_field(response, tokens, count, 0, "coreVersion",
+                     endpoint->core_version, sizeof(endpoint->core_version));
+
+    if (strcmp(endpoint->mode, "relay") == 0 && !endpoint->mitm_session[0]) {
+        set_error(error, error_size, "RetroArch relay session ID is missing");
+        return -1;
+    }
+    if (error && error_size) error[0] = '\0';
+    return 0;
 }
