@@ -236,3 +236,37 @@ test("leaving the last seat closes the room instead of deleting during a join ra
   const list = await call("GET");
   assert.equal(list.body.rooms.some((room) => room.code === code), false);
 });
+
+
+test("a ready public room reopens when a disconnected seat expires", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const code = host.body.room.code;
+  const tokens = [host.body.token];
+
+  for (const displayName of ["B", "C", "D"]) {
+    const joined = await call("POST", { action: "join", code, displayName });
+    tokens.push(joined.body.token);
+  }
+  await Promise.all(tokens.map((token) =>
+    call("POST", { action: "heartbeat", ready: true }, token)
+  ));
+
+  const blobPath = "cb-rooms/" + code + ".json";
+  const room = JSON.parse(blobs.get(blobPath).body);
+  room.players[3].lastSeen = Date.now() - 11 * 60 * 1000;
+  blobs.set(blobPath, { body: JSON.stringify(room), etag: String(++etagSequence) });
+
+  const publicRooms = await call("GET");
+  const listed = publicRooms.body.rooms.find((entry) => entry.code === code);
+  assert.ok(listed);
+  assert.equal(listed.players, 3);
+  assert.equal(listed.status, "waiting");
+
+  const quickJoin = await call("POST", { action: "any", displayName: "Replacement" });
+  assert.equal(quickJoin.statusCode, 200);
+  assert.equal(quickJoin.body.room.code, code);
+
+  const finalRoom = await call("GET", {}, host.body.token, { code });
+  assert.equal(finalRoom.body.room.players.length, 4);
+  assert.equal(finalRoom.body.room.status, "waiting");
+});
