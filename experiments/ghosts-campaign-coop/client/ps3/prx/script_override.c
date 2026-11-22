@@ -11,7 +11,7 @@
 #define GHC_SCRIPT_GSCBIN_CAPACITY 65536u
 #define GHC_GSC_WRAPPER_HEADER 16u
 
-static uint8_t g_gscbin[GHC_SCRIPT_GSCBIN_CAPACITY];
+static uint8_t g_gscbin[GHC_SCRIPT_GSCBIN_CAPACITY] __attribute__((aligned(16)));
 static volatile uint32_t g_status = GHC_SCRIPT_OVERRIDE_EMPTY;
 static uint32_t g_comp_len;
 static uint32_t g_stack_len;
