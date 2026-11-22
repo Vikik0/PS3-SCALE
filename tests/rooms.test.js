@@ -861,3 +861,24 @@ test("a started Netplay match keeps its host identity when the host leaves the l
   assert.equal(lookup.body.ready, true);
   assert.equal(lookup.body.address, "madrid.relay.retroarch.com");
 });
+
+
+test("host can roll back the room lock when RetroArch fails to launch", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+
+  const started = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(started.statusCode, 200);
+  const beforeCancel = await call("GET", {}, guest.body.token, { code: host.body.room.code });
+  assert.equal(beforeCancel.body.room.gameStarted, true);
+
+  const cancelled = await call("POST", { action: "game_start_cancel" }, host.body.token);
+  assert.equal(cancelled.statusCode, 200);
+  assert.equal(cancelled.body.gameStartCancelled, true);
+
+  const afterCancel = await call("GET", {}, guest.body.token, { code: host.body.room.code });
+  assert.equal(afterCancel.body.room.gameStarted, false);
+  assert.equal(afterCancel.body.room.players.length, 2);
+});
