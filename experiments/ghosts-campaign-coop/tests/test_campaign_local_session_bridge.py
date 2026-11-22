@@ -40,6 +40,33 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertIn("var_0 < 200", self.source)
         self.assertIn("wait 0.05", self.source)
 
+    def test_ready_session_revalidates_both_native_players_against_live_entity_array(self):
+        body = function_body(self.source, "ghc_campaign_native_pair_is_current")
+        self.assertIn('getentarray( "player", "classname" )', body)
+        self.assertIn("level.playerpiggyback = var_0", body)
+        self.assertIn("level.ghc_campaign_player_0 issplitscreenplayer()", body)
+        self.assertIn("level.ghc_campaign_player_0 issplitscreenplayerprimary()", body)
+        self.assertIn("level.ghc_campaign_player_1 issplitscreenplayer()", body)
+        self.assertIn("level.ghc_campaign_player_1 issplitscreenplayerprimary()", body)
+        self.assertIn("var_5 == level.ghc_campaign_player_0", body)
+        self.assertIn("var_5 == level.ghc_campaign_player_1", body)
+        self.assertIn("if ( var_1 != 2 || !var_2 || !var_3 )", body)
+        self.assertNotIn("wait", body.lower())
+
+    def test_player_specific_actions_revalidate_native_pair_before_mutation(self):
+        main = function_body(self.source, "main")
+        loadout = function_body(self.source, "ghc_campaign_apply_clockwork_player_two_loadout")
+        begin = function_body(self.source, "ghc_campaign_drill_begin")
+        finish = function_body(self.source, "ghc_campaign_drill_finish")
+        self.assertIn("ghc_campaign_native_pair_is_current()", main)
+        for body in (loadout, begin, finish):
+            self.assertIn("ghc_campaign_native_pair_is_current()", body)
+        self.assertIn("level.ghc_campaign_session_ready = 0", begin)
+        self.assertIn("ghc_campaign_drill_abort_slot( 0 )", begin)
+        self.assertIn("ghc_campaign_drill_abort_slot( 1 )", begin)
+        self.assertIn("ghc_campaign_drill_abort_slot( 0 )", finish)
+        self.assertIn("ghc_campaign_drill_abort_slot( 1 )", finish)
+
     def test_startup_retries_identity_binding_until_native_flags_are_ready(self):
         body = function_body(self.source, "main")
         self.assertIn("var_0 < 200", body)
