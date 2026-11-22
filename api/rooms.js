@@ -88,7 +88,7 @@ function publicRoom(room) {
     players: active.length,
     maxPlayers: MAX_PLAYERS,
     createdAt: room.createdAt,
-    status: room.status === "ready" && active.length < MAX_PLAYERS ? "waiting" : room.status
+    status: room.status === "ready" && active.length < 2 ? "waiting" : room.status
   };
 }
 
@@ -191,7 +191,7 @@ module.exports = async function handler(req, res) {
       return reply(res, 200, {
         room: {
           code: record.room.code,
-          status: record.room.status === "ready" && active.length < MAX_PLAYERS ? "waiting" : record.room.status,
+          status: record.room.status === "ready" && active.length < 2 ? "waiting" : record.room.status,
           isPrivate: record.room.isPrivate,
           players: active.map(({ id, name, ready }) => ({ id, name, ready })),
           selfPlayerId: claims.sub,
@@ -326,7 +326,7 @@ module.exports = async function handler(req, res) {
         activePlayer.lastSeen = now;
         if (typeof body.ready === "boolean") activePlayer.ready = body.ready;
         const active = activePlayers(room, now);
-        room.status = active.length === MAX_PLAYERS && active.every((entry) => entry.ready) ? "ready" : "waiting";
+        room.status = active.length >= 2 && active.every((entry) => entry.ready) ? "ready" : "waiting";
         room.updatedAt = now;
         return {
           status: 200,
