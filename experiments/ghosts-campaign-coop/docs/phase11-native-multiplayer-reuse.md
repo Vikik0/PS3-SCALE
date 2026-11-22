@@ -122,3 +122,11 @@ Added a Ghidra exporter and Python comparator for the exact next research step: 
 
 The Ghidra exporter is read-only and requires manual execution on both exact TU 1.16 images. The Python comparator is covered by the normal host test suite. Neither tool proposes a hook address.
 
+## GSC interaction owner adapter
+
+Added client/ps3/gsc/ghc_campaign_interaction_owner.gsc as the Campaign-side counterpart to the portable C ownership contract.
+
+It waits a bounded time for the validated session bridge, maps a player entity to native slot 0 or 1, and exposes begin/complete/cancel/abort operations for up to eight shared interaction spots. Each player may own one interaction; both players may own different spots concurrently; a spot cannot be claimed by both; only the owner may finish it; and abort releases the lock without completing the objective.
+
+The helper is compiled separately from the local-session bridge. It is not yet invoked by Clockwork's original handle_drill_spot() because the original mission script source is not part of the repository's committed source tree. Do not mark the drill as co-op integrated until that original function is patched to pass the actual player entity through input, weapon, animation and cleanup paths.
+
