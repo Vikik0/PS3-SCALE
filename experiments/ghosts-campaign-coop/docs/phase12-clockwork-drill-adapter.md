@@ -13,6 +13,7 @@ Updated client/ps3/gsc/ghc_campaign_local_session.gsc:
 - Each retry refreshes getentarray("player", "classname"), checks issplitscreen(), and attempts the full primary/secondary identity bind.
 - It does not return early merely because two player entities exist; it waits for issplitscreenplayer() and issplitscreenplayerprimary() to report a valid pair.
 - It binds level.player to the native primary and level.playengineeffects to the native secondary only after exact-pair validation.
+- `level.playengineeffects` is not an invented alias: the user's `common.ff` analysis records `maps/_load.gsc::init_level_flags()` storing the already-existing second player entity there (lines 1430–1450). The bridge preserves that stock Campaign convention, but only after validating the native primary/secondary pair.
 - A rebind releases any active drill ownership for slots 0 and 1 before clearing the previous player references. Completed drill state remains shared and is not reset by a rebind.
 - Every successful native-pair bind resets `ghc_campaign_clockwork_p2_loadout_applied` before marking the session ready. A replacement secondary entity therefore receives its own Clockwork loadout; the previous pair's idempotency flag cannot suppress loadout application after controller disconnect/rebind.
 
