@@ -8,6 +8,6 @@
   "source_sha256": null,
   "compiled_gscbin_sha256": null,
   "compiled_gscbin_bytes": null,
-  "status": "GSC source updated with Clockwork drill ownership adapter; awaiting deterministic CI rebuild and artifact hash pinning",
-  "behavior": "Reuses only engine-created native split-screen players; validates primary/secondary identity; binds Campaign aliases after exact-two-player validation; exposes a Clockwork Player 2 starting-loadout helper; never spawns or clones a player."
+  "status": "compiled and round-trip decompiled after Phase 12 source update; not injected or runtime-tested; artifact hashes pending deterministic CI rebuild",
+  "behavior": "Reuses only engine-created native split-screen players; validates primary/secondary identity; binds Campaign aliases after exact-two-player validation; exposes a Clockwork Player 2 loadout helper and GSC-side two-spot drill ownership helpers; never spawns or clones a player."
 }
