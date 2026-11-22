@@ -50,9 +50,9 @@ The existing C state machine in client/ps3/campaign_interaction.c remains the ho
 
 ## Build verification
 
-GitHub Actions run 45056440850 passed all five jobs on the current feature branch:
+GitHub Actions run 45070589371 passed all five jobs on the current feature branch:
 
-- Python: 197 tests passed, including the new PS3 MapEnts scanner tests.
+- Python: 197 tests passed, including sequential drill ownership and owner-handoff audit tests.
 - Protocol/runtime C tests: passed, including Campaign interaction ownership.
 - Host runtime simulator: passed its 10,025 checks.
 - GSC Tool 1.6.2.364: Campaign registry shim and local-session bridge compiled and round-trip decompiled.
