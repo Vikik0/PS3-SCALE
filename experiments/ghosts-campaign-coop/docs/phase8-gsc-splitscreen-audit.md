@@ -36,7 +36,14 @@ The same asset contains teleport_player_post_osprey. It searches spawn entities 
 
 Reference: common/1063.gsc, lines 6626–6662.
 
-This is a concrete two-player placement path in shared GSC. A static caller for teleport_player_post_osprey was not found among the 380 decompiled scripts, so its runtime use in the target Campaign mission remains unconfirmed.
+This is a concrete two-player placement path in shared GSC. A static caller for teleport_player_post_osprey was not found among the 380 decompiled scripts, so its runtime use in the target Campaign mission remains unconfirmed. 
+
+Other shared assets use the second-player handle in gameplay systems, not just placement:
+- common asset 981 updates gameskill for every entity in level.playerpiggyback, then combines level.player.gameskill with level.playengineeffects.gameskill when is_controlling_uav is true (common/981.gsc, lines 305–331).
+- common asset 954 makes the autosave/attach sequence end when level.playengineeffects dies in the split-screen/co-op path (common/954.gsc, lines 233–244).
+- common asset 1120 creates a second missile attractor for level.playengineeffects when is_controlling_uav is true (common/1120.gsc, lines 82–105).
+
+These are stronger signs of an existing two-player gameplay model in the shared Campaign-era script layer. They still depend on level.playengineeffects already being initialized; they do not show the native routine that creates that player entity/client.
 
 ### common asset 962
 
