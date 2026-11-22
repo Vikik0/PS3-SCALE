@@ -134,7 +134,7 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
         ))
 
         self.assertEqual(report["status"], "SOURCE_INCOMPLETE")
-        self.assertEqual(report["checks"]["both_drill_functions_found"], False)
+        self.assertEqual(report["checks"]["all_core_drill_functions_found"], False)
         self.assertEqual(report["target_functions"]["handle_drilling"], [])
 
     def test_missing_abort_cleanup_keeps_adapter_blocked(self):
