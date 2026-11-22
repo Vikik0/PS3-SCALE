@@ -27,7 +27,7 @@ discovery_guys_wakeup()
 
 fixture_interior_setup()
 {
-    level.ghc_stage6_marker = 2;
+    level.ghc_fixture_marker = 2;
 }
 '''
 
@@ -39,8 +39,8 @@ class ClockworkAiTargetPatchTests(unittest.TestCase):
 
     def test_patch_selects_player_and_preserves_other_functions(self):
         patched = patch_source(SYNTHETIC_SOURCE, self.body_hash)
-        self.assertIn("level.ghc_stage6_marker = 1;", patched)
-        self.assertIn("level.ghc_stage6_marker = 2;", patched)
+        self.assertIn("level.ghc_fixture_marker = 1;", patched)
+        self.assertIn("level.ghc_fixture_marker = 2;", patched)
         self.assertIn("clockwork_pick_enemy_target( var_1 )", patched)
         self.assertIn("issplitscreen() && isdefined( level.playengineeffects )", patched)
         self.assertIn("secondary_player issplitscreenplayer()", patched)
