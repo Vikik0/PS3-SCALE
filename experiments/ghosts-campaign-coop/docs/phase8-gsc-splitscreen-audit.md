@@ -127,3 +127,33 @@ The coop dvar is not a substitute for issplitscreen. Do not force coop=1 or copy
 4. Only after the native second-client path is proven, test the shared GSC two-player paths and the Clockwork mission's per-client behavior.
 
 **Status:** GSC decompilation and static audit complete for 380/380 extracted ScriptFile candidates. Native Campaign local-client creation remains unproven; no hook or playable co-op build is claimed.
+
+
+## 7. Clockwork single-player coupling
+
+A separate scan of exact primary-player references found **789 occurrences of level.player across 26 Clockwork scripts**, compared with only 7 level.playerpiggyback references across 4 scripts and 3 level.playengineeffects references in one script.
+
+The largest primary-player reference clusters are:
+
+| Clockwork script | level.player occurrences |
+|---|---:|
+| maps/clockwork_interior.gsc | 118 |
+| maps/clockwork_exfil.gsc | 117 |
+| maps/clockwork_code.gsc | 115 |
+| maps/clockwork_intro.gsc | 112 |
+| maps/clockwork_defend.gsc | 84 |
+| maps/clockwork_audio.gsc | 72 |
+| maps/ally_attack_dog.gsc | 34 |
+
+Clockwork asset 1218 also initializes level.player directly from the first entity returned by getentarray("player", "classname") (clockwork/1218.gsc, lines 4–9).
+
+This is the main mission-level integration risk. The shared layer has a second-player handle, but much of Clockwork's story/gameplay logic addresses the primary player explicitly. That does not mean every occurrence must be duplicated: some are intentionally host/leader-only, some are camera/cutscene operations, and some are per-player gameplay. Each function must be classified before adapting it.
+
+Do not mechanically replace level.player with level.playerpiggyback. The correct behavior depends on whether the operation is:
+- global/mission-level and should execute once;
+- player-specific and should run once per local player;
+- primary-player-only (story camera, scripted sequence, leader choice);
+- client-specific (HUD, visibility, view/camera, audio);
+- shared state that must aggregate both players (difficulty, checkpoints, down/death state).
+
+The reusable GSC scanner now reports primary_player_ref separately from playerpiggyback and playengineeffects so this audit can be repeated as scripts are revised.
