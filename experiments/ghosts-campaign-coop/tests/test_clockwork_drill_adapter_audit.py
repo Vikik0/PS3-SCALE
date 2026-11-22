@@ -104,8 +104,32 @@ new_trench_setup()
     drill_player_2 = handle_drill_spot( "drill_spot2", "drill2_start", "drill2_complete", "TAG_FX_XMark_LE" );
     drill_player_1 playerlinktodelta( level.player_approach_weld, "tag_player", 1, 45, 45, 10, 10 );
     drill_player_2 playerlinktodelta( level.player_approach_weld, "tag_player", 0.5, 90, 20, 10, 10 );
+    if ( common_scripts\\utility::flag( "vault_blast_area" ) )
+    {
+        var_3 = getent( "smoke_spot", "targetname" );
+        thread clockwork_apply_vault_blast( level.player, var_3 );
+        if ( isdefined( level.playengineeffects ) && isplayer( level.playengineeffects ) && isalive( level.playengineeffects ) )
+            thread clockwork_apply_vault_blast( level.playengineeffects, var_3 );
+    }
+    level.player playrumbleonentity( "artillery_rumble" );
+    if ( isdefined( level.playengineeffects ) && isplayer( level.playengineeffects ) && isalive( level.playengineeffects ) )
+        level.playengineeffects playrumbleonentity( "artillery_rumble" );
     level.ghc_clockwork_drill_available = 0;
     level.playengineeffects takeweapon( "drill_press" );
+}
+clockwork_apply_vault_blast( player, blast_origin )
+{
+    if ( !isdefined( player ) || !isplayer( player ) || !isalive( player ) || !isdefined( blast_origin ) )
+        return;
+    var_0 = player.health - 5;
+    if ( var_0 > 0 )
+        player dodamage( var_0, blast_origin.origin );
+    player shellshock( "default", 5 );
+    player setstance( "prone" );
+    player pushplayervector( ( 100, 0, 0 ), 1 );
+    wait 0.2;
+    if ( isdefined( player ) && isplayer( player ) && isalive( player ) )
+        player pushplayervector( ( 0, 0, 0 ), 1 );
 }
 '''
 
