@@ -269,7 +269,7 @@ int cb_online_get_netplay_endpoint(CBOnlineSession *session,
                                    char *error, size_t error_size) {
     char response[CB_HTTP_BUFFER];
     cb_json_token tokens[CB_JSON_TOKEN_COUNT];
-    int count, ready, port, mode;
+    int count, ready, port;
 
     if (!session || !session->token[0] || !endpoint) {
         set_error(error, error_size, "No active room session");
