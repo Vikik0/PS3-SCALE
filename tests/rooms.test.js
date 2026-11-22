@@ -549,6 +549,7 @@ test("a ready two-player room stays locked and is not advertised as waiting", as
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
   await call("POST", { action: "heartbeat", ready: true }, host.body.token);
   await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  await call("POST", { action: "game_start" }, host.body.token);
 
   let room = await call("GET", {}, host.body.token, { code: host.body.room.code });
   assert.equal(room.body.room.status, "ready");
@@ -606,6 +607,9 @@ test("Netplay relay lookup is private to room members and resolves the matching 
   const guestReady = await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
   assert.equal(hostReady.body.netplayId, netplayId);
   assert.equal(guestReady.body.netplayId, netplayId);
+  const start = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.ok, true);
 
   let requestedUrl = "";
   global.fetch = async (url, options) => {
@@ -744,4 +748,71 @@ test("Netplay endpoint ignores a stale public-lobby host entry", async () => {
   assert.equal(lookup.statusCode, 200);
   assert.equal(lookup.body.ready, false);
   assert.equal(lookup.body.state, "host_not_connectable");
+});
+
+
+test("only the host can start Netplay and a started room rejects late joins", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+
+  const guestStart = await call("POST", { action: "game_start" }, guest.body.token);
+  assert.equal(guestStart.statusCode, 403);
+
+  const hostStart = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(hostStart.statusCode, 200);
+  assert.equal(hostStart.body.ok, true);
+  assert.ok(hostStart.body.gameStartedAt);
+
+  const lateJoin = await call("POST", {
+    action: "join",
+    code: host.body.room.code,
+    displayName: "Late Player"
+  });
+  assert.equal(lateJoin.statusCode, 409);
+
+  const listing = await call("GET");
+  assert.equal(listing.body.rooms.some((entry) => entry.code === host.body.room.code), false);
+});
+
+test("started rooms retain player seats for a full match window", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  await call("POST", { action: "game_start" }, host.body.token);
+
+  const pathname = "cb-rooms/" + host.body.room.code + ".json";
+  const stored = JSON.parse(blobs.get(pathname).body);
+  stored.players.find((player) => player.id === host.body.player.id).lastSeen =
+    Date.now() - 15 * 60 * 1000;
+  blobs.set(pathname, { body: JSON.stringify(stored), etag: String(++etagSequence) });
+
+  const heartbeat = await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  assert.equal(heartbeat.statusCode, 200);
+  assert.equal(heartbeat.body.players.length, 2);
+  assert.equal(heartbeat.body.players.some((player) => player.id === host.body.player.id), true);
+  assert.equal(heartbeat.body.hostPlayerId, host.body.player.id);
+
+  const listing = await call("GET");
+  assert.equal(listing.body.rooms.some((entry) => entry.code === host.body.room.code), false);
+});
+
+test("client Netplay discovery waits for the host to mark game start", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+
+  let fetched = false;
+  global.fetch = async () => {
+    fetched = true;
+    return { ok: true, status: 200, async json() { return []; } };
+  };
+  const lookup = await call("POST", { action: "netplay" }, guest.body.token);
+  assert.equal(lookup.statusCode, 200);
+  assert.equal(lookup.body.ready, false);
+  assert.equal(lookup.body.state, "waiting_for_host_start");
+  assert.equal(fetched, false);
 });
