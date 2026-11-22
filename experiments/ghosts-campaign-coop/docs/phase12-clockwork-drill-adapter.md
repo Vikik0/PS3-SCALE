@@ -70,3 +70,15 @@ The adapter is compile-tested source, not a playable feature:
 5. Native Campaign local-client creation, controller 1 routing, independent camera/viewport/HUD, player state and respawn remain unproven on the target PS3.
 
 GSC compilation and host tests prove source/contract integrity only. They do not prove runtime loading or in-game co-op.
+
+## Live native-pair revalidation
+
+The bridge now has a separate read-only check, ghc_campaign_native_pair_is_current(), which refreshes getentarray and confirms that:
+
+- the native split-screen mode is still active;
+- the stored primary and secondary handles are still native split-screen players;
+- their primary/secondary roles have not changed;
+- the live player entity array still contains those exact two handles and no third local split-screen player.
+
+The bridge uses this check before reusing an already-ready session, applying Player 2's loadout, and beginning or finishing a drill interaction. If the pair is no longer valid, it marks the session not ready and releases both drill locks without marking either spot complete. This closes the stale-entity case where a controller disconnects or the engine replaces one local player while the Campaign script still holds an old entity reference.
+
