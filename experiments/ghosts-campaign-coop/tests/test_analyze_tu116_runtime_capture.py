@@ -31,6 +31,7 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
             "status": "PASS_METADATA",
             "mode": mode,
             "self_sha256": analyzer.sha256_file(Path(self_file)),
+            "reconstructed_elf": {"output_elf": str(output_elf)},
         }
 
     @staticmethod
