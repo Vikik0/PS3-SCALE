@@ -226,7 +226,7 @@ python3 - "$PKGDIR/ICON0.PNG" <<'PY'
 from pathlib import Path
 import struct
 data = Path(__import__("sys").argv[1]).read_bytes()
-if data[:8] != b"\\x89PNG\\r\\n\\x1a\\n":
+if data[:8] != b"\x89PNG\r\n\x1a\n":
     raise SystemExit("ICON0.PNG is not a valid PNG")
 width, height = struct.unpack(">II", data[16:24])
 if (width, height) != (320, 176):
