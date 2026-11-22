@@ -7,6 +7,7 @@
 #include <io/pad.h>
 #include <sysutil/sysutil.h>
 #include <sys/time.h>
+struct timeval;
 #include <net/net.h>
 
 #define MENU_ROOM_LIMIT 8
