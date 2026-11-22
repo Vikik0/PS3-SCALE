@@ -112,6 +112,9 @@ test("four-seat retro lobby UI renders and its inline script parses", () => {
   assert.match(html, /id="privateRoom"/);
   assert.match(html, /id="publicBtn"/);
   assert.match(html, /id="privateBtn"/);
+  assert.match(html, /sessionStorage\.setItem\("cb_player_id",state\.player\.id\)/);
+  assert.match(html, /data\.room\.selfPlayerId/);
+  assert.match(html, /function expireRoomSession\(/);
   assert.match(html, /room\.players\.length>1\?"Players joined/);
   assert.doesNotMatch(html, /\bboth\?/);
 });
@@ -276,4 +279,66 @@ test("a ready public room reopens when a disconnected seat expires", async () =>
   const finalRoom = await call("GET", {}, host.body.token, { code });
   assert.equal(finalRoom.body.room.players.length, 4);
   assert.equal(finalRoom.body.room.status, "waiting");
+});
+
+
+test("room refresh identifies the current player and rejects an expired seat", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const code = host.body.room.code;
+
+  const room = await call("GET", {}, host.body.token, { code });
+  assert.equal(room.statusCode, 200);
+  assert.equal(room.body.room.selfPlayerId, host.body.player.id);
+  assert.equal(room.body.room.players[0].id, host.body.player.id);
+
+  const stored = JSON.parse(blobs.get("cb-rooms/" + code + ".json").body);
+  stored.players[0].lastSeen = Date.now() - 11 * 60 * 1000;
+  blobs.set("cb-rooms/" + code + ".json", {
+    body: JSON.stringify(stored),
+    etag: String(++etagSequence)
+  });
+
+  const expired = await call("GET", {}, host.body.token, { code });
+  assert.equal(expired.statusCode, 403);
+  assert.match(expired.body.error, /seat has expired/i);
+});
+
+test("heartbeat prunes expired seats and returns only active players", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const code = host.body.room.code;
+  const tokens = [host.body.token];
+
+  for (const displayName of ["B", "C", "D"]) {
+    const joined = await call("POST", { action: "join", code, displayName });
+    tokens.push(joined.body.token);
+  }
+  await Promise.all(tokens.map((token) =>
+    call("POST", { action: "heartbeat", ready: true }, token)
+  ));
+
+  const blobPath = "cb-rooms/" + code + ".json";
+  const stored = JSON.parse(blobs.get(blobPath).body);
+  stored.players[3].lastSeen = Date.now() - 11 * 60 * 1000;
+  blobs.set(blobPath, { body: JSON.stringify(stored), etag: String(++etagSequence) });
+
+  const heartbeat = await call("POST", { action: "heartbeat", ready: true }, tokens[0]);
+  assert.equal(heartbeat.statusCode, 200);
+  assert.equal(heartbeat.body.players.length, 3);
+  assert.equal(heartbeat.body.players.some((player) => player.id === tokens[3]), false);
+
+  const persisted = JSON.parse(blobs.get(blobPath).body);
+  assert.equal(persisted.players.length, 3);
+  assert.equal(persisted.status, "waiting");
+
+  const expiredPlayer = await call("GET", {}, tokens[3], { code });
+  assert.equal(expiredPlayer.statusCode, 403);
+});
+
+test("a restored browser session keeps the same player identity and ready state", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
+  assert.match(html, /sessionStorage\.setItem\("cb_player_id",state\.player\.id\)/);
+  assert.match(html, /data\.room\.selfPlayerId/);
+  assert.match(html, /state\.ready=Boolean\(me\.ready\)/);
+  assert.match(html, /startRoomTimers\(3000\)/);
+  assert.match(html, /Your room session expired/);
 });
