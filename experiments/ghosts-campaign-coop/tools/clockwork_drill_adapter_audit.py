@@ -303,11 +303,11 @@ def audit(
         and p2_drill_press_grant
     )
     drill_owner_returned_to_caller = (
-        len(re.findall(r"return\\s+drill_player\\s*;", body("handle_drill_spot"))) >= 2
+        len(re.findall(r"return\s+drill_player\s*;", body("handle_drill_spot"))) >= 2
     )
     post_drill_animation_uses_returned_owner = (
-        _has(body("new_trench_setup"), r"drill_player_1\\s*=\\s*handle_drill_spot\\s*\\(")
-        and _has(body("new_trench_setup"), r"drill_player_2\\s*=\\s*handle_drill_spot\\s*\\(")
+        _has(body("new_trench_setup"), r"drill_player_1\s*=\s*handle_drill_spot\s*\(")
+        and _has(body("new_trench_setup"), r"drill_player_2\s*=\s*handle_drill_spot\s*\(")
         and "drill_player_1 playerlinktodelta" in body("new_trench_setup")
         and "drill_player_2 playerlinktodelta" in body("new_trench_setup")
         and "level.player playerlinktodelta" not in body("new_trench_setup")
