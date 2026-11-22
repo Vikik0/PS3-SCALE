@@ -8,7 +8,7 @@ CONTENTID := UP0001-$(APPID)_00-0000000000000000
 ICON0 := $(CURDIR)/pkgfiles/ICON0.PNG
 PKGFILES := $(CURDIR)/pkgfiles
 CA_BUNDLE := $(PKGFILES)/USRDIR/cacert.pem
-SFOXML := $(CURDIR)/sfo.xml
+SFOXML := $(CURDIR)/sfo-native.xml
 include $(PSL1GHT)/ppu_rules
 TARGET := crashbash
 BUILD := build
