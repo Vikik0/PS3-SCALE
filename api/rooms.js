@@ -1,7 +1,7 @@
 "use strict";
 
 const crypto = require("node:crypto");
-const { get, put, list } = require("@vercel/blob");
+const { get, put, list, del } = require("@vercel/blob");
 const {
   signGuestToken,
   verifyGuestToken,
