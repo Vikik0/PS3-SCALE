@@ -1,0 +1,255 @@
+{
+  "phase": 23,
+  "purpose": "read-only intake of user-uploaded Clockwork mission FastFiles and Bink media",
+  "fastfiles": [
+    {
+      "file": "clockwork(1).ff",
+      "bytes": 85855599,
+      "sha256": "a2ac70c7349047f2eded5f45a5e46ff8278689839fe1655106263520fe639783",
+      "inner_magic_offset": 91716,
+      "block_count": 2048,
+      "outer_zone_bytes": 134217728,
+      "inner_inflated_zone_bytes": 134573892,
+      "inner_zlib_streams": 164,
+      "outer_stream_complete": false,
+      "stop_reason": "invalid raw-DEFLATE distance after validated blocks",
+      "trailing_bytes": 16557959,
+      "asset_pool": {
+        "tags": 1999,
+        "assets": 4153,
+        "scriptfiles": 109,
+        "rawfiles": 55,
+        "map_ents": 1
+      }
+    },
+    {
+      "file": "clockwork_start_tr.ff",
+      "bytes": 9684153,
+      "sha256": "ebc3bf38f3947161b4243c0d5dc7122f73f0cf817cb3d98059468b813bda3b4a",
+      "blocks": 221,
+      "zone_bytes": 14483456,
+      "asset_pool": {
+        "tags": 545,
+        "assets": 245,
+        "scriptfiles": 0,
+        "rawfiles": 1,
+        "map_ents": 0,
+        "type_counts": {
+          "xanim": 199,
+          "xmodel": 23,
+          "techset": 21
+        }
+      }
+    },
+    {
+      "file": "clockwork_end_tr.ff",
+      "bytes": 9293040,
+      "sha256": "",
+      "blocks": 214,
+      "asset_pool": {
+        "tags": 721,
+        "assets": 315,
+        "scriptfiles": 0,
+        "rawfiles": 1,
+        "map_ents": 0,
+        "type_counts": {
+          "xanim": 282,
+          "xmodel": 15,
+          "techset": 16
+        }
+      }
+    },
+    {
+      "file": "por_clockwork.ff",
+      "bytes": 0,
+      "sha256": "",
+      "blocks": 17,
+      "asset_pool": {
+        "assets": 2380,
+        "scriptfiles": 0,
+        "rawfiles": 1,
+        "map_ents": 0,
+        "type_counts": {
+          "sound": 2101,
+          "localize": 276,
+          "stringtable": 1
+        }
+      }
+    },
+    {
+      "file": "sna_clockwork.ff",
+      "bytes": 0,
+      "sha256": "",
+      "blocks": 17,
+      "asset_pool": {
+        "assets": 2380,
+        "scriptfiles": 0,
+        "rawfiles": 1,
+        "map_ents": 0,
+        "type_counts": {
+          "sound": 2101,
+          "localize": 276,
+          "stringtable": 1
+        }
+      }
+    },
+    {
+      "file": "fra_clockwork.ff",
+      "bytes": 0,
+      "sha256": "",
+      "blocks": 17,
+      "asset_pool": {
+        "assets": 2380,
+        "scriptfiles": 0,
+        "rawfiles": 1,
+        "map_ents": 0,
+        "type_counts": {
+          "sound": 2101,
+          "localize": 276,
+          "stringtable": 1
+        }
+      }
+    },
+    {
+      "file": "eng_clockwork.ff",
+      "bytes": 0,
+      "sha256": "",
+      "blocks": 16,
+      "asset_pool": {
+        "assets": 2380,
+        "scriptfiles": 0,
+        "rawfiles": 1,
+        "map_ents": 0,
+        "type_counts": {
+          "sound": 2101,
+          "localize": 276,
+          "stringtable": 1
+        }
+      }
+    }
+  ],
+  "bink_media": [
+    {
+      "file": "mission_preview_clockwork.bik",
+      "bytes": 0,
+      "duration_seconds": 0.5,
+      "width": 1280,
+      "height": 720,
+      "fps": "30/1"
+    },
+    {
+      "file": "clockwork_load.bik",
+      "bytes": 0,
+      "duration_seconds": 38.17,
+      "width": 1280,
+      "height": 720,
+      "fps": "30000/1001",
+      "multiple_bink_audio_streams": true
+    },
+    {
+      "file": "clockwork_vault_drill.bik",
+      "bytes": 0,
+      "duration_seconds": 8.61,
+      "width": 1024,
+      "height": 512,
+      "fps": "30000/1001"
+    },
+    {
+      "file": "clockwork_vault_scan.bik",
+      "bytes": 0,
+      "duration_seconds": 3.97,
+      "width": 1024,
+      "height": 512,
+      "fps": "30000/1001"
+    },
+    {
+      "file": "clockwork_vault_still.bik",
+      "bytes": 0,
+      "duration_seconds": 1.03,
+      "width": 1024,
+      "height": 512,
+      "fps": "30000/1001"
+    }
+  ],
+  "extracted_source": {
+    "asset": "maps/clockwork_interior.gscbin",
+    "candidate_bytes": 21237,
+    "candidate_sha256": "d14dd35cc362121a15bdec3c2237c44014b4275f5a428b695a27bd27daa801dd",
+    "gsc_tool": "1.6.2.364",
+    "decompiled_bytes": 91543,
+    "decompiled_sha256": "7fc0f02476d5c9ebbe7c28e68abe762a26a976a28587228c5027d1a5c543e1f1",
+    "matches_previous_source_byte_identically": true
+  },
+  "mapents": {
+    "pool_index": 4059,
+    "type_id": "0x14",
+    "pointer": "0xFFFFFFFF",
+    "col_map_type": "0x0F",
+    "map_path_string": "maps/clockwork.d3dbsp",
+    "entity_string_candidate_count": 0,
+    "standalone_map_or_ents_file_in_upload": false
+  },
+  "gsc_patch_validation": {
+    "source_lineage": "Stage 2 -> reconstructed Stage 5 -> reconstructed Stage 6 -> Stage 8",
+    "historical_stage56_source": "NOT_AVAILABLE; reconstructed from Phase 18/19 documented behavior",
+    "stage2_source": {
+      "bytes": 100132,
+      "sha256": "d2411ee69e328c6932f53ecc5db8e547bad465379a8cd9593fa1f171f0a5c73b"
+    },
+    "stage5_reconstruction": {
+      "source_bytes": 101296,
+      "source_sha256": "4533c0b9ed49977443e00bebf340fe5323b9dab6f424f5f057a91ace25d4d3a6",
+      "gscbin_bytes": 23126,
+      "gscbin_sha256": "b79fc0e2a0d900b4c8244c724d521a2168812f84fc28a2740a9e63d4ad847334",
+      "compile": "PASS",
+      "decompile": "PASS",
+      "recompile": "PASS",
+      "roundtrip_byte_identical": true
+    },
+    "stage6_reconstruction": {
+      "source_bytes": 104487,
+      "source_sha256": "b4f7b92d4499d41bd9b04e4431020d86041b3004fbe9d197fd0d61bdc77aecad",
+      "gscbin_bytes": 23595,
+      "gscbin_sha256": "fbbfcdcc99f55deb908a2e7cd96228693c5372e80cf6b5d90c195106bb8724e1",
+      "compile": "PASS",
+      "decompile": "PASS",
+      "recompile": "PASS",
+      "roundtrip_byte_identical": true,
+      "source_audit": {
+        "status": "PASS",
+        "checks_passed": 13,
+        "checks_total": 13
+      },
+      "host_tests": {
+        "status": "PASS",
+        "passed": 7,
+        "total": 7
+      }
+    },
+    "stage8_on_reconstructed_stage6": {
+      "source_bytes": 105568,
+      "source_sha256": "a2471b5f6d4e02441e038ad939038cb554ae1f09377166ee1bb62fa221ddd800",
+      "gscbin_bytes": 23823,
+      "gscbin_sha256": "438f173d2a44e0851cc8f2d1da5f02177aac61ec29b3376f80b5e76fe19494f1",
+      "compile": "PASS",
+      "decompile": "PASS",
+      "recompile": "PASS",
+      "roundtrip_byte_identical": true,
+      "host_tests": {
+        "status": "PASS",
+        "passed": 11,
+        "total": 11
+      },
+      "native_secondary_identity_guard": true
+    },
+    "historical_build_comparison": {
+      "phase18_stage5_reported_gscbin_bytes": 23168,
+      "phase19_stage6_reported_gscbin_bytes": 23919,
+      "reconstruction_is_historically_byte_identical": false,
+      "reason": "The historical merged source and exact patch diff were not retained; this reconstruction follows documented behavior."
+    },
+    "runtime_validation": "NOT_PERFORMED",
+    "retail_fastfile_rebuild": "NOT_PERFORMED",
+    "pkg_build": "NOT_PERFORMED"
+  }
+}
