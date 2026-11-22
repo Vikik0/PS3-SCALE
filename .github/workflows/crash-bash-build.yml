@@ -85,6 +85,7 @@ jobs:
           command -v spu-gcc
           command -v make_self
           command -v make_self_npdrm
+          command -v ppu-nm || command -v nm
           command -v pkg
           command -v package_finalize
           command -v sfo
