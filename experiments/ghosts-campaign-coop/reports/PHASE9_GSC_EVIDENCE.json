@@ -219,5 +219,20 @@
     "elf_bytes": 111416,
     "elf_sha256": "42befdeb3e5f4901fe7089ad5288819c451b02989a6358ea94ba601cfaaea246",
     "hardware_loaded": false
+  },
+  "final_ci": {
+    "workflow_run_id": 45023444205,
+    "all_five_jobs_passed": true,
+    "host_tests": "127/127",
+    "final_documentation_workflow_run_id": 45023497892,
+    "final_documentation_workflow_passed": true
+  },
+  "pad_probe_mode_provenance": {
+    "parsed_fields": [
+      "MODE_SOURCE",
+      "MODE_LABEL_IS_OPERATOR_SELECTED"
+    ],
+    "labels_are_auto_detected": false,
+    "combined_operator_selected_true_only_if_both_logs_marked": true
   }
 }
