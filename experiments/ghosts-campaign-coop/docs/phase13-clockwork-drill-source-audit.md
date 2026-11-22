@@ -1,82 +1,80 @@
-# Phase 13 — Clockwork drill source adapter audit
+# Phase 13 — Clockwork drill source audit
 
 ## الهدف
 
-تجهيز فحص آلي قبل تعديل سكربت Clockwork الأصلي. جسر Phase 12 يوفّر دوال ملكية Drill، لكن لا يجوز اعتبارها مدمجة حتى نعرف أن دوال المهمة الأصلية تمرّر اللاعب الذي بدأ التفاعل، وأن كل دوال المساعدة تستخدم اللاعب نفسه بدلاً من `level.player`. توسعت المرحلة لتغطي ثلاث دوال أساسية وثلاث دوال مساندة في دورة الحفر، اعتماداً على مصفوفة تحليل Clockwork الخاصة بعينة FastFile ذات SHA-256 `a2ac70c7349047f2eded5f45a5e46ff8278689839fe1655106263520fe639783`.
+هذه الأداة تفحص المصدر الأصلي والمصدر المعدّل لدورة الحفر في مهمة Clockwork. تركيزها على التقاط اللاعب الذي فعّل الـTrigger، وتمريره إلى منطق الحفر، ومنع رجوع الدوال المساندة إلى `level.player` بصورة غير مقصودة.
 
-الأداة الجديدة للقراءة فقط:
+الأداة:
 
 `tools/clockwork_drill_adapter_audit.py`
 
-لا تعدّل المصدر، ولا تترجم GSC، ولا تعيد بناء FastFile أو EBOOT.
+الأداة للقراءة فقط؛ لا تعدّل المصدر ولا تترجم GSC ولا تعيد بناء FastFile.
+
+## مصدر المرجع
+
+- FastFile: `clockwork.ff`
+- SHA-256 للـFastFile: `a2ac70c7349047f2eded5f45a5e46ff8278689839fe1655106263520fe639783`
+- SHA-256 للمصدر الأصلي `maps__clockwork_interior.gsc`: `7fc0f02476d5c9ebbe7c28e68abe762a26a976a28587228c5027d1a5c543e1f1`
+
+تُستخدم الدوال الست التالية لمطابقة المصدر الأصلي مع مصفوفة التحليل:
+
+| الدالة | نطاق الأسطر الأصلي | مراجع `level.player` |
+|---|---:|---:|
+| `switchmsg` | 263–277 | 8 |
+| `handle_drill_spot` | 278–503 | 32 |
+| `restore_footstep_notetrack_scripts` | 504–514 | 4 |
+| `handle_drilling` | 563–707 | 10 |
+| `drillthrough_plate_sound` | 717–734 | 1 |
+| `handle_misc_drill_details` | 760–848 | 15 |
+| **المجموع** | | **70** |
+
+`switchmsg` مستثناة من تدقيق ملكية اللاعب الثاني لأنها تنفذ التقاط أداة الحفر السينمائي الخاص بـLogan. يجب أن تبقى دالة اللاعب الأساسي، مع منح `drill_press` للاعب الثاني بصورة منفصلة.
 
 ## التشغيل على Windows
 
-ضع ملف GSC المستخرج من نسختك بجانب ملفات التحليل، ثم شغّل من مجلد:
+شغّل من مجلد:
 
 `experiments/ghosts-campaign-coop`
 
-```powershell
-python tools/clockwork_drill_adapter_audit.py "D:\Ghosts\decompiled\maps__clockwork_interior.gsc" --json-out "D:\Ghosts\analysis\clockwork_drill_source_audit.json"
-```
-
-لإيقاف الأمر برمز خطأ إذا لم يجتز المصدر المعدّل بوابة الفحص، مع مقارنة النسخة الأصلية المنفصلة بمصفوفة Clockwork المرجعية:
+لفحص المصدر المعدّل مع مقارنة الأصل:
 
 ```powershell
-python tools/clockwork_drill_adapter_audit.py "D:\Ghosts\patched\maps__clockwork_interior.gsc" \
-  --reference-source "D:\Ghosts\original\maps__clockwork_interior.gsc" \
-  --json-out "D:\Ghosts\analysis\clockwork_drill_source_audit.json" --strict
+python tools/clockwork_drill_adapter_audit.py "D:\Ghosts\patched\maps__clockwork_interior.gsc" --reference-source "D:\Ghosts\original\maps__clockwork_interior.gsc" --json-out "D:\Ghosts\analysis\clockwork_drill_source_audit.json" --strict
 ```
-
-## نطاق الدوال المرجعية
-
-الدوال الأساسية التي يجب أن توجد في المصدر:
-
-- `handle_drill_spot` — الأسطر 278–503، وفيها 32 مرجعاً إلى `level.player`.
-- `handle_drilling` — الأسطر 563–707، وفيها 10 مراجع.
-- `handle_misc_drill_details` — الأسطر 760–848، وفيها 15 مرجعاً.
-
-الدوال المساندة التي يفحصها التقرير أيضاً:
-
-- `switchmsg` — تظل دالة Logan الأساسية فقط لأنها تنفذ التقاط أداة الحفر السينمائي. لا تُحوّل مراجعها إلى اللاعب الثاني؛ يضيف التعديل منح `drill_press` للاعب الثاني دون تغيير حركة القصة.
-- `switchmsg` — الأسطر 263–277، وفيها 8 مراجع.
-- `restore_footstep_notetrack_scripts` — الأسطر 504–514، وفيها 4 مراجع.
-- `drillthrough_plate_sound` — الأسطر 717–734، وفيها مرجع واحد.
-
-المجموع في هذه الدوال الست هو 70 مرجعاً مباشراً إلى اللاعب الأساسي. إذا تغيّرت الأسطر أو الأعداد، لا تفترض أن المصدر هو نفس نسخة Clockwork التي بُنيت عليها المصفوفة.
 
 ## ما الذي يفحصه؟
 
-- وجود الدوال الأساسية الثلاث، وفحص الدوال المساندة، مع إبقاء `switchmsg` ضمن فحص خط الأساس فقط لا ضمن دوال الملكية المستقلة.
-- عدد مراجع `level.player` في الدوال الأساسية والمساندة الست.
-- دوال GSC المحلية التي تستدعيها كل دالة، ثم تتبع سلسلة الاستدعاءات المحلية حتى نهايتها.
-- أي مرجع `level.player` مخفي داخل دالة مساعدة متفرعة من مسار Drill.
-- تمرير اللاعب صراحةً إلى دوال المساعدة ورصد استدعاءات input وweapon وanimation وcontrol وHUD.
-- وجود `ghc_campaign_drill_begin` في مدخل التفاعل، ووجود مساري complete وcancel ضمن سلسلة التفاعل.
-- وجود استدعاء `ghc_campaign_drill_abort_player` في المصدر لتنظيف التفاعل عند الموت أو الانقطاع.
+- وجود الدوال الأساسية: `handle_drill_spot` و`handle_drilling` و`handle_misc_drill_details`.
+- وجود الدوال المساندة التي يجب أن تستقبل اللاعب صراحةً: `watch_for_air_drop_death` و`restore_footstep_notetrack_scripts` و`drillthrough_plate_sound` و`stop_current_car_watcher`.
+- التقاط ناتج `flag_wait` في `watch_for_drill_trigger` وتخزين اللاعب الذي فعّل التفاعل.
+- تمرير `drill_player` إلى `handle_drilling`.
+- التحقق من أن اللاعب الثاني هو الـnative secondary player عبر `issplitscreenplayer()` و`issplitscreenplayerprimary()`.
+- تجهيز loadout اللاعب الثاني بأسلحة Clockwork والـGrenades.
+- تشغيل مساعدات الحفر لكل لاعب على حدة، وإدارة `ammoCounterHide` على مستوى اللاعبين الاثنين.
+- فصل حالة `aiming_at_ally` وحفظ ذخيرة الـGrenades لكل لاعب.
+- تنظيف حالة الحفر عند الموت أو الانقطاع وإعادة تفعيل الـTrigger.
+- إبقاء `switchmsg` دالة Logan الأساسية مع منح اللاعب الثاني `drill_press` وإزالته بعد نهاية جزء الخزنة.
 
-في الفحص الأولي شغّل الأداة على المصدر الأصلي دون `--strict` لتوثيق الاعتمادات. عند إعداد نسخة معدّلة، احتفظ بالأصل دون تغيير، ومرّر النسخة المعدّلة كأول وسيط ومرّر الأصل عبر `--reference-source`. بهذه الطريقة تتم مقارنة هوية المصدر الأصلي مع المصفوفة، بينما يتم فحص ملكية اللاعب ومسارات begin/complete/cancel على النسخة المعدّلة؛ لا نقارن عدد مراجع اللاعب في النسخة المعدّلة بعد تحويلها إلى وسيط صريح مع العدد القديم.
+يسمح الفحص بخمسة استخدامات محددة لـ`level.player` داخل `handle_drill_spot` فقط عندما تكون fallback أو مقارنة هوية مع اللاعب الأساسي؛ لا يسمح باستخدامها لاستدعاء methods الخاصة باللاعب داخل مسار الحفر.
 
 ## تفسير النتيجة
 
 | الحالة | معناها |
 |---|---|
-| `SOURCE_INCOMPLETE` | إحدى الدوال الأساسية الثلاث غير موجودة في الملف المدخل. |
-| `SOURCE_REFERENCE_MISSING` | شُغّل `--strict` دون توفير نسخة GSC الأصلية عبر `--reference-source`. |
-| `SOURCE_BASELINE_MISMATCH` | نسخة `--reference-source` لا تطابق نطاقات الأسطر وأعداد مراجع اللاعب في مصفوفة Clockwork المرجعية. |
-| `BLOCKED_INCOMPLETE_PLAYER_SCOPING` | ما زالت هناك مراجع للاعب الأساسي أو أن أحد مسارات begin/complete/cancel/abort ناقص. |
-| `SOURCE_ADAPTER_READY_FOR_MANUAL_REVIEW` | اجتاز المصدر الفحوص الثابتة الأولية؛ هذا ليس تصريحاً بتطبيق Patch، وما زال يحتاج مراجعة يدوية. |
+| `SOURCE_INCOMPLETE` | إحدى الدوال المطلوبة غير موجودة. |
+| `SOURCE_REFERENCE_MISSING` | شُغّل الوضع الصارم دون تمرير المصدر الأصلي. |
+| `SOURCE_BASELINE_MISMATCH` | المصدر المرجعي لا يطابق SHA-256 ومصفوفة Clockwork الأصلية. |
+| `BLOCKED_INCOMPLETE_PLAYER_SCOPING` | مسار التقاط اللاعب أو تمريره أو تنظيفه غير مكتمل، أو توجد مراجع غير مسموحة إلى اللاعب الأساسي. |
+| `SOURCE_ADAPTER_READY_FOR_MANUAL_REVIEW` | اجتاز المصدر الفحوص الثابتة؛ ما زال يحتاج مراجعة واختباراً داخل اللعبة. |
 
-حتى الحالة الأخيرة لا تعني أن اللعب يعمل. يجب التأكد يدوياً من أن اللاعب الممرر هو صاحب الضغط الفعلي، وأن رقم Drill spot صحيح، وأن السلاح وADS/fire والوقفة والأنيميشن وقيود الحركة وAction Slot كلها تخص اللاعب نفسه، وأن الإلغاء والموت والـCheckpoint تنظف الحالة دون إكمال الهدف.
+## حدود الفحص
 
-## حدود هذه المرحلة
-
-- لم نعدّل سكربتات اللعبة الأصلية لأن مصدر GSC الأصلي غير موجود في مستودع المشروع.
-- لا نستخدم أرقام الأسطر القديمة من جدول التحليل كتعليمات Patch؛ يجب فحص المصدر المستخرج نفسه.
-- لا نضيف Hook أو عنوان ذاكرة اعتماداً على أسماء الدوال أو نتائج هذا التقرير.
-- إنشاء Local Client ثانٍ داخل Campaign وربط Controller 2 والكاميرا والـHUD ما زال يحتاج دليل Runtime من TU 1.16.
-- لا يتم إنشاء PKG أو الادعاء بوجود نسخة قابلة للعب من هذه الأداة.
+- الفحص ثابت ولا يثبت أن اللعبة أنشأت Local Client ثانياً.
+- التقاط activator مبني على سلوك `trigger_flag_on_cleared` في مصدر common scripts المتاح؛ يجب تأكيد نوع Trigger الخاص بنقطتي الحفر من MapEnts أو داخل اللعبة.
+- إذا لم يمرر الـTrigger اللاعب، يستخدم التعديل fallback إلى Logan حتى لا يكسر اللعب الفردي.
+- لا يثبت الفحص استقلال الكاميرا أو HUD.
+- لا يعيد بناء `clockwork.ff` ولا ينشئ PKG.
 
 ## الاختبارات
 
-تغطي اختبارات Phase 13 المصدر الأصلي غير المعدّل، والمصدر المعدّل افتراضياً، والمراجع غير المباشرة داخل الدوال المساعدة، والتعليقات والنصوص، ونقص الدوال المطلوبة، ورفض الملفات غير التابعة لـGSC.
+تغطي الاختبارات تمرير اللاعب، كشف المراجع غير المباشرة، فصل الدوال الأساسية عن `switchmsg`، التحقق من الـnative secondary identity، حماية مسارات الموت والانقطاع، مطابقة المصدر المرجعي، ورفض الملفات غير التابعة لـGSC.
