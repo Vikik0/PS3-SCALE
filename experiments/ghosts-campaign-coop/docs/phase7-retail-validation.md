@@ -42,7 +42,7 @@ TU 1.16 Campaign LOAD segments begin at 0x10000 and 0x7E0000. Multiplayer segmen
 
 ## Bootstrap status
 
-The PR head at intake, aaf08883047d4d1b5c1bd597c4a1b7692af703d5, had a successful Actions run 44964516226 and produced the diagnostic bootstrap artifact. It contains ghosts_coop.prx, ghosts_coop.fake.sprx, ghosts_coop.elf, and the import stub archive. It has no Campaign player-two hook, loader integration, second camera, HUD integration, or playable co-op flow. It is not a playable mod.
+The PR head at intake, aaf08883047d4d1b5c1bd597c4a1b7692af703d5, had a successful Actions run 44964516226 and produced the diagnostic bootstrap artifact. It contains ghosts_coop.prx, ghosts_coop.fake.sprx, ghosts_coop.elf, and the import stub archive. It has no Campaign player-two hook, loader integration, second camera, HUD integration, or playable co-op flow. It is not a playable mod. The separate GSC registry ZIP from the same run has a manifest mismatch: the manifest declares 401 bytes, while the archived GSC binary is 400 bytes and has a different SHA-256. That binary is excluded from the Phase 7 deliverable and is not used as validation evidence until rebuilt.
 
 ## Next engineering gates
 
