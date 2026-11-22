@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check PS3 package build script syntax
-        run: bash -n Crash-Bash-Enhanced/scripts/build_online_pkg.sh
+        run: bash -n Crash-Bash-Enhanced/scripts/build_online_pkg_clean.sh
       - name: Run protocol tests
         run: sh Crash-Bash-Enhanced/scripts/test_host.sh
 
@@ -95,7 +95,7 @@ jobs:
           test -s "$PS3DEV/bin/sfo.xml"
           test -s "$PS3DEV/portlibs/ppu/lib/libz.a"
       - name: Build the online Crash Bash package
-        run: bash Crash-Bash-Enhanced/scripts/build_online_pkg.sh
+        run: bash Crash-Bash-Enhanced/scripts/build_online_pkg_clean.sh
       - name: Verify package checksum
         run: |
           cd Crash-Bash-Enhanced/build-artifacts
