@@ -1,0 +1,30 @@
+{
+  "status": "PASS",
+  "checks": {
+    "lever_entry_keeps_legacy_no_argument_api": true,
+    "primary_player_receives_light_fx": true,
+    "secondary_alias_receives_light_fx": true,
+    "secondary_player_is_validated_and_distinct": true,
+    "late_secondary_player_watcher_is_started_once": true,
+    "secondary_watcher_waits_until_lights_on": true,
+    "secondary_watcher_revalidates_current_alias": true,
+    "secondary_watcher_skips_existing_fx_owner": true,
+    "secondary_watcher_clears_its_guard": true,
+    "fx_helper_accepts_explicit_player": true,
+    "fx_helper_validates_player_liveness": true,
+    "fx_helper_prevents_duplicate_threads": true,
+    "fx_initial_state_is_player_specific": true,
+    "fx_tracks_selected_player_pose": true,
+    "fx_stops_on_shared_lights_on_or_player_exit": true,
+    "fx_cleans_player_owned_state": true,
+    "state_helper_accepts_explicit_player": true,
+    "state_helper_uses_player_command": true,
+    "state_helper_polls_player_nvgs_not_shared_flag": true,
+    "state_helper_exits_when_lights_on_or_player_invalid": true
+  },
+  "limitations": [
+    "static source audit does not prove that the engine emits nightvision_effectsoff transitions for both local players",
+    "per-viewport flashlight rendering and independent NVG state require a live PS3/RPCS3 Campaign test",
+    "the audit does not prove native Campaign Player 2 creation"
+  ]
+}
