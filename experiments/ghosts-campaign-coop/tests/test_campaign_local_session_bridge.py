@@ -134,12 +134,20 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
 
     def test_drill_cancel_and_abort_release_without_marking_complete(self):
         cancel = function_body(self.source, "ghc_campaign_drill_cancel")
-        abort = function_body(self.source, "ghc_campaign_drill_abort_player")
+        abort_player = function_body(self.source, "ghc_campaign_drill_abort_player")
+        abort_slot = function_body(self.source, "ghc_campaign_drill_abort_slot")
         self.assertIn("ghc_campaign_drill_finish( var_0, var_1, 0 )", cancel)
-        self.assertIn("ghc_campaign_drill_set_owner_for_spot( var_2, -1 )", abort)
-        self.assertIn("ghc_campaign_drill_set_active_spot_for_player( var_1, -1 )", abort)
-        self.assertNotIn("set_complete", abort)
-        self.assertIn("ghc_campaign_drill_owner_for_spot( var_2 ) != var_1", abort)
+        self.assertIn("ghc_campaign_drill_abort_slot( var_1 )", abort_player)
+        self.assertIn("ghc_campaign_drill_set_owner_for_spot( var_1, -1 )", abort_slot)
+        self.assertIn("ghc_campaign_drill_set_active_spot_for_player( var_0, -1 )", abort_slot)
+        self.assertNotIn("set_complete", abort_slot)
+        self.assertIn("ghc_campaign_drill_owner_for_spot( var_1 ) != var_0", abort_slot)
+
+    def test_slot_lookup_remains_available_for_cleanup_after_session_flag_drops(self):
+        body = function_body(self.source, "ghc_campaign_drill_player_slot")
+        self.assertIn("level.ghc_campaign_player_0", body)
+        self.assertIn("level.ghc_campaign_player_1", body)
+        self.assertNotIn("ghc_campaign_session_ready", body)
 
     def test_manifest_pins_source_and_compiled_gsc_artifact(self):
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
