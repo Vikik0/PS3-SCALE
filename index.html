@@ -328,8 +328,8 @@ function renderRoom(){
     node.querySelector("small").textContent=p?(p.ready?"READY":"NOT READY"):"OPEN SEAT";
     $("slots").appendChild(node);
   }
-  const allReady=room.players.length===(room.maxPlayers||4)&&room.players.every(p=>p.ready);
-  $("roomNotice").textContent=allReady?"All four seats are ready. Gameplay is not connected to this lobby.":room.players.length>1?"Players joined. Mark ready when prepared.":"Waiting for more players.";
+  const allReady=room.players.length>=2&&room.players.every(p=>p.ready);
+  $("roomNotice").textContent=allReady?"All players are ready. Open Crash Bash Online and use Netplay to start the match.":room.players.length>1?"Players joined. Mark ready when prepared.":"Waiting for at least two players.";
   $("roomNotice").className="notice"+(allReady?"":" warnbox");
   $("readyBtn").textContent=state.ready?"CANCEL READY":"I'M READY";
 }
