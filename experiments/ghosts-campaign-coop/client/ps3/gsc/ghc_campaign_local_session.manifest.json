@@ -5,9 +5,9 @@
   "platform": "PS3",
   "compiler": "GSC Tool 1.6.2.364",
   "compile_command": "gsc-tool --mode comp --game iw6 --system ps3 ghc_campaign_local_session.gsc",
-  "source_sha256": "777a46520ceac847e8a7aae78bef30a0ab2239ecd773158e4c9b185d901e1aa2",
-  "compiled_gscbin_sha256": "c66b51728f25e98d8517dfa2ebfbe29f8f9c6231ac89786e2de51771b484e831",
-  "compiled_gscbin_bytes": 823,
-  "status": "compiled and round-trip decompiled; not injected or runtime-tested",
+  "source_sha256": null,
+  "compiled_gscbin_sha256": null,
+  "compiled_gscbin_bytes": null,
+  "status": "GSC source updated with Clockwork drill ownership adapter; awaiting deterministic CI rebuild and artifact hash pinning",
   "behavior": "Reuses only engine-created native split-screen players; validates primary/secondary identity; binds Campaign aliases after exact-two-player validation; exposes a Clockwork Player 2 starting-loadout helper; never spawns or clones a player."
 }
