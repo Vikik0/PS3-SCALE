@@ -11,7 +11,8 @@ def make_zone(tag_count,records,trailer=b""):
     struct.pack_into(">I",zone,0x28,tag_count)
     struct.pack_into(">I",zone,0x30,len(records))
     if tag_count:
-        zone.extend(b"\0"*(tag_count*4))
+        zone.extend(b"\0"*4)
+        zone.extend(struct.pack(">i",-1)*tag_count)
         zone.extend(b"tag0\0")
         zone.extend(trailer)
     for pointer,type_id in records:
