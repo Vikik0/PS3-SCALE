@@ -51,6 +51,11 @@ The drill PIP is still managed by the stock shared `level.pintoscreenedge` path.
 
 The portable C model and GSC bridge remain separate from the local retail-source patch. The bridge is not injected or automatically loaded by the retail Campaign VM, and the local `handle_drill_spot` patch does not yet call the bridge ownership API.
 
+
+## Latest CI validation
+
+GitHub Actions run `45070589371` passed all five jobs. The Python suite passed 197 tests, including the sequential Campaign interaction tests, the Clockwork owner-handoff source audit, and the PS3 MapEnts synthetic-fixture tests. The pinned GSC Tool compile/round-trip, PS3 PRX bootstrap, protocol header and worker checks also passed. This remains source/build validation, not a PS3 runtime test.
+
 ## Validation boundaries
 
 - Host tests validate the sequential ownership contract and source-audit checks.
