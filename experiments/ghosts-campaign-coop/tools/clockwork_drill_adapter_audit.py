@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only source audit for the Clockwork drill co-op adapter."""
+"""Read-only source audit for the Clockwork drill player-routing patch."""
 from __future__ import annotations
 
 import argparse
@@ -27,32 +27,25 @@ RECEIVER_METHOD_RE = re.compile(
     r"\b([A-Za-z_][A-Za-z0-9_]*)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\("
 )
 
-# These three functions form the required drill interaction path.
 CORE_TARGETS = (
     "handle_drill_spot",
     "handle_drilling",
     "handle_misc_drill_details",
 )
-
-# These adjacent functions own weapon switching, post-drill restoration and audio.
 RELATED_TARGETS = (
+    "watch_for_air_drop_death",
     "restore_footstep_notetrack_scripts",
     "drillthrough_plate_sound",
+    "stop_current_car_watcher",
+)
+PRIMARY_ONLY_TARGETS = ("switchmsg",)
+COORDINATION_TARGETS = (
+    "watch_for_drill_trigger",
+    "clockwork_setup_player_two",
+    "handle_drill_ammo_counter",
+    "clockwork_watch_player_pair",
 )
 
-# The drill pickup cutscene is intentionally Logan-only. It keeps its stock
-# level.player references while also granting the drill_press to the secondary.
-PRIMARY_ONLY_TARGETS = ("switchmsg",)
-
-ADAPTER_MARKERS = {
-    "begin": "ghc_campaign_drill_begin",
-    "complete": "ghc_campaign_drill_complete",
-    "cancel": "ghc_campaign_drill_cancel",
-    "abort_player": "ghc_campaign_drill_abort_player",
-}
-
-# Reference values from the user's Clockwork asset analysis matrix.
-# They are an identity/safety check, not guessed patch offsets.
 REFERENCE_FASTFILE_SHA256 = "a2ac70c7349047f2eded5f45a5e46ff8278689839fe1655106263520fe639783"
 REFERENCE_GSC_SOURCE_SHA256 = "7fc0f02476d5c9ebbe7c28e68abe762a26a976a28587228c5027d1a5c543e1f1"
 REFERENCE_FUNCTIONS = {
@@ -64,12 +57,18 @@ REFERENCE_FUNCTIONS = {
     "handle_misc_drill_details": {"start_line": 760, "end_line": 848, "level_player_refs": 15},
 }
 
+SAFE_PRIMARY_ALIAS_PATTERNS = (
+    re.compile(r"\bdrill_player\s*=\s*level\.player\s*;"),
+    re.compile(r"\bdrill_player\s*!=\s*level\.player\b"),
+)
 
-def _function_inventory(path: Path) -> dict[str, dict]:
+
+def _function_inventory(path: Path) -> tuple[dict[str, dict], dict[str, str]]:
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     ranges = function_ranges(lines)
     names = {name for name, _, _ in ranges}
     inventory: dict[str, dict] = {}
+    bodies: dict[str, str] = {}
 
     for name, start, end in ranges:
         signature = strip_comments_and_strings(lines[start - 1]).strip()
@@ -94,18 +93,14 @@ def _function_inventory(path: Path) -> dict[str, dict]:
             call for call in CALL_RE.findall(clean_body)
             if call in names and call != name
         })
-        adapter_calls = {
-            marker: ADAPTER_MARKERS[marker] in clean_body
-            for marker in ADAPTER_MARKERS
-        }
         raw_player_refs = len(PLAYER_RE.findall(clean_body))
         allowed_primary_alias_refs = 0
         if name == "handle_drill_spot":
-            allowed_primary_alias_refs = (
-                len(re.findall(r"\bdrill_player\s*=\s*level\.player\s*;", clean_body))
-                + len(re.findall(r"\bdrill_player\s*!=\s*level\.player\b", clean_body))
+            allowed_primary_alias_refs = sum(
+                len(pattern.findall(clean_body)) for pattern in SAFE_PRIMARY_ALIAS_PATTERNS
             )
         unsafe_player_refs = max(0, raw_player_refs - allowed_primary_alias_refs)
+
         row = {
             "function": name,
             "start_line": start,
@@ -117,9 +112,9 @@ def _function_inventory(path: Path) -> dict[str, dict]:
             "player_methods": sorted(direct_methods),
             "player_method_categories": categories(direct_methods) if direct_methods else [],
             "local_calls": calls,
-            "adapter_calls": adapter_calls,
         }
-        # Preserve duplicate definitions rather than silently hiding one.
+        bodies[name] = clean_body
+
         if name in inventory:
             existing = inventory[name]
             if isinstance(existing, list):
@@ -129,7 +124,7 @@ def _function_inventory(path: Path) -> dict[str, dict]:
         else:
             inventory[name] = row
 
-    return inventory
+    return inventory, bodies
 
 
 def _rows_for(inventory: dict[str, dict], name: str) -> list[dict]:
@@ -152,7 +147,7 @@ def _call_closure(inventory: dict[str, dict], root: str) -> list[str]:
     return sorted(visited)
 
 
-def _compare_reference_baseline(inventory: dict[str, dict]) -> dict:
+def _compare_reference_baseline(inventory: dict[str, dict], reference_source: Path) -> dict:
     comparisons = {}
     mismatches = []
     for name, expected in REFERENCE_FUNCTIONS.items():
@@ -166,20 +161,25 @@ def _compare_reference_baseline(inventory: dict[str, dict]) -> dict:
                 "level_player_refs": row["level_player_refs"],
             }
         matches = observed == expected
-        comparisons[name] = {
-            "expected": expected,
-            "observed": observed,
-            "matches": matches,
-        }
+        comparisons[name] = {"expected": expected, "observed": observed, "matches": matches}
         if not matches:
             mismatches.append(name)
+
+    observed_hash = hashlib.sha256(reference_source.read_bytes()).hexdigest()
+    hash_matches = observed_hash == REFERENCE_GSC_SOURCE_SHA256
     return {
         "reference_fastfile_sha256": REFERENCE_FASTFILE_SHA256,
-        "reference_gsc_source_sha256": REFERENCE_GSC_SOURCE_SHA256,
+        "expected_gsc_source_sha256": REFERENCE_GSC_SOURCE_SHA256,
+        "observed_gsc_source_sha256": observed_hash,
+        "source_hash_matches": hash_matches,
         "function_comparisons": comparisons,
-        "matches": not mismatches,
+        "matches": not mismatches and hash_matches,
         "mismatches": mismatches,
     }
+
+
+def _has(body: str, pattern: str) -> bool:
+    return re.search(pattern, body) is not None
 
 
 def audit(
@@ -194,72 +194,138 @@ def audit(
     if path.suffix.lower() != ".gsc":
         raise ValueError("input must be a decompiled .gsc source file")
 
-    inventory = _function_inventory(path)
+    inventory, bodies = _function_inventory(path)
+    missing = [
+        name for name in (*CORE_TARGETS, *RELATED_TARGETS, *COORDINATION_TARGETS)
+        if not _rows_for(inventory, name)
+    ]
+    roots = [name for name in (*CORE_TARGETS, *RELATED_TARGETS) if _rows_for(inventory, name)]
+    closures = {name: _call_closure(inventory, name) for name in roots}
+    closure_functions = sorted({name for closure in closures.values() for name in closure})
+    closure_rows = [
+        row for name in closure_functions for row in _rows_for(inventory, name)
+    ]
+    unscoped_functions = sorted({
+        row["function"] for row in closure_rows if row["unsafe_level_player_refs"]
+    })
+
+    def body(name: str) -> str:
+        return bodies.get(name, "")
+
+    signatures = {
+        name: [row["parameters"] for row in _rows_for(inventory, name)]
+        for name in (*CORE_TARGETS, *RELATED_TARGETS, *COORDINATION_TARGETS, *PRIMARY_ONLY_TARGETS)
+    }
+
+    trigger_capture = (
+        _has(body("watch_for_drill_trigger"), r"flag_wait\s*\(\s*var_0\s*\)")
+        and "level.ghc_clockwork_drill_activator" in body("watch_for_drill_trigger")
+    )
+    activator_forwarded = (
+        "level.ghc_clockwork_drill_activator" in body("handle_drill_spot")
+        and _has(body("handle_drill_spot"), r"thread\s+handle_drilling\s*\(\s*var_2\s*,\s*var_1\s*,\s*drill_player\s*\)")
+    )
+    native_secondary_check = (
+        "issplitscreenplayer" in body("clockwork_setup_player_two")
+        and "issplitscreenplayerprimary" in body("clockwork_setup_player_two")
+        and "takeallweapons" in body("clockwork_setup_player_two")
+    )
+    secondary_loadout = all(
+        token in body("clockwork_setup_player_two")
+        for token in (
+            "gm6+scopegm6_sp+silencer03_sp",
+            "cz805bren+reflex_sp+silencer_sp",
+            "fraggrenade",
+            "flash_grenade",
+        )
+    )
+    pair_watcher = (
+        "level.playengineeffects" in body("clockwork_watch_player_pair")
+        and "clockwork_setup_player_two" in body("clockwork_watch_player_pair")
+        and "handle_misc_drill_details" in body("clockwork_watch_player_pair")
+    )
+    ammo_counter = (
+        "level.player" in body("handle_drill_ammo_counter")
+        and "level.playengineeffects" in body("handle_drill_ammo_counter")
+        and "ammoCounterHide" in body("handle_drill_ammo_counter")
+    )
+    player_scoped_signatures = (
+        signatures.get("handle_drilling") == [["var_0", "var_1", "player"]]
+        and signatures.get("handle_misc_drill_details") == [["player"]]
+        and signatures.get("watch_for_air_drop_death") == [["player"]]
+        and signatures.get("restore_footstep_notetrack_scripts") == [["player"]]
+        and signatures.get("drillthrough_plate_sound") == [["var_0", "var_1", "player"]]
+        and signatures.get("stop_current_car_watcher") == [["player", "var_0", "var_1"]]
+    )
+    per_player_aim_state = (
+        "level.aiming_at_ally" not in body("handle_misc_drill_details")
+        and "level.aiming_at_ally" not in body("watch_for_air_drop_death")
+        and "player.ghc_aiming_at_ally" in body("handle_misc_drill_details")
+        and "player.ghc_aiming_at_ally" in body("watch_for_air_drop_death")
+    )
+    per_player_ammo = (
+        "drill_player.ghc_clockwork_frag_ammo" in body("handle_drill_spot")
+        and "drill_player.ghc_clockwork_flash_ammo" in body("handle_drill_spot")
+        and "player.ghc_clockwork_frag_ammo" in body("restore_footstep_notetrack_scripts")
+        and "player.ghc_clockwork_flash_ammo" in body("restore_footstep_notetrack_scripts")
+    )
+    death_disconnect_recovery = (
+        "!isalive( drill_player )" in body("handle_drill_spot")
+        and "flag_clear( var_1 )" in body("handle_drill_spot")
+        and "watch_for_drill_trigger" in body("handle_drill_spot")
+        and "enable_trigger_with_targetname( var_0 )" in body("handle_drill_spot")
+    )
+    p2_drill_press_grant = (
+        "level.ghc_clockwork_drill_available = 1" in body("switchmsg")
+        and "level.playengineeffects giveweapon( \"drill_press\" )" in body("switchmsg")
+    )
+    p2_drill_press_cleanup = (
+        "level.ghc_clockwork_drill_available = 0" in body("new_trench_setup")
+        and "level.playengineeffects takeweapon( \"drill_press\" )" in body("new_trench_setup")
+    )
+    primary_only_switchmsg = (
+        bool(_rows_for(inventory, "switchmsg"))
+        and bool(PLAYER_RE.findall(body("switchmsg")))
+        and p2_drill_press_grant
+    )
+
+    checks = {
+        "all_required_functions_found": not missing,
+        "trigger_activator_capture_present": trigger_capture,
+        "trigger_activator_passed_to_drilling": activator_forwarded,
+        "native_secondary_identity_verified": native_secondary_check,
+        "secondary_clockwork_loadout_present": secondary_loadout,
+        "pair_watcher_starts_player_helpers": pair_watcher,
+        "ammo_counter_checks_both_players": ammo_counter,
+        "drill_helpers_use_explicit_player_arguments": player_scoped_signatures,
+        "no_unsafe_level_player_references_in_drill_call_graph": not unscoped_functions,
+        "aiming_state_is_per_player": per_player_aim_state,
+        "grenade_ammo_is_per_player": per_player_ammo,
+        "death_disconnect_reopens_drill_trigger": death_disconnect_recovery,
+        "logan_only_pickup_preserved_and_secondary_granted_drill": primary_only_switchmsg,
+        "secondary_drill_press_removed_after_vault": p2_drill_press_cleanup,
+    }
+
     if reference_source is not None:
         reference_source = Path(reference_source)
         if not reference_source.is_file():
             raise FileNotFoundError(f"original Clockwork reference GSC was not found: {reference_source}")
         if reference_source.suffix.lower() != ".gsc":
             raise ValueError("reference input must be a decompiled .gsc source file")
-        reference_baseline = _compare_reference_baseline(_function_inventory(reference_source))
+        reference_inventory, _ = _function_inventory(reference_source)
+        reference_baseline = _compare_reference_baseline(reference_inventory, reference_source)
         reference_baseline["provided"] = True
         reference_baseline["reference_source_file"] = reference_source.name
-        reference_baseline["observed_gsc_source_sha256"] = hashlib.sha256(
-            reference_source.read_bytes()
-        ).hexdigest()
-        reference_baseline["matches_source_sha256"] = (
-            reference_baseline["observed_gsc_source_sha256"] == REFERENCE_GSC_SOURCE_SHA256
-        )
-        reference_baseline["matches"] = (
-            reference_baseline["matches"] and reference_baseline["matches_source_sha256"]
-        )
     else:
         reference_baseline = {
             "reference_fastfile_sha256": REFERENCE_FASTFILE_SHA256,
-            "reference_gsc_source_sha256": REFERENCE_GSC_SOURCE_SHA256,
+            "expected_gsc_source_sha256": REFERENCE_GSC_SOURCE_SHA256,
             "provided": False,
             "reference_source_file": None,
             "function_comparisons": {},
             "matches": False,
             "mismatches": list(REFERENCE_FUNCTIONS),
         }
-    missing = [name for name in CORE_TARGETS if not _rows_for(inventory, name)]
-    roots = [name for name in (*CORE_TARGETS, *RELATED_TARGETS) if _rows_for(inventory, name)]
-    primary_only_rows = {
-        name: _rows_for(inventory, name) for name in PRIMARY_ONLY_TARGETS
-    }
-    closures = {name: _call_closure(inventory, name) for name in roots}
-    closure_functions = sorted({name for closure in closures.values() for name in closure})
-    closure_rows = [
-        row
-        for name in closure_functions
-        for row in _rows_for(inventory, name)
-    ]
-    global_player_functions = sorted({
-        row["function"] for row in closure_rows if row["level_player_refs"]
-    })
-
-    marker_locations = {}
-    for marker in ADAPTER_MARKERS:
-        marker_locations[marker] = sorted({
-            row["function"]
-            for rows in inventory.values()
-            for row in (rows if isinstance(rows, list) else [rows])
-            if row["adapter_calls"][marker]
-        })
-
-    drill_spot_rows = _rows_for(inventory, "handle_drill_spot")
-    begin_in_entry = any(row["adapter_calls"]["begin"] for row in drill_spot_rows)
-    complete_in_closure = any(row["adapter_calls"]["complete"] for row in closure_rows)
-    cancel_in_closure = any(row["adapter_calls"]["cancel"] for row in closure_rows)
-    checks = {
-        "all_core_drill_functions_found": not missing,
-        "begin_called_from_handle_drill_spot": begin_in_entry,
-        "completion_path_present_in_drill_call_graph": complete_in_closure,
-        "cancellation_path_present_in_drill_call_graph": cancel_in_closure,
-        "no_level_player_references_in_drill_call_graph": not global_player_functions,
-        "abort_player_helper_referenced_in_source": bool(marker_locations["abort_player"]),
-    }
 
     if missing:
         status = "SOURCE_INCOMPLETE"
@@ -275,54 +341,51 @@ def audit(
     return {
         "status": status,
         "source_file": path.name,
-        "reference_source_file": reference_baseline["reference_source_file"],
         "required_core_functions": list(CORE_TARGETS),
         "related_functions": list(RELATED_TARGETS),
         "primary_only_functions": list(PRIMARY_ONLY_TARGETS),
-        "primary_only_function_details": primary_only_rows,
-        "primary_only_level_player_refs": sum(
-            row["level_player_refs"]
-            for rows in primary_only_rows.values()
-            for row in rows
-        ),
+        "coordination_functions": list(COORDINATION_TARGETS),
         "target_functions": {
             name: _rows_for(inventory, name) for name in CORE_TARGETS
         },
         "related_function_details": {
             name: _rows_for(inventory, name) for name in RELATED_TARGETS
         },
+        "primary_only_function_details": {
+            name: _rows_for(inventory, name) for name in PRIMARY_ONLY_TARGETS
+        },
+        "coordination_function_details": {
+            name: _rows_for(inventory, name) for name in COORDINATION_TARGETS
+        },
         "call_graph": closures,
         "drill_call_graph_functions": closure_functions,
-        "unscoped_level_player_functions": global_player_functions,
-        "adapter_marker_locations": marker_locations,
+        "unscoped_level_player_functions": unscoped_functions,
         "checks": checks,
         "reference_baseline": reference_baseline,
         "reference_baseline_required_for_strict_mode": require_reference_baseline,
         "limitations": [
-            "The reference baseline comes from the user's Clockwork FastFile analysis; --strict requires the original GSC SHA-256 and all six known function ranges and level.player reference counts to match it.",
-            "This is static source analysis only; it does not compile GSC or load it into the retail Campaign VM.",
-            "A clean report does not prove that the passed player is the actual activating controller or that the drill spot index is mapped correctly.",
-            "Weapon, ADS/fire input, stance, animation link, action-slot and control-lock cleanup still require manual path-by-path review.",
-            "The abort-player call site must be manually verified to run on death, disconnect, checkpoint restart and normal cancellation.",
-            "Shared objective completion must remain idempotent and must not be committed by cancellation, death or disconnect.",
-            "A source-ready result is not evidence of native Campaign Local Client creation, controller routing, camera/HUD separation or playable co-op.",
+            "This is static source analysis only; it does not load the script into the retail Campaign VM.",
+            "The trigger activator payload is supported by the supplied common trigger callback source, but the exact Clockwork MapEnts trigger class still needs runtime confirmation.",
+            "The patch consumes the native secondary-player alias if the engine already created it; it does not create a second Campaign Local Client.",
+            "A clean source audit and successful GSC compilation do not prove independent camera/HUD rendering or playable local co-op.",
+            "The compiled GSCBIN still needs to be inserted into a rebuilt Clockwork FastFile; no installable PKG is produced by this audit.",
         ],
     }
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("source", type=Path, help="user-owned decompiled maps__clockwork_interior.gsc")
+    parser.add_argument("source", type=Path, help="patched maps__clockwork_interior.gsc")
     parser.add_argument("--json-out", type=Path, help="optional path for the JSON audit report")
     parser.add_argument(
         "--reference-source",
         type=Path,
-        help="original, unmodified Clockwork GSC used to verify the six-function reference baseline",
+        help="original, unmodified Clockwork GSC used to verify the pinned baseline",
     )
     parser.add_argument(
         "--strict",
         action="store_true",
-        help="require adapter checks plus --reference-source matching the six-function Clockwork baseline",
+        help="require all routing checks plus the exact original GSC reference source",
     )
     args = parser.parse_args(argv)
 
