@@ -12,6 +12,7 @@ client/ps3/gsc/ghc_campaign_local_session.gsc
 
 أصبح السكربت:
 
+- إذا كانت الجلسة جاهزة، لا يعيد استخدامها إلا بعد التأكد أن اللاعب الأساسي والثانوي ما زالا لاعبي Split-screen أصليين وأن مراجع Campaign ما زالت تشير إلى الكيانين نفسيهما.
 - يعيد قراءة قائمة اللاعبين من getentarray.
 - يحاول ربط اللاعبين لمدة تصل إلى 10 ثوانٍ كحد أقصى.
 - لا يعتبر وجود كيانين كافياً؛ ينتظر أيضاً ظهور هوية Split-screen الأساسية والثانوية.
@@ -52,13 +53,13 @@ client/ps3/gsc/ghc_campaign_local_session.gsc
 - بناء وفحص PRX وPad Probe وPRX importer باستخدام PS3DK.
 - اختبارات Cloudflare Worker وتجميعه التجريبي ناجحة.
 
-ملف GSCBIN الناتج للجسر حجمه 1,798 بايت، وبصمة SHA-256:
+ملف GSCBIN الناتج للجسر حجمه 1,891 بايت، وبصمة SHA-256:
 
-dc846bbe1e3256f1fb8aae20913722335afe17105b61607322e890d892751a1f
+7a1be335a18217b457781a976ea8757d96e571eec9170101b2bff723c4003079
 
 وبصمة مصدر GSC:
 
-560417dcadd38187537c117dadff8f674021c664d9f94b79cd485096cb506a8f
+3072ee96a5207d4787164991aadf3a0cdde87facdf6b5e8cd17f74f6b8bcb055
 
 حزمة البناء موجودة ضمن GitHub Actions artifact باسم ghosts-campaign-gsc-session-bridge، رقم 14757777369.
 
