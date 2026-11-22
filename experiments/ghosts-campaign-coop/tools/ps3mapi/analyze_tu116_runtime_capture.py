@@ -5,7 +5,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -63,6 +66,71 @@ def _require_directory(path: Path, label: str) -> None:
         raise FileNotFoundError(f"{label} directory was not found: {path}")
 
 
+def _commit_staged_outputs(
+    staged_outputs: dict[str, Path],
+    final_outputs: dict[str, Path],
+    *,
+    overwrite: bool,
+) -> None:
+    """Promote a complete analysis set, restoring old outputs if promotion fails."""
+    for name in OUTPUT_NAMES:
+        staged = staged_outputs[name]
+        if not staged.is_file():
+            raise FileNotFoundError(f"staged analysis output is missing: {staged}")
+
+    output_dir = next(iter(final_outputs.values())).parent
+    backup_dir = Path(tempfile.mkdtemp(prefix=".ghosts-capture-backup-", dir=output_dir))
+    keep_backup = False
+    moved_existing: list[tuple[Path, Path]] = []
+    promoted: list[Path] = []
+
+    try:
+        for name in OUTPUT_NAMES:
+            staged = staged_outputs[name]
+            target = final_outputs[name]
+
+            if target.exists():
+                if not overwrite:
+                    raise FileExistsError(
+                        f"analysis output appeared during the run: {target}; "
+                        "pass --overwrite to replace it"
+                    )
+                if not target.is_file():
+                    raise IsADirectoryError(f"analysis output path is not a file: {target}")
+                backup = backup_dir / name
+                os.replace(target, backup)
+                moved_existing.append((backup, target))
+
+            os.replace(staged, target)
+            promoted.append(target)
+    except Exception as exc:
+        rollback_errors: list[OSError] = []
+        for target in reversed(promoted):
+            try:
+                if target.exists():
+                    target.unlink()
+            except OSError as rollback_error:
+                rollback_errors.append(rollback_error)
+
+        for backup, target in reversed(moved_existing):
+            try:
+                if backup.exists():
+                    os.replace(backup, target)
+            except OSError as rollback_error:
+                rollback_errors.append(rollback_error)
+
+        if rollback_errors:
+            keep_backup = True
+            raise RuntimeError(
+                "analysis output promotion failed and rollback was incomplete; "
+                f"preserve recovery files at {backup_dir}"
+            ) from rollback_errors[0]
+        raise exc
+    finally:
+        if not keep_backup:
+            shutil.rmtree(backup_dir, ignore_errors=True)
+
+
 def analyze(
     campaign_self: Path,
     campaign_dumps: Path,
@@ -78,7 +146,8 @@ def analyze(
     """Verify both captures, reconstruct analysis ELFs, and compare evidence.
 
     The function never patches, decrypts, uploads, or modifies game files.
-    Existing output files are protected unless overwrite=True is explicit.
+    All ten outputs are staged first. Existing outputs are replaced only after
+    every analysis step succeeds, and are restored if the promotion fails.
     """
     campaign_self = Path(campaign_self)
     campaign_dumps = Path(campaign_dumps)
@@ -107,140 +176,156 @@ def analyze(
         _require_file(multiplayer_log, "Multiplayer Pad Probe log")
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    outputs = {name: output_dir / name for name in OUTPUT_NAMES}
-    existing = [path for path in outputs.values() if path.exists()]
+    final_outputs = {name: output_dir / name for name in OUTPUT_NAMES}
+    existing = [path for path in final_outputs.values() if path.exists()]
     if existing and not overwrite:
         names = ", ".join(str(path) for path in existing)
         raise FileExistsError(
             f"analysis outputs already exist: {names}; pass --overwrite to replace them"
         )
 
-    campaign_elf = outputs["campaign_tu116_runtime.elf"]
-    multiplayer_elf = outputs["multiplayer_tu116_runtime.elf"]
+    with tempfile.TemporaryDirectory(
+        prefix=".ghosts-capture-stage-", dir=output_dir
+    ) as staging:
+        stage_dir = Path(staging)
+        outputs = {name: stage_dir / name for name in OUTPUT_NAMES}
 
-    campaign_verification = verify_dump(
-        campaign_self,
-        campaign_dumps,
-        map_file,
-        campaign_elf,
-        "campaign",
-        overwrite=overwrite,
-    )
-    multiplayer_verification = verify_dump(
-        multiplayer_self,
-        multiplayer_dumps,
-        map_file,
-        multiplayer_elf,
-        "multiplayer",
-        overwrite=overwrite,
-    )
+        campaign_elf = outputs["campaign_tu116_runtime.elf"]
+        multiplayer_elf = outputs["multiplayer_tu116_runtime.elf"]
 
-    campaign_strings = scan_runtime_strings(campaign_elf)
-    multiplayer_strings = scan_runtime_strings(multiplayer_elf)
-    string_comparison = compare_runtime_strings(campaign_elf, multiplayer_elf)
-    binary_comparison = compare_runtime_elfs(campaign_elf, multiplayer_elf)
-
-    if campaign_log is None:
-        pad_comparison = {
-            "status": "NOT_PROVIDED",
-            "both_controllers_simultaneously_visible_in_both": False,
-            "interpretation_limit": (
-                "No Pad Probe logs were supplied. Runtime ELF analysis can proceed, "
-                "but controller-port visibility has not been assessed."
-            ),
-        }
-    else:
-        pad_comparison = compare_pad_probe_logs(
-            parse_pad_probe_log(campaign_log),
-            parse_pad_probe_log(multiplayer_log),
+        campaign_verification = verify_dump(
+            campaign_self,
+            campaign_dumps,
+            map_file,
+            campaign_elf,
+            "campaign",
+            overwrite=False,
         )
-        pad_comparison["input_sha256"] = {
-            "campaign_log": sha256_file(campaign_log),
-            "multiplayer_log": sha256_file(multiplayer_log),
+        multiplayer_verification = verify_dump(
+            multiplayer_self,
+            multiplayer_dumps,
+            map_file,
+            multiplayer_elf,
+            "multiplayer",
+            overwrite=False,
+        )
+
+        # The verification JSON must reference the final paths, not the temporary stage.
+        campaign_rebuilt = campaign_verification.get("reconstructed_elf")
+        if isinstance(campaign_rebuilt, dict):
+            campaign_rebuilt["output_elf"] = str(final_outputs["campaign_tu116_runtime.elf"])
+        multiplayer_rebuilt = multiplayer_verification.get("reconstructed_elf")
+        if isinstance(multiplayer_rebuilt, dict):
+            multiplayer_rebuilt["output_elf"] = str(final_outputs["multiplayer_tu116_runtime.elf"])
+
+        campaign_strings = scan_runtime_strings(campaign_elf)
+        multiplayer_strings = scan_runtime_strings(multiplayer_elf)
+        string_comparison = compare_runtime_strings(campaign_elf, multiplayer_elf)
+        binary_comparison = compare_runtime_elfs(campaign_elf, multiplayer_elf)
+
+        if campaign_log is None:
+            pad_comparison = {
+                "status": "NOT_PROVIDED",
+                "both_controllers_simultaneously_visible_in_both": False,
+                "interpretation_limit": (
+                    "No Pad Probe logs were supplied. Runtime ELF analysis can proceed, "
+                    "but controller-port visibility has not been assessed."
+                ),
+            }
+        else:
+            pad_comparison = compare_pad_probe_logs(
+                parse_pad_probe_log(campaign_log),
+                parse_pad_probe_log(multiplayer_log),
+            )
+            pad_comparison["input_sha256"] = {
+                "campaign_log": sha256_file(campaign_log),
+                "multiplayer_log": sha256_file(multiplayer_log),
+            }
+
+        dump_checks_passed = (
+            campaign_verification.get("status") == "PASS_METADATA"
+            and multiplayer_verification.get("status") == "PASS_METADATA"
+        )
+        pad_gate_passed = (
+            pad_comparison.get("status")
+            == "BOTH_CONTROLLERS_SIMULTANEOUSLY_VISIBLE_IN_BOTH"
+        )
+
+        if not dump_checks_passed:
+            status = "CAPTURE_VERIFICATION_FAILED"
+        elif pad_gate_passed:
+            status = "CAPTURE_READY_FOR_ENGINE_REVIEW"
+        elif campaign_log is None:
+            status = "ELF_ANALYSIS_READY_PAD_EVIDENCE_MISSING"
+        else:
+            status = "ELF_ANALYSIS_READY_PAD_GATE_NOT_PASSED"
+
+        write_json(outputs["campaign_dump_verification.json"], campaign_verification)
+        write_json(outputs["multiplayer_dump_verification.json"], multiplayer_verification)
+        write_json(outputs["campaign_runtime_strings.json"], campaign_strings)
+        write_json(outputs["multiplayer_runtime_strings.json"], multiplayer_strings)
+        write_json(outputs["runtime_string_comparison.json"], string_comparison)
+        write_json(outputs["runtime_binary_comparison.json"], binary_comparison)
+        write_json(outputs["pad_probe_comparison.json"], pad_comparison)
+
+        input_hashes = {
+            "campaign_default_self": sha256_file(campaign_self),
+            "multiplayer_default_mp_self": sha256_file(multiplayer_self),
         }
+        if campaign_log is not None:
+            input_hashes["campaign_pad_probe_log"] = sha256_file(campaign_log)
+            input_hashes["multiplayer_pad_probe_log"] = sha256_file(multiplayer_log)
 
-    dump_checks_passed = (
-        campaign_verification.get("status") == "PASS_METADATA"
-        and multiplayer_verification.get("status") == "PASS_METADATA"
-    )
-    pad_gate_passed = (
-        pad_comparison.get("status")
-        == "BOTH_CONTROLLERS_SIMULTANEOUSLY_VISIBLE_IN_BOTH"
-    )
-
-    if not dump_checks_passed:
-        status = "CAPTURE_VERIFICATION_FAILED"
-    elif pad_gate_passed:
-        status = "CAPTURE_READY_FOR_ENGINE_REVIEW"
-    elif campaign_log is None:
-        status = "ELF_ANALYSIS_READY_PAD_EVIDENCE_MISSING"
-    else:
-        status = "ELF_ANALYSIS_READY_PAD_GATE_NOT_PASSED"
-
-    write_json(outputs["campaign_dump_verification.json"], campaign_verification)
-    write_json(outputs["multiplayer_dump_verification.json"], multiplayer_verification)
-    write_json(outputs["campaign_runtime_strings.json"], campaign_strings)
-    write_json(outputs["multiplayer_runtime_strings.json"], multiplayer_strings)
-    write_json(outputs["runtime_string_comparison.json"], string_comparison)
-    write_json(outputs["runtime_binary_comparison.json"], binary_comparison)
-    write_json(outputs["pad_probe_comparison.json"], pad_comparison)
-
-    input_hashes = {
-        "campaign_default_self": sha256_file(campaign_self),
-        "multiplayer_default_mp_self": sha256_file(multiplayer_self),
-    }
-    if campaign_log is not None:
-        input_hashes["campaign_pad_probe_log"] = sha256_file(campaign_log)
-        input_hashes["multiplayer_pad_probe_log"] = sha256_file(multiplayer_log)
-
-    summary = {
-        "status": status,
-        "profile": {
-            "title_id": "BLUS31270",
-            "title_update": "1.16",
-            "target_console": "PS3 CEX CFW 4.93",
-            "player_count_target": 2,
-            "mode": "offline local Campaign co-op",
-        },
-        "dump_verification": {
-            "campaign": campaign_verification.get("status"),
-            "multiplayer": multiplayer_verification.get("status"),
-            "both_passed": dump_checks_passed,
-        },
-        "pad_probe": {
-            "status": pad_comparison.get("status"),
-            "both_ports_visible_simultaneously_in_both_modes": pad_gate_passed,
-            "mode_labels_are_operator_selected": pad_comparison.get(
-                "mode_labels_are_operator_selected"
+        summary = {
+            "status": status,
+            "profile": {
+                "title_id": "BLUS31270",
+                "title_update": "1.16",
+                "target_console": "PS3 CEX CFW 4.93",
+                "player_count_target": 2,
+                "mode": "offline local Campaign co-op",
+            },
+            "dump_verification": {
+                "campaign": campaign_verification.get("status"),
+                "multiplayer": multiplayer_verification.get("status"),
+                "both_passed": dump_checks_passed,
+            },
+            "pad_probe": {
+                "status": pad_comparison.get("status"),
+                "both_ports_visible_simultaneously_in_both_modes": pad_gate_passed,
+                "mode_labels_are_operator_selected": pad_comparison.get(
+                    "mode_labels_are_operator_selected"
+                ),
+            },
+            "player_two_gate": {
+                "status": "NOT_PROVEN",
+                "native_campaign_local_client_creation": False,
+                "controller_to_player_two_mapping": False,
+                "independent_camera_and_hud": False,
+                "reason": (
+                    "These require verified runtime call-path and player-state evidence. "
+                    "Pad visibility, strings, or changed binary blocks are not sufficient."
+                ),
+            },
+            "input_sha256": input_hashes,
+            "outputs": {key: str(path) for key, path in final_outputs.items()},
+            "next_gate": (
+                "Review the reconstructed Campaign and Multiplayer PPU images in Ghidra, "
+                "map verified local-client allocation and controller routing, and compare "
+                "player-state/view ownership before designing any Campaign hook."
             ),
-        },
-        "player_two_gate": {
-            "status": "NOT_PROVEN",
-            "native_campaign_local_client_creation": False,
-            "controller_to_player_two_mapping": False,
-            "independent_camera_and_hud": False,
-            "reason": (
-                "These require verified runtime call-path and player-state evidence. "
-                "Pad visibility, strings, or changed binary blocks are not sufficient."
-            ),
-        },
-        "input_sha256": input_hashes,
-        "outputs": {key: str(path) for key, path in outputs.items()},
-        "next_gate": (
-            "Review the reconstructed Campaign and Multiplayer PPU images in Ghidra, "
-            "map verified local-client allocation and controller routing, and compare "
-            "player-state/view ownership before designing any Campaign hook."
-        ),
-        "limitations": [
-            "PASS_METADATA means the SELF headers and captured PT_LOAD sizes match the recorded TU 1.16 profile; it is not cryptographic proof of the installed update.",
-            "The operator selects Campaign or Multiplayer manually. The dump and Pad Probe tools do not auto-detect the active game mode.",
-            "A 0x03 port mask proves only that the pad subsystem reported ports 0 and 1 together in one sample.",
-            "String matches and changed ELF blocks are navigation leads, not function boundaries or approved hook addresses.",
-            "The reconstructed ELF is for static analysis only and is not a runnable EBOOT.",
-            "This pipeline does not spawn Player 2, patch the game, rebuild signed FastFiles, or create an installable/playable PKG.",
-        ],
-    }
-    write_json(outputs["capture_summary.json"], summary)
+            "limitations": [
+                "PASS_METADATA means the SELF headers and captured PT_LOAD sizes match the recorded TU 1.16 profile; it is not cryptographic proof of the installed update.",
+                "The operator selects Campaign or Multiplayer manually. The dump and Pad Probe tools do not auto-detect the active game mode.",
+                "A 0x03 port mask proves only that the pad subsystem reported ports 0 and 1 together in one sample.",
+                "String matches and changed ELF blocks are navigation leads, not function boundaries or approved hook addresses.",
+                "The reconstructed ELF is for static analysis only and is not a runnable EBOOT.",
+                "This pipeline does not spawn Player 2, patch the game, rebuild signed FastFiles, or create an installable/playable PKG.",
+            ],
+        }
+        write_json(outputs["capture_summary.json"], summary)
+        _commit_staged_outputs(outputs, final_outputs, overwrite=overwrite)
+
     return summary
 
 
