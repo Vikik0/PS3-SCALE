@@ -51,7 +51,8 @@ disc_source = (root / "source/disc_browser.c").read_text(encoding="utf-8")
 launch_args = (root / "source/game_launch_args.c").read_text(encoding="utf-8")
 assert "#define SCREEN_DISC_SELECT 3" in source
 assert "cb_disc_scan(discs, CB_DISC_MAX, &scanned)" in source
-assert "cb_launch_game(discs[disc_selected].path, is_host, netplay_nickname" in source
+assert "cb_launch_game(discs[disc_selected].path, 1, netplay_nickname" in source
+assert "cb_launch_game(discs[disc_selected].path, 0, netplay_nickname" in source
 assert "if ((screen == SCREEN_ROOM || screen == SCREEN_DISC_SELECT)" in source
 assert "CB-%.12s-HOST" in source
 assert "No CUE files were found." in source
