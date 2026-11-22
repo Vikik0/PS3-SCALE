@@ -203,5 +203,21 @@
     "compiled_sha256": "0c52cb5712cadce6308b47c9c216ac7c483036bd3084ff35899c096c6d35ee85",
     "matches_verified_phase7_artifact": true,
     "injected_or_hardware_tested": false
+  },
+  "pad_probe_v4_ci": {
+    "workflow_run_id": 45023069795,
+    "all_jobs_passed": true,
+    "host_tests": "124/124",
+    "prx_gen_check_passed": true,
+    "artifact_id": 14754149725,
+    "artifact_bytes": 101363,
+    "artifact_sha256": "d8739f2b345ddadcfb154b89fa7baacf7b5934d1728e2752cb0c3bfcbc2b960e",
+    "prx_bytes": 145384,
+    "prx_sha256": "1f627b62bd48eb2f87fde95d34f7d91c07f3e5a008f5a4c0a81c472021d284c9",
+    "fake_sprx_bytes": 147304,
+    "fake_sprx_sha256": "4de0ea6f49629818e4fd69d4f3e44e9357fff4f7481ad87ba07888e9542b574a",
+    "elf_bytes": 111416,
+    "elf_sha256": "42befdeb3e5f4901fe7089ad5288819c451b02989a6358ea94ba601cfaaea246",
+    "hardware_loaded": false
   }
 }
