@@ -44,6 +44,8 @@ $(BUILD):
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 pkg: ca-bundle $(BUILD)
 	@$(MAKE) --no-print-directory $(OUTPUT).pkg
+	@command -v package_finalize >/dev/null
+	@package_finalize "$(OUTPUT).pkg"
 else
 DEPENDS := $(OFILES:.o=.d)
 $(OUTPUT).self: $(OUTPUT).elf
