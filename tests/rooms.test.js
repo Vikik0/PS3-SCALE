@@ -888,3 +888,46 @@ test("host can roll back the room lock when RetroArch fails to launch", async ()
   assert.equal(afterCancel.body.room.gameStarted, false);
   assert.equal(afterCancel.body.room.players.length, 2);
 });
+
+
+test("a started Netplay match keeps its relay identity when the host seat expires", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: true });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  await call("POST", { action: "game_start" }, host.body.token);
+
+  const pathname = "cb-rooms/" + host.body.room.code + ".json";
+  const stored = JSON.parse(blobs.get(pathname).body);
+  const netplayId = stored.netplayId;
+  stored.players.find((player) => player.id === host.body.player.id).lastSeen =
+    Date.now() - 31 * 60 * 1000;
+  blobs.set(pathname, { body: JSON.stringify(stored), etag: String(++etagSequence) });
+
+  const heartbeat = await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  assert.equal(heartbeat.statusCode, 200);
+  assert.equal(heartbeat.body.gameStarted, true);
+  assert.equal(heartbeat.body.netplayId, netplayId);
+  assert.equal(heartbeat.body.players.length, 1);
+
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    async json() {
+      return [{
+        fields: {
+          username: "CB-" + netplayId + "-HOST",
+          connectable: true,
+          mitm_ip: "madrid.relay.retroarch.com",
+          mitm_port: 55435,
+          mitm_session: "AbCdEf0123456789",
+          updated: new Date().toISOString()
+        }
+      }];
+    }
+  });
+
+  const lookup = await call("POST", { action: "netplay" }, guest.body.token);
+  assert.equal(lookup.body.ready, true);
+  assert.equal(lookup.body.address, "madrid.relay.retroarch.com");
+});
