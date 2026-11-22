@@ -143,7 +143,7 @@ function renderRoom(){
     $("slots").appendChild(node);
   }
   const allReady=room.players.length===(room.maxPlayers||4)&&room.players.every(p=>p.ready);
-  $("roomNotice").textContent=allReady?"All seats are ready. This lobby still needs a compatible game-session transport.":both?"Players joined. Mark ready when prepared.":"Waiting for more players.";
+  $("roomNotice").textContent=allReady?"All seats are ready. This lobby still needs a compatible game-session transport.":room.players.length>1?"Players joined. Mark ready when prepared.":"Waiting for more players.";
   $("roomNotice").className="notice"+(allReady?"":" warnbox");
   $("readyBtn").textContent=state.ready?"CANCEL READY":"I'M READY";
 }
