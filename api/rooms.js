@@ -150,12 +150,13 @@ module.exports = async function handler(req, res) {
       const player = findPlayer(record.room, claims.sub);
       if (!player) return reply(res, 403, { error: "You are not a member of this room." });
 
+      const active = activePlayers(record.room);
       return reply(res, 200, {
         room: {
           code: record.room.code,
-          status: record.room.status,
+          status: record.room.status === "ready" && active.length < MAX_PLAYERS ? "waiting" : record.room.status,
           isPrivate: record.room.isPrivate,
-          players: activePlayers(record.room).map(({ id, name, ready }) => ({ id, name, ready })),
+          players: active.map(({ id, name, ready }) => ({ id, name, ready })),
           maxPlayers: MAX_PLAYERS,
           createdAt: record.room.createdAt,
           updatedAt: record.room.updatedAt
