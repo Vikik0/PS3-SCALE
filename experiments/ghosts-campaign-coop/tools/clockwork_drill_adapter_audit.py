@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -53,6 +54,7 @@ ADAPTER_MARKERS = {
 # Reference values from the user's Clockwork asset analysis matrix.
 # They are an identity/safety check, not guessed patch offsets.
 REFERENCE_FASTFILE_SHA256 = "a2ac70c7349047f2eded5f45a5e46ff8278689839fe1655106263520fe639783"
+REFERENCE_GSC_SOURCE_SHA256 = "7fc0f02476d5c9ebbe7c28e68abe762a26a976a28587228c5027d1a5c543e1f1"
 REFERENCE_FUNCTIONS = {
     "switchmsg": {"start_line": 263, "end_line": 277, "level_player_refs": 8},
     "handle_drill_spot": {"start_line": 278, "end_line": 503, "level_player_refs": 32},
@@ -96,12 +98,22 @@ def _function_inventory(path: Path) -> dict[str, dict]:
             marker: ADAPTER_MARKERS[marker] in clean_body
             for marker in ADAPTER_MARKERS
         }
+        raw_player_refs = len(PLAYER_RE.findall(clean_body))
+        allowed_primary_alias_refs = 0
+        if name == "handle_drill_spot":
+            allowed_primary_alias_refs = (
+                len(re.findall(r"\bdrill_player\s*=\s*level\.player\s*;", clean_body))
+                + len(re.findall(r"\bdrill_player\s*!=\s*level\.player\b", clean_body))
+            )
+        unsafe_player_refs = max(0, raw_player_refs - allowed_primary_alias_refs)
         row = {
             "function": name,
             "start_line": start,
             "end_line": end,
             "parameters": parameters,
-            "level_player_refs": len(PLAYER_RE.findall(clean_body)),
+            "level_player_refs": raw_player_refs,
+            "allowed_primary_alias_refs": allowed_primary_alias_refs,
+            "unsafe_level_player_refs": unsafe_player_refs,
             "player_methods": sorted(direct_methods),
             "player_method_categories": categories(direct_methods) if direct_methods else [],
             "local_calls": calls,
@@ -163,6 +175,7 @@ def _compare_reference_baseline(inventory: dict[str, dict]) -> dict:
             mismatches.append(name)
     return {
         "reference_fastfile_sha256": REFERENCE_FASTFILE_SHA256,
+        "reference_gsc_source_sha256": REFERENCE_GSC_SOURCE_SHA256,
         "function_comparisons": comparisons,
         "matches": not mismatches,
         "mismatches": mismatches,
@@ -191,9 +204,19 @@ def audit(
         reference_baseline = _compare_reference_baseline(_function_inventory(reference_source))
         reference_baseline["provided"] = True
         reference_baseline["reference_source_file"] = reference_source.name
+        reference_baseline["observed_gsc_source_sha256"] = hashlib.sha256(
+            reference_source.read_bytes()
+        ).hexdigest()
+        reference_baseline["matches_source_sha256"] = (
+            reference_baseline["observed_gsc_source_sha256"] == REFERENCE_GSC_SOURCE_SHA256
+        )
+        reference_baseline["matches"] = (
+            reference_baseline["matches"] and reference_baseline["matches_source_sha256"]
+        )
     else:
         reference_baseline = {
             "reference_fastfile_sha256": REFERENCE_FASTFILE_SHA256,
+            "reference_gsc_source_sha256": REFERENCE_GSC_SOURCE_SHA256,
             "provided": False,
             "reference_source_file": None,
             "function_comparisons": {},
@@ -276,7 +299,7 @@ def audit(
         "reference_baseline": reference_baseline,
         "reference_baseline_required_for_strict_mode": require_reference_baseline,
         "limitations": [
-            "The reference baseline comes from the user's Clockwork FastFile analysis; --strict requires all six known function ranges and level.player reference counts to match it.",
+            "The reference baseline comes from the user's Clockwork FastFile analysis; --strict requires the original GSC SHA-256 and all six known function ranges and level.player reference counts to match it.",
             "This is static source analysis only; it does not compile GSC or load it into the retail Campaign VM.",
             "A clean report does not prove that the passed player is the actual activating controller or that the drill spot index is mapped correctly.",
             "Weapon, ADS/fire input, stance, animation link, action-slot and control-lock cleanup still require manual path-by-path review.",
