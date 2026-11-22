@@ -82,7 +82,7 @@ static void draw_home(void)
         text(472, 352, 15, 0x9bb4c2ff, "CLOUD NOT TESTED");
     rect(58, 438, 680, 32, 0x0b1720ff);
     text(72, 444, 13, 0x9bb4c2ff, g_status);
-    text(60, 474, 12, 0x6d8794ff, "CROSS: SELECT     UP/DOWN: MOVE     CIRCLE: BACK");
+    text(60, 474, 12, 0x6d8794ff, "CROSS: SELECT     UP/DOWN: MOVE");
     text(666, 474, 12, 0x6d8794ff, "NO PSN");
     tiny3d_Flip();
 }
