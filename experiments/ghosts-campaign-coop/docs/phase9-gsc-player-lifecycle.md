@@ -121,3 +121,18 @@ The existing read-only Campaign registry shim at client/ps3/gsc/ghc_campaign_pla
 - It fails closed unless exactly two native split-screen player entities are already present.
 
 This verifies the script's syntax and compiled artifact only. It has not been injected into the game or run on PS3 hardware.
+
+
+## 8. Pad Probe v4 unload-safety update
+
+The diagnostic PRX was hardened so module_stop checks the worker-thread join result. If the worker cannot be joined, the module returns SYS_PRX_STOP_FAIL and remains resident instead of allowing an unload while code may still be executing. A successful join returns SYS_PRX_STOP_OK.
+
+GitHub Actions run 45023069795 passed all five jobs and 124/124 host tests. The PS3DK job built the PRX and passed prx-gen check. The verified artifact is ghosts-campaign-pad-probe (artifact ID 14754149725), 101,363 bytes, SHA-256 d8739f2b345ddadcfb154b89fa7baacf7b5934d1728e2752cb0c3bfcbc2b960e.
+
+Contents:
+- PRX: 145,384 bytes; SHA-256 1f627b62bd48eb2f87fde95d34f7d91c07f3e5a008f5a4c0a81c472021d284c9
+- fake-signed SPRX: 147,304 bytes; SHA-256 4de0ea6f49629818e4fd69d4f3e44e9357fff4f7481ad87ba07888e9542b574a
+- ELF: 111,416 bytes; SHA-256 42befdeb3e5f4901fe7089ad5288819c451b02989a6358ea94ba601cfaaea246
+- Arabic instructions and the Campaign/Multiplayer mode files.
+
+This is still a read-only diagnostic PRX, not a Campaign co-op mod. It has passed CI validation but has not been loaded on a PS3.
