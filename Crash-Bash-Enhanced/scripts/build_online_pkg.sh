@@ -207,8 +207,8 @@ test -s "$USRDIR/EBOOT.BIN"
 
 # Fail the build if the libretro entry points are not linked into the EBOOT.
 NM="$(command -v ppu-nm || command -v nm)"
-"$NM" -g "$RA/retroarch_psl1ght.elf" | grep -E '[[:space:]][Tt][[:space:]]+retro_run
-"$NM" -g "$RA/retroarch_psl1ght.elf" | grep -E '[[:space:]][Tt][[:space:]]+retro_get_system_info
+"$NM" -g "$RA/retroarch_psl1ght.elf" | grep -E '[[:space:]][Tt][[:space:]]+retro_run' >/dev/null
+"$NM" -g "$RA/retroarch_psl1ght.elf" | grep -E '[[:space:]][Tt][[:space:]]+retro_get_system_info' >/dev/null
 
 echo "== Install pinned core metadata, menu assets and licenses"
 wget -qO "$USRDIR/info/pcsx_rearmed_libretro.info" \
@@ -369,7 +369,7 @@ ls -lah "$OUT" "$OUT.sha256" "$ROOT/build-artifacts/BUILD-MANIFEST.txt"
 cat "$OUT.sha256"
 
  >/dev/null
-"$NM" -g "$RA/retroarch_psl1ght.elf" | grep -Eq '[[:space:]][Tt][[:space:]]+retro_get_system_info$'
+"$NM" -g "$RA/retroarch_psl1ght.elf" | grep -E '[[:space:]][Tt][[:space:]]+retro_get_system_info' >/dev/null
 
 echo "== Install pinned core metadata, menu assets and licenses"
 wget -qO "$USRDIR/info/pcsx_rearmed_libretro.info" \
@@ -690,7 +690,7 @@ ls -lah "$OUT" "$OUT.sha256" "$ROOT/build-artifacts/BUILD-MANIFEST.txt"
 cat "$OUT.sha256"
 
  >/dev/null
-"$NM" -g "$RA/retroarch_psl1ght.elf" | grep -Eq '[[:space:]][Tt][[:space:]]+retro_get_system_info$'
+"$NM" -g "$RA/retroarch_psl1ght.elf" | grep -E '[[:space:]][Tt][[:space:]]+retro_get_system_info' >/dev/null
 
 echo "== Install pinned core metadata, menu assets and licenses"
 wget -qO "$USRDIR/info/pcsx_rearmed_libretro.info" \
