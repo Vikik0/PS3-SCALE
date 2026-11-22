@@ -125,6 +125,8 @@ jobs:
           test -s compiled/iw6/clockwork_stage56.gscbin
           cp compiled/iw6/clockwork_stage56.gscbin /tmp/clockwork-stage56-original.gscbin
           gsc-tool --mode decomp --game iw6 --system ps3 compiled/iw6/clockwork_stage56.gscbin
+          echo "Stage 5/6 GSC outputs after decompile:"
+          find . -maxdepth 5 -type f -iname '*clockwork_stage56*' -printf '%p %s bytes\\n' || true
           test -s decompiled/iw6/clockwork_stage56.gsc
           grep -q 'clockwork_get_secondary_player' decompiled/iw6/clockwork_stage56.gsc
           grep -q 'clockwork_apply_vault_blast' decompiled/iw6/clockwork_stage56.gsc
