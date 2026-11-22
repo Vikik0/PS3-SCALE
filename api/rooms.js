@@ -415,10 +415,10 @@ module.exports = async function handler(req, res) {
         if (!currentPlayer) {
           return { write: false, status: 403, body: { error: "Your room seat has expired. Rejoin the room." } };
         }
-        const hostPlayerId = active.some((entry) => entry.id === room.hostPlayerId)
-          ? room.hostPlayerId
-          : active[0]?.id;
-        if (claims.sub !== hostPlayerId) {
+        // prunePlayers promotes an expired host only before a match starts.
+        // During a started match, the original host identity must remain authoritative.
+        const hostPlayerId = room.hostPlayerId;
+        if (!hostPlayerId || claims.sub !== hostPlayerId) {
           return { write: false, status: 403, body: { error: "Only the current room host can start the Netplay session." } };
         }
 
