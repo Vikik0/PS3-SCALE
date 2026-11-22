@@ -24,4 +24,5 @@ cc -std=c11 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -I"$ROOT/include" "$
 "$tmp_peer"
 
 python3 "$ROOT/tests/test_extract_disc.py"
-echo "Host protocol, JSON, archive, netcode, UDP peer and disc-extractor tests passed."
+python3 "$ROOT/tests/test_online_menu_source.py"
+echo "Host protocol, JSON, archive, netcode, UDP peer, disc-extractor and native lobby tests passed."
