@@ -106,6 +106,24 @@ function findPlayer(room, playerId) {
   return (room.players || []).find((p) => p.id === playerId);
 }
 
+async function mutateRoom(code, update, maxAttempts = 6) {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const record = await readRoom(code);
+    if (!record) return { found: false, saved: false };
+    const outcome = update(record.room);
+    if (outcome && outcome.write === false) {
+      return { found: true, saved: false, room: record.room, outcome };
+    }
+    try {
+      await saveRoom(code, record.room, record.etag);
+      return { found: true, saved: true, room: record.room, outcome: outcome || {} };
+    } catch (error) {
+      if (error?.name !== "BlobPreconditionFailedError" || attempt === maxAttempts - 1) throw error;
+    }
+  }
+  throw new Error("Room update retry limit reached.");
+}
+
 module.exports = async function handler(req, res) {
   if (!process.env.BLOB_READ_WRITE_TOKEN || !(process.env.CB_TOKEN_SECRET_V2 || process.env.CB_TOKEN_SECRET)) {
     return reply(res, 503, { error: "Lobby storage is not configured yet." });
@@ -119,113 +137,6 @@ module.exports = async function handler(req, res) {
       const claims = tokenClaims(req);
       if (!claims || claims.room !== code) return reply(res, 401, { error: "A valid room guest token is required." });
       const record = await readRoom(code);
-      if (!record) return reply(res, 404, { error: "Room not found." });
-      const room = record.room;
-      const player = findPlayer(room, claims.sub);
-      if (!player) return reply(res, 403, { error: "You are no longer in this room." });
-      const active = (room.players || []).filter((p) => Date.now() - p.lastSeen <= PLAYER_TTL_MS);
-      return reply(res, 200, {
-        room: {
-          code: room.code,
-          status: room.status,
-          isPrivate: room.isPrivate,
-          players: active.map(({ id, name, ready }) => ({ id, name, ready })),
-          maxPlayers: MAX_PLAYERS,
-          createdAt: room.createdAt,
-          updatedAt: room.updatedAt
-        }
-      });
-    }
-
-    if (req.method !== "POST") {
-      res.setHeader("Allow", "GET, POST");
-      return reply(res, 405, { error: "Method not allowed." });
-    }
-
-    const body = req.body && typeof req.body === "object" ? req.body : {};
-    const action = String(body.action || "");
-    const name = cleanDisplayName(body.displayName);
-
-    if (action === "create") {
-      for (let attempt = 0; attempt < 5; attempt += 1) {
-        const code = makeCode();
-        const playerId = crypto.randomUUID();
-        const now = Date.now();
-        const room = {
-          code,
-          status: "waiting",
-          isPrivate: Boolean(body.isPrivate),
-          maxPlayers: MAX_PLAYERS,
-          createdAt: now,
-          updatedAt: now,
-          players: [{ id: playerId, name, ready: false, joinedAt: now, lastSeen: now }],
-          signals: [],
-          nextSignalId: 1
-        };
-        try {
-          await createRoom(code, room);
-          return reply(res, 201, {
-            room: publicRoom(room),
-            player: { id: playerId, name },
-            token: signGuestToken({ sub: playerId, room: code })
-          });
-        } catch (error) {
-          if (attempt === 4) throw error;
-        }
-      }
-    }
-
-    if (action === "any") {
-      const candidates = await listRooms();
-      for (const candidate of candidates) {
-        const record = await readRoom(candidate.code);
-        if (!record) continue;
-        const room = record.room;
-        room.players = (room.players || []).filter((p) => Date.now() - p.lastSeen <= PLAYER_TTL_MS);
-        if (room.isPrivate || room.status !== "waiting" || room.players.length >= MAX_PLAYERS) continue;
-        const playerId = crypto.randomUUID();
-        const now = Date.now();
-        room.players.push({ id: playerId, name, ready: false, joinedAt: now, lastSeen: now });
-        room.updatedAt = now;
-        try {
-          await saveRoom(candidate.code, room, record.etag);
-          return reply(res, 200, {
-            room: publicRoom(room),
-            player: { id: playerId, name },
-            token: signGuestToken({ sub: playerId, room: candidate.code })
-          });
-        } catch (error) {
-          if (error?.name !== "BlobPreconditionFailedError") throw error;
-        }
-      }
-      return reply(res, 404, { error: "No public battle is waiting. Create a public battle first." });
-    }
-
-    if (action === "join") {
-      const code = String(body.code || "").toUpperCase();
-      if (!/^[A-Z2-9]{6}$/.test(code)) return reply(res, 400, { error: "Enter a valid six-character room code." });
-      const record = await readRoom(code);
-      if (!record) return reply(res, 404, { error: "Room not found." });
-      const room = record.room;
-      room.players = (room.players || []).filter((p) => Date.now() - p.lastSeen <= PLAYER_TTL_MS);
-      if (room.players.length < MAX_PLAYERS) room.status = "waiting";
-      if (room.status !== "waiting" || room.players.length >= MAX_PLAYERS) return reply(res, 409, { error: "Room is full or already playing." });
-      const playerId = crypto.randomUUID();
-      const now = Date.now();
-      room.players.push({ id: playerId, name, ready: false, joinedAt: now, lastSeen: now });
-      room.updatedAt = now;
-      await saveRoom(code, room, record.etag);
-      return reply(res, 200, {
-        room: publicRoom(room),
-        player: { id: playerId, name },
-        token: signGuestToken({ sub: playerId, room: code })
-      });
-    }
-
-    const claims = tokenClaims(req);
-    if (!claims) return reply(res, 401, { error: "Guest token missing or expired." });
-    const code = claims.room;
-    const record = await readRoom(code);
     if (!record) return reply(res, 404, { error: "Room not found." });
     const room = record.room;
     const player = findPlayer(room, claims.sub);
@@ -233,13 +144,22 @@ module.exports = async function handler(req, res) {
     const now = Date.now();
 
     if (action === "heartbeat") {
-      player.lastSeen = now;
-      if (typeof body.ready === "boolean") player.ready = body.ready;
-      const activePlayers = room.players.filter((p) => now - p.lastSeen <= PLAYER_TTL_MS);
-      room.status = activePlayers.length === MAX_PLAYERS && activePlayers.every((p) => p.ready) ? "ready" : "waiting";
-      room.updatedAt = now;
-      await saveRoom(code, room, record.etag);
-      return reply(res, 200, { ok: true, players: room.players.map(({ id, name, ready }) => ({ id, name, ready })) });
+      const outcome = await mutateRoom(code, (currentRoom) => {
+        const currentPlayer = findPlayer(currentRoom, claims.sub);
+        if (!currentPlayer) return { write: false, status: 403, body: { error: "You are no longer in this room." } };
+        const now = Date.now();
+        currentPlayer.lastSeen = now;
+        if (typeof body.ready === "boolean") currentPlayer.ready = body.ready;
+        const activePlayers = currentRoom.players.filter((p) => now - p.lastSeen <= PLAYER_TTL_MS);
+        currentRoom.status = activePlayers.length === MAX_PLAYERS && activePlayers.every((p) => p.ready) ? "ready" : "waiting";
+        currentRoom.updatedAt = now;
+        return {
+          status: 200,
+          body: { ok: true, players: currentRoom.players.map(({ id, name, ready }) => ({ id, name, ready })) }
+        };
+      });
+      if (!outcome.found) return reply(res, 404, { error: "Room not found." });
+      return reply(res, outcome.outcome.status || 200, outcome.outcome.body);
     }
 
     if (action === "signal") {
@@ -249,17 +169,25 @@ module.exports = async function handler(req, res) {
       if (Buffer.byteLength(payload, "utf8") > 12000) return reply(res, 413, { error: "Signal payload too large." });
       const targetPlayerId = String(body.toPlayerId || "");
       if (!targetPlayerId) return reply(res, 400, { error: "A target player ID is required for room signaling." });
-      const target = room.players.find((p) =>
-        p.id === targetPlayerId &&
-        p.id !== player.id &&
-        now - p.lastSeen <= PLAYER_TTL_MS
-      );
-      if (!target) return reply(res, 404, { error: "Target player is not an active member of this room." });
-      room.signals.push({ id: room.nextSignalId++, from: player.id, to: target.id, type, payload: JSON.parse(payload), createdAt: now });
-      room.signals = room.signals.slice(-32);
-      room.updatedAt = now;
-      await saveRoom(code, room, record.etag);
-      return reply(res, 202, { ok: true });
+      const outcome = await mutateRoom(code, (currentRoom) => {
+        const currentPlayer = findPlayer(currentRoom, claims.sub);
+        if (!currentPlayer) return { write: false, status: 403, body: { error: "You are no longer in this room." } };
+        const now = Date.now();
+        const target = currentRoom.players.find((p) =>
+          p.id === targetPlayerId &&
+          p.id !== currentPlayer.id &&
+          now - p.lastSeen <= PLAYER_TTL_MS
+        );
+        if (!target) return { write: false, status: 404, body: { error: "Target player is not an active member of this room." } };
+        currentRoom.signals = currentRoom.signals || [];
+        currentRoom.nextSignalId = currentRoom.nextSignalId || 1;
+        currentRoom.signals.push({ id: currentRoom.nextSignalId++, from: currentPlayer.id, to: target.id, type, payload: JSON.parse(payload), createdAt: now });
+        currentRoom.signals = currentRoom.signals.slice(-32);
+        currentRoom.updatedAt = now;
+        return { status: 202, body: { ok: true } };
+      });
+      if (!outcome.found) return reply(res, 404, { error: "Room not found." });
+      return reply(res, outcome.outcome.status || 202, outcome.outcome.body);
     }
 
     if (action === "poll") {
@@ -269,15 +197,17 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === "leave") {
-      room.players = room.players.filter((p) => p.id !== player.id);
-      room.signals = (room.signals || []).filter((s) => s.from !== player.id && s.to !== player.id);
-      room.status = "waiting";
-      if (room.players.length === 0) await del(pathFor(code), { access: ACCESS });
-      else {
-        room.updatedAt = now;
-        await saveRoom(code, room, record.etag);
-      }
-      return reply(res, 200, { ok: true });
+      const outcome = await mutateRoom(code, (currentRoom) => {
+        const currentPlayer = findPlayer(currentRoom, claims.sub);
+        if (!currentPlayer) return { write: false, status: 403, body: { error: "You are no longer in this room." } };
+        currentRoom.players = (currentRoom.players || []).filter((p) => p.id !== currentPlayer.id);
+        currentRoom.signals = (currentRoom.signals || []).filter((signal) => signal.from !== currentPlayer.id && signal.to !== currentPlayer.id);
+        currentRoom.status = currentRoom.players.length === 0 ? "closed" : "waiting";
+        currentRoom.updatedAt = Date.now();
+        return { status: 200, body: { ok: true } };
+      });
+      if (!outcome.found) return reply(res, 404, { error: "Room not found." });
+      return reply(res, outcome.outcome.status || 200, outcome.outcome.body);
     }
 
     return reply(res, 400, { error: "Unknown action." });
