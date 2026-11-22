@@ -107,6 +107,22 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertNotIn("level.ghc_campaign_player_0", body)
 
 
+    def test_ready_session_is_reused_only_if_both_native_players_still_match(self):
+        body = function_body(self.source, "main")
+        return_position = body.index("return 1")
+        for check in (
+            "issplitscreen()",
+            "level.ghc_campaign_player_0 issplitscreenplayer()",
+            "level.ghc_campaign_player_0 issplitscreenplayerprimary()",
+            "level.ghc_campaign_player_1 issplitscreenplayer()",
+            "!level.ghc_campaign_player_1 issplitscreenplayerprimary()",
+            "level.player == level.ghc_campaign_player_0",
+            "level.playengineeffects == level.ghc_campaign_player_1",
+        ):
+            self.assertIn(check, body)
+            self.assertLess(body.index(check), return_position)
+        self.assertLess(return_position, body.index("ghc_campaign_drill_abort_slot( 0 )"))
+
     def test_rebind_releases_only_active_drill_locks_before_clearing_player_handles(self):
         body = function_body(self.source, "main")
         guard = body.index("level.ghc_campaign_drill_state_initialized")
