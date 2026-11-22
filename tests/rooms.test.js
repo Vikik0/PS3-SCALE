@@ -158,3 +158,81 @@ test("room signaling rejects missing, self and unknown recipients", async () => 
   }, joined.body.token);
   assert.equal(unknown.statusCode, 404);
 });
+
+
+test("simultaneous joins retry stale ETags without losing player seats", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const code = host.body.room.code;
+  const joins = await Promise.all(["A", "B", "C"].map((displayName) =>
+    call("POST", { action: "join", code, displayName })
+  ));
+  assert.deepEqual(joins.map((result) => result.statusCode), [200, 200, 200]);
+  const room = await call("GET", {}, host.body.token, { code });
+  assert.equal(room.body.room.players.length, 4);
+  assert.equal(new Set(room.body.room.players.map((player) => player.id)).size, 4);
+});
+
+test("simultaneous ANY BATTLE requests fill the same public room without overwriting seats", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const joins = await Promise.all(["A", "B", "C"].map((displayName) =>
+    call("POST", { action: "any", displayName })
+  ));
+  assert.deepEqual(joins.map((result) => result.statusCode), [200, 200, 200]);
+  assert.ok(joins.every((result) => result.body.room.code === host.body.room.code));
+  const room = await call("GET", {}, host.body.token, { code: host.body.room.code });
+  assert.equal(room.body.room.players.length, 4);
+});
+
+test("simultaneous ready heartbeats preserve all four players' updates", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const tokens = [host.body.token];
+  for (const displayName of ["B", "C", "D"]) {
+    const joined = await call("POST", { action: "join", code: host.body.room.code, displayName });
+    tokens.push(joined.body.token);
+  }
+  const updates = await Promise.all(tokens.map((token) =>
+    call("POST", { action: "heartbeat", ready: true }, token)
+  ));
+  assert.ok(updates.every((result) => result.statusCode === 200));
+  const room = await call("GET", {}, tokens[0], { code: host.body.room.code });
+  assert.equal(room.body.room.status, "ready");
+  assert.ok(room.body.room.players.every((player) => player.ready));
+});
+
+test("simultaneous signaling messages are retained instead of overwriting each other", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const code = host.body.room.code;
+  const tokens = [host.body.token];
+  const ids = [host.body.player.id];
+  for (const displayName of ["B", "C", "D"]) {
+    const joined = await call("POST", { action: "join", code, displayName });
+    tokens.push(joined.body.token);
+    ids.push(joined.body.player.id);
+  }
+  const sends = await Promise.all([0, 1, 2].map((index) =>
+    call("POST", {
+      action: "signal",
+      toPlayerId: ids[3],
+      type: "ice",
+      payload: { candidate: "candidate-" + index }
+    }, tokens[index])
+  ));
+  assert.ok(sends.every((result) => result.statusCode === 202));
+  const inbox = await call("POST", { action: "poll", since: 0 }, tokens[3]);
+  assert.equal(inbox.body.signals.length, 3);
+  assert.deepEqual(
+    inbox.body.signals.map((signal) => signal.payload.candidate).sort(),
+    ["candidate-0", "candidate-1", "candidate-2"]
+  );
+});
+
+test("leaving the last seat closes the room instead of deleting during a join race", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const code = host.body.room.code;
+  const left = await call("POST", { action: "leave" }, host.body.token);
+  assert.equal(left.statusCode, 200);
+  const rejoin = await call("POST", { action: "join", code, displayName: "Late Player" });
+  assert.equal(rejoin.statusCode, 409);
+  const list = await call("GET");
+  assert.equal(list.body.rooms.some((room) => room.code === code), false);
+});
