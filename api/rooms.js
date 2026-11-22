@@ -87,7 +87,11 @@ function prunePlayers(room, now = Date.now()) {
   const active = activePlayers(room, now);
   const hostIsActive = active.some((player) => player.id === room.hostPlayerId);
   if (!room.hostPlayerId || !hostIsActive) {
-    room.hostPlayerId = active[0]?.id || "";
+    const nextHostId = active[0]?.id || "";
+    if (nextHostId && nextHostId !== room.hostPlayerId) {
+      room.netplayId = crypto.randomBytes(6).toString("hex").toUpperCase();
+    }
+    room.hostPlayerId = nextHostId;
   }
   if (active.length !== previous.length) {
     active.forEach((player) => { player.ready = false; });
@@ -553,6 +557,9 @@ module.exports = async function handler(req, res) {
         room.players = prunePlayers(room, now).filter((entry) => entry.id !== currentPlayer.id);
         if (room.hostPlayerId === currentPlayer.id) {
           room.hostPlayerId = room.players[0]?.id || "";
+          if (room.hostPlayerId) {
+            room.netplayId = crypto.randomBytes(6).toString("hex").toUpperCase();
+          }
         }
         room.players.forEach((entry) => { entry.ready = false; });
         room.signals = (room.signals || []).filter((signal) =>
