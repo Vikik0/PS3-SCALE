@@ -11,6 +11,7 @@
 #include "font8x12.h"
 #include "online_menu.h"
 #include "game_launcher.h"
+#include "disc_browser.h"
 
 #define MENU_COUNT 5
 static volatile int g_exit_requested = 0;
@@ -122,7 +123,18 @@ static void activate_selection(void)
         cb_online_menu(g_guest_name, &g_network_state, &g_online_state,
                        &g_exit_requested, g_status, sizeof(g_status));
         break;
-    case 3: cb_launch_game(g_status, sizeof(g_status)); break;
+    case 3: {
+        CBGameDisc discs[CB_DISC_MAX];
+        size_t disc_count = 0;
+        if (cb_disc_scan(discs, CB_DISC_MAX, &disc_count) != 0 || disc_count == 0) {
+            snprintf(g_status, sizeof(g_status),
+                     "No CUE found. Copy Crash Bash to a PSXISO folder.");
+        } else {
+            cb_launch_game(discs[0].path, 0, "CrashBashPlayer",
+                           g_status, sizeof(g_status));
+        }
+        break;
+    }
     default: g_exit_requested = 1; break;
     }
 }
