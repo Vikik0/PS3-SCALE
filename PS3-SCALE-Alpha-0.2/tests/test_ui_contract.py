@@ -509,7 +509,7 @@ assert "start_catalog_sync_worker(1)" in main
 assert "ps3scale_catalog_match_game" in src
 assert "EXACT ONLINE PROFILE FOUND" in src
 assert "ONE-LAUNCH PROFILE ARMED. START THIS GAME." in src
-assert "CHECKING WEBMAN AND ARMING PROFILE." in src
+assert "CHECKING GAME VERSION, WEBMAN AND ARMING PROFILE." in src
 assert "APPLY: REVIEW + CONFIRM IN DETAILS" in src
 assert "STALE PROFILE SCRIPT. REMOVE IT BEFORE STARTING." in src
 assert "MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY" in src
@@ -860,7 +860,7 @@ assert "actions/upload-artifact@v4" not in build_workflow
 assert "actions/setup-python@v5" not in index_workflow
 
 # Keep the visible app, support payload and local report on one version.
-assert '#define PS3SCALE_APP_VERSION "ALPHA 0.28"' in src
+assert '#define PS3SCALE_APP_VERSION "ALPHA 0.29"' in src
 assert '#define SETTINGS_COUNT 10' in src
 assert 'fprintf(fp, "settings_version=3\\n");' in src
 assert 'enhancement_persistent=%d' in src
