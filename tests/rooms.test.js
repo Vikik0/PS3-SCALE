@@ -816,3 +816,40 @@ test("client Netplay discovery waits for the host to mark game start", async () 
   assert.equal(lookup.body.state, "waiting_for_host_start");
   assert.equal(fetched, false);
 });
+
+
+test("a started Netplay match keeps its host identity when the host leaves the lobby app", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: true });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  await call("POST", { action: "game_start" }, host.body.token);
+  const room = await call("GET", {}, guest.body.token, { code: host.body.room.code });
+  const netplayId = room.body.room.netplayId;
+
+  await call("POST", { action: "leave" }, host.body.token);
+  const afterLeave = await call("GET", {}, guest.body.token, { code: host.body.room.code });
+  assert.equal(afterLeave.body.room.netplayId, netplayId);
+
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    async json() {
+      return [{
+        fields: {
+          username: "CB-" + netplayId + "-HOST",
+          connectable: true,
+          mitm_ip: "madrid.relay.retroarch.com",
+          mitm_port: 55435,
+          mitm_session: "AbCdEf0123456789",
+          updated: new Date().toISOString()
+        }
+      }];
+    }
+  });
+
+  const lookup = await call("POST", { action: "netplay" }, guest.body.token);
+  assert.equal(lookup.statusCode, 200);
+  assert.equal(lookup.body.ready, true);
+  assert.equal(lookup.body.address, "madrid.relay.retroarch.com");
+});
