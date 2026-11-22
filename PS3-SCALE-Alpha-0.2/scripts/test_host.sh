@@ -90,5 +90,6 @@ cc -std=c99 -Wall -Wextra -Werror \
 "$OUT/test_profile_apply"
 
 python3 "$ROOT/tests/test_ui_contract.py" "$ROOT/source/ps3/main.c"
+python3 "$ROOT/tests/test_launch_responsiveness.py" "$ROOT/source/ps3/main.c"
 python3 "$ROOT/tests/test_online_download_progress.py" "$ROOT"
 python3 "$ROOT/tests/test_theme_bundle.py" "$ROOT"
