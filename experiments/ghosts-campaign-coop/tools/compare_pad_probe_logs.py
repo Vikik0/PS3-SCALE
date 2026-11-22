@@ -141,8 +141,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"STATUS: {result['status']}")
     for label in ("campaign", "multiplayer"):
         data = result[label]
+        mode_label = data["mode"] or "unlabelled"
+        if data.get("mode_label_is_operator_selected") is True:
+            mode_label += " (operator-selected)"
         print(
-            f"{label}: mode={data['mode'] or 'unlabelled'}, valid_samples={len(data['samples'])}, "
+            f"{label}: mode={mode_label}, valid_samples={len(data['samples'])}, "
             f"errors={len(data['errors'])}, masks={['0x%02x' % mask for mask in data['unique_masks']]}, "
             f"port0={data['port0_seen']}, port1={data['port1_seen']}, "
             f"simultaneous={data['both_controllers_simultaneously_seen']}"
