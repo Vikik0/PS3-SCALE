@@ -2,7 +2,7 @@
 
 ## الهدف
 
-هذه الأداة تفحص المصدر الأصلي والمصدر المعدّل لدورة الحفر في مهمة Clockwork. تركيزها على التقاط اللاعب الذي فعّل الـTrigger، وتمريره إلى منطق الحفر، ومنع رجوع الدوال المساندة إلى `level.player` بصورة غير مقصودة.
+هذه الأداة تفحص المصدر الأصلي والمصدر المعدّل لدورة الحفر في مهمة Clockwork. تركيزها على التقاط اللاعب مباشرةً من حدث الـTrigger، وتمريره إلى منطق الحفر، ومنع رجوع الدوال المساندة إلى `level.player` بصورة غير مقصودة.
 
 الأداة:
 
@@ -46,13 +46,15 @@ python tools/clockwork_drill_adapter_audit.py "D:\Ghosts\patched\maps__clockwork
 
 - وجود الدوال الأساسية: `handle_drill_spot` و`handle_drilling` و`handle_misc_drill_details`.
 - وجود الدوال المساندة التي يجب أن تستقبل اللاعب صراحةً: `watch_for_air_drop_death` و`restore_footstep_notetrack_scripts` و`drillthrough_plate_sound` و`stop_current_car_watcher`.
-- التقاط ناتج `flag_wait` في `watch_for_drill_trigger` وتخزين اللاعب الذي فعّل التفاعل.
-- تمرير `drill_player` إلى `handle_drilling`.
+- التقاط اللاعب مباشرةً من `drill_trigger waittill( "trigger", drill_activator )` داخل `handle_drill_spot`، ثم ضبط Flag المهمة مع تمرير اللاعب نفسه.
+- عدم الاعتماد على `flag_wait` لالتقاط اللاعب؛ بعض callbacks في Split-Screen قد تنتظر لمس اللاعبين الاثنين ثم تضبط الـFlag دون تمرير الـactivator.
+- تمرير `drill_player` إلى `handle_drilling`، ومنع عامل الحفر من التعليق داخل `flag_wait` إذا مات اللاعب وتمت إعادة ضبط الـFlag.
 - التحقق من أن اللاعب الثاني هو الـnative secondary player عبر `issplitscreenplayer()` و`issplitscreenplayerprimary()`.
 - تجهيز loadout اللاعب الثاني بأسلحة Clockwork والـGrenades.
 - تشغيل مساعدات الحفر لكل لاعب على حدة، وإدارة `ammoCounterHide` على مستوى اللاعبين الاثنين.
 - فصل حالة `aiming_at_ally` وحفظ ذخيرة الـGrenades لكل لاعب.
-- تنظيف حالة الحفر عند الموت أو الانقطاع وإعادة تفعيل الـTrigger.
+- تنظيف حالة الحفر عند الموت أو الانقطاع، وإعادة ضبط Flag البداية، وانتظار انتهاء دورة تنظيف قصيرة قبل إعادة تفعيل الـTrigger.
+- حفظ قيمة `ammoCounterHide` الأصلية وإعادتها بدلاً من فرض القيمة `0` بعد انتهاء الحفر.
 - إبقاء `switchmsg` دالة Logan الأساسية مع منح اللاعب الثاني `drill_press` وإزالته بعد نهاية جزء الخزنة.
 
 يسمح الفحص بخمسة استخدامات محددة لـ`level.player` داخل `handle_drill_spot` فقط عندما تكون fallback أو مقارنة هوية مع اللاعب الأساسي؛ لا يسمح باستخدامها لاستدعاء methods الخاصة باللاعب داخل مسار الحفر.
@@ -70,7 +72,7 @@ python tools/clockwork_drill_adapter_audit.py "D:\Ghosts\patched\maps__clockwork
 ## حدود الفحص
 
 - الفحص ثابت ولا يثبت أن اللعبة أنشأت Local Client ثانياً.
-- التقاط activator مبني على سلوك `trigger_flag_on_cleared` في مصدر common scripts المتاح؛ يجب تأكيد نوع Trigger الخاص بنقطتي الحفر من MapEnts أو داخل اللعبة.
+- التقاط activator يستخدم حدث `trigger` القياسي مباشرةً، بدلاً من الاعتماد على callback الذي يضبط Flag المهمة. يجب تأكيد أن حدث Trigger الخاص بنقطتي الحفر يصل إلى المستمع المباشر على نسخة اللعبة المستهدفة.
 - إذا لم يمرر الـTrigger اللاعب، يستخدم التعديل fallback إلى Logan حتى لا يكسر اللعب الفردي.
 - لا يثبت الفحص استقلال الكاميرا أو HUD.
 - لا يعيد بناء `clockwork.ff` ولا ينشئ PKG.
