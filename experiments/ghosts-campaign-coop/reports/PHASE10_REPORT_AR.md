@@ -48,7 +48,23 @@ tools/ps3mapi/analyze_tu116_runtime_capture.py
 - رفض المدخلات الناقصة قبل بدء التحليل.
 - عدم إنشاء تقرير نجاح عند فشل التحقق.
 
-نتيجة GitHub Actions ستُسجل بعد اكتمال تشغيل CI لهذه التعديلات.
+## نتيجة CI الفعلية
+
+نجح GitHub Actions run 45029058147 (Run 695) على commit daa9ce889c0f11f7a42b3d0af893dff14585ca98، ونجحت الوظائف الخمس كلها:
+
+- server-tests: **137 اختبار Python ناجحاً**.
+- protocol-header: نجاح جميع اختبارات C المحمولة ومحاكي Runtime بعدد **10,025 فحصاً و0 إخفاقات**.
+- gsc-script-compile: ترجمة Registry shim وفكّه مجدداً بنجاح، مع مطابقة manifest.
+- ps3-prx-bootstrap: بناء PRX الأساسي وأداة Pad Probe والتحقق من ملفات PRX.
+- worker-check: اختبارات Worker وعمليات bundle dry-run ناجحة، دون نشر خدمة.
+
+تم إنتاج حزمة Pad Probe رقم artifact 14756549670 بحجم 101,535 بايت وبصمة SHA-256:
+70c84d1f2de0ee917d03dfa4e94b1d7b145f5c7816071221ebdf34e0b2f14565
+
+ملف ghosts_campaign_pad_probe.fake.sprx داخل الحزمة حجمه 147,304 بايت وبصمته:
+4de0ea6f49629818e4fd69d4f3e44e9357fff4f7481ad87ba07888e9542b574a
+
+هذا نجاح بناء واختبارات CI فقط؛ لم يتم تحميل الأداة على PS3 ولم تُلتقط سجلات فعلية.
 
 ## 4. ما لم يتغير
 
