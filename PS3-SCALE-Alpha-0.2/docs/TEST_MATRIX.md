@@ -1,11 +1,12 @@
-# Device test matrix — Alpha 0.28
+# Device test matrix — Alpha 0.29
 
 Primary device (user-reported):
 - Family: PS3 Slim
-- System software: CFW 4.92
+- System software: CFW 4.93
 - Exact CECH retail model: not yet confirmed
 - CEX / DEX: not yet verified on the console; the app queries this read-only when supported
-- Cobra version and available HDD space: not yet confirmed
+- Cobra version: 8.5 (user-reported)
+- Available HDD space: not yet confirmed
 
 The About page reports the Platform ID, mapped hardware family/series, firmware, and console type. This is a read-only identification step; the user must still confirm the on-device values before a hardware-specific feature is enabled.
 
@@ -52,8 +53,10 @@ No real screenshot pairs are currently bundled in the repository; this part requ
 5. Keep webMAN active but move its plugin file outside the two common detection paths; Companion Tools should still attempt the local service instead of blocking the launch action.
 6. Exit PS3 SCALE while a companion launch request is waiting; confirm shutdown completes cleanly after the bounded request finishes.
 7. Test one harmless, reversible, single-write profile with a known expected byte at the exact address.
-8. Confirm a stale or edited PS3 SCALE script is blocked, while a foreign webMAN script is never overwritten or deleted.
-9. Confirm that closing the game clears the process-memory change.
+8. Confirm profile identity scans run on a background worker and D-pad / Circle input remains responsive while the HDD or mounted-disc check runs.
+9. Change or unmount the selected game after arming; confirm the pending PS3 SCALE script is removed and the game is not launched with a stale profile.
+10. Confirm a stale or edited PS3 SCALE script is blocked, while a foreign webMAN script is never overwritten or deleted.
+11. Confirm that closing the game clears the process-memory change.
 
 ## Other hardware targets after the Slim test
 
