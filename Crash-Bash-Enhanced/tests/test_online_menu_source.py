@@ -10,7 +10,7 @@ source = (root / "source/online_menu.c").read_text(encoding="utf-8")
 assert "#define ROOM_HEARTBEAT_FRAMES 300" in source
 assert "#define ROOM_LIST_REFRESH_FRAMES 600" in source
 assert "if (++room_list_poll_frames >= ROOM_LIST_REFRESH_FRAMES)" in source
-assert "if (screen == SCREEN_ROOM && ++poll_frames >= ROOM_HEARTBEAT_FRAMES)" in source
+assert "if ((screen == SCREEN_ROOM || screen == SCREEN_DISC_SELECT)" in source
 assert "static int session_is_gone(const char *error)" in source
 assert 'strstr(error, "expired")' in source
 assert 'strstr(error, "no longer")' in source
@@ -19,7 +19,8 @@ assert "memset(session, 0, sizeof(*session))" in source
 assert "Your room ended or your seat expired." in source
 
 heartbeat = re.search(
-    r"if \(screen == SCREEN_ROOM && \+\+poll_frames >= ROOM_HEARTBEAT_FRAMES\)"
+    r"if \(\(screen == SCREEN_ROOM \|\| screen == SCREEN_DISC_SELECT\)\s*"
+    r"&& \+\+poll_frames >= ROOM_HEARTBEAT_FRAMES\)"
     r"(.*?)(?=\n            if \(screen == SCREEN_ROOM\) draw_room)",
     source,
     re.S,
