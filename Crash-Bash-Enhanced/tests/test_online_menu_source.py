@@ -38,7 +38,8 @@ online_source = (root / "source/online.c").read_text(encoding="utf-8")
 launcher = (root / "source/game_launcher.c").read_text(encoding="utf-8")
 assert "BTN_START" in source
 assert "cb_launch_game(" in source
-assert "ALL PLAYERS READY - PRESS START TO OPEN CRASH BASH" in source
+assert "ALL PLAYERS READY - PRESS START TO SELECT THE GAME" in source
+assert "if (view->game_started)" in source
 assert "view->player_count >= 2" in online_source
 assert "OPEN CRASH BASH ONLINE" in main_source
 assert 'cb_launch_game(discs[0].path, 0, "CrashBashPlayer"' in main_source
