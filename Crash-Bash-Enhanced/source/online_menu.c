@@ -9,6 +9,8 @@
 #include <net/net.h>
 
 #define MENU_ROOM_LIMIT 8
+#define ROOM_HEARTBEAT_FRAMES 300
+#define ROOM_LIST_REFRESH_FRAMES 600
 #define SCREEN_ROOMS 0
 #define SCREEN_ROOM 1
 #define SCREEN_JOIN_CODE 2
@@ -80,6 +82,31 @@ static int load_rooms(CBOnlineRoom *rooms, int *count, int *selected, char *stat
     else if (*selected >= *count) *selected = *count - 1;
     snprintf(status, size, "Found %d public room(s).", *count);
     return 0;
+}
+
+static int session_is_gone(const char *error)
+{
+    if (!error) return 0;
+    return strstr(error, "expired") != NULL ||
+           strstr(error, "no longer") != NULL ||
+           strstr(error, "not a member") != NULL ||
+           strstr(error, "not found") != NULL;
+}
+
+static void return_to_rooms(CBOnlineSession *session, CBOnlineRoomView *view,
+                            int *ready, int *screen, unsigned int *poll_frames,
+                            CBOnlineRoom *rooms, int *room_count, int *selected,
+                            char *status, size_t status_size)
+{
+    char ignored[160] = "";
+    if (session && session->token[0]) cb_online_leave_room(session, ignored, sizeof(ignored));
+    if (session) memset(session, 0, sizeof(*session));
+    if (view) memset(view, 0, sizeof(*view));
+    if (ready) *ready = 0;
+    if (screen) *screen = SCREEN_ROOMS;
+    if (poll_frames) *poll_frames = 0;
+    load_rooms(rooms, room_count, selected, status, status_size);
+    snprintf(status, status_size, "Your room ended or your seat expired. Choose another battle.");
 }
 
 static void draw_rooms(const CBOnlineRoom *rooms, int count, int selected, int private_create, const char *status)
@@ -186,6 +213,7 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
     int curl_initialized = 0;
     int lobby_ready = 0;
     unsigned int poll_frames = 0;
+    unsigned int room_list_poll_frames = 0;
     u16 old_up = 0, old_down = 0, old_left = 0, old_right = 0;
     u16 old_cross = 0, old_circle = 0, old_triangle = 0, old_square = 0;
     u16 old_l1 = 0, old_l2 = 0, old_r1 = 0;
@@ -230,6 +258,7 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
     }
     curl_initialized = 1;
     load_rooms(rooms, &room_count, &selected, status, status_size);
+    room_list_poll_frames = 0;
 
     while (!exit_requested || !*exit_requested) {
         padInfo info;
@@ -255,6 +284,10 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
         }
 
         if (screen == SCREEN_ROOMS) {
+            if (++room_list_poll_frames >= ROOM_LIST_REFRESH_FRAMES) {
+                room_list_poll_frames = 0;
+                load_rooms(rooms, &room_count, &selected, status, status_size);
+            }
             if (up && !old_up && room_count > 0) selected = (selected + room_count - 1) % room_count;
             if (down && !old_down && room_count > 0) selected = (selected + 1) % room_count;
             if (l1 && !old_l1) {
@@ -264,19 +297,19 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
             if (r1 && !old_r1) { screen = SCREEN_JOIN_CODE; code_cursor = 0; }
             if (l2 && !old_l2) {
                 if (cb_online_join_any_room(guest_name, &session, &view, error, sizeof(error)) == 0) {
-                    ready = 0; screen = SCREEN_ROOM; poll_frames = 0;
+                    ready = 0; screen = SCREEN_ROOM; poll_frames = 0; room_list_poll_frames = 0;
                     snprintf(status, status_size, "Joined public battle %.6s.", session.code);
                 } else snprintf(status, status_size, "Any battle: %.120s", error);
             }
             if (cross && !old_cross && room_count > 0) {
                 if (cb_online_join_room(rooms[selected].code, guest_name, &session, &view, error, sizeof(error)) == 0) {
-                    ready = 0; screen = SCREEN_ROOM; poll_frames = 0;
+                    ready = 0; screen = SCREEN_ROOM; poll_frames = 0; room_list_poll_frames = 0;
                     snprintf(status, status_size, "Joined room %.6s. Waiting for both players.", session.code);
                 } else snprintf(status, status_size, "Join room: %.120s", error);
             }
             if (triangle && !old_triangle) {
                 if (cb_online_create_room(guest_name, private_create, &session, &view, error, sizeof(error)) == 0) {
-                    ready = 0; screen = SCREEN_ROOM; poll_frames = 0;
+                    ready = 0; screen = SCREEN_ROOM; poll_frames = 0; room_list_poll_frames = 0;
                     snprintf(status, status_size, "%s room %.6s created. Share the code.", private_create ? "Private" : "Public", session.code);
                 } else snprintf(status, status_size, "Create room: %.120s", error);
             }
@@ -299,7 +332,7 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
             }
             if (cross && !old_cross) {
                 if (cb_online_join_room(join_code, guest_name, &session, &view, error, sizeof(error)) == 0) {
-                    ready = 0; screen = SCREEN_ROOM; poll_frames = 0;
+                    ready = 0; screen = SCREEN_ROOM; poll_frames = 0; room_list_poll_frames = 0;
                     snprintf(status, status_size, "Joined private/public room %.6s.", session.code);
                 } else snprintf(status, status_size, "Join code: %.120s", error);
             }
@@ -311,25 +344,34 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                 if (cb_online_set_ready(&session, next_ready, &view, error, sizeof(error)) == 0) {
                     ready = next_ready;
                     snprintf(status, status_size, "%s", ready ? "You are ready." : "Ready status cancelled.");
+                } else if (session_is_gone(error)) {
+                    return_to_rooms(&session, &view, &ready, &screen, &poll_frames,
+                                    rooms, &room_count, &selected, status, status_size);
                 } else snprintf(status, status_size, "Ready update: %.120s", error);
             }
-            if (square && !old_square) {
-                if (cb_online_get_room(&session, &view, error, sizeof(error)) != 0)
-                    snprintf(status, status_size, "Room refresh: %.120s", error);
+            if (square && !old_square && screen == SCREEN_ROOM) {
+                if (cb_online_get_room(&session, &view, error, sizeof(error)) != 0) {
+                    if (session_is_gone(error)) {
+                        return_to_rooms(&session, &view, &ready, &screen, &poll_frames,
+                                        rooms, &room_count, &selected, status, status_size);
+                    } else snprintf(status, status_size, "Room refresh: %.120s", error);
+                }
             }
             if (circle && !old_circle) {
                 cb_online_leave_room(&session, error, sizeof(error));
                 memset(&session, 0, sizeof(session));
                 memset(&view, 0, sizeof(view));
-                ready = 0; screen = SCREEN_ROOMS;
+                ready = 0; screen = SCREEN_ROOMS; poll_frames = 0; room_list_poll_frames = 0;
                 load_rooms(rooms, &room_count, &selected, status, status_size);
             }
-            if (screen == SCREEN_ROOM && ++poll_frames >= 300) {
+            if (screen == SCREEN_ROOM && ++poll_frames >= ROOM_HEARTBEAT_FRAMES) {
                 poll_frames = 0;
-                if (cb_online_set_ready(&session, ready, &view, error, sizeof(error)) != 0)
-                    snprintf(status, status_size, "Heartbeat: %.120s", error);
-                else if (cb_online_get_room(&session, &view, error, sizeof(error)) != 0)
-                    snprintf(status, status_size, "Room refresh: %.120s", error);
+                if (cb_online_set_ready(&session, ready, &view, error, sizeof(error)) != 0) {
+                    if (session_is_gone(error)) {
+                        return_to_rooms(&session, &view, &ready, &screen, &poll_frames,
+                                        rooms, &room_count, &selected, status, status_size);
+                    } else snprintf(status, status_size, "Heartbeat: %.120s", error);
+                }
             }
             if (screen == SCREEN_ROOM) draw_room(&view, &session, status);
             else draw_rooms(rooms, room_count, selected, private_create, status);
