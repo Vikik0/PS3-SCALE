@@ -10,6 +10,7 @@
 #include <net/net.h>
 #include "font8x12.h"
 #include "online_menu.h"
+#include "game_launcher.h"
 
 #define MENU_COUNT 5
 static volatile int g_exit_requested = 0;
@@ -17,13 +18,11 @@ static u32 *g_font_texture = NULL;
 static int g_selected = 0;
 static int g_network_state = 0;
 static int g_online_state = 0;
-static int g_screen = 0;
-static int g_demo_x = 410, g_demo_y = 270;
 static char g_guest_name[32] = "Guest-00000000";
 static char g_status[120] = "Ready. PSN is not required.";
 static const char *g_menu[MENU_COUNT] = {
     "GUEST PROFILE", "NETWORK CHECK", "ONLINE ROOMS",
-    "OFFLINE ARENA TEST", "EXIT"
+    "START CRASH BASH", "EXIT"
 };
 
 static void on_sysutil(u64 status, u64 param, void *userdata)
@@ -87,20 +86,6 @@ static void draw_home(void)
     text(666, 474, 12, 0x6d8794ff, "NO PSN");
     tiny3d_Flip();
 }
-static void draw_demo(void)
-{
-    tiny3d_Clear(0x071019ff, TINY3D_CLEAR_ALL);
-    tiny3d_Project2D();
-    rect(24, 22, 800, 468, 0x101e2aff);
-    rect(24, 22, 800, 5, 0x46d6b2ff);
-    text(56, 44, 25, 0xf5fbffff, "TRAINING ARENA");
-    text(56, 82, 14, 0x9bb4c2ff, "LOCAL INPUT TEST - NOT THE ORIGINAL GAME");
-    rect(70, 125, 708, 300, 0x0b1720ff);
-    rect((float)g_demo_x, (float)g_demo_y, 24, 24, 0x46d6b2ff);
-    rect(500, 240, 16, 16, 0xff9a55ff);
-    text(56, 474, 12, 0x6d8794ff, "DPAD: MOVE     CIRCLE: BACK");
-    tiny3d_Flip();
-}
 static void make_guest_name(void)
 {
     unsigned int seed = (unsigned int)(uintptr_t)&g_guest_name;
@@ -137,7 +122,7 @@ static void activate_selection(void)
         cb_online_menu(g_guest_name, &g_network_state, &g_online_state,
                        &g_exit_requested, g_status, sizeof(g_status));
         break;
-    case 3: g_screen = 1; break;
+    case 3: cb_launch_game(g_status, sizeof(g_status)); break;
     default: g_exit_requested = 1; break;
     }
 }
@@ -145,7 +130,7 @@ int main(int argc, char **argv)
 {
     padInfo pad_info;
     padData pad_data;
-    u16 old_up = 0, old_down = 0, old_cross = 0, old_circle = 0;
+    u16 old_up = 0, old_down = 0, old_cross = 0;
     int pad_ready = 0;
     (void)argc; (void)argv;
 
@@ -162,7 +147,7 @@ int main(int argc, char **argv)
     sysUtilRegisterCallback(SYSUTIL_EVENT_SLOT0, on_sysutil, NULL);
 
     while (!g_exit_requested) {
-        u16 up = 0, down = 0, cross = 0, circle = 0;
+        u16 up = 0, down = 0, cross = 0;
         sysUtilCheckCallback();
         if (pad_ready && ioPadGetInfo(&pad_info) == 0) {
             int p;
@@ -170,34 +155,16 @@ int main(int argc, char **argv)
                 if (!pad_info.status[p]) continue;
                 if (ioPadGetData(p, &pad_data) == 0 && pad_data.len >= 8) {
                     up = pad_data.BTN_UP; down = pad_data.BTN_DOWN;
-                    cross = pad_data.BTN_CROSS; circle = pad_data.BTN_CIRCLE;
+                    cross = pad_data.BTN_CROSS;
                     break;
                 }
             }
         }
-        if (g_screen == 0) {
-            if (up && !old_up) g_selected = (g_selected + MENU_COUNT - 1) % MENU_COUNT;
-            if (down && !old_down) g_selected = (g_selected + 1) % MENU_COUNT;
-            if (cross && !old_cross) activate_selection();
-            draw_home();
-        } else {
-            if (pad_ready && ioPadGetInfo(&pad_info) == 0) {
-                int p;
-                for (p = 0; p < MAX_PADS; p++) {
-                    if (!pad_info.status[p]) continue;
-                    if (ioPadGetData(p, &pad_data) == 0 && pad_data.len >= 8) {
-                        if (pad_data.BTN_LEFT && g_demo_x > 78) g_demo_x -= 3;
-                        if (pad_data.BTN_RIGHT && g_demo_x < 748) g_demo_x += 3;
-                        if (pad_data.BTN_UP && g_demo_y > 132) g_demo_y -= 3;
-                        if (pad_data.BTN_DOWN && g_demo_y < 390) g_demo_y += 3;
-                        break;
-                    }
-                }
-            }
-            if (circle && !old_circle) g_screen = 0;
-            draw_demo();
-        }
-        old_up = up; old_down = down; old_cross = cross; old_circle = circle;
+        if (up && !old_up) g_selected = (g_selected + MENU_COUNT - 1) % MENU_COUNT;
+        if (down && !old_down) g_selected = (g_selected + 1) % MENU_COUNT;
+        if (cross && !old_cross) activate_selection();
+        draw_home();
+        old_up = up; old_down = down; old_cross = cross;
     }
     if (g_network_state == 1) netDeinitialize();
     sysUtilUnregisterCallback(SYSUTIL_EVENT_SLOT0);
