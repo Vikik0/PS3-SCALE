@@ -70,7 +70,10 @@ static int http_request(const char *method, const char *path, const char *body, 
     if (status < 200 || status >= 300) { parse_error(response.data, error, error_size, status); curl_slist_free_all(headers); curl_easy_cleanup(curl); return -1; }
     if (response.length + 1 > output_size) { set_error(error, error_size, "Lobby response buffer is too small"); curl_slist_free_all(headers); curl_easy_cleanup(curl); return -1; }
     memcpy(output, response.data, response.length + 1); curl_slist_free_all(headers); curl_easy_cleanup(curl);
-    if (error && error_size) error[0] = '\0'; return 0;
+    if (error && error_size) {
+        error[0] = '\0';
+    }
+    return 0;
 }
 static int get_string_field(const char *json, const cb_json_token *tokens, int count, int object, const char *key, char *out, size_t size) {
     int value = cb_json_object_get(json, tokens, count, object, key);
@@ -159,7 +162,10 @@ int cb_online_health(char *error, size_t error_size) {
         !cb_json_bool(response, secret >= 0 ? &tokens[secret] : NULL, 0)) {
         set_error(error, error_size, "Lobby API is reachable but cloud storage or guest-token setup is missing"); return -1;
     }
-    if (error && error_size) error[0] = '\0'; return 0;
+    if (error && error_size) {
+        error[0] = '\0';
+    }
+    return 0;
 }
 int cb_online_list_rooms(CBOnlineRoom *rooms, size_t capacity, size_t *count_out, char *error, size_t error_size) {
     char response[CB_HTTP_BUFFER]; cb_json_token tokens[CB_JSON_TOKEN_COUNT]; int count, array, n, i; size_t written = 0;
