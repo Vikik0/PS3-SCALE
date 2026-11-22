@@ -44,6 +44,19 @@ The BIOS/system folder remains under the installed app directory shown above.
 4. The host opens RetroArch's Netplay menu and selects **Start Netplay Host**.
 5. Other players refresh the **Netplay Host List** and join the host.
 
+### Automatic room-assisted launch (native lobby companion)
+
+The separate **Crash Bash Enhanced Lobby** PKG (`CBEN00001`) provides an optional room-code flow and automatic RetroArch host discovery:
+
+1. Install both `CBON00001` and `CBEN00001` on every participating PS3.
+2. Open **ONLINE ROOMS** in the native companion. One player creates a room; the others join with its six-character invite code.
+3. Every active player marks **READY**. Press **START** to open the CUE picker.
+4. The host selects the same Crash Bash CUE used by everyone else and presses **CROSS**. The room is locked against late joins before RetroArch starts hosting.
+5. Each client selects the identical CUE file and presses **CROSS** once. The companion discovers the host's public RetroArch lobby entry and starts RetroArch with the authenticated relay endpoint and session ID.
+6. If the client returns to the room after the match starts, the room displays **MATCH STARTED**; press **START** and select the same CUE to retry joining.
+
+When using this assisted flow, players do not need to open **Netplay Host List** manually. The lobby API coordinates rooms and discovers the relay; RetroArch Netplay still carries and synchronizes the game session. The **OPEN CRASH BASH ONLINE** home-menu item opens the standalone RetroArch menu for local play or the manual Netplay flow above.
+
 The package is configured to allow up to three remote clients (four participants including the host). This is a configured maximum, **not a claim that four-player performance has already passed hardware testing**. Start with a two-player LAN test; four-player and internet tests are still release gates.
 
 Lockstep is enabled because the pinned PCSX-ReARMed core reports a `0x440000`-byte savestate. Lockstep keeps one shared state instead of a rollback state for every buffered frame. This reduces memory use, but every frame waits for player input, so network latency can appear as input delay or brief stalls.
