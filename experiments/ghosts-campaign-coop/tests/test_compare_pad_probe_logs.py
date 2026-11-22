@@ -66,6 +66,17 @@ class PadProbeComparatorTests(unittest.TestCase):
             self.assertTrue(result["mode_label_provenance"]["campaign"]["operator_selected"])
             self.assertIn("not auto-detected", result["interpretation_limit"])
 
+    def test_manual_mode_provenance_requires_both_logs(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            campaign = parse_log(write_log(root, "campaign.log", [0x03], "CAMPAIGN"))
+            multiplayer = parse_log(write_log(root, "multiplayer.log", [0x03], "MULTIPLAYER"))
+            multiplayer["mode_label_is_operator_selected"] = None
+            result = compare(campaign, multiplayer)
+            self.assertFalse(result["mode_labels_are_operator_selected"])
+            self.assertTrue(result["mode_label_provenance"]["campaign"]["operator_selected"])
+            self.assertIsNone(result["mode_label_provenance"]["multiplayer"]["operator_selected"])
+
     def test_mislabeled_modes_are_inconclusive(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
