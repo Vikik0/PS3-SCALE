@@ -114,13 +114,14 @@ The current evidence does **not** prove a playable second Campaign player. It do
 
 The existing read-only Campaign registry shim at client/ps3/gsc/ghc_campaign_player_registry.gsc was independently compiled with GSC Tool 1.6.2.364 for IW6/PS3 and then round-trip decompiled successfully.
 
-- Compiled GSCBIN: 400 bytes.
-- SHA-256: 0c52cb5712cadce6308b47c9c216ac7c483036bd3084ff35899c096c6d35ee85.
+- Compiled GSCBIN: 457 bytes.
+- SHA-256: 27eab77b588ab79dd3627ca64d6454911a98712fcc6123eb999d60e44c56b375.
 - The hash and size match the verified Phase 7 registry artifact manifest.
 - The shim assigns slot 0/1 by native split-screen primary identity rather than assuming player-array order.
+- It exposes registry status values 0–6: not checked, ready, missing player array, split-screen inactive, duplicate primary, duplicate secondary, or player count not exactly two.
 - It fails closed unless exactly two native split-screen player entities are already present.
 
-This verifies the script's syntax and compiled artifact only. It has not been injected into the game or run on PS3 hardware.
+The CI compile job now verifies the source SHA-256, compiled GSCBIN SHA-256, and byte count against the manifest. This verifies script syntax and artifact integrity only; it has not been injected into the game or run on PS3 hardware.
 
 
 ## 8. Pad Probe v4 unload-safety update
