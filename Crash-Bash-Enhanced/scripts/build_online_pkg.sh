@@ -76,6 +76,7 @@ position = block.rfind('"disabled"')
 block = block[:position] + '"port 1"' + block[position + len('"disabled"'):]
 path.write_text(text[:start] + block + text[end:])
 PY
+grep -q 'return 0x440000;' "$PCSX/frontend/libretro.c"
 
 echo "== Build the PS1 core for the PS3"
 make -C "$PCSX" -f Makefile.libretro platform=psl1ght DYNAREC=lightrec -j"$JOBS"
@@ -122,6 +123,17 @@ if text.count(old) != 1:
     raise SystemExit("Could not uniquely identify the PSL1GHT app data directory")
 platform.write_text(text.replace(old, f'#define EMULATOR_CONTENT_DIR "{app_id}"', 1))
 
+paths = root / "frontend/drivers/platform_ps3_paths.c"
+text = paths.read_text()
+old = '"/dev_hdd0/home/%08u/retroarch", user_id);'
+if text.count(old) != 1:
+    raise SystemExit("Could not uniquely identify the PS3 RetroArch user-profile directory")
+paths.write_text(text.replace(
+    old,
+    f'"/dev_hdd0/home/%08u/retroarch/{app_id}", user_id);',
+    1
+))
+
 config = root / "config.def.h"
 text = config.read_text()
 for old, new in (
@@ -155,6 +167,12 @@ USRDIR="$PKGDIR/USRDIR"
 CORE_SELF="$USRDIR/cores/pcsx_rearmed_libretro_psl1ght.SELF"
 mkdir -p "$USRDIR/cores" "$USRDIR/info" "$USRDIR/assets" \
     "$USRDIR/licenses" "$USRDIR/system"
+
+cat > "$USRDIR/system/README-BIOS.txt" <<'EOF'
+Place a PlayStation BIOS dumped from your own console in this folder.
+No BIOS file is included in this package. Use the same BIOS file on every
+console in a Netplay session, or use the same built-in HLE mode on all consoles.
+EOF
 
 echo "== Build PS3 Salamander EBOOT"
 rm -f "$USRDIR/EBOOT.BIN"
@@ -225,6 +243,10 @@ menu_show_load_content = "true"
 config_save_on_exit = "true"
 EOF
 
+cat > "$USRDIR/retroarch-core-options.cfg" <<'EOF'
+pcsx_rearmed_multitap = "port 1"
+EOF
+
 cat > "$USRDIR/README-Crash-Bash-Online.txt" <<'EOF'
 CRASH BASH ONLINE — PLAYSTATION 3
 
@@ -236,8 +258,10 @@ GETTING THE GAME
 1. Create a BIN/CUE dump from your own Crash Bash disc.
 2. Copy both files to /dev_hdd0/PSXISO/ or to a /PSXISO/ folder on USB.
 3. Keep the BIN filename referenced by the CUE file exactly correct.
-4. A BIOS dumped from your own PS1 is recommended. If you use one, place it
-   in /dev_hdd0/game/CBASH0001/USRDIR/system/ on each console.
+4. A BIOS dumped from your own PS1 is recommended. If you use one, place the
+   same BIOS file in /dev_hdd0/game/CBASH0001/USRDIR/system/ on each console.
+5. Settings and logs are kept in the app-specific profile under
+   /dev_hdd0/home/<user-id>/retroarch/CBASH0001/.
 
 LOCAL PLAY
 1. Launch Crash Bash Online from the PS3 XMB.
@@ -248,21 +272,24 @@ ONLINE PLAY
 1. Both consoles install the same PKG and use identical game dumps.
 2. Both players load the same CUE file with the included PCSX-ReARMed core.
 3. Open RetroArch's Netplay menu.
-4. The host selects Start Hosting.
+4. The host selects Start Netplay Host.
 5. Other players refresh the Netplay Host List and join the host.
-6. The host accepts up to three remote connections (four players total).
+6. The host is configured to accept up to three remote clients (four participants
+   total); four-player performance has not yet been validated on PS3 hardware.
 
 Lockstep synchronization is enabled because the pinned PS1 core has a large
 savestate (0x440000 bytes). Lockstep keeps one state instead of a rollback state
 for every buffered frame; the trade-off is that a frame waits for every player's
 input, which can add latency or brief stalls on slower connections.
 
-Keep the game dump, region, BIOS choice, core version and core options identical
-on every console. The package enables the RetroArch public lobby, NAT traversal
+Keep the exact same CUE file and every referenced BIN track byte-for-byte
+identical on all consoles, along with the same region, BIOS file, core version
+and core options. The package enables the RetroArch public lobby, NAT traversal
 and the Madrid relay endpoint by default. If direct connection is needed,
-forward TCP/UDP port 55435 on the host router. Network restrictions or relay
-availability can still prevent a connection. For a private match, set a Netplay
-Server Password on the host and share it only with invited players.
+forward TCP port 55435 on the host router. Network restrictions or relay
+availability can still prevent a connection. For a password-protected match,
+set a Netplay Server Password on the host and share it only with invited players.
+The room may still appear in the public host list.
 
 PSN is not initialized or required by this homebrew build. An internet
 connection is still required for online Netplay.
@@ -279,7 +306,10 @@ test -s "$OUT"
 MAGIC="$(od -An -tx1 -N4 "$OUT" | tr -d ' \n')"
 test "$MAGIC" = "7f504b47"
 
-sha256sum "$OUT" > "$OUT.sha256"
+(
+    cd "$ROOT/build-artifacts"
+    sha256sum "Crash-Bash-Online-PS3.pkg" > "Crash-Bash-Online-PS3.pkg.sha256"
+)
 cat > "$ROOT/build-artifacts/BUILD-MANIFEST.txt" <<EOF
 Package: Crash Bash Online — PS3
 Application ID: $APP_ID
@@ -290,8 +320,9 @@ RetroArch assets commit: $ASSETS_COMMIT
 libretro-super metadata commit: $LIBRETRO_SUPER_COMMIT
 Netplay: RetroArch Netplay, PSN-independent
 Synchronization: lockstep (one savestate; PS1 state size 0x440000 bytes)
-Player limit: 1 host + 3 remote clients (4 total)
+Configured maximum: 1 host + 3 remote clients (4 total; hardware test pending)
 PCSX-ReARMed Multitap: Port 1
+PS3 user profile: /dev_hdd0/home/<user-id>/retroarch/CBASH0001/
 Game data and BIOS: not included
 EOF
 
