@@ -22,7 +22,7 @@ assert sfo_values.get("TITLE_ID") == app_id, "SFO template TITLE_ID must match t
 assert sfo_values.get("TITLE") == "Crash Bash Online"
 assert sfo_values.get("CATEGORY") == "HG"
 assert '/dev_hdd0/game/CBON00001/USRDIR/cores/pcsx_rearmed_libretro_psl1ght.SELF' in script
-assert 'make -C "$RA" -f Makefile.psl1ght -j"$JOBS" all CONTENTID="$CONTENT_ID"' in script
+assert 'make -C "$RA" -f Makefile.psl1ght -j"$JOBS" create-core CONTENTID="$CONTENT_ID"' in script
 assert 'make_self_npdrm "$RA/build/retroarch_psl1ght.elf" "$USRDIR/EBOOT.BIN" "$CONTENT_ID"' in script
 assert '"$NM" -g "$RA/build/retroarch_psl1ght.elf"' in script, "Check symbols in the exact ELF wrapped into EBOOT.BIN"
 assert 'sfo --title "$APP_TITLE" --appid "$APP_ID" -f "$ROOT/sfo.xml"' in script
