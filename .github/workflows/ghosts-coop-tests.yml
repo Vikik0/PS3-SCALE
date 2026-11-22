@@ -75,6 +75,19 @@ jobs:
           grep -q 'issplitscreenplayerprimary' decompiled/iw6/ghc_campaign_local_session.gsc
           grep -q 'level.playengineeffects' decompiled/iw6/ghc_campaign_local_session.gsc
           grep -q 'cz805bren' decompiled/iw6/ghc_campaign_local_session.gsc
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path("client/ps3/gsc/ghc_campaign_local_session.manifest.json").read_text())
+          source = Path("client/ps3/gsc/ghc_campaign_local_session.gsc").read_bytes()
+          binary = Path("compiled/iw6/ghc_campaign_local_session.gscbin").read_bytes()
+          assert hashlib.sha256(source).hexdigest() == manifest["source_sha256"], "session bridge source hash mismatch"
+          assert hashlib.sha256(binary).hexdigest() == manifest["compiled_gscbin_sha256"], "session bridge bytecode hash mismatch"
+          assert len(binary) == manifest["compiled_gscbin_bytes"], "session bridge bytecode size mismatch"
+          print(f"Session bridge manifest verified: source={manifest['source_sha256']}, binary_bytes={len(binary)}")
+          PY
       - uses: actions/upload-artifact@v6
         with:
           name: ghosts-campaign-gsc-registry
@@ -87,6 +100,7 @@ jobs:
           path: |
             experiments/ghosts-campaign-coop/compiled/iw6/ghc_campaign_local_session.gscbin
             experiments/ghosts-campaign-coop/client/ps3/gsc/ghc_campaign_local_session.gsc
+            experiments/ghosts-campaign-coop/client/ps3/gsc/ghc_campaign_local_session.manifest.json
 
   protocol-header:
     runs-on: ubuntu-latest
