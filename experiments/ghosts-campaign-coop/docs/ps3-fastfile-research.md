@@ -43,11 +43,11 @@ References: [CoD-Research FastFiles](https://github.com/primetime43/CoD-Research
 Read-only PS3 Ghosts .ff inspector and zone extractor. It:
 
 - validates IWff0100 and version 0x22E;
-- locates IWffS100 in the first 64 KiB and applies the documented A + 0x20000 rule;
-- expands the 64 KiB raw-deflate blocks;
+- locates IWffS100 in the first 0x40000 bytes (the supplied Clockwork marker is at 0x16644) and applies A + 0x20000;
+- expands 64 KiB raw-deflate blocks and accepts/reports the four opaque bytes observed after each compressed block;
 - recognizes short and long IW6 asset headers and expands valid inline zlib streams;
 - records file/zone sizes, block count, inner stream count, SHA-256 and any trailing bytes;
-- refuses to overwrite the source file and refuses to write an incomplete zone.
+- refuses to overwrite the source file; it can emit both the outer-decompressed raw zone and the inner-inflated zone, and refuses to write an unparsed tail unless --allow-unparsed-tail is explicit.
 
 Example:
 
@@ -59,7 +59,7 @@ The known retail writer terminates the block stream with the two-byte marker 00 
 
 ### 2. tools/ps3_zone_script_export.py
 
-Scans an already inflated .zone and exports validated .gsc, .csc, and compiled GSC magic assets. It recognizes the short and long IW6 headers, validates lengths and safe asset paths, writes a JSON inventory, and never edits the source zone.
+Scans the outer-decompressed raw .zone (inline asset zlib streams remain compressed). It recognizes short and long IW6 headers, rebuilds the GSC Tool ScriptFile wrapper from long assets, exports short assets as RawFiles or source, validates lengths and safe paths, and writes a JSON inventory.
 
 ~~~powershell
 python tools/ps3_zone_script_export.py "C:\Ghosts\analysis\common.zone" "C:\Ghosts\analysis\scripts" --report-json "C:\Ghosts\analysis\scripts.json"
@@ -75,7 +75,7 @@ The exporter deliberately does not classify assets by a hard-coded type ID. Publ
 
 ## Test status and limitations
 
-Both tools have synthetic-fixture tests for patch/base marker offsets, outer block decoding, inner zlib inflation, short/long asset headers, compiled GSC detection, malformed inputs, and output path safety. These tests validate the parser logic only. Neither tool has yet been run against an actual BLUS31270/BLES/NPEB retail .ff file in this workspace.
+Both tools have synthetic-fixture tests for retail block trailers, marker offsets beyond 64 KiB, raw/inner zone output, GSC wrapper reconstruction, malformed inputs, and output path safety. Phase 7 also ran the tools against the user's exact BLUS31270 common.ff, clockwork.ff, patch_common.ff, and patch_common_mp.ff files. Counts, hashes, TU 1.16 executable metadata, and the remaining Clockwork tail/MapEnts limitations are recorded in docs/phase7-retail-validation.md.
 
 The known multi-zone DLC files common_alien_dlc_updated_mp.ff and common_core_dlc_updated_mp.ff use a different container and are outside this parser's current scope. The normal PS3 retail patch/base variants are the target.
 
@@ -115,7 +115,7 @@ References: [GSC Tool README](https://github.com/xensik/gsc-tool/blob/dev/README
 
 ### Compiled GSC validation
 
-The script exporter now validates the GSC Tool IW binary wrapper before treating a body as compiled script: GSC NUL magic, three little-endian 32-bit lengths, exact stored-buffer/bytecode size, and zlib expansion of the stack buffer when compressed. A magic-only false positive is no longer exported as a compiled script. The public GSC Tool README and asset serializer are the format references.
+The script exporter does not expect GSC magic to be present in the original FastFile asset body. It validates the long asset header, zlib-decompresses the stored stack buffer, reads bytecode immediately after the stored compressed stack, and constructs the GSC Tool wrapper (GSC NUL magic, three little-endian lengths, compressed stack, bytecode). It round-trip validates the wrapper before exporting it as a compiled-GSC candidate; GSC Tool decompilation remains the final confirmation.
 
 ### Windows batch decompilation
 
@@ -126,3 +126,9 @@ powershell -ExecutionPolicy Bypass -File tools\decompile_iw6_ps3_scripts.ps1 -Gs
 ~~~
 
 The helper copies the binary tree into the output directory before decompiling, so the original exported assets remain unchanged.
+
+## Phase 7 — actual retail sample validation
+
+The exact user-supplied BLUS31270 FastFiles and TU 1.16 executable set have now been parsed. See docs/phase7-retail-validation.md for file hashes and sizes, block counts, asset counts, SELF types and entry points. Key findings: Clockwork's marker is at 0x16644; its 2,048 valid blocks expand to a 128 MiB zone followed by 16,557,959 uninterpreted bytes. Its MapEnts pool entry is type 0x14 at index 4059 with pointer 0xFFFFFFFF, so spawn entities remain undecoded. The current extraction produces 109 compiled-GSC candidates, 54 RawFiles and one short source asset; the previous 109/109 decompile result was not repeated in this phase.
+
+The per-block four-byte suffix is reported as opaque; its meaning is not established. The exact end marker remains separate: 00 01 followed by four zero padding bytes. No modified FastFile is written or signed.
