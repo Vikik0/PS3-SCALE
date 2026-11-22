@@ -30,9 +30,9 @@ Do not change the core version, CUE/BIN content, region, BIOS file (or HLE choic
 6. From the companion's home menu, also test **OPEN CRASH BASH ONLINE**.
 7. Temporarily test without the RetroArch package installed and confirm the launcher reports the missing app rather than crashing.
 
-Pass criteria: both players see the same room membership and Ready state, the native companion launches the separate RetroArch app, and the missing-package path is handled cleanly.
+Pass criteria: both players see the same room membership and Ready state, the CUE picker finds the local disc, the room host starts RetroArch with Netplay hosting enabled, the client opens the RetroArch menu, and the missing-package path is handled cleanly.
 
-This is a matchmaking handoff only. After RetroArch opens, players still load the same CUE/BIN and manually host/join through RetroArch Netplay. The room code is not yet passed into Netplay, and the lobby does not synchronize game state.
+The host's Netplay nickname is `CB-ROOMCODE-HOST`. On the client, open **Netplay Host List** and select that exact nickname. Client selection remains manual; the lobby does not pass a transport endpoint or room ID into Netplay and does not synchronize game state itself.
 
 ## Test 1 — Single-console baseline
 
