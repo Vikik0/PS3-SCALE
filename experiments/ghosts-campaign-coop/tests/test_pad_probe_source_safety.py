@@ -25,6 +25,11 @@ class PadProbeSourceSafetyTests(unittest.TestCase):
         self.assertIn("for (i = 0; i < length; ++i)", source)
         self.assertIn("return 0;", source)
 
+    def test_log_marks_mode_as_operator_selected_not_auto_detected(self):
+        source = (PROBE / "module.c").read_text(encoding="utf-8")
+        self.assertIn("MODE_SOURCE=manual_mode_file", source)
+        self.assertIn("MODE_LABEL_IS_OPERATOR_SELECTED=1", source)
+
     def test_campaign_and_multiplayer_logs_are_separate(self):
         source = (PROBE / "module.c").read_text(encoding="utf-8")
         self.assertIn("ghosts_campaign_pad_probe.log", source)
