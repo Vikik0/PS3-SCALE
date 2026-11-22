@@ -111,8 +111,8 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
 
     def test_complete_player_routing_source_passes_static_gate(self):
         report = audit(self.write_source(passing_source()))
+        self.assertTrue(all(report["checks"].values()), report["checks"])
         self.assertEqual(report["status"], "SOURCE_ADAPTER_READY_FOR_MANUAL_REVIEW")
-        self.assertTrue(all(report["checks"].values()))
         self.assertEqual(report["unscoped_level_player_functions"], [])
         self.assertIn("clockwork_watch_player_pair", report["coordination_functions"])
 
