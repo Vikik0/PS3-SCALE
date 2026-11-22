@@ -153,6 +153,7 @@ ghc_campaign_interaction_finish( var_0, var_1, var_2 )
     }
 
     if ( level.ghc_campaign_interaction_owner_by_spot[var_1] != var_0
+        || !isdefined( level.ghc_campaign_interaction_active_spot_by_player[var_3] )
         || level.ghc_campaign_interaction_active_spot_by_player[var_3] != var_1 )
     {
         level.ghc_campaign_interaction_status = 5;
@@ -201,6 +202,9 @@ ghc_campaign_interaction_abort_player( var_0 )
 
 ghc_campaign_interaction_is_complete( var_0 )
 {
+    if ( !isdefined( level.ghc_campaign_interaction_completed_by_spot ) )
+        return 0;
+
     if ( var_0 < 0 || var_0 >= 8 )
         return 0;
 
@@ -212,6 +216,9 @@ ghc_campaign_interaction_is_complete( var_0 )
 
 ghc_campaign_interaction_owner_for_spot( var_0 )
 {
+    if ( !isdefined( level.ghc_campaign_interaction_owner_by_spot ) )
+        return undefined;
+
     if ( var_0 < 0 || var_0 >= 8 )
         return undefined;
 
