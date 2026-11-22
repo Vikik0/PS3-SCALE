@@ -533,11 +533,14 @@ test("room creator is the host and host role transfers when they leave", async (
   const joined = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
   let room = await call("GET", {}, joined.body.token, { code: host.body.room.code });
   assert.equal(room.body.room.hostPlayerId, host.body.player.id);
+  const originalNetplayId = room.body.room.netplayId;
 
   const left = await call("POST", { action: "leave" }, host.body.token);
   assert.equal(left.statusCode, 200);
   room = await call("GET", {}, joined.body.token, { code: host.body.room.code });
   assert.equal(room.body.room.hostPlayerId, joined.body.player.id);
+  assert.equal(room.body.room.netplayId === originalNetplayId, false);
+  assert.match(room.body.room.netplayId, /^[A-F0-9]{12}$/);
   assert.equal(room.body.room.players.length, 1);
 });
 
@@ -567,6 +570,8 @@ test("a ready two-player room stays locked and is not advertised as waiting", as
 test("an expired host seat is promoted before the remaining player heartbeats", async () => {
   const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  const initialRoom = await call("GET", {}, guest.body.token, { code: host.body.room.code });
+  const originalNetplayId = initialRoom.body.room.netplayId;
   const pathname = "cb-rooms/" + host.body.room.code + ".json";
   const stored = JSON.parse(blobs.get(pathname).body);
   stored.players[0].lastSeen = Date.now() - 11 * 60 * 1000;
@@ -576,6 +581,7 @@ test("an expired host seat is promoted before the remaining player heartbeats", 
   assert.equal(heartbeat.statusCode, 200);
   const room = await call("GET", {}, guest.body.token, { code: host.body.room.code });
   assert.equal(room.body.room.hostPlayerId, guest.body.player.id);
+  assert.notEqual(room.body.room.netplayId, originalNetplayId);
   assert.equal(room.body.room.status, "waiting");
 });
 
