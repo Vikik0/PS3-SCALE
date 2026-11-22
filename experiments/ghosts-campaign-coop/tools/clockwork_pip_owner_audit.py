@@ -63,7 +63,7 @@ def audit(interior_source: str, pip_source: str) -> dict:
         "pip_enable_creates_pip_for_selected_player": "player newpip()" in enable,
         "pip_enable_records_current_owner": "level.pintoscreenedge_player = player" in enable,
         "pip_enable_stops_previous_owner_pip": (
-            'level.pintoscreenedge notify( "stop_interference" )' in enable
+            enable.count('level.pintoscreenedge notify( "stop_interference" );') >= 2
             and "level.pintoscreenedge.enable = 0" in enable
         ),
         "pip_timer_accepts_player": bool(re.search(r"\bplayer\b", timer_sig)),
