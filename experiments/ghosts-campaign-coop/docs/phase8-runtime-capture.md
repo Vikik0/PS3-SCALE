@@ -96,12 +96,12 @@ The PS3DK build job packages the diagnostic PRX, fake-signed SPRX, analysis ELF,
 
 ## 7. Verified CI build result
 
-GitHub Actions run 45019924511 passed all five jobs. The server/network suite completed 117/117 tests, and the PS3DK job built the pad-probe PRX and passed prx-gen validation. Artifact ID: 14753341454; package size: 100,676 bytes; SHA-256: 3cfc7716b9e9713e49b8006feac682f28f855d8b8cf7b70747786061f9dd2502.
+GitHub Actions run 45021075125 passed all five jobs. The server/network suite completed 122/122 tests, and the PS3DK job built the pad-probe PRX and passed prx-gen validation. Artifact ID: 14753498564; package size: 101,345 bytes; SHA-256: 4ca7aeb389a96b907689eeb846437f61eb5fa8b2d8977bde9712805f771fecd1.
 
 The archive contains:
-- ghosts_campaign_pad_probe.prx — 145,272 bytes;
-- ghosts_campaign_pad_probe.fake.sprx — 147,192 bytes;
-- ghosts_campaign_pad_probe.elf — 111,304 bytes;
+- ghosts_campaign_pad_probe.prx — 145,336 bytes;
+- ghosts_campaign_pad_probe.fake.sprx — 147,256 bytes;
+- ghosts_campaign_pad_probe.elf — 111,368 bytes;
 - Arabic instructions and both Campaign/Multiplayer mode files.
 
 The build is verified; hardware loading is not. Do not treat the CI artifact as a playable game mod.
