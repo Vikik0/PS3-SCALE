@@ -82,3 +82,5 @@ The bridge now has a separate read-only check, ghc_campaign_native_pair_is_curre
 
 The bridge uses this check before reusing an already-ready session, applying Player 2's loadout, and beginning or finishing a drill interaction. If the pair is no longer valid, it marks the session not ready and releases both drill locks without marking either spot complete. This closes the stale-entity case where a controller disconnects or the engine replaces one local player while the Campaign script still holds an old entity reference.
 
+If validation fails, ghc_campaign_invalidate_local_session() sets status 8, releases both drill locks, clears the stale secondary alias and player handles, and preserves level.player only when the stored primary is still a valid native primary player. A fresh main() call can then attempt a bounded rebind. Initial single-player Campaign startup does not clear the normal level.player alias because this cleanup path runs only after a previously ready local pair becomes invalid.
+
