@@ -196,13 +196,13 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         source_hash = hashlib.sha256(BRIDGE.read_bytes()).hexdigest()
         self.assertEqual(
             manifest["source_sha256"],
-            "560417dcadd38187537c117dadff8f674021c664d9f94b79cd485096cb506a8f",
+            "3072ee96a5207d4787164991aadf3a0cdde87facdf6b5e8cd17f74f6b8bcb055",
         )
         self.assertEqual(source_hash, manifest["source_sha256"])
-        self.assertEqual(manifest["compiled_gscbin_bytes"], 1798)
+        self.assertEqual(manifest["compiled_gscbin_bytes"], 1891)
         self.assertEqual(
             manifest["compiled_gscbin_sha256"],
-            "dc846bbe1e3256f1fb8aae20913722335afe17105b61607322e890d892751a1f",
+            "7a1be335a18217b457781a976ea8757d96e571eec9170101b2bff723c4003079",
         )
         self.assertIn("not injected or runtime-tested", manifest["status"])
 
