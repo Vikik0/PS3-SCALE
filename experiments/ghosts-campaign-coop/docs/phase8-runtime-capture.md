@@ -90,3 +90,16 @@ Before a hook is considered, analysis must establish:
 ## 6. CI artifact package
 
 The PS3DK build job packages the diagnostic PRX, fake-signed SPRX, analysis ELF, Arabic usage notes, and both mode-selection text files as the ghosts-campaign-pad-probe artifact. The PRX passed prx-gen build/check in CI. This proves the module compiles and its imports are structurally valid; it does not prove that it has been loaded on a PS3.
+
+
+## 7. Verified CI build result
+
+GitHub Actions run 45019924511 passed all five jobs. The server/network suite completed 117/117 tests, and the PS3DK job built the pad-probe PRX and passed prx-gen validation. Artifact ID: 14753341454; package size: 100,676 bytes; SHA-256: 3cfc7716b9e9713e49b8006feac682f28f855d8b8cf7b70747786061f9dd2502.
+
+The archive contains:
+- ghosts_campaign_pad_probe.prx — 145,272 bytes;
+- ghosts_campaign_pad_probe.fake.sprx — 147,192 bytes;
+- ghosts_campaign_pad_probe.elf — 111,304 bytes;
+- Arabic instructions and both Campaign/Multiplayer mode files.
+
+The build is verified; hardware loading is not. Do not treat the CI artifact as a playable game mod.
