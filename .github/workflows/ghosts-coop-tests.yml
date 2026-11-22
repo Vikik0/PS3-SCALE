@@ -184,7 +184,7 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/experiments/ghosts-campaign-coop/client/ps3/prx/build"
           cp "$probe_out/libghosts_coop_stub.a" "$GITHUB_WORKSPACE/experiments/ghosts-campaign-coop/client/ps3/prx/build/"
           install -m 0644 "$probe_out/libghosts_coop_stub.a" "$PS3DK/ppu/lib/"
-          for name in libsysmodule_stub libnet_stub libssl_stub libhttp_stub libhttp_util_stub libio_stub; do
+          for name in libsysmodule_stub libnet_stub libssl_stub libhttp_stub libhttp_util_stub libio_stub libfs_stub liblv2_stub; do
             input="$PS3_TOOLCHAIN_ROOT/tools/nidgen/nids/extracted/$name.yaml"
             out="$RUNNER_TEMP/ps3-stubs/$name"
             mkdir -p "$out"
@@ -195,6 +195,8 @@ jobs:
           done
       - name: Build and validate CEX-compatible PRX bootstrap
         run: make -C experiments/ghosts-campaign-coop/client/ps3/prx PS3DEV="$PS3DEV" PS3DK="$PS3DK"
+      - name: Build and validate read-only Campaign/Multiplayer pad probe
+        run: make -C experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe PS3DEV="$PS3DEV" PS3DK="$PS3DK"
       - name: Link and validate a PRX importer against Ghosts exports
         shell: bash
         run: |
@@ -213,6 +215,13 @@ jobs:
             experiments/ghosts-campaign-coop/client/ps3/prx/build/ghosts_coop.fake.sprx
             experiments/ghosts-campaign-coop/client/ps3/prx/build/ghosts_coop.elf
             experiments/ghosts-campaign-coop/client/ps3/prx/build/libghosts_coop_stub.a
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ghosts-campaign-pad-probe
+          path: |
+            experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/build/ghosts_campaign_pad_probe.prx
+            experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/build/ghosts_campaign_pad_probe.fake.sprx
+            experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/build/ghosts_campaign_pad_probe.elf
 
   worker-check:
     runs-on: ubuntu-latest
