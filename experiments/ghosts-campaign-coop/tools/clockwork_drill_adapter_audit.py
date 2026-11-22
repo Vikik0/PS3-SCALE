@@ -37,12 +37,14 @@ RELATED_TARGETS = (
     "restore_footstep_notetrack_scripts",
     "drillthrough_plate_sound",
     "stop_current_car_watcher",
+    "clockwork_drill_plant_sound",
 )
 PRIMARY_ONLY_TARGETS = ("switchmsg",)
 COORDINATION_TARGETS = (
     "clockwork_setup_player_two",
     "handle_drill_ammo_counter",
     "clockwork_watch_player_pair",
+    "new_trench_setup",
 )
 
 REFERENCE_FASTFILE_SHA256 = "a2ac70c7349047f2eded5f45a5e46ff8278689839fe1655106263520fe639783"
@@ -300,6 +302,28 @@ def audit(
         and bool(PLAYER_RE.findall(body("switchmsg")))
         and p2_drill_press_grant
     )
+    drill_owner_returned_to_caller = (
+        len(re.findall(r"return\\s+drill_player\\s*;", body("handle_drill_spot"))) >= 2
+    )
+    post_drill_animation_uses_returned_owner = (
+        _has(body("new_trench_setup"), r"drill_player_1\\s*=\\s*handle_drill_spot\\s*\\(")
+        and _has(body("new_trench_setup"), r"drill_player_2\\s*=\\s*handle_drill_spot\\s*\\(")
+        and "drill_player_1 playerlinktodelta" in body("new_trench_setup")
+        and "drill_player_2 playerlinktodelta" in body("new_trench_setup")
+        and "level.player playerlinktodelta" not in body("new_trench_setup")
+    )
+    player_scoped_drill_plant_audio = (
+        "clockwork_drill_plant_sound" in body("handle_drill_spot")
+        and signatures.get("clockwork_drill_plant_sound") == [["player"]]
+        and "player playsound" in body("clockwork_drill_plant_sound")
+        and "level.player" not in body("clockwork_drill_plant_sound")
+    )
+    player_scoped_drill_pullout_audio = (
+        literal_body("handle_misc_drill_details").count(
+            'player playsound( "clkw_scn_vault_drill_pullout" )'
+        ) >= 2
+        and "maps\\\\clockwork_audio::drill_pullout" not in literal_body("handle_misc_drill_details")
+    )
 
     checks = {
         "all_required_functions_found": not missing,
@@ -318,6 +342,10 @@ def audit(
         "death_disconnect_reopens_drill_trigger": death_disconnect_recovery,
         "logan_only_pickup_preserved_and_secondary_granted_drill": primary_only_switchmsg,
         "secondary_drill_press_removed_after_vault": p2_drill_press_cleanup,
+        "drill_owner_returned_to_caller": drill_owner_returned_to_caller,
+        "post_drill_animation_uses_returned_owner": post_drill_animation_uses_returned_owner,
+        "drill_plant_audio_uses_actual_owner": player_scoped_drill_plant_audio,
+        "drill_pullout_audio_uses_actual_owner": player_scoped_drill_pullout_audio,
     }
 
     if reference_source is not None:
@@ -381,6 +409,7 @@ def audit(
             "This is static source analysis only; it does not load the script into the retail Campaign VM.",
             "The patch listens directly to the Clockwork trigger entity's standard trigger event to capture its toucher; the exact MapEnts trigger class and runtime event delivery still need in-game confirmation.",
             "The patch consumes the native secondary-player alias if the engine already created it; it does not create a second Campaign Local Client.",
+            "The drill PIP camera is still managed through the shared level.pintoscreenedge path, whose stock initialization is tied to level.player; independent Player 2 PIP/HUD rendering remains a separate runtime/asset task.",
             "A clean source audit and successful GSC compilation do not prove independent camera/HUD rendering or playable local co-op.",
             "The compiled GSCBIN still needs to be inserted into a rebuilt Clockwork FastFile; no installable PKG is produced by this audit.",
         ],
