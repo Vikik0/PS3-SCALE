@@ -178,7 +178,7 @@ async function getLibretroLobbyEntries() {
 function netplayEndpoint(fields) {
   if (!fields || fields.connectable !== true) return null;
   const updatedAt = Date.parse(fields.updated || fields.created || "");
-  if (Number.isFinite(updatedAt) && Date.now() - updatedAt > 120000) return null;
+  if (Number.isFinite(updatedAt) && Date.now() - updatedAt > 90000) return null;
 
   const validHost = (value) =>
     typeof value === "string" &&
@@ -405,11 +405,13 @@ module.exports = async function handler(req, res) {
       const hostPlayerId = active.some((entry) => entry.id === record.room.hostPlayerId)
         ? record.room.hostPlayerId
         : active[0]?.id;
-      if (!hostPlayerId || !record.room.netplayId) {
-        return reply(res, 503, { error: "This room is missing its Netplay identity. Create a new room." });
+      if (!hostPlayerId) {
+        return reply(res, 409, { error: "No active room host is available." });
       }
 
-      const hostNickname = "CB-" + record.room.netplayId + "-HOST";
+      // Rooms created before 0.6.0 used the invite code as their RetroArch nickname.
+      const netplayId = record.room.netplayId || record.room.code;
+      const hostNickname = "CB-" + netplayId + "-HOST";
       const entries = await getLibretroLobbyEntries();
       const hostEntry = entries.find((entry) =>
         entry?.fields?.username === hostNickname
