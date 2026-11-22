@@ -40,7 +40,6 @@ RELATED_TARGETS = (
 )
 PRIMARY_ONLY_TARGETS = ("switchmsg",)
 COORDINATION_TARGETS = (
-    "watch_for_drill_trigger",
     "clockwork_setup_player_two",
     "handle_drill_ammo_counter",
     "clockwork_watch_player_pair",
@@ -223,11 +222,13 @@ def audit(
     }
 
     trigger_capture = (
-        _has(body("watch_for_drill_trigger"), r"flag_wait\s*\(\s*var_0\s*\)")
-        and "level.ghc_clockwork_drill_activator" in body("watch_for_drill_trigger")
+        _has(body("handle_drill_spot"), r"getent\s*\(\s*var_0\s*,")
+        and _has(body("handle_drill_spot"), r"drill_trigger\s+waittill\s*\(")
+        and _has(literal_body("handle_drill_spot"), r"waittill\s*\(\s*\"trigger\"")
     )
     activator_forwarded = (
-        "level.ghc_clockwork_drill_activator" in body("handle_drill_spot")
+        "drill_activator" in body("handle_drill_spot")
+        and _has(body("handle_drill_spot"), r"flag_set\s*\(\s*var_1\s*,\s*drill_player\s*\)")
         and _has(body("handle_drill_spot"), r"thread\s+handle_drilling\s*\(\s*var_2\s*,\s*var_1\s*,\s*drill_player\s*\)")
     )
     native_secondary_check = (
@@ -254,6 +255,10 @@ def audit(
         and "level.playengineeffects" in body("handle_drill_ammo_counter")
         and "ammoCounterHide" in literal_body("handle_drill_ammo_counter")
     )
+    ammo_counter_restores_original = (
+        _has(body("handle_drill_ammo_counter"), r"getdvar\s*\(\s*\"ammoCounterHide\"")
+        and _has(literal_body("handle_drill_ammo_counter"), r"setsaveddvar\s*\(\s*\"ammoCounterHide\"\s*,\s*var_0\s*\)")
+    )
     player_scoped_signatures = (
         signatures.get("handle_drilling") == [["var_0", "var_1", "player"]]
         and signatures.get("handle_misc_drill_details") == [["player"]]
@@ -276,9 +281,10 @@ def audit(
     )
     death_disconnect_recovery = (
         "!isalive( drill_player )" in body("handle_drill_spot")
-        and "flag_clear( var_1 )" in body("handle_drill_spot")
-        and "watch_for_drill_trigger" in body("handle_drill_spot")
-        and "enable_trigger_with_targetname( var_0 )" in body("handle_drill_spot")
+        and _has(body("handle_drill_spot"), r"flag_clear\s*\(\s*var_1\s*\)")
+        and _has(body("handle_drill_spot"), r"drill_trigger\s+waittill\s*\(")
+        and _has(body("handle_drill_spot"), r"enable_trigger_with_targetname\s*\(\s*var_0\s*\)")
+        and _has(body("handle_drill_spot"), r"wait\s+0\.1")
     )
     p2_drill_press_grant = (
         "level.ghc_clockwork_drill_available = 1" in body("switchmsg")
@@ -302,6 +308,7 @@ def audit(
         "secondary_clockwork_loadout_present": secondary_loadout,
         "pair_watcher_starts_player_helpers": pair_watcher,
         "ammo_counter_checks_both_players": ammo_counter,
+        "ammo_counter_restores_original_setting": ammo_counter_restores_original,
         "drill_helpers_use_explicit_player_arguments": player_scoped_signatures,
         "no_unsafe_level_player_references_in_drill_call_graph": not unscoped_functions,
         "aiming_state_is_per_player": per_player_aim_state,
@@ -370,7 +377,7 @@ def audit(
         "reference_baseline_required_for_strict_mode": require_reference_baseline,
         "limitations": [
             "This is static source analysis only; it does not load the script into the retail Campaign VM.",
-            "The trigger activator payload is supported by the supplied common trigger callback source, but the exact Clockwork MapEnts trigger class still needs runtime confirmation.",
+            "The patch listens directly to the Clockwork trigger entity's standard trigger event to capture its toucher; the exact MapEnts trigger class and runtime event delivery still need in-game confirmation.",
             "The patch consumes the native secondary-player alias if the engine already created it; it does not create a second Campaign Local Client.",
             "A clean source audit and successful GSC compilation do not prove independent camera/HUD rendering or playable local co-op.",
             "The compiled GSCBIN still needs to be inserted into a rebuilt Clockwork FastFile; no installable PKG is produced by this audit.",
