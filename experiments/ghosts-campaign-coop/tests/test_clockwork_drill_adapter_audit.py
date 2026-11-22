@@ -156,6 +156,16 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
         self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
         self.assertFalse(report["checks"]["death_disconnect_reopens_drill_trigger"])
 
+    def test_drill_worker_does_not_wait_forever_on_a_cleared_start_flag(self):
+        source = passing_source().replace(
+            '    if ( player adsbuttonpressed( "ads" ) )\\n',
+            '    common_scripts\\\\utility::flag_wait( var_1 );\\n'
+            '    if ( player adsbuttonpressed( "ads" ) )\\n',
+        )
+        report = audit(self.write_source(source))
+        self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
+        self.assertFalse(report["checks"]["drill_worker_does_not_block_on_start_flag"])
+
     def test_primary_alias_fallback_and_identity_checks_are_allowed(self):
         report = audit(self.write_source(passing_source()))
         row = report["target_functions"]["handle_drill_spot"][0]
