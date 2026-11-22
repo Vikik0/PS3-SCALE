@@ -12,7 +12,7 @@
 typedef struct { char code[7]; char host[CB_ONLINE_NAME_MAX]; int players; int max_players; } CBOnlineRoom;
 typedef struct { char id[CB_ONLINE_ID_MAX]; char name[CB_ONLINE_NAME_MAX]; int ready; } CBOnlinePlayer;
 typedef struct { char code[7]; char token[CB_ONLINE_TOKEN_MAX]; char player_id[CB_ONLINE_ID_MAX]; char player_name[CB_ONLINE_NAME_MAX]; int ready; } CBOnlineSession;
-typedef struct { char code[7]; int is_private; int is_ready; int player_count; CBOnlinePlayer players[CB_ONLINE_PLAYER_MAX]; } CBOnlineRoomView;
+typedef struct { char code[7]; char host_player_id[CB_ONLINE_ID_MAX]; int is_private; int is_ready; int player_count; CBOnlinePlayer players[CB_ONLINE_PLAYER_MAX]; } CBOnlineRoomView;
 int cb_online_init(void);
 void cb_online_shutdown(void);
 int cb_online_health(char *error, size_t error_size);
