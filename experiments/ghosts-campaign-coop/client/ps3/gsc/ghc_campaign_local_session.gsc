@@ -38,6 +38,10 @@ main()
         ghc_campaign_drill_abort_slot( 1 );
     }
 
+    if ( isdefined( level.ghc_campaign_session_ready )
+        && level.ghc_campaign_session_ready )
+        ghc_campaign_clear_session_aliases();
+
     level.ghc_campaign_session_ready = 0;
     level.ghc_campaign_session_status = 0;
     level.ghc_campaign_player_0 = undefined;
@@ -162,12 +166,28 @@ ghc_campaign_bind_native_local_pair()
     return 1;
 }
 
+ghc_campaign_clear_session_aliases()
+{
+    if ( isdefined( level.ghc_campaign_player_0 )
+        && level.ghc_campaign_player_0 issplitscreenplayer()
+        && level.ghc_campaign_player_0 issplitscreenplayerprimary() )
+        level.player = level.ghc_campaign_player_0;
+    else
+        level.player = undefined;
+
+    level.playengineeffects = undefined;
+    level.ghc_campaign_player_0 = undefined;
+    level.ghc_campaign_player_1 = undefined;
+    level.playerpiggyback = undefined;
+}
+
 ghc_campaign_invalidate_local_session()
 {
-    level.ghc_campaign_session_ready = 0;
-    level.ghc_campaign_session_status = 8;
     ghc_campaign_drill_abort_slot( 0 );
     ghc_campaign_drill_abort_slot( 1 );
+    ghc_campaign_clear_session_aliases();
+    level.ghc_campaign_session_ready = 0;
+    level.ghc_campaign_session_status = 8;
     return 0;
 }
 
