@@ -1,4 +1,5 @@
 #include "online_menu.h"
+#include "game_launcher.h"
 #include "online.h"
 #include <stdio.h>
 #include <string.h>
@@ -191,11 +192,12 @@ static void draw_room(const CBOnlineRoomView *view, const CBOnlineSession *sessi
             draw_text((float)x + 18, (float)y + 23, 16, 0x9bb4c2ff, slot);
         }
     }
-    if (view->is_ready) draw_text(58, 338, 16, 0x7ce0a8ff, "FOUR SEATS READY - LOBBY ONLY");
-    else draw_text(58, 338, 15, 0x9bb4c2ff, "Waiting for players. Game sync is not connected.");
+    if (view->is_ready) draw_text(58, 338, 16, 0x7ce0a8ff, "ALL PLAYERS READY - PRESS START TO OPEN CRASH BASH");
+    else if (view->player_count < 2) draw_text(58, 338, 15, 0x9bb4c2ff, "Waiting for at least two players.");
+    else draw_text(58, 338, 15, 0x9bb4c2ff, "Waiting for every player to mark READY.");
     draw_rect(58, 390, 720, 38, 0x0b1720ff);
     draw_text(72, 398, 14, 0x9bb4c2ff, status);
-    draw_text(56, 474, 12, 0x6d8794ff, "CROSS TOGGLE READY  SQUARE REFRESH  CIRCLE LEAVE ROOM");
+    draw_text(56, 474, 12, 0x6d8794ff, "CROSS READY  START LAUNCH GAME  SQUARE REFRESH  CIRCLE LEAVE");
     tiny3d_Flip();
 }
 
@@ -218,7 +220,7 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
     unsigned int room_list_poll_frames = 0;
     u16 old_up = 0, old_down = 0, old_left = 0, old_right = 0;
     u16 old_cross = 0, old_circle = 0, old_triangle = 0, old_square = 0;
-    u16 old_l1 = 0, old_l2 = 0, old_r1 = 0;
+    u16 old_l1 = 0, old_l2 = 0, old_r1 = 0, old_start = 0;
 
     memset(&session, 0, sizeof(session));
     memset(&view, 0, sizeof(view));
@@ -267,7 +269,7 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
         padData data;
         u16 up = 0, down = 0, left = 0, right = 0;
         u16 cross = 0, circle = 0, triangle = 0, square = 0;
-        u16 l1 = 0, l2 = 0, r1 = 0;
+        u16 l1 = 0, l2 = 0, r1 = 0, start = 0;
         sysUtilCheckCallback();
 
         if (ioPadGetInfo(&info) == 0) {
@@ -279,7 +281,7 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                     left = data.BTN_LEFT; right = data.BTN_RIGHT;
                     cross = data.BTN_CROSS; circle = data.BTN_CIRCLE;
                     triangle = data.BTN_TRIANGLE; square = data.BTN_SQUARE;
-                    l1 = data.BTN_L1; l2 = data.BTN_L2; r1 = data.BTN_R1;
+                    l1 = data.BTN_L1; l2 = data.BTN_L2; r1 = data.BTN_R1; start = data.BTN_START;
                     break;
                 }
             }
@@ -351,12 +353,22 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                                     rooms, &room_count, &selected, status, status_size);
                 } else snprintf(status, status_size, "Ready update: %.120s", error);
             }
+            if (start && !old_start && screen == SCREEN_ROOM) {
+                if (!view.is_ready) {
+                    snprintf(status, status_size, "At least two players must join and all must be READY.");
+                } else {
+                    cb_launch_game(error, sizeof(error));
+                    snprintf(status, status_size, "%.120s", error);
+                }
+            }
             if (square && !old_square && screen == SCREEN_ROOM) {
                 if (cb_online_get_room(&session, &view, error, sizeof(error)) != 0) {
                     if (session_is_gone(error)) {
                         return_to_rooms(&session, &view, &ready, &screen, &poll_frames,
                                         rooms, &room_count, &selected, status, status_size);
                     } else snprintf(status, status_size, "Room refresh: %.120s", error);
+                } else {
+                    ready = session.ready;
                 }
             }
             if (circle && !old_circle) {
@@ -381,7 +393,7 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
 
         old_up = up; old_down = down; old_left = left; old_right = right;
         old_cross = cross; old_circle = circle; old_triangle = triangle; old_square = square;
-        old_l1 = l1; old_l2 = l2; old_r1 = r1;
+        old_l1 = l1; old_l2 = l2; old_r1 = r1; old_start = start;
     }
 
     if (session.token[0]) cb_online_leave_room(&session, error, sizeof(error));
