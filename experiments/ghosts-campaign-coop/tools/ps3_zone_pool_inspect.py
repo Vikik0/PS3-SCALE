@@ -30,12 +30,18 @@ def inspect_pool(zone:bytes)->dict[str,Any]:
         if strings_start>len(zone):
             raise PoolError("tag pointer placeholder table is outside the zone")
         offset=strings_start
-        for _ in range(tag_count):
-            end=zone.find(b"\0",offset)
-            if end<0:
-                raise PoolError("unterminated zone tag string")
-            tags.append(zone[offset:end].decode("ascii","replace"))
-            offset=end+1
+        for index in range(tag_count):
+            pointer=struct.unpack_from(">i",zone,0x3C+index*4)[0]
+            if pointer==0:
+                tags.append("")
+            elif pointer==-1:
+                end=zone.find(b"\0",offset)
+                if end<0:
+                    raise PoolError("unterminated inline script string")
+                tags.append(zone[offset:end].decode("ascii","replace"))
+                offset=end+1
+            else:
+                raise PoolError(f"unsupported non-inline script-string pointer at index {index}: 0x{pointer & 0xffffffff:08X}")
         after_tags=offset
         best=None
         # Retail zones have a small variable trailer between tag strings and pool.
