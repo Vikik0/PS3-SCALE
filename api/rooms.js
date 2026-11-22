@@ -72,7 +72,7 @@ function publicRoom(room) {
   const active = activePlayers(room);
   return {
     code: room.code,
-    host: room.players?.[0]?.name || "Guest",
+    host: active[0]?.name || "Guest",
     players: active.length,
     maxPlayers: MAX_PLAYERS,
     createdAt: room.createdAt,
@@ -147,16 +147,19 @@ module.exports = async function handler(req, res) {
       }
       const record = await readRoom(code);
       if (!record) return reply(res, 404, { error: "Room not found." });
-      const player = findPlayer(record.room, claims.sub);
-      if (!player) return reply(res, 403, { error: "You are not a member of this room." });
-
       const active = activePlayers(record.room);
+      const player = active.find((entry) => entry.id === claims.sub);
+      if (!player) {
+        return reply(res, 403, { error: "Your room seat has expired. Rejoin the room." });
+      }
+
       return reply(res, 200, {
         room: {
           code: record.room.code,
           status: record.room.status === "ready" && active.length < MAX_PLAYERS ? "waiting" : record.room.status,
           isPrivate: record.room.isPrivate,
           players: active.map(({ id, name, ready }) => ({ id, name, ready })),
+          selfPlayerId: claims.sub,
           maxPlayers: MAX_PLAYERS,
           createdAt: record.room.createdAt,
           updatedAt: record.room.updatedAt
@@ -273,14 +276,19 @@ module.exports = async function handler(req, res) {
           return { write: false, status: 403, body: { error: "You are no longer in this room." } };
         }
         const now = Date.now();
-        currentPlayer.lastSeen = now;
-        if (typeof body.ready === "boolean") currentPlayer.ready = body.ready;
+        room.players = activePlayers(room, now);
+        const activePlayer = findPlayer(room, claims.sub);
+        if (!activePlayer) {
+          return { write: false, status: 403, body: { error: "Your room seat has expired. Rejoin the room." } };
+        }
+        activePlayer.lastSeen = now;
+        if (typeof body.ready === "boolean") activePlayer.ready = body.ready;
         const active = activePlayers(room, now);
         room.status = active.length === MAX_PLAYERS && active.every((entry) => entry.ready) ? "ready" : "waiting";
         room.updatedAt = now;
         return {
           status: 200,
-          body: { ok: true, players: room.players.map(({ id, name, ready }) => ({ id, name, ready })) }
+          body: { ok: true, players: active.map(({ id, name, ready }) => ({ id, name, ready })) }
         };
       });
       if (!outcome.found) return reply(res, 404, { error: "Room not found." });
@@ -301,15 +309,14 @@ module.exports = async function handler(req, res) {
         return reply(res, 400, { error: "A target player ID is required for room signaling." });
       }
       const outcome = await mutateRoom(code, (room) => {
+        const now = Date.now();
+        room.players = activePlayers(room, now);
         const currentPlayer = findPlayer(room, claims.sub);
         if (!currentPlayer) {
-          return { write: false, status: 403, body: { error: "You are no longer in this room." } };
+          return { write: false, status: 403, body: { error: "Your room seat has expired. Rejoin the room." } };
         }
-        const now = Date.now();
         const target = room.players.find((entry) =>
-          entry.id === targetPlayerId &&
-          entry.id !== currentPlayer.id &&
-          now - entry.lastSeen <= PLAYER_TTL_MS
+          entry.id === targetPlayerId && entry.id !== currentPlayer.id
         );
         if (!target) {
           return { write: false, status: 404, body: { error: "Target player is not an active member of this room." } };
@@ -333,9 +340,13 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === "poll") {
+      const activePlayer = activePlayers(record.room).find((entry) => entry.id === player.id);
+      if (!activePlayer) {
+        return reply(res, 403, { error: "Your room seat has expired. Rejoin the room." });
+      }
       const since = Number.isInteger(body.since) && body.since >= 0 ? body.since : 0;
       const signals = (record.room.signals || []).filter((signal) =>
-        signal.to === player.id && signal.id > since
+        signal.to === activePlayer.id && signal.id > since
       );
       return reply(res, 200, {
         signals,
@@ -349,9 +360,13 @@ module.exports = async function handler(req, res) {
         if (!currentPlayer) {
           return { write: false, status: 403, body: { error: "You are no longer in this room." } };
         }
-        room.players = room.players.filter((entry) => entry.id !== currentPlayer.id);
+        const now = Date.now();
+        room.players = activePlayers(room, now).filter((entry) => entry.id !== currentPlayer.id);
         room.signals = (room.signals || []).filter((signal) =>
-          signal.from !== currentPlayer.id && signal.to !== currentPlayer.id
+          signal.from !== currentPlayer.id &&
+          signal.to !== currentPlayer.id &&
+          room.players.some((entry) => entry.id === signal.from) &&
+          room.players.some((entry) => entry.id === signal.to)
         );
         room.status = room.players.length === 0 ? "closed" : "waiting";
         room.updatedAt = Date.now();
