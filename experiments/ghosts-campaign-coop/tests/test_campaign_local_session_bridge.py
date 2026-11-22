@@ -268,5 +268,37 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
                 self.assertNotIn(token, lowered)
 
 
+    def test_successful_bind_starts_one_guarded_session_monitor(self):
+        main = function_body(self.source, "main")
+        start = function_body(self.source, "ghc_campaign_start_session_monitor")
+        self.assertGreaterEqual(main.count("ghc_campaign_start_session_monitor()"), 3)
+        self.assertIn("level.ghc_campaign_session_monitor_active", start)
+        self.assertIn("thread ghc_campaign_watch_native_session()", start)
+        self.assertIn("return 1", start)
+
+    def test_session_monitor_revalidates_both_native_entities_and_campaign_aliases(self):
+        body = function_body(self.source, "ghc_campaign_watch_native_session")
+        self.assertIn("ghc_campaign_native_pair_is_current()", body)
+        self.assertIn("level.player == level.ghc_campaign_player_0", body)
+        self.assertIn("level.playengineeffects == level.ghc_campaign_player_1", body)
+        self.assertIn("while ( isdefined( level.ghc_campaign_session_ready )", body)
+
+    def test_session_monitor_requires_two_seconds_of_consecutive_failures(self):
+        body = function_body(self.source, "ghc_campaign_watch_native_session")
+        self.assertIn("var_0 >= 8", body)
+        self.assertIn("wait 0.25", body)
+        self.assertIn("ghc_campaign_invalidate_local_session()", body)
+
+    def test_session_monitor_resets_failure_count_after_valid_pair_returns(self):
+        body = function_body(self.source, "ghc_campaign_watch_native_session")
+        self.assertIn("var_0 = 0", body)
+        self.assertIn("level.ghc_campaign_session_monitor_active = undefined", body)
+
+    def test_session_monitor_does_not_create_or_rebind_players(self):
+        body = function_body(self.source, "ghc_campaign_watch_native_session").lower()
+        for token in ("spawnplayer(", "cloneplayer(", "playercmd_spawn", "playercmd_cloneplayer", "ghc_campaign_bind_native_local_pair("):
+            self.assertNotIn(token, body)
+
+
 if __name__ == "__main__":
     unittest.main()
