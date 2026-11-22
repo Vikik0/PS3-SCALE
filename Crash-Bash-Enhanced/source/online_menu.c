@@ -6,6 +6,7 @@
 #include <libfont.h>
 #include <io/pad.h>
 #include <sysutil/sysutil.h>
+#include <sys/time.h>
 #include <net/net.h>
 
 #define MENU_ROOM_LIMIT 8
