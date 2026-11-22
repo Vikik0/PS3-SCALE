@@ -41,9 +41,9 @@ prototype_app_id = re.search(r"^APPID := ([A-Z0-9]+)$", prototype_makefile, re.M
 prototype_content_id = re.search(r"^CONTENTID := ([A-Z0-9_-]+)$", prototype_makefile, re.M)
 prototype_title = re.search(r"^TITLE := (.+)$", prototype_makefile, re.M)
 assert prototype_app_id and re.fullmatch(r"[A-Z]{4}[0-9]{5}", prototype_app_id.group(1))
-assert prototype_content_id and prototype_content_id.group(1).startswith(
-    f"UP0001-{prototype_app_id.group(1)}_00-"
-), "Native lobby Content ID must match its app ID"
+assert prototype_content_id and prototype_content_id.group(1) == (
+    "UP0001-$(APPID)_00-0000000000000000"
+), "Native lobby Content ID must derive from its APPID variable"
 assert prototype_title and prototype_sfo_values.get("TITLE") == prototype_title.group(1)
 assert prototype_sfo_values.get("TITLE_ID") == prototype_app_id.group(1), (
     "Native lobby SFO TITLE_ID must match its Makefile APPID"
