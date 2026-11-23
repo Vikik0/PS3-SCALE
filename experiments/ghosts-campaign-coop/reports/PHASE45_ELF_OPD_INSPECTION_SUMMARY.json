@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "phase": 45,
+  "status": "ELF_OPD_INSPECTION_EXPANDED",
+  "tool_version": "0.1.2",
+  "changes": [
+    "complete OPD slot and invalid-pointer accounting",
+    "TOC mapping and zero-TOC evidence",
+    "section alignment and trailing-byte validation",
+    "operator seed-range candidate emitted only for structurally valid OPD sections"
+  ],
+  "validation_boundary": "Synthetic ELF fixtures only. The user's exact decrypted TU 1.16 PPU ELF is still required for real OPD evidence."
+}

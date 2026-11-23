@@ -71,6 +71,27 @@ def make_ppc64_elf_with_opd():
     return bytes(data)
 
 
+
+
+def make_ppc64_elf_with_mixed_opd():
+    """ELF with two valid, one invalid and one empty OPD descriptor."""
+    data = bytearray(make_ppc64_elf_with_opd())
+    struct.pack_into(">Q", data, 120 + 32, 0x20)
+    struct.pack_into(">Q", data, 120 + 40, 0x20)
+    struct.pack_into(">Q", data, 0x340 + 32, 0x20)
+    data[0x210:0x220] = struct.pack(">IIII", 0x1001, 0x3000, 0, 0)
+    return bytes(data)
+
+
+def make_ppc64_elf_with_trailing_opd_bytes():
+    data = bytearray(make_ppc64_elf_with_opd())
+    struct.pack_into(">Q", data, 120 + 32, 0x11)
+    struct.pack_into(">Q", data, 120 + 40, 0x11)
+    struct.pack_into(">Q", data, 0x340 + 32, 0x11)
+    data[0x210] = 0xAA
+    return bytes(data)
+
+
 class PpuElfTests(unittest.TestCase):
     def test_rejects_non_ppc64_elf(self):
         with self.assertRaisesRegex(ElfFormatError, "EM_PPC64"):
@@ -118,6 +139,19 @@ class PpuElfTests(unittest.TestCase):
         self.assertEqual(info["entry_descriptor"]["code_address"], "0x1010")
         self.assertEqual(info["entry_descriptor"]["toc"], "0x3000")
         self.assertEqual(info["module_toc"], "0x3000")
+        self.assertFalse(info["module_toc_mapped"])
+        self.assertEqual(info["descriptor_slots_total"], 2)
+        self.assertEqual(info["descriptor_slots_scanned"], 2)
+        self.assertEqual(info["empty_descriptors"], 0)
+        self.assertEqual(info["nonempty_descriptors"], 2)
+        self.assertEqual(info["valid_code_pointers"], 2)
+        self.assertEqual(info["invalid_code_pointers"], 0)
+        self.assertEqual(info["distinct_toc_values"], 1)
+        self.assertEqual(info["mapped_toc_values"], 0)
+        self.assertEqual(info["unmapped_toc_values"], 1)
+        self.assertEqual(info["operator_seed_range_candidate"]["virtual_address"], "0x2000")
+        self.assertEqual(info["operator_seed_range_candidate"]["size"], "0x10")
+        self.assertTrue(info["entry_descriptor"]["code_pointer_executable"])
 
     def test_inspection_reports_hash_and_operator_asserted_profile(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -138,6 +172,36 @@ class PpuElfTests(unittest.TestCase):
             path.write_bytes(make_ppc64_elf())
             with self.assertRaisesRegex(ValueError, "Title ID"):
                 inspect_file(path, "BLUS00000")
+
+
+    def test_opd_info_reconciles_empty_invalid_and_valid_descriptors(self):
+        info = PpuElf(make_ppc64_elf_with_mixed_opd()).opd_info()
+        self.assertEqual(info["descriptor_slots_total"], 4)
+        self.assertEqual(info["descriptor_slots_scanned"], 4)
+        self.assertEqual(info["empty_descriptors"], 1)
+        self.assertEqual(info["nonempty_descriptors"], 3)
+        self.assertEqual(info["valid_code_pointers"], 2)
+        self.assertEqual(info["invalid_code_pointers"], 1)
+        self.assertEqual(info["descriptor_count"], 2)
+        self.assertEqual(info["distinct_toc_values"], 1)
+        self.assertEqual(info["zero_toc_descriptors"], 0)
+        self.assertEqual(info["operator_seed_range_candidate"]["size"], "0x20")
+
+    def test_opd_info_does_not_offer_seed_range_for_under_aligned_section(self):
+        data = bytearray(make_ppc64_elf_with_opd())
+        struct.pack_into(">Q", data, 0x340 + 48, 4)
+        info = PpuElf(bytes(data)).opd_info()
+        self.assertEqual(info["section_alignment"], 4)
+        self.assertFalse(info["section_alignment_valid"])
+        self.assertIsNone(info["operator_seed_range_candidate"])
+
+    def test_opd_info_reports_trailing_bytes_and_withholds_seed_range(self):
+        info = PpuElf(make_ppc64_elf_with_trailing_opd_bytes()).opd_info()
+        self.assertEqual(info["descriptor_slots_total"], 2)
+        self.assertEqual(info["descriptor_slots_scanned"], 2)
+        self.assertEqual(info["trailing_bytes"], 1)
+        self.assertFalse(info["section_size_aligned"])
+        self.assertIsNone(info["operator_seed_range_candidate"])
 
 
 if __name__ == "__main__":

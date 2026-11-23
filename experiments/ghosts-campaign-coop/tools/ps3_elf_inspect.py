@@ -258,54 +258,164 @@ class PpuElf:
         return self.data[mapping.file_offset:mapping.file_offset + size]
 
     def opd_info(self) -> dict[str, Any]:
-        """Read the PS3 PPU 8-byte {u32 code, u32 TOC} function descriptors."""
+        """Inspect the PS3 PPU 8-byte {u32 code, u32 TOC} function descriptors."""
         entry = self.header["entry"]
         containing = [
             section for section in self.sections
             if section["size"] and section["address"] <= entry < section["address"] + section["size"]
         ]
         opd_section = min(containing, key=lambda section: section["size"]) if containing else None
-        entry_bytes = self.read_virtual(entry, 8)
-        entry_descriptor = None
         ranges = self.executable_ranges()
 
         def is_code(address: int) -> bool:
-            return any(lo <= address < hi for lo, hi in ranges)
+            return (
+                address != 0
+                and address % 4 == 0
+                and any(lo <= address < hi for lo, hi in ranges)
+            )
 
-        if entry_bytes:
+        def toc_is_mapped(address: int) -> bool:
+            return address != 0 and self.map_memory_address(address) is not None
+
+        entry_bytes = self.read_virtual(entry, 8)
+        entry_descriptor = None
+        if entry_bytes is not None:
             code, toc = struct.unpack(">II", entry_bytes)
-            if is_code(code):
-                entry_descriptor = {"opd_address": f"0x{entry:X}", "code_address": f"0x{code:X}", "toc": f"0x{toc:X}"}
+            entry_descriptor = {
+                "opd_address": f"0x{entry:X}",
+                "code_address": f"0x{code:X}",
+                "toc": f"0x{toc:X}",
+                "code_pointer_aligned": code % 4 == 0,
+                "code_pointer_executable": is_code(code),
+                "toc_zero": toc == 0,
+                "toc_mapped": toc_is_mapped(toc),
+            }
 
         descriptors: list[dict[str, Any]] = []
         toc_counts: dict[int, int] = {}
+        toc_values: set[int] = set()
+        mapped_toc_values: set[int] = set()
+        unmapped_toc_values: set[int] = set()
+        descriptor_slots_total = 0
+        descriptor_slots_scanned = 0
+        empty_descriptors = 0
+        nonempty_descriptors = 0
+        unreadable_descriptors = 0
+        valid_code_pointers = 0
+        invalid_code_pointers = 0
+        zero_toc_descriptors = 0
+        trailing_bytes = 0
+        section_payload_readable = False
+
         if opd_section is not None:
-            blob = self.read_virtual(opd_section["address"], opd_section["size"])
-            if blob is not None:
+            section_size = opd_section["size"]
+            descriptor_slots_total = section_size // 8
+            trailing_bytes = section_size % 8
+            blob = self.read_virtual(opd_section["address"], section_size)
+            if blob is None:
+                unreadable_descriptors = descriptor_slots_total
+            else:
+                section_payload_readable = True
                 for offset in range(0, len(blob) - 7, 8):
+                    descriptor_slots_scanned += 1
                     code, toc = struct.unpack_from(">II", blob, offset)
                     if code == 0 and toc == 0:
+                        empty_descriptors += 1
                         continue
+
+                    nonempty_descriptors += 1
+                    if toc == 0:
+                        zero_toc_descriptors += 1
+                    else:
+                        toc_values.add(toc)
+                        if toc_is_mapped(toc):
+                            mapped_toc_values.add(toc)
+                        else:
+                            unmapped_toc_values.add(toc)
+
                     if not is_code(code):
+                        invalid_code_pointers += 1
                         continue
+
+                    valid_code_pointers += 1
                     descriptors.append({
                         "opd_address": f"0x{opd_section['address'] + offset:X}",
                         "code_address": f"0x{code:X}",
                         "toc": f"0x{toc:X}",
+                        "toc_zero": toc == 0,
+                        "toc_mapped": toc_is_mapped(toc),
                     })
-                    toc_counts[toc] = toc_counts.get(toc, 0) + 1
+                    if toc != 0:
+                        toc_counts[toc] = toc_counts.get(toc, 0) + 1
 
         module_toc = max(toc_counts, key=toc_counts.get) if toc_counts else None
+        section_address = opd_section["address"] if opd_section else None
+        section_size = opd_section["size"] if opd_section else None
+        section_alignment = opd_section["alignment"] if opd_section else None
+        address_aligned = section_address is not None and section_address % 8 == 0
+        size_aligned = section_size is not None and section_size >= 8 and section_size % 8 == 0
+        alignment_valid = (
+            section_alignment is not None
+            and section_alignment >= 8
+            and (section_alignment & (section_alignment - 1)) == 0
+        )
+        in_ppu_address_space = (
+            section_address is not None
+            and section_size is not None
+            and section_address <= 0xFFFFFFFF
+            and section_size <= 0x100000000 - section_address
+        )
+        range_candidate = None
+        if (
+            opd_section is not None
+            and section_payload_readable
+            and address_aligned
+            and size_aligned
+            and alignment_valid
+            and in_ppu_address_space
+            and valid_code_pointers > 0
+        ):
+            range_candidate = {
+                "virtual_address": f"0x{section_address:X}",
+                "size": f"0x{section_size:X}",
+                "section_name": opd_section["name"],
+                "section_index": opd_section["index"],
+            }
+
         return {
             "entry_descriptor": entry_descriptor,
             "section_index": opd_section["index"] if opd_section else None,
             "section_name": opd_section["name"] if opd_section else None,
-            "section_address": f"0x{opd_section['address']:X}" if opd_section else None,
-            "section_size": f"0x{opd_section['size']:X}" if opd_section else None,
+            "section_type": opd_section["type"] if opd_section else None,
+            "section_address": f"0x{section_address:X}" if section_address is not None else None,
+            "section_size": f"0x{section_size:X}" if section_size is not None else None,
+            "section_alignment": section_alignment,
+            "section_payload_readable": section_payload_readable,
+            "section_address_aligned": address_aligned,
+            "section_size_aligned": size_aligned,
+            "section_alignment_valid": alignment_valid,
+            "descriptor_slots_total": descriptor_slots_total,
+            "descriptor_slots_scanned": descriptor_slots_scanned,
+            "empty_descriptors": empty_descriptors,
+            "nonempty_descriptors": nonempty_descriptors,
+            "unreadable_descriptors": unreadable_descriptors,
+            "valid_code_pointers": valid_code_pointers,
+            "invalid_code_pointers": invalid_code_pointers,
+            "trailing_bytes": trailing_bytes,
+            "zero_toc_descriptors": zero_toc_descriptors,
+            "distinct_toc_values": len(toc_values),
+            "mapped_toc_values": len(mapped_toc_values),
+            "unmapped_toc_values": len(unmapped_toc_values),
             "descriptor_count": len(descriptors),
             "module_toc": f"0x{module_toc:X}" if module_toc is not None else None,
+            "module_toc_mapped": toc_is_mapped(module_toc) if module_toc is not None else None,
+            "operator_seed_range_candidate": range_candidate,
             "descriptors": descriptors,
-            "note": "OPD entries are address-taken function descriptors, not guaranteed to enumerate every function in the executable.",
+            "note": (
+                "OPD entries are address-taken function descriptors, not guaranteed to enumerate every "
+                "function in the executable. The seed-range candidate is structural evidence only; verify "
+                "the exact executable and matching runtime capture before using it."
+            ),
         }
 
     def function_symbols(self) -> list[dict[str, Any]]:
@@ -404,7 +514,7 @@ def inspect_file(
 
     return {
         "tool": "ps3_elf_inspect",
-        "tool_version": "0.1.1",
+        "tool_version": "0.1.2",
         "input": {
             "file_name": file_path.name,
             "size_bytes": len(data),
