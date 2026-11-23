@@ -12,7 +12,7 @@ import zipfile
 from pathlib import Path, PurePosixPath
 
 FILE_RE = re.compile(r'^\s*FILE\s+(?:"([^"]+)"|\'([^\']+)\'|(\S+))\s+(\S+)\s*$', re.I)
-TRACK_RE = re.compile(r'^\s*TRACK\s+\d+\s+(\S+)\s*
+TRACK_RE = re.compile(r'^\s*TRACK\s+\d+\s+(\S+)\s*$', re.I)
 MAX_ARCHIVE_BYTES = 512 * 1024 * 1024
 
 
