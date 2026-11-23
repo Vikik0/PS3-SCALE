@@ -212,11 +212,11 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
     def test_duplicate_vault_bink_call_sites_are_blocked(self):
         source = passing_source().replace(
             'cinematicingameloopresident( "clockwork_vault_scan" );',
-            'cinematicingameloopresident( "clockwork_vault_scan" );\\n'
+            'cinematicingameloopresident( "clockwork_vault_scan" );\n'
             '    cinematicingameloopresident( "clockwork_vault_scan" );',
         ).replace(
             'cinematicingame( "clockwork_vault_drill" );',
-            'cinematicingame( "clockwork_vault_drill" );\\n'
+            'cinematicingame( "clockwork_vault_drill" );\n'
             '    cinematicingame( "clockwork_vault_drill" );',
         )
         report = audit(self.write_source(source))
