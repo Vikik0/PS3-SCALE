@@ -28,5 +28,12 @@
     "ghidra_runtime_in_ci": false,
     "real_ppu_inputs_available": false
   },
-  "interpretation": "One-command capture and static PPU analysis workflow only. It does not create or prove a native Campaign Player 2."
+  "interpretation": "One-command capture and static PPU analysis workflow only. It does not create or prove a native Campaign Player 2.",
+  "ci_validation": {
+    "workflow_run_id": 45257107588,
+    "status": "success",
+    "jobs_passed": 5,
+    "python_tests_passed": 309,
+    "ps3_prx_bootstrap": "success"
+  }
 }

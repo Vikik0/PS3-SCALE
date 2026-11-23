@@ -49,6 +49,10 @@ Add OPD arguments only when verified:
 
 GitHub Actions run 45256740635 passed all five jobs and 309 Python tests. The Ghidra integration is tested with a mocked runner; no actual Ghidra process or retail PPU ELF is executed by CI.
 
+## CI result
+
+GitHub Actions run 45257107588 passed all five jobs and 309 Python tests. Ghidra is mocked in host tests and is not executed by CI.
+
 ## Validation boundary
 
 Host tests mock the Ghidra runner and verify output copying, summary metadata, option validation and failure rollback. CI does not run Ghidra itself. The tool still needs the user's exact TU 1.16 SELF files, PS3MAPI dumps and Ghidra installation to produce real PPU findings. It does not approve hooks or prove a playable Campaign Player 2.
