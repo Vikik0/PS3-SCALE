@@ -162,8 +162,9 @@ def analyze(
     """Verify both captures, reconstruct analysis ELFs, and compare evidence.
 
     The function never patches, decrypts, uploads, or modifies game files.
-    All ten outputs are staged first. Existing outputs are replaced only after
-    every analysis step succeeds, and are restored if the promotion fails.
+    The base ten outputs are always staged; six PPU outputs are added when Ghidra
+    is enabled. Existing outputs are replaced only after every requested step
+    succeeds, and are restored if the promotion fails.
     """
     campaign_self = Path(campaign_self)
     campaign_dumps = Path(campaign_dumps)
