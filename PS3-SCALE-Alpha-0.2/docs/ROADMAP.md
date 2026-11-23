@@ -30,7 +30,10 @@
 - [x] Offline USB package discovery, library rescan and restore defaults.
 - [x] Companion Tools status detection for Apollo, Artemis and webMAN.
 - [x] Static UI contract tests included in host CI.
-- [ ] Physical smoke test of the localized UI, custom keyboard, 3D animation, startup scan and music handoff.
+- [x] Game Title ID + APP_VER revalidation runs in background workers with static scan storage, not on the controller stack.
+- [x] Safe unmodified game-launch fallback when profile arming fails for recoverable reasons; preserve selection checks and foreign webMAN scripts.
+- [x] Bound cover/preview file sizes before PNG decoding.
+- [ ] Physical smoke test of the localized UI, custom keyboard, 3D animation, startup scan, game launch and music handoff.
 
 ## Alpha 0.3 — PS2 configuration manager
 
