@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "phase": 33,
+  "status": "CAMPAIGN_PLAYER_STATE_OWNERSHIP_AUDIT_COMPLETED",
+  "missions": [
+    {
+      "mission": "black_ice",
+      "source_file_count": 76,
+      "target_function_count": 4,
+      "target_functions_found": 4,
+      "ownership_patterns": {
+        "NO_CLASSIFIED_OWNERSHIP_SIGNAL": 1,
+        "MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE": 3
+      },
+      "findings": [
+        {"function":"player_fail_finale_instakill","level_player_reference_count":26,"player_method_categories":{"movement_control":8,"feedback_audio":6,"camera_view":2,"weapons":1,"other_player_api":2},"ownership_pattern":"MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE"},
+        {"function":"ascend_logic","level_player_reference_count":22,"player_method_categories":{"movement_control":4,"camera_view":2,"health_lifecycle":1,"input":2,"other_player_api":2},"ownership_pattern":"MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE"},
+        {"function":"event_player_turns_key","level_player_reference_count":17,"player_method_categories":{"movement_control":8,"weapons":8},"ownership_pattern":"MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE"},
+        {"function":"player_saw_kill","level_player_reference_count":1,"player_method_categories":{},"ownership_pattern":"NO_CLASSIFIED_OWNERSHIP_SIGNAL"}
+      ]
+    },
+    {
+      "mission": "carrier",
+      "source_file_count": 118,
+      "target_function_count": 6,
+      "target_functions_found": 6,
+      "ownership_patterns": {
+        "PLAYER_ARRAY_AWARE_PATH": 1,
+        "SECONDARY_CLIENT_REFERENCE_PATH": 1,
+        "MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE": 3,
+        "NO_CLASSIFIED_OWNERSHIP_SIGNAL": 1
+      },
+      "findings": [
+        {"function":"knockback_hesh","level_player_reference_count":51,"player_method_categories":{"movement_control":24,"weapons":13,"health_lifecycle":3,"camera_view":2,"feedback_audio":2,"other_player_api":1},"ownership_pattern":"MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE"},
+        {"function":"cut_the_rope","level_player_reference_count":22,"player_method_categories":{"movement_control":8,"weapons":6,"health_lifecycle":2},"ownership_pattern":"MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE"},
+        {"function":"victory_choppers_land","level_player_reference_count":20,"player_method_categories":{"movement_control":10,"weapons":9,"health_lifecycle":1},"ownership_pattern":"MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE"},
+        {"function":"playerview_playmissanim","level_player_reference_count":3,"secondary_client_reference_count":3,"ownership_pattern":"SECONDARY_CLIENT_REFERENCE_PATH"},
+        {"function":"monitorscavengerpickup","level_player_reference_count":0,"player_array_references":{"level.playerpiggyback":6,"level.players":0},"ownership_pattern":"PLAYER_ARRAY_AWARE_PATH"},
+        {"function":"dog_monitor_goal_ent","level_player_reference_count":0,"ownership_pattern":"NO_CLASSIFIED_OWNERSHIP_SIGNAL"}
+      ]
+    },
+    {
+      "mission": "cornered",
+      "source_file_count": 55,
+      "target_function_count": 7,
+      "target_functions_found": 7,
+      "ownership_patterns": {
+        "PLAYER_ARRAY_AWARE_PATH": 2,
+        "MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE": 3,
+        "PLAYER_ARRAY_AWARE_WITH_PER_PLAYER_ACTIONS": 2
+      },
+      "findings": [
+        {"function":"gun_down_trigger_internal","level_player_reference_count":78,"player_method_categories":{"weapons":31,"movement_control":2,"other_player_api":8},"ownership_pattern":"MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE"},
+        {"function":"fall_player","level_player_reference_count":47,"player_method_categories":{"movement_control":16,"camera_view":9,"feedback_audio":8,"health_lifecycle":3,"weapons":2,"other_player_api":2},"ownership_pattern":"MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE"},
+        {"function":"upload_virus_enter","level_player_reference_count":44,"player_method_categories":{"weapons":12,"movement_control":8,"other_player_api":20},"ownership_pattern":"MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE"},
+        {"function":"courtyard_rorke","level_player_reference_count":6,"player_array_references":{"level.playerpiggyback":1,"level.players":0},"ownership_pattern":"PLAYER_ARRAY_AWARE_WITH_PER_PLAYER_ACTIONS"},
+        {"function":"bar_enemies","level_player_reference_count":3,"player_array_references":{"level.playerpiggyback":1,"level.players":0},"ownership_pattern":"PLAYER_ARRAY_AWARE_WITH_PER_PLAYER_ACTIONS"},
+        {"function":"enemy_threat_logic_dog_wait","level_player_reference_count":0,"player_array_references":{"level.playerpiggyback":1,"level.players":0},"ownership_pattern":"PLAYER_ARRAY_AWARE_PATH"},
+        {"function":"enemy_corpse_alert_level","level_player_reference_count":0,"player_array_references":{"level.playerpiggyback":1,"level.players":0},"ownership_pattern":"PLAYER_ARRAY_AWARE_PATH"}
+      ]
+    }
+  ],
+  "interpretation": "Static ownership hints only. level-scoped fields are not automatically proven globally shared or per-player. The previous PS3 common-loader analysis records that level.playerpiggyback enumerates existing player entities and level.playengineeffects stores the second entity if present; this does not create a second native local client or bind Controller 2."
+}

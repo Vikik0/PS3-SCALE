@@ -1,0 +1,232 @@
+#!/usr/bin/env python3
+"""Classify per-player API use versus level-scope state in selected IW6 GSC functions.
+
+This is a read-only static audit. It does not rewrite scripts or assume that
+level.player references can be mechanically replaced with a second player.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from collections import Counter
+from pathlib import Path
+from typing import Any
+
+from gsc_callgraph_audit import clean_source_lines, function_ranges
+
+PLAYER_RE = re.compile(r"\blevel\.player\b")
+PLAYER_METHOD_RE = re.compile(
+    r"\blevel\.player\s+(?:(?:[A-Za-z_][A-Za-z0-9_]*\\)*[A-Za-z_][A-Za-z0-9_]*::)?([A-Za-z_][A-Za-z0-9_]*)\s*\("
+)
+PLAYER_FIELD_RE = re.compile(r"\blevel\.player\.([A-Za-z_][A-Za-z0-9_]*)")
+PLAYER_ARRAY_PATTERNS = {
+    "level.playerpiggyback": re.compile(r"\blevel\.playerpiggyback\b"),
+    "level.players": re.compile(r"\blevel\.players\b"),
+}
+SECONDARY_CLIENT_RE = re.compile(r"\blevel\.playengineeffects\b")
+LEVEL_FIELD_RE = re.compile(r"\blevel\.([A-Za-z_][A-Za-z0-9_]*)")
+FLAG_API_RE = re.compile(r"\b(?:flag_init|flag_set|flag_clear|flag_wait|flag_wait_all|flag_wait_any|flag_waitopen)\s*\(", re.I)
+DVAR_API_RE = re.compile(r"\b(?:setdvar|setsaveddvar|getdvar|getdvarint)\s*\(", re.I)
+
+METHOD_GROUPS = {
+    "input": {
+        "buttonpressed", "attackbuttonpressed", "adsbuttonpressed", "usebuttonpressed",
+        "meleebuttonpressed", "jumpbuttonpressed", "reloadbuttonpressed", "issprinting",
+    },
+    "weapons": {
+        "giveweapon", "takeweapon", "takeallweapons", "switchtoweapon", "switchtoweaponimmediate",
+        "getcurrentweapon", "setweaponammoclip", "setweaponammostock", "getweaponammoclip",
+        "getweaponammostock", "getweaponslistprimaries", "disableweapons", "enableweapons",
+        "disableweaponswitch", "enableweaponswitch", "disableoffhandweapons", "enableoffhandweapons",
+        "allowfire", "disableweaponpickup", "enableweaponpickup", "setperk", "unsetperk",
+    },
+    "movement_control": {
+        "setorigin", "setplayerangles", "setvelocity", "playerlinktoblend", "playerlinktodelta",
+        "playerlinktoabsolute", "playerlinkto", "linkto", "unlink", "freezecontrols",
+        "allowcrouch", "allowprone", "allowstand", "allowjump", "allowsprint", "allowmelee",
+        "setstance", "setmovespeedscale", "lerpviewangleclamp", "setcandamage",
+    },
+    "camera_view": {
+        "setviewmodel", "hideviewmodel", "showviewmodel", "getplayerangles", "geteye", "getgunangles",
+        "setviewkickscale", "viewkick", "lerpfov", "getstance", "enablemousesteer",
+        "disableslowaim", "enableslowaim",
+    },
+    "hud_ui": {
+        "hidehud", "showhud", "createclientfontstring", "createclienticon", "create_client_overlay",
+        "sethintstring", "sethinttext", "iprintln", "iprintlnbold",
+    },
+    "health_lifecycle": {
+        "isalive", "kill", "suicide", "sethealth", "gethealth", "damage", "endon", "waittill",
+        "notify", "enableinvulnerability", "disableinvulnerability",
+    },
+    "feedback_audio": {
+        "playrumbleonentity", "shellshock", "playlocalsound", "stoplocalsound", "playsound",
+    },
+}
+
+DEFAULT_TARGETS = {
+    "black_ice": ["player_fail_finale_instakill", "ascend_logic", "event_player_turns_key", "player_saw_kill"],
+    "carrier": ["knockback_hesh", "cut_the_rope", "victory_choppers_land", "playerview_playmissanim", "monitorscavengerpickup", "dog_monitor_goal_ent"],
+    "cornered": ["gun_down_trigger_internal", "fall_player", "upload_virus_enter", "bar_enemies", "courtyard_rorke", "enemy_threat_logic_dog_wait", "enemy_corpse_alert_level"],
+}
+
+
+class OwnershipAuditError(ValueError):
+    """Raised when a mission input cannot be audited."""
+
+
+def _method_category(method: str) -> str:
+    lowered = method.lower()
+    for category, methods in METHOD_GROUPS.items():
+        if lowered in methods:
+            return category
+    return "other_player_api"
+
+
+def _audit_function(relative: str, name: str, start: int, end: int, clean: list[str]) -> dict[str, Any]:
+    body = "\n".join(clean[start - 1:end])
+    player_refs = len(PLAYER_RE.findall(body))
+    methods = Counter(method.lower() for method in PLAYER_METHOD_RE.findall(body))
+    fields = Counter(PLAYER_FIELD_RE.findall(body))
+    arrays = {key: len(pattern.findall(body)) for key, pattern in PLAYER_ARRAY_PATTERNS.items()}
+    secondary_client_refs = len(SECONDARY_CLIENT_RE.findall(body))
+    level_fields = Counter(LEVEL_FIELD_RE.findall(body))
+    for reserved in ("player", "playerpiggyback", "playengineeffects", "players"):
+        level_fields.pop(reserved, None)
+    categories = Counter()
+    for method, count in methods.items():
+        categories[_method_category(method)] += count
+    flag_calls = len(FLAG_API_RE.findall(body))
+    dvar_calls = len(DVAR_API_RE.findall(body))
+
+    per_player_actions = sum(categories.values()) + sum(fields.values())
+    level_scope_refs = sum(level_fields.values()) + flag_calls + dvar_calls
+    if any(arrays.values()) and per_player_actions:
+        ownership_pattern = "PLAYER_ARRAY_AWARE_WITH_PER_PLAYER_ACTIONS"
+    elif any(arrays.values()):
+        ownership_pattern = "PLAYER_ARRAY_AWARE_PATH"
+    elif secondary_client_refs and per_player_actions:
+        ownership_pattern = "SECONDARY_CLIENT_AND_PER_PLAYER_ACTIONS"
+    elif secondary_client_refs:
+        ownership_pattern = "SECONDARY_CLIENT_REFERENCE_PATH"
+    elif per_player_actions and level_scope_refs:
+        ownership_pattern = "MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE"
+    elif per_player_actions:
+        ownership_pattern = "PER_PLAYER_ACTIONS_VISIBLE"
+    elif level_scope_refs:
+        ownership_pattern = "LEVEL_SCOPE_STATE_VISIBLE"
+    else:
+        ownership_pattern = "NO_CLASSIFIED_OWNERSHIP_SIGNAL"
+
+    return {
+        "function": name,
+        "file": relative,
+        "start_line": start,
+        "end_line": end,
+        "level_player_reference_count": player_refs,
+        "player_method_calls": dict(methods.most_common()),
+        "player_method_categories": dict(categories.most_common()),
+        "player_field_references": dict(fields.most_common()),
+        "player_array_references": arrays,
+        "secondary_client_reference_count": secondary_client_refs,
+        "level_scope_field_references": dict(level_fields.most_common()),
+        "mission_flag_api_call_count": flag_calls,
+        "dvar_api_call_count": dvar_calls,
+        "ownership_pattern": ownership_pattern,
+        "warning": (
+            "Static ownership hint only. Do not duplicate or replace shared flags, rigs, devices, checkpoints, "
+            "or world state as if they were per-player data."
+        ),
+    }
+
+
+def audit_mission(name: str, root: Path, target_names: list[str] | None = None) -> dict[str, Any]:
+    root = Path(root).expanduser().resolve()
+    if not root.is_dir():
+        raise OwnershipAuditError(f"mission directory does not exist: {root}")
+    files = sorted(root.rglob("*.gsc"), key=lambda item: item.as_posix().casefold())
+    if not files:
+        raise OwnershipAuditError(f"no GSC source files found under {root}")
+    wanted = set(target_names or DEFAULT_TARGETS.get(name, []))
+    if not wanted:
+        raise OwnershipAuditError(f"no target functions configured for mission {name!r}")
+
+    findings: list[dict[str, Any]] = []
+    for path in files:
+        original = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        clean = clean_source_lines(original)
+        relative = path.relative_to(root).as_posix()
+        for function_name, start, end in function_ranges(clean):
+            if function_name in wanted:
+                findings.append(_audit_function(relative, function_name, start, end, clean))
+
+    found_names = {item["function"] for item in findings}
+    missing = sorted(wanted - found_names)
+    return {
+        "mission": name,
+        "status": "PLAYER_STATE_OWNERSHIP_AUDIT_COMPLETED",
+        "source_file_count": len(files),
+        "target_function_count": len(wanted),
+        "target_functions_found": len(findings),
+        "missing_target_functions": missing,
+        "findings": findings,
+        "interpretation": (
+            "The audit distinguishes visible player entity operations from mission-level state references. "
+            "A level-scoped field is listed for ownership review; its presence under level does not prove "
+            "whether the underlying object is mission-global or player-specific at runtime."
+        ),
+    }
+
+
+def audit_paths(missions: dict[str, Path]) -> dict[str, Any]:
+    if not missions:
+        raise OwnershipAuditError("provide at least one mission directory")
+    reports = [audit_mission(name, path) for name, path in sorted(missions.items())]
+    return {
+        "schema_version": 1,
+        "status": "CAMPAIGN_PLAYER_STATE_OWNERSHIP_AUDIT_COMPLETED",
+        "mission_count": len(reports),
+        "missions": reports,
+        "interpretation": (
+            "Static ownership hints only. This report does not implement co-op changes and does not prove "
+            "a second native Campaign local client."
+        ),
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("missions", nargs="+", help="NAME=PATH pairs containing decompiled .gsc files")
+    parser.add_argument("--output-json", required=True, type=Path)
+    args = parser.parse_args(argv)
+    try:
+        missions: dict[str, Path] = {}
+        for item in args.missions:
+            if "=" not in item:
+                raise OwnershipAuditError(f"expected NAME=PATH, got {item!r}")
+            name, raw_path = item.split("=", 1)
+            if not name or not raw_path or name in missions:
+                raise OwnershipAuditError(f"invalid or duplicate mission mapping: {item!r}")
+            missions[name] = Path(raw_path)
+        report = audit_paths(missions)
+        args.output_json.parent.mkdir(parents=True, exist_ok=True)
+        args.output_json.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(json.dumps({
+            "status": report["status"],
+            "missions": [{
+                "mission": mission["mission"],
+                "target_function_count": mission["target_function_count"],
+                "target_functions_found": mission["target_functions_found"],
+                "ownership_patterns": dict(Counter(item["ownership_pattern"] for item in mission["findings"])),
+            } for mission in report["missions"]],
+        }, indent=2))
+        return 0
+    except (OSError, OwnershipAuditError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
