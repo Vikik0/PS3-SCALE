@@ -45,7 +45,7 @@ assert "PROFILE NOT APPLIED. STARTING GAME UNMODIFIED." in start_game
 
 # If profile arming fails for a recoverable reason, explicit CROSS/START
 # still launches the selected title unmodified when webMAN can handle it.
-profile_service = section("static void service_profile_arm(void)\\n{", "static void confirm_profile_install(void)\\n{")
+profile_service = section("static void service_profile_arm(void)\n{", "static void confirm_profile_install(void)\n{")
 assert "result == -101 || result == -102" in profile_service
 assert "result == -1 || result == -4 || result == -5" in profile_service
 assert "selected_game_matches_auto_launch_target()" in profile_service
