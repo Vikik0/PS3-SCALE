@@ -67,7 +67,7 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
     def _fake_run(self, command, check):
         export_index = command.index(EXPORT_SCRIPT)
         output_csv = Path(command[export_index + 1])
-        if "Campaign" in command[1]:
+        if "Campaign" in command[2]:
             self._write_inventory(output_csv, "Campaign", "a" * 64)
         else:
             self._write_inventory(output_csv, "Multiplayer", "b" * 64)
