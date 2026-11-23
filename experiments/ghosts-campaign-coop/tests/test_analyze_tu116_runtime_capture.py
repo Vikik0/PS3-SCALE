@@ -104,10 +104,11 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
     def test_truncated_pad_capture_cannot_pass_engine_review_gate(self):
         campaign_log = self.write_log("campaign.log", "CAMPAIGN")
         multiplayer_log = self.write_log("multiplayer.log", "MULTIPLAYER")
-        campaign_log.write_text(
-            campaign_log.read_text(encoding="utf-8").replace("Pad probe finished.\\n", ""),
-            encoding="utf-8",
-        )
+        lines = [
+            line for line in campaign_log.read_text(encoding="utf-8").splitlines()
+            if line != "Pad probe finished."
+        ]
+        campaign_log.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
         result = self.run_analyzer(campaign_log=campaign_log, multiplayer_log=multiplayer_log)
 
