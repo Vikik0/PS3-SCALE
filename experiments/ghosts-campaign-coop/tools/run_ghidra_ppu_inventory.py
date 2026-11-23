@@ -20,6 +20,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from tools.compare_ppu_function_inventories import InventoryError, read_inventory
 from tools.compare_splitscreen_builtin_xrefs import compare_paths as compare_builtin_xrefs, read_inventory as read_builtin_inventory, read_xrefs
+from tools.ps3_elf_inspect import PpuElf
 
 PROCESSOR = "PowerPC:BE:64:default"
 PPU_ADDRESS_MAX = 0xFFFFFFFF
@@ -195,7 +196,10 @@ def _read_elf_inspector_opd_report(
         raise FileNotFoundError(f"{label}: ELF inspector report was not found: {report_path}")
     raw = report_path.read_bytes()
     report_sha256 = hashlib.sha256(raw).hexdigest()
+    elf_bytes = elf_path.read_bytes()
+    actual_elf_hash = hashlib.sha256(elf_bytes).hexdigest()
     try:
+        parsed_elf = PpuElf(elf_bytes)
         report = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ValueError(f"{label}: ELF inspector report is not valid UTF-8 JSON") from exc
@@ -213,7 +217,6 @@ def _read_elf_inspector_opd_report(
         or any(character not in "0123456789abcdef" for character in report_elf_hash.lower())
     ):
         raise ValueError(f"{label}: ELF inspector input SHA-256 is missing or malformed")
-    actual_elf_hash = sha256_file(elf_path)
     if report_elf_hash.lower() != actual_elf_hash:
         raise ValueError(f"{label}: ELF inspector report SHA-256 does not match the supplied ELF")
 
@@ -232,7 +235,11 @@ def _read_elf_inspector_opd_report(
     elf_info = report.get("elf")
     if not isinstance(elf_info, dict):
         raise ValueError(f"{label}: ELF inspector ELF metadata is missing")
-    if elf_info.get("machine") != 21 or elf_info.get("endianness") != "big":
+    if (
+        elf_info.get("machine") != parsed_elf.header["machine"]
+        or elf_info.get("machine") != 21
+        or elf_info.get("endianness") != "big"
+    ):
         raise ValueError(f"{label}: ELF inspector report is not a big-endian PPC64 ELF")
     if elf_info.get("type_name") not in {"ET_EXEC", "ET_DYN"}:
         raise ValueError(f"{label}: ELF inspector report has an unsupported ELF type")
@@ -266,10 +273,28 @@ def _read_elf_inspector_opd_report(
         raise ValueError(f"{label}: OPD candidate address does not match its section")
     if str(opd_info.get("section_size", "")).lower() != size.lower():
         raise ValueError(f"{label}: OPD candidate size does not match its section")
-    if candidate.get("section_index") != opd_info.get("section_index"):
+    candidate_section_index = candidate.get("section_index")
+    candidate_section_name = candidate.get("section_name")
+    if (
+        isinstance(candidate_section_index, bool)
+        or not isinstance(candidate_section_index, int)
+        or candidate_section_index < 0
+        or not isinstance(candidate_section_name, str)
+    ):
+        raise ValueError(f"{label}: OPD candidate section identity is malformed")
+    if candidate_section_index != opd_info.get("section_index"):
         raise ValueError(f"{label}: OPD candidate section index does not match its section")
-    if candidate.get("section_name") != opd_info.get("section_name"):
+    if candidate_section_name != opd_info.get("section_name"):
         raise ValueError(f"{label}: OPD candidate section name does not match its section")
+    section_alignment = opd_info.get("section_alignment")
+    if (
+        isinstance(section_alignment, bool)
+        or not isinstance(section_alignment, int)
+        or section_alignment < 8
+        or (section_alignment & (section_alignment - 1)) != 0
+        or opd[0] % section_alignment != 0
+    ):
+        raise ValueError(f"{label}: OPD section does not satisfy its declared alignment")
 
     count_fields = (
         "descriptor_slots_total",
@@ -310,6 +335,8 @@ def _read_elf_inspector_opd_report(
         raise ValueError(f"{label}: OPD inspector TOC mapping counts do not reconcile")
     if counts["distinct_toc_values"] > counts["nonempty_descriptors"] - counts["zero_toc_descriptors"]:
         raise ValueError(f"{label}: OPD inspector distinct TOC count is invalid")
+    if opd_info != parsed_elf.opd_info():
+        raise ValueError(f"{label}: OPD inspector report does not match the supplied ELF structure")
 
     evidence = {
         "source": "ELF_INSPECTOR_REPORT",

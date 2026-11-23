@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "phase": 47,
+  "status": "ELF_INSPECTOR_OPD_REPORT_RECOMPUTED",
+  "changes": [
+    "runner reparses exact ELF bytes with PpuElf",
+    "complete report OPD object must equal recomputed ELF OPD evidence",
+    "declared section alignment and candidate identity are independently checked",
+    "tests generate reports through the real inspect_file implementation",
+    "tampered OPD candidate ranges are rejected before Ghidra"
+  ],
+  "validation_boundary": "Synthetic PPC64 ELF fixtures and mocked Ghidra only. Retail PPU input and operator profile authenticity remain unverified."
+}

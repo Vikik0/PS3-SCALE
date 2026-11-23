@@ -2,11 +2,13 @@ import csv
 import hashlib
 import json
 import subprocess
+import struct
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import call, patch
 
+from tools.ps3_elf_inspect import inspect_file
 from tools.run_ghidra_ppu_inventory import (
     EXPORT_SCRIPT,
     XREF_SCRIPT,
@@ -88,60 +90,38 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
 
 
     def write_inspector_report(self, path, elf_path, *, valid=True):
-        report = {
-            "tool": "ps3_elf_inspect",
-            "tool_version": "0.1.2",
-            "input": {
-                "file_name": Path(elf_path).name,
-                "sha256": hashlib.sha256(Path(elf_path).read_bytes()).hexdigest(),
-            },
-            "operator_asserted_profile": {
-                "title_id": "BLUS31270",
-                "title_update": "1.16",
-                "firmware_family": "CEX",
-                "firmware_version": "4.93",
-            },
-            "elf": {
-                "machine": 21,
-                "endianness": "big",
-                "type_name": "ET_EXEC",
-                "opd": {
-                    "section_index": 2,
-                    "section_name": ".opd",
-                    "section_type": 1,
-                    "section_address": "0x1000",
-                    "section_size": "0x40",
-                    "section_payload_readable": True,
-                    "section_address_aligned": True,
-                    "section_size_aligned": True,
-                    "section_alignment_valid": True,
-                    "section_address_matches_declared_alignment": True,
-                    "descriptor_slots_total": 8,
-                    "descriptor_slots_scanned": 8,
-                    "empty_descriptors": 4,
-                    "nonempty_descriptors": 4,
-                    "unreadable_descriptors": 0,
-                    "valid_code_pointers": 3,
-                    "invalid_code_pointers": 1,
-                    "trailing_bytes": 0,
-                    "zero_toc_descriptors": 1,
-                    "distinct_toc_values": 2,
-                    "mapped_toc_values": 2,
-                    "unmapped_toc_values": 0,
-                    "descriptor_count": 3,
-                    "operator_seed_range_candidate": {
-                        "virtual_address": "0x1000",
-                        "size": "0x40",
-                        "section_name": ".opd",
-                        "section_index": 2,
-                    },
-                },
-            },
-        }
+        ident = bytearray(b"\x7fELF" + bytes([2, 2, 1, 0, 0]) + bytes(7))
+        header = struct.pack(
+            ">16sHHIQQQIHHHHHH", bytes(ident), 2, 21, 1,
+            0x2000, 64, 0x300, 0, 64, 56, 2, 64, 2, 0,
+        )
+        code_segment = struct.pack(
+            ">IIQQQQQQ", 1, 5, 0x100, 0x1000,
+            0x1000, 0x80, 0x80, 0x1000,
+        )
+        data_segment = struct.pack(
+            ">IIQQQQQQ", 1, 4, 0x200, 0x2000,
+            0x2000, 0x10, 0x10, 8,
+        )
+        null_section = bytes(64)
+        opd_section = struct.pack(
+            ">IIQQQQIIQQ", 0, 1, 0, 0x2000, 0x200, 0x10, 0, 0, 8, 8,
+        )
+        elf_bytes = bytearray(0x380)
+        elf_bytes[:64] = header
+        elf_bytes[64:120] = code_segment
+        elf_bytes[120:176] = data_segment
+        elf_bytes[0x100:0x180] = bytes(range(0x80))
+        elf_bytes[0x200:0x210] = struct.pack(">IIII", 0x1010, 0x3000, 0x1020, 0x3000)
+        elf_bytes[0x300:0x340] = null_section
+        elf_bytes[0x340:0x380] = opd_section
+        Path(elf_path).write_bytes(elf_bytes)
+        report = inspect_file(Path(elf_path), "BLUS31270")
         if not valid:
             report["elf"]["opd"]["section_alignment_valid"] = False
-        Path(path).write_text(json.dumps(report), encoding="utf-8")
-        return Path(path)
+        report_path = Path(path)
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+        return report_path
 
     def _fake_run(self, command, check):
         export_index = command.index(EXPORT_SCRIPT)
@@ -647,6 +627,23 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
                 )
         self.assertFalse((self.output_dir / "campaign_ppu_inventory.csv").exists())
         self.assertFalse((self.output_dir / "ppu_inventory_manifest.json").exists())
+
+
+    def test_inspector_report_with_forged_opd_candidate_is_rejected(self):
+        report_path = self.write_inspector_report(
+            self.root / "campaign-inspector.json", self.campaign_elf
+        )
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        report["elf"]["opd"]["operator_seed_range_candidate"]["size"] = "0x80"
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+        with patch("tools.run_ghidra_ppu_inventory.subprocess.run") as run:
+            with self.assertRaisesRegex(ValueError, "candidate size does not match"):
+                generate_inventories(
+                    self.headless, self.campaign_elf, self.multiplayer_elf,
+                    self.output_dir, script_dir=self.script_dir,
+                    campaign_opd_inspector_report=report_path,
+                )
+        run.assert_not_called()
 
 
 if __name__ == "__main__":
