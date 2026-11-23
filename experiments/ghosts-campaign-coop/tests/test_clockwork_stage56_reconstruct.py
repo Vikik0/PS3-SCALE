@@ -33,6 +33,15 @@ class ClockworkStage56ReconstructionTests(unittest.TestCase):
         self.assertIn("secondary_player == level.ghc_vault_player_two", stage6)
         self.assertEqual(audit(stage6)["status"], "PASS")
 
+    def test_stage5_and_stage6_preserve_one_call_site_per_vault_cinematic(self):
+        stage5, stage6 = patch_source(SOURCE, SOURCE_HASH)
+        scan_call = 'cinematicingameloopresident( "clockwork_vault_scan" )'
+        drill_call = 'cinematicingame( "clockwork_vault_drill" )'
+
+        for reconstructed in (stage5, stage6):
+            self.assertEqual(reconstructed.count(scan_call), 1)
+            self.assertEqual(reconstructed.count(drill_call), 1)
+
     def test_secondary_identity_is_native_split_screen_only(self):
         _, stage6 = patch_source(SOURCE, SOURCE_HASH)
         self.assertIn("issplitscreen()", stage6)
