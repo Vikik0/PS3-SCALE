@@ -372,5 +372,29 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertIn(token, source)
 
+    def test_opd_seed_summary_with_no_created_or_existing_functions_is_rejected(self):
+        def fake_run(command, check):
+            self._fake_run(command, check)
+            if SEED_SCRIPT in command:
+                summary_path = Path(command[command.index(SEED_SCRIPT) + 3])
+                report = json.loads(summary_path.read_text(encoding="utf-8"))
+                report["functions_created"] = 0
+                report["functions_already_present"] = 0
+                report["functions_failed_to_create"] = report["valid_code_pointers"]
+                summary_path.write_text(json.dumps(report), encoding="utf-8")
+            return subprocess.CompletedProcess(command, 0)
+
+        with patch("tools.run_ghidra_ppu_inventory.subprocess.run", side_effect=fake_run):
+            with self.assertRaisesRegex(ValueError, "created or found no functions"):
+                generate_inventories(
+                    self.headless,
+                    self.campaign_elf,
+                    self.multiplayer_elf,
+                    self.output_dir,
+                    script_dir=self.script_dir,
+                    campaign_opd=(0x1000, 0x40),
+                )
+        self.assertFalse((self.output_dir / "campaign_ppu_inventory.csv").exists())
+
 if __name__ == "__main__":
     unittest.main()

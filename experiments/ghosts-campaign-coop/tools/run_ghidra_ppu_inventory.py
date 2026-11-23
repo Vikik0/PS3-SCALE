@@ -146,6 +146,8 @@ def _read_opd_seed_summary(
     )
     if accounted != counts["valid_code_pointers"]:
         raise ValueError(f"{label}: OPD seeder function counts do not reconcile")
+    if counts["functions_created"] + counts["functions_already_present"] == 0:
+        raise ValueError(f"{label}: OPD seeder created or found no functions")
     if counts["descriptors_visited"] < counts["valid_code_pointers"]:
         raise ValueError(f"{label}: OPD seeder descriptor counts do not reconcile")
     return report
