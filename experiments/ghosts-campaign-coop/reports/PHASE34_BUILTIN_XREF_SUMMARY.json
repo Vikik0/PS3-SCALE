@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "phase": 34,
+  "status": "SPLITSCREEN_BUILTIN_XREF_PIPELINE_ADDED",
+  "ghidra_script": "tools/ghidra/FindGhostsSplitScreenBuiltins.java",
+  "comparison_tool": "tools/compare_splitscreen_builtin_xrefs.py",
+  "expected_inputs": [
+    "campaign_ppu_inventory.csv",
+    "multiplayer_ppu_inventory.csv",
+    "campaign_builtin_xrefs.csv",
+    "multiplayer_builtin_xrefs.csv",
+    "ppu_inventory_manifest.json"
+  ],
+  "terms": [
+    "isSplitScreen",
+    "isSplitscreenPlayer",
+    "isSplitscreenPlayerPrimary",
+    "isPlayingSolo",
+    "PlayerCMD_IsSplitScreenPlayer",
+    "PlayerCMD_IsSplitScreenPlayerPrimary",
+    "PlayerCMD_Spawn",
+    "PlayerCMD_ClonePlayer",
+    "SV_InitLocalClient",
+    "CL_InitLocalClients",
+    "CL_SetSplitScreen"
+  ],
+  "output": "splitscreen_builtin_xrefs.json",
+  "validation": {
+    "synthetic_tests": 10,
+    "real_ppu_inputs_available": false,
+    "real_ghidra_run_performed": false,
+    "native_player_two_function_identified": false,
+    "hook_approved": false
+  },
+  "interpretation": "This phase creates a Ghidra-to-PPU xref evidence pipeline. It does not identify or approve a native Campaign Player 2 initializer."
+}
