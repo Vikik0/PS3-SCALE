@@ -19,13 +19,17 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from tools.compare_ppu_function_inventories import InventoryError, read_inventory
+from tools.compare_splitscreen_builtin_xrefs import read_inventory as read_builtin_inventory, read_xrefs
 
 PROCESSOR = "PowerPC:BE:64:default"
 EXPORT_SCRIPT = "ExportGhostsPpuFunctionInventory.java"
+XREF_SCRIPT = "FindGhostsSplitScreenBuiltins.java"
 SEED_SCRIPT = "SeedGhostsOpdFunctions.java"
 OUTPUT_NAMES = (
     "campaign_ppu_inventory.csv",
     "multiplayer_ppu_inventory.csv",
+    "campaign_builtin_xrefs.csv",
+    "multiplayer_builtin_xrefs.csv",
     "ppu_inventory_manifest.json",
 )
 
@@ -85,6 +89,7 @@ def _run_headless(
     project_name: str,
     elf: Path,
     output_csv: Path,
+    output_xref_csv: Path,
     script_dir: Path,
     opd: tuple[int, int] | None,
 ) -> list[str]:
@@ -110,6 +115,9 @@ def _run_headless(
         "-postScript",
         EXPORT_SCRIPT,
         str(output_csv),
+        "-postScript",
+        XREF_SCRIPT,
+        str(output_xref_csv),
         "-deleteProject",
     ])
 
@@ -217,7 +225,7 @@ def generate_inventories(
         raise ValueError("Campaign and Multiplayer ELF inputs must be different files")
     if not script_dir.is_dir():
         raise FileNotFoundError(f"Ghidra script directory was not found: {script_dir}")
-    for script_name in (EXPORT_SCRIPT, SEED_SCRIPT):
+    for script_name in (EXPORT_SCRIPT, XREF_SCRIPT, SEED_SCRIPT):
         if not (script_dir / script_name).is_file():
             raise FileNotFoundError(f"required Ghidra script was not found: {script_dir / script_name}")
 
@@ -239,6 +247,8 @@ def generate_inventories(
         project_location.mkdir()
         campaign_csv = stage_dir / OUTPUT_NAMES[0]
         multiplayer_csv = stage_dir / OUTPUT_NAMES[1]
+        campaign_xref_csv = stage_dir / OUTPUT_NAMES[2]
+        multiplayer_xref_csv = stage_dir / OUTPUT_NAMES[3]
 
         commands = {}
         commands["campaign"] = _run_headless(
@@ -247,10 +257,14 @@ def generate_inventories(
             "GhostsCampaignTU116",
             campaign_elf,
             campaign_csv,
+            campaign_xref_csv,
             script_dir,
             campaign_opd,
         )
         campaign_rows = read_inventory(campaign_csv)
+        campaign_xref_rows = read_xrefs(
+            campaign_xref_csv, read_builtin_inventory(campaign_csv)
+        )
 
         commands["multiplayer"] = _run_headless(
             headless,
@@ -258,10 +272,14 @@ def generate_inventories(
             "GhostsMultiplayerTU116",
             multiplayer_elf,
             multiplayer_csv,
+            multiplayer_xref_csv,
             script_dir,
             multiplayer_opd,
         )
         multiplayer_rows = read_inventory(multiplayer_csv)
+        multiplayer_xref_rows = read_xrefs(
+            multiplayer_xref_csv, read_builtin_inventory(multiplayer_csv)
+        )
 
         manifest = {
             "schema_version": 1,
@@ -281,6 +299,9 @@ def generate_inventories(
                 "inventory_file": OUTPUT_NAMES[0],
                 "inventory_sha256": sha256_file(campaign_csv),
                 "function_records": len(campaign_rows),
+                "builtin_xref_file": OUTPUT_NAMES[2],
+                "builtin_xref_sha256": sha256_file(campaign_xref_csv),
+                "builtin_xref_rows": len(campaign_xref_rows),
                 "opd_seeding": (
                     {
                         "enabled": True,
@@ -296,6 +317,9 @@ def generate_inventories(
                 "inventory_file": OUTPUT_NAMES[1],
                 "inventory_sha256": sha256_file(multiplayer_csv),
                 "function_records": len(multiplayer_rows),
+                "builtin_xref_file": OUTPUT_NAMES[3],
+                "builtin_xref_sha256": sha256_file(multiplayer_xref_csv),
+                "builtin_xref_rows": len(multiplayer_xref_rows),
                 "opd_seeding": (
                     {
                         "enabled": True,
@@ -321,7 +345,9 @@ def generate_inventories(
         staged = {
             OUTPUT_NAMES[0]: campaign_csv,
             OUTPUT_NAMES[1]: multiplayer_csv,
-            OUTPUT_NAMES[2]: manifest_path,
+            OUTPUT_NAMES[2]: campaign_xref_csv,
+            OUTPUT_NAMES[3]: multiplayer_xref_csv,
+            OUTPUT_NAMES[4]: manifest_path,
         }
         _promote_outputs(staged, final, overwrite=overwrite)
 
@@ -366,6 +392,8 @@ def main(argv: list[str] | None = None) -> int:
     print("Ghidra PPU inventories generated.")
     print(f"Campaign functions: {manifest['campaign']['function_records']}")
     print(f"Multiplayer functions: {manifest['multiplayer']['function_records']}")
+    print(f"Campaign builtin xref rows: {manifest['campaign']['builtin_xref_rows']}")
+    print(f"Multiplayer builtin xref rows: {manifest['multiplayer']['builtin_xref_rows']}")
     print(f"Output directory: {Path(args.output_dir).resolve()}")
     print("Review ppu_inventory_manifest.json before comparing the two inventories.")
     return 0

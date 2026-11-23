@@ -9,6 +9,7 @@ from unittest.mock import call, patch
 
 from tools.run_ghidra_ppu_inventory import (
     EXPORT_SCRIPT,
+    XREF_SCRIPT,
     PROCESSOR,
     SEED_SCRIPT,
     _validate_opd_pair,
@@ -38,6 +39,7 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         self.script_dir = self.root / "ghidra-scripts"
         self.script_dir.mkdir()
         (self.script_dir / EXPORT_SCRIPT).write_text("// export", encoding="utf-8")
+        (self.script_dir / XREF_SCRIPT).write_text("// xrefs", encoding="utf-8")
         (self.script_dir / SEED_SCRIPT).write_text("// seed", encoding="utf-8")
         self.campaign_elf = self.root / "campaign.elf"
         self.multiplayer_elf = self.root / "multiplayer.elf"
@@ -64,13 +66,35 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
                 "call_target_entries": "",
             })
 
+    def _write_xrefs(self, path, program):
+        fields = [
+            "program", "builtin", "string_address", "reference_address",
+            "reference_type", "source_type", "caller_name", "caller_entry",
+            "caller_body_start", "caller_body_end", "instruction",
+        ]
+        with path.open("w", encoding="utf-8", newline="") as stream:
+            writer = csv.DictWriter(stream, fieldnames=fields)
+            writer.writeheader()
+            writer.writerow({
+                "program": program, "builtin": "isSplitScreen",
+                "string_address": "0x5000", "reference_address": "0x1001",
+                "reference_type": "DATA", "source_type": "ANALYSIS",
+                "caller_name": "FUN_fixture", "caller_entry": "0x1000",
+                "caller_body_start": "0x1000", "caller_body_end": "0x1010",
+                "instruction": "load r3, 0x5000",
+            })
+
     def _fake_run(self, command, check):
         export_index = command.index(EXPORT_SCRIPT)
+        xref_index = command.index(XREF_SCRIPT)
         output_csv = Path(command[export_index + 1])
+        output_xref_csv = Path(command[xref_index + 1])
         if "Campaign" in command[2]:
             self._write_inventory(output_csv, "Campaign", "a" * 64)
+            self._write_xrefs(output_xref_csv, "Campaign")
         else:
             self._write_inventory(output_csv, "Multiplayer", "b" * 64)
+            self._write_xrefs(output_xref_csv, "Multiplayer")
         return subprocess.CompletedProcess(command, 0)
 
     def test_runs_both_builds_and_writes_hash_manifest_atomically(self):
@@ -93,6 +117,8 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         self.assertNotIn(SEED_SCRIPT, multiplayer_command)
         self.assertIn(EXPORT_SCRIPT, campaign_command)
         self.assertIn(EXPORT_SCRIPT, multiplayer_command)
+        self.assertIn(XREF_SCRIPT, campaign_command)
+        self.assertIn(XREF_SCRIPT, multiplayer_command)
         self.assertIn("-deleteProject", campaign_command)
         self.assertIn("-deleteProject", multiplayer_command)
 
@@ -108,8 +134,13 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         )
         self.assertEqual(saved["campaign"]["function_records"], 1)
         self.assertEqual(saved["multiplayer"]["function_records"], 1)
+        self.assertEqual(saved["campaign"]["builtin_xref_rows"], 1)
+        self.assertEqual(saved["multiplayer"]["builtin_xref_rows"], 1)
+        self.assertRegex(saved["campaign"]["builtin_xref_sha256"], r"^[0-9a-f]{64}$")
         self.assertTrue((self.output_dir / "campaign_ppu_inventory.csv").is_file())
         self.assertTrue((self.output_dir / "multiplayer_ppu_inventory.csv").is_file())
+        self.assertTrue((self.output_dir / "campaign_builtin_xrefs.csv").is_file())
+        self.assertTrue((self.output_dir / "multiplayer_builtin_xrefs.csv").is_file())
 
     def test_second_mode_failure_does_not_promote_partial_inventory(self):
         calls = 0
@@ -134,6 +165,8 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
 
         self.assertFalse((self.output_dir / "campaign_ppu_inventory.csv").exists())
         self.assertFalse((self.output_dir / "multiplayer_ppu_inventory.csv").exists())
+        self.assertFalse((self.output_dir / "campaign_builtin_xrefs.csv").exists())
+        self.assertFalse((self.output_dir / "multiplayer_builtin_xrefs.csv").exists())
         self.assertFalse((self.output_dir / "ppu_inventory_manifest.json").exists())
 
     def test_existing_outputs_are_not_overwritten_without_explicit_flag(self):
@@ -195,8 +228,30 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
                     script_dir=self.script_dir,
                 )
         self.assertFalse((self.output_dir / "campaign_ppu_inventory.csv").exists())
+        self.assertFalse((self.output_dir / "campaign_builtin_xrefs.csv").exists())
         self.assertFalse((self.output_dir / "ppu_inventory_manifest.json").exists())
 
+    def test_malformed_xref_csv_aborts_before_any_final_output_is_promoted(self):
+        def fake_run(command, check):
+            self._fake_run(command, check)
+            xref_index = command.index(XREF_SCRIPT)
+            Path(command[xref_index + 1]).write_text(
+                "program,builtin\nCampaign,isSplitScreen\n", encoding="utf-8"
+            )
+            return subprocess.CompletedProcess(command, 0)
+
+        with patch("tools.run_ghidra_ppu_inventory.subprocess.run", side_effect=fake_run):
+            with self.assertRaisesRegex(ValueError, "missing columns"):
+                generate_inventories(
+                    self.headless, self.campaign_elf, self.multiplayer_elf,
+                    self.output_dir, script_dir=self.script_dir,
+                )
+        for name in (
+            "campaign_ppu_inventory.csv", "multiplayer_ppu_inventory.csv",
+            "campaign_builtin_xrefs.csv", "multiplayer_builtin_xrefs.csv",
+            "ppu_inventory_manifest.json",
+        ):
+            self.assertFalse((self.output_dir / name).exists())
 
 if __name__ == "__main__":
     unittest.main()
