@@ -328,18 +328,27 @@ function renderRoom(){
     node.querySelector("small").textContent=p?(p.ready?"READY":"NOT READY"):"OPEN SEAT";
     $("slots").appendChild(node);
   }
+  const matchStarted=Boolean(room.gameStarted);
+  if(matchStarted){
+    $("roomNotice").textContent="Match started. READY is locked. Use Crash Bash Online to join the game.";
+    $("roomNotice").className="notice";
+    $("readyBtn").textContent="MATCH STARTED";
+    $("readyBtn").disabled=true;
+    return;
+  }
   const allReady=room.players.length>=2&&room.players.every(p=>p.ready);
   $("roomNotice").textContent=allReady?"All players are ready. Open Crash Bash Online and use Netplay to start the match.":room.players.length>1?"Players joined. Mark ready when prepared.":"Waiting for at least two players.";
   $("roomNotice").className="notice"+(allReady?"":" warnbox");
+  $("readyBtn").disabled=false;
   $("readyBtn").textContent=state.ready?"CANCEL READY":"I'M READY";
 }
 async function updateRoomPresence(action,ready){
-  if(!state.token||!state.code||state.heartbeatInFlight)return false;
+  if(!state.token||!state.code||state.heartbeatInFlight||(action==="set_ready"&&state.room?.gameStarted))return false;
   state.heartbeatInFlight=true;
   try{
     const payload=action==="set_ready"?{action,ready}:{action};
     const data=await api("/api/rooms","POST",payload);
-    state.room={...(state.room||{}),players:data.players};
+    state.room={...(state.room||{}),...data,players:data.players};
     const me=data.players.find(player=>player.id===state.player?.id);
     if(!me){
       expireRoomSession("Your seat is no longer active. Create or join a battle again.");
@@ -350,6 +359,10 @@ async function updateRoomPresence(action,ready){
     renderRoom();
     return true;
   }catch(e){
+    if(e.status===409&&action==="set_ready"){
+      await refreshRoom();
+      return false;
+    }
     if([401,403,404,410].includes(e.status)){
       expireRoomSession(e.message||"Your room session expired. Join or create another battle.");
     }else{
