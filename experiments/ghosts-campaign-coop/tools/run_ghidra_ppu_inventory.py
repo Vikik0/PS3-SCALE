@@ -337,7 +337,7 @@ def generate_inventories(
                 "This workflow does not identify or approve a hook, create Player 2, or modify game files.",
             ],
         }
-        manifest_path = stage_dir / OUTPUT_NAMES[2]
+        manifest_path = stage_dir / OUTPUT_NAMES[4]
         manifest_path.write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
