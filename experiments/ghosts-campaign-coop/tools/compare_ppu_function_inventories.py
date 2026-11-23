@@ -81,6 +81,9 @@ def read_inventory(path: Path) -> list[dict[str, Any]]:
                 "call_targets": [
                     value for value in (row.get("call_targets") or "").split(";") if value
                 ],
+                "call_target_symbols": [
+                    value for value in (row.get("call_target_symbols") or "").split(";") if value
+                ],
             })
     if not rows:
         raise InventoryError(f"{path}: inventory contains no function rows")
@@ -136,12 +139,18 @@ def compare(
         for function in group["functions"]:
             haystack = function["name"].lower()
             hits = [keyword for keyword in keyword_values if keyword in haystack]
-            if hits:
+            target_symbols = function.get("call_target_symbols", [])
+            target_hits = [
+                keyword for keyword in keyword_values
+                if any(keyword in symbol.lower() for symbol in target_symbols)
+            ]
+            if hits or target_hits:
                 priority.append({
                     "fingerprint": group["fingerprint"],
                     "function": function,
                     "keyword_hits": hits,
-                    "classification": "MULTIPLAYER_ONLY_NAME_MATCH_LEAD",
+                    "call_target_keyword_hits": target_hits,
+                    "classification": "MULTIPLAYER_ONLY_NAME_OR_CALL_TARGET_MATCH_LEAD",
                 })
 
     priority.sort(
@@ -160,7 +169,13 @@ def compare(
             "matching_fingerprint_groups": len(matched),
             "multiplayer_only_fingerprint_groups": len(multiplayer_only),
             "campaign_only_fingerprint_groups": len(campaign_only),
-            "priority_multiplayer_only_name_matches": len(priority),
+            "priority_multiplayer_only_name_matches": sum(
+                1 for item in priority if item["keyword_hits"]
+            ),
+            "priority_multiplayer_only_call_target_matches": sum(
+                1 for item in priority if item["call_target_keyword_hits"]
+            ),
+            "priority_multiplayer_only_leads": len(priority),
         },
         "matched_fingerprints": matched,
         "multiplayer_only": multiplayer_only,
