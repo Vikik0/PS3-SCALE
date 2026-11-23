@@ -21,6 +21,7 @@ from tools.ps3mapi.compare_runtime_strings import compare as compare_runtime_str
 from tools.ps3mapi.diff_runtime_elfs import compare as compare_runtime_elfs
 from tools.ps3mapi.scan_runtime_strings import scan as scan_runtime_strings
 from tools.ps3mapi.verify_tu116_dump import verify as verify_dump
+from tools.run_ghidra_ppu_inventory import _validate_opd_pair, generate_inventories
 
 DEFAULT_MAP = Path(__file__).with_name("SELF_MEMORY_MAP_TU116.json")
 
@@ -36,6 +37,15 @@ OUTPUT_NAMES = (
     "pad_probe_comparison.json",
     "capture_summary.json",
 )
+GHIDRA_OUTPUT_MAP = {
+    "campaign_ppu_inventory.csv": "ppu_campaign_ppu_inventory.csv",
+    "multiplayer_ppu_inventory.csv": "ppu_multiplayer_ppu_inventory.csv",
+    "campaign_builtin_xrefs.csv": "ppu_campaign_builtin_xrefs.csv",
+    "multiplayer_builtin_xrefs.csv": "ppu_multiplayer_builtin_xrefs.csv",
+    "splitscreen_builtin_xrefs.json": "ppu_splitscreen_builtin_xrefs.json",
+    "ppu_inventory_manifest.json": "ppu_inventory_manifest.json",
+}
+GHIDRA_OUTPUT_NAMES = tuple(GHIDRA_OUTPUT_MAP.values())
 
 
 def sha256_file(path: Path) -> str:
@@ -71,9 +81,10 @@ def _commit_staged_outputs(
     final_outputs: dict[str, Path],
     *,
     overwrite: bool,
+    output_names: tuple[str, ...] = OUTPUT_NAMES,
 ) -> None:
     """Promote a complete analysis set, restoring old outputs if promotion fails."""
-    for name in OUTPUT_NAMES:
+    for name in output_names:
         staged = staged_outputs[name]
         if not staged.is_file():
             raise FileNotFoundError(f"staged analysis output is missing: {staged}")
@@ -85,7 +96,7 @@ def _commit_staged_outputs(
     promoted: list[Path] = []
 
     try:
-        for name in OUTPUT_NAMES:
+        for name in output_names:
             staged = staged_outputs[name]
             target = final_outputs[name]
 
@@ -141,6 +152,10 @@ def analyze(
     map_file: Path = DEFAULT_MAP,
     campaign_log: Path | None = None,
     multiplayer_log: Path | None = None,
+    analyze_headless: Path | None = None,
+    ghidra_script_dir: Path | None = None,
+    campaign_opd: tuple[int, int] | None = None,
+    multiplayer_opd: tuple[int, int] | None = None,
     overwrite: bool = False,
 ) -> dict:
     """Verify both captures, reconstruct analysis ELFs, and compare evidence.
@@ -175,8 +190,15 @@ def analyze(
         _require_file(campaign_log, "Campaign Pad Probe log")
         _require_file(multiplayer_log, "Multiplayer Pad Probe log")
 
+    if analyze_headless is not None:
+        analyze_headless = Path(analyze_headless)
+        _require_file(analyze_headless, "Ghidra analyzeHeadless executable")
+    elif ghidra_script_dir is not None or campaign_opd is not None or multiplayer_opd is not None:
+        raise ValueError("Ghidra script directory and OPD ranges require --analyze-headless")
+
+    output_names = OUTPUT_NAMES + GHIDRA_OUTPUT_NAMES if analyze_headless is not None else OUTPUT_NAMES
     output_dir.mkdir(parents=True, exist_ok=True)
-    final_outputs = {name: output_dir / name for name in OUTPUT_NAMES}
+    final_outputs = {name: output_dir / name for name in output_names}
     existing = [path for path in final_outputs.values() if path.exists()]
     if existing and not overwrite:
         names = ", ".join(str(path) for path in existing)
@@ -188,7 +210,7 @@ def analyze(
         prefix=".ghosts-capture-stage-", dir=output_dir
     ) as staging:
         stage_dir = Path(staging)
-        outputs = {name: stage_dir / name for name in OUTPUT_NAMES}
+        outputs = {name: stage_dir / name for name in output_names}
 
         campaign_elf = outputs["campaign_tu116_runtime.elf"]
         multiplayer_elf = outputs["multiplayer_tu116_runtime.elf"]
@@ -240,6 +262,42 @@ def analyze(
             pad_comparison["input_sha256"] = {
                 "campaign_log": sha256_file(campaign_log),
                 "multiplayer_log": sha256_file(multiplayer_log),
+            }
+
+        ppu_analysis = {"status": "NOT_RUN"}
+        if analyze_headless is not None:
+            ghidra_output_dir = stage_dir / "ghidra-ppu"
+            ghidra_manifest = generate_inventories(
+                analyze_headless,
+                campaign_elf,
+                multiplayer_elf,
+                ghidra_output_dir,
+                script_dir=ghidra_script_dir,
+                campaign_opd=campaign_opd,
+                multiplayer_opd=multiplayer_opd,
+            )
+            ghidra_manifest_path = ghidra_output_dir / "ppu_inventory_manifest.json"
+            manifest_data = json.loads(ghidra_manifest_path.read_text(encoding="utf-8"))
+            manifest_data["campaign"]["elf_path"] = str(final_outputs["campaign_tu116_runtime.elf"])
+            manifest_data["multiplayer"]["elf_path"] = str(final_outputs["multiplayer_tu116_runtime.elf"])
+            write_json(ghidra_manifest_path, manifest_data)
+            for source_name, output_name in GHIDRA_OUTPUT_MAP.items():
+                source_path = ghidra_output_dir / source_name
+                if not source_path.is_file():
+                    raise FileNotFoundError(f"Ghidra evidence output is missing: {source_path}")
+                shutil.copyfile(source_path, outputs[output_name])
+            comparison = json.loads(
+                (ghidra_output_dir / "splitscreen_builtin_xrefs.json").read_text(encoding="utf-8")
+            )
+            ppu_analysis = {
+                "status": "GHIDRA_PPU_ANALYSIS_COMPLETED",
+                "campaign_function_records": manifest_data["campaign"]["function_records"],
+                "multiplayer_function_records": manifest_data["multiplayer"]["function_records"],
+                "campaign_builtin_xref_rows": manifest_data["campaign"]["builtin_xref_rows"],
+                "multiplayer_builtin_xref_rows": manifest_data["multiplayer"]["builtin_xref_rows"],
+                "multiplayer_only_builtin_lead_count": len(comparison["multiplayer_only_leads"]),
+                "comparison_sha256": sha256_file(ghidra_output_dir / "splitscreen_builtin_xrefs.json"),
+                "manifest_sha256": sha256_file(ghidra_manifest_path),
             }
 
         dump_checks_passed = (
@@ -303,6 +361,7 @@ def analyze(
                     "mode_labels_are_operator_selected"
                 ),
             },
+            "ppu_analysis": ppu_analysis,
             "player_two_gate": {
                 "status": "NOT_PROVEN",
                 "native_campaign_local_client_creation": False,
@@ -316,9 +375,12 @@ def analyze(
             "input_sha256": input_hashes,
             "outputs": {key: str(path) for key, path in final_outputs.items()},
             "next_gate": (
-                "Review the reconstructed Campaign and Multiplayer PPU images in Ghidra, "
-                "map verified local-client allocation and controller routing, and compare "
-                "player-state/view ownership before designing any Campaign hook."
+                "Review the PPU builtin-XREF comparison and inspect each Multiplayer-only lead in Ghidra; "
+                "then verify local-client allocation, controller routing and player-state/view ownership "
+                "before designing any Campaign hook."
+                if analyze_headless is not None else
+                "Run the one-shot Ghidra PPU analysis on these reconstructed ELFs to map verified local-client "
+                "allocation, controller routing and player-state/view ownership before designing any Campaign hook."
             ),
             "limitations": [
                 "PASS_METADATA means the SELF headers and captured PT_LOAD sizes match the recorded TU 1.16 profile; it is not cryptographic proof of the installed update.",
@@ -330,7 +392,9 @@ def analyze(
             ],
         }
         write_json(outputs["capture_summary.json"], summary)
-        _commit_staged_outputs(outputs, final_outputs, overwrite=overwrite)
+        _commit_staged_outputs(
+            outputs, final_outputs, overwrite=overwrite, output_names=output_names
+        )
 
     return summary
 
@@ -343,12 +407,24 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--multiplayer-dumps", type=Path, required=True)
     parser.add_argument("--campaign-log", type=Path)
     parser.add_argument("--multiplayer-log", type=Path)
+    parser.add_argument("--analyze-headless", type=Path)
+    parser.add_argument("--ghidra-script-dir", type=Path)
+    parser.add_argument("--campaign-opd-va")
+    parser.add_argument("--campaign-opd-size")
+    parser.add_argument("--multiplayer-opd-va")
+    parser.add_argument("--multiplayer-opd-size")
     parser.add_argument("--map", dest="map_file", type=Path, default=DEFAULT_MAP)
     parser.add_argument("--output-dir", type=Path, default=Path("analysis/tu116-capture"))
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args(argv)
 
     try:
+        campaign_opd = _validate_opd_pair(
+            args.campaign_opd_va, args.campaign_opd_size, "Campaign"
+        )
+        multiplayer_opd = _validate_opd_pair(
+            args.multiplayer_opd_va, args.multiplayer_opd_size, "Multiplayer"
+        )
         result = analyze(
             args.campaign_self,
             args.campaign_dumps,
@@ -358,6 +434,10 @@ def main(argv: list[str] | None = None) -> int:
             map_file=args.map_file,
             campaign_log=args.campaign_log,
             multiplayer_log=args.multiplayer_log,
+            analyze_headless=args.analyze_headless,
+            ghidra_script_dir=args.ghidra_script_dir,
+            campaign_opd=campaign_opd,
+            multiplayer_opd=multiplayer_opd,
             overwrite=args.overwrite,
         )
     except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
