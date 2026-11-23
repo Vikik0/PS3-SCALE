@@ -175,6 +175,13 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
             self.assertEqual(lead["incoming_callers"][0]["name"], "SV_InitLocalClient")
             self.assertEqual(lead["outgoing_target_fingerprints"], [multiplayer_target])
             self.assertEqual(
+                lead["outgoing_target_functions"][0]["name"],
+                "FUN_mp_target",
+            )
+            self.assertFalse(
+                lead["outgoing_target_functions"][0]["fingerprint_present_in_campaign"]
+            )
+            self.assertEqual(
                 lead["outgoing_multiplayer_only_target_fingerprints"],
                 [multiplayer_target],
             )
@@ -208,8 +215,16 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
         self.assertEqual(delta["caller_fingerprint"], shared)
         self.assertEqual(delta["campaign_only_callee_fingerprints"], [campaign_callee])
         self.assertEqual(
+            delta["campaign_callee_functions"][0]["name"],
+            "FUN_campaign_target",
+        )
+        self.assertEqual(
             delta["multiplayer_only_callee_fingerprints"],
             [multiplayer_callee],
+        )
+        self.assertEqual(
+            delta["multiplayer_callee_functions"][0]["name"],
+            "FUN_mp_target",
         )
 
     def test_legacy_inventory_without_call_target_symbols_remains_supported(self):
