@@ -224,5 +224,11 @@
       ]
     }
   ],
-  "interpretation": "Static call-site and callback-reference evidence only; no second native Campaign local client, controller routing, independent camera or HUD is proven."
+  "interpretation": "Static call-site and callback-reference evidence only; no second native Campaign local client, controller routing, independent camera or HUD is proven.",
+  "ci_validation": {
+    "workflow_run_id": 45250534837,
+    "status": "success",
+    "jobs_passed": 5,
+    "python_tests_passed": 290
+  }
 }
