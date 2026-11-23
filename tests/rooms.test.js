@@ -997,7 +997,7 @@ test("started rooms retain player seats for a full match window", async () => {
     Date.now() - 15 * 60 * 1000;
   blobs.set(pathname, { body: JSON.stringify(stored), etag: String(++etagSequence) });
 
-  const heartbeat = await call("POST", { action: "set_ready", ready: true }, guest.body.token);
+  const heartbeat = await call("POST", { action: "heartbeat" }, guest.body.token);
   assert.equal(heartbeat.statusCode, 200);
   assert.equal(heartbeat.body.players.length, 2);
   assert.equal(heartbeat.body.players.some((player) => player.id === host.body.player.id), true);
@@ -1042,7 +1042,7 @@ test("a started Netplay match keeps its host identity when the host leaves the l
   const afterLeave = await call("GET", {}, guest.body.token, { code: host.body.room.code });
   assert.equal(afterLeave.body.room.netplayId, netplayId);
   assert.equal(afterLeave.body.room.gameStarted, true);
-  const guestHeartbeat = await call("POST", { action: "set_ready", ready: true }, guest.body.token);
+  const guestHeartbeat = await call("POST", { action: "heartbeat" }, guest.body.token);
   assert.equal(guestHeartbeat.body.gameStarted, true);
   assert.equal(guestHeartbeat.body.netplayId, netplayId);
   assert.equal(guestHeartbeat.body.players.length, 1);
@@ -1113,7 +1113,7 @@ test("a started Netplay match keeps its relay identity when the host seat expire
     Date.now() - 31 * 60 * 1000;
   blobs.set(pathname, { body: JSON.stringify(stored), etag: String(++etagSequence) });
 
-  const heartbeat = await call("POST", { action: "set_ready", ready: true }, guest.body.token);
+  const heartbeat = await call("POST", { action: "heartbeat" }, guest.body.token);
   assert.equal(heartbeat.statusCode, 200);
   assert.equal(heartbeat.body.gameStarted, true);
   assert.equal(heartbeat.body.netplayId, netplayId);
