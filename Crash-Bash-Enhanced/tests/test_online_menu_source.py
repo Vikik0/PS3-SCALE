@@ -7,6 +7,20 @@ import re
 root = Path(__file__).resolve().parents[1]
 source = (root / "source/online_menu.c").read_text(encoding="utf-8")
 
+# Opening Online Rooms and refreshing its room list must never block the render loop.
+assert "#include <sys/thread.h>" in source
+assert "static void lobby_worker(void *opaque)" in source
+assert "sysThreadCreate(thread, lobby_worker, task" in source
+assert "sysThreadJoin(thread, &result)" in source
+assert "LOBBY_WORK_CONNECT" in source
+assert "LOBBY_WORK_LIST" in source
+assert "CONNECTING TO ONLINE ROOMS" in source
+assert "if (worker_active && worker.done)" in source
+assert "start_lobby_worker(&worker_thread, &worker, LOBBY_WORK_CONNECT)" in source
+startup = source[source.index("int cb_online_menu"):source.index("while (!exit_requested || !*exit_requested)", source.index("int cb_online_menu"))]
+assert "ensure_lobby(" not in startup, "Initial lobby connection must run in the worker thread."
+assert "load_rooms(" not in source, "Room list requests must not run synchronously on the render loop."
+
 assert "#define ROOM_HEARTBEAT_FRAMES 300" in source
 assert "#define ROOM_LIST_REFRESH_FRAMES 600" in source
 assert "if (++room_list_poll_frames >= ROOM_LIST_REFRESH_FRAMES)" in source
