@@ -102,6 +102,8 @@ new_trench_setup()
 {
     drill_player_1 = handle_drill_spot( "drill_spot1", "drill1_start", "drill1_complete", "TAG_FX_XMark_RI" );
     drill_player_2 = handle_drill_spot( "drill_spot2", "drill2_start", "drill2_complete", "TAG_FX_XMark_LE" );
+    cinematicingameloopresident( "clockwork_vault_scan" );
+    cinematicingame( "clockwork_vault_drill" );
     drill_player_1 playerlinktodelta( level.player_approach_weld, "tag_player", 1, 45, 45, 10, 10 );
     drill_player_2 playerlinktodelta( level.player_approach_weld, "tag_player", 0.5, 90, 20, 10, 10 );
     if ( common_scripts\\utility::flag( "vault_blast_area" ) )
@@ -199,6 +201,39 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
         self.assertEqual(report["status"], "SOURCE_ADAPTER_READY_FOR_MANUAL_REVIEW")
         self.assertEqual(report["unscoped_level_player_functions"], [])
         self.assertIn("clockwork_watch_player_pair", report["coordination_functions"])
+
+    def test_vault_bink_events_have_one_mission_level_call_site_each(self):
+        report = audit(self.write_source(passing_source()))
+        self.assertTrue(report["checks"]["vault_scan_cinematic_single_invocation"])
+        self.assertTrue(report["checks"]["vault_drill_cinematic_single_invocation"])
+        self.assertEqual(report["cinematic_media"]["clockwork_vault_scan"]["total_calls"], 1)
+        self.assertEqual(report["cinematic_media"]["clockwork_vault_drill"]["total_calls"], 1)
+
+    def test_duplicate_vault_bink_call_sites_are_blocked(self):
+        source = passing_source().replace(
+            'cinematicingameloopresident( "clockwork_vault_scan" );',
+            'cinematicingameloopresident( "clockwork_vault_scan" );\\n'
+            '    cinematicingameloopresident( "clockwork_vault_scan" );',
+        ).replace(
+            'cinematicingame( "clockwork_vault_drill" );',
+            'cinematicingame( "clockwork_vault_drill" );\\n'
+            '    cinematicingame( "clockwork_vault_drill" );',
+        )
+        report = audit(self.write_source(source))
+        self.assertFalse(report["checks"]["vault_scan_cinematic_single_invocation"])
+        self.assertFalse(report["checks"]["vault_drill_cinematic_single_invocation"])
+        self.assertEqual(report["cinematic_media"]["clockwork_vault_scan"]["total_calls"], 2)
+        self.assertEqual(report["cinematic_media"]["clockwork_vault_drill"]["total_calls"], 2)
+
+    def test_missing_vault_bink_call_site_is_reported(self):
+        source = passing_source().replace(
+            'cinematicingame( "clockwork_vault_drill" );',
+            '',
+        )
+        report = audit(self.write_source(source))
+        self.assertTrue(report["checks"]["vault_scan_cinematic_single_invocation"])
+        self.assertFalse(report["checks"]["vault_drill_cinematic_single_invocation"])
+        self.assertEqual(report["cinematic_media"]["clockwork_vault_drill"]["total_calls"], 0)
 
     def test_original_single_player_method_reference_blocks_player_scoping(self):
         source = passing_source().replace(
