@@ -158,7 +158,7 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
             write_inventory(multiplayer_path, [
                 row("FUN_shared_mp", "0x9000", shared, entries="0x9100"),
                 row("FUN_mp_target", "0x9100", multiplayer_target, entries=""),
-                row("FUN_opaque_player_path", "0x9200", candidate, entries="0x9100"),
+                row("FUN_opaque_9200", "0x9200", candidate, entries="0x9100"),
                 row("SV_InitLocalClient", "0x9300", caller, entries="0x9200"),
             ], fields=fields)
 
@@ -168,7 +168,7 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
             )
             lead = next(
                 item for item in result["priority_multiplayer_only"]
-                if item["function"]["name"] == "FUN_opaque_player_path"
+                if item["function"]["name"] == "FUN_opaque_9200"
             )
             self.assertIn("local", lead["incoming_caller_keyword_hits"])
             self.assertIn("client", lead["incoming_caller_keyword_hits"])
