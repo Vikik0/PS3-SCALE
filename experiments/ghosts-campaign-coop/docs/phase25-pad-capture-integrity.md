@@ -27,7 +27,7 @@ An error at a required checkpoint, a truncated log, a missing completion marker,
 - Added v4 header, read-only flag, completion-marker, checkpoint, duplicate-index and index-range parsing.
 - Added a separate provenance gate for the operator-selected Campaign/Multiplayer mode labels.
 - The comparator now reports capture completeness and provenance separately from controller visibility.
-- The runtime capture analyzer only reports `CAPTURE_READY_FOR_ENGINE_REVIEW` when both logs pass the complete capture and provenance gates and both modes report a simultaneous `0x03` sample.
+- The runtime capture analyzer only reports `CAPTURE_READY_FOR_ENGINE_REVIEW` when both logs pass the complete capture and provenance gates and both modes report a simultaneous `0x03` sample. Its summary JSON exposes capture completeness and provenance as separate booleans.
 - Added tests for truncated captures, missing completion markers, duplicate sample indices, failed periodic checkpoints, old probe versions, missing read-only metadata and legacy logs.
 
 ## Validation boundary
