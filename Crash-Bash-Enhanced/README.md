@@ -114,14 +114,15 @@ Consequently, the current PS3 RetroArch Netplay package and this repository's Ve
 
 ## Personal game-inclusive build
 
-The user's BIN/CUE dump is kept out of Git history and out of public CI artifacts. The personal build workflow accepts a **single-use private download URL** for a ZIP containing exactly one CUE file and every BIN track it references.
+The user's BIN/CUE dump is kept out of Git history and out of public CI artifacts. The private workflow reads a temporary direct-download URL from the repository Actions secret `CRASH_BASH_DISC_ARCHIVE_URL`; never put that URL in a workflow input, commit, issue or log.
 
-1. The workflow downloads the private ZIP into its temporary runner workspace and validates the CUE references, filenames and 2352-byte sector alignment.
-2. It builds the pinned RetroArch + PCSX-ReARMed runtime, stages the disc under `USRDIR/PSXISO/`, then creates one finalized `CBON00001` PKG.
-3. Before uploading the build artifact, the workflow encrypts the personal PKG to a public certificate. Only the matching private key held outside GitHub can decrypt it. The encrypted artifact expires after one day; the raw BIN/CUE and unencrypted PKG are never uploaded as artifacts.
-4. The build script compares every staged BIN/CUE byte-for-byte with the files inside the package staging tree, then writes a SHA-256 checksum and personal build manifest.
+1. Upload a ZIP containing exactly one CUE file and every BIN track it references to the user's private file storage. Generate a **single-use HTTPS download URL** with a 15-minute lifetime, then immediately save it as the repository secret `CRASH_BASH_DISC_ARCHIVE_URL`.
+2. Manually run `.github/workflows/crash-bash-personal-build.yml` from the repository's default branch. It checks out `crash-bash-enhanced`, downloads the archive once, validates its CUE references, filenames and sector alignment, and stages the disc under `USRDIR/PSXISO/`.
+3. The workflow builds the pinned RetroArch + PCSX-ReARMed runtime and creates one finalized `CBON00001` PKG. Before upload, it encrypts the personal PKG to the public certificate in `keys/personal-build-public.pem`. Only the matching private key held outside GitHub can decrypt it.
+4. The encrypted artifact expires after one day. The raw BIN/CUE and unencrypted PKG are removed from the runner and are never uploaded as artifacts. The build script compares staged BIN/CUE bytes with the package staging tree and writes a SHA-256 checksum and manifest.
+5. Delete the now-expired/consumed `CRASH_BASH_DISC_ARCHIVE_URL` secret after the run.
 
-The public CI workflow remains game-free. The private workflow is `.github/workflows/crash-bash-personal-build.yml` on the default branch and checks out the `crash-bash-enhanced` source branch for the build.
+The public CI workflow remains game-free. The private workflow is on the default branch and builds the enhanced source branch.
 
 ## Licensing and project scope
 
