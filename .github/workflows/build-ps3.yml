@@ -2,7 +2,7 @@ name: PS3 SCALE build
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, "design/**"]
     paths:
       - "PS3-SCALE-Alpha-0.2/**"
       - ".github/workflows/build-ps3.yml"
