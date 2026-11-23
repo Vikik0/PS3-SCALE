@@ -293,6 +293,18 @@ int cb_online_set_disc_fingerprint(CBOnlineSession *session, const char *fingerp
     return cb_online_get_room(session, view, error, error_size);
 }
 
+int cb_online_clear_disc_fingerprint(CBOnlineSession *session, CBOnlineRoomView *view,
+                                      char *error, size_t error_size) {
+    char response[CB_HTTP_BUFFER];
+    if (!session || !session->token[0] || !view) {
+        set_error(error, error_size, "No active room session");
+        return -1;
+    }
+    if (http_request("POST", "/api/rooms", "{\"action\":\"clear_disc\"}",
+                     session->token, response, sizeof(response), error, error_size) < 0) return -1;
+    return cb_online_get_room(session, view, error, error_size);
+}
+
 int cb_online_set_ready(CBOnlineSession *session, int ready, CBOnlineRoomView *view, char *error, size_t error_size) {
     char body[64], response[CB_HTTP_BUFFER];
     if (!session || !session->token[0] || !view) { set_error(error, error_size, "No active room session"); return -1; }

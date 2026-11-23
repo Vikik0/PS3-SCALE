@@ -91,3 +91,6 @@ assert '"gameStarted"' in online_source
 assert "view->game_started" in online_source
 assert "if (view->game_started) view->is_ready = 1;" in online_source
 assert "cb_online_get_netplay_endpoint" in online_source
+assert "cb_online_clear_disc_fingerprint" in online_source
+assert "clear_disc_confirmation(" in source
+assert source.count("clear_disc_confirmation(&session, &view, error, sizeof(error))") >= 4

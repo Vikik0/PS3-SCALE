@@ -432,6 +432,22 @@ module.exports = async function handler(req, res) {
       return reply(res, outcome.outcome.status || 200, outcome.outcome.body);
     }
 
+    if (action === "clear_disc") {
+      const outcome = await mutateRoom(code, (room) => {
+        const now = Date.now();
+        const active = prunePlayers(room, now);
+        const currentPlayer = active.find((entry) => entry.id === claims.sub);
+        if (!currentPlayer) return { write: false, status: 403, body: { error: "Your room seat has expired. Rejoin the room." } };
+        if (room.gameStartedAt) return { write: false, status: 409, body: { error: "The match has already started; disc selection is locked." } };
+        delete currentPlayer.discFingerprint;
+        currentPlayer.lastSeen = now;
+        room.updatedAt = now;
+        return { status: 200, body: { ok: true, playerCount: active.length, ...discSelection(room, active) } };
+      });
+      if (!outcome.found) return reply(res, 404, { error: "Room not found." });
+      return reply(res, outcome.outcome.status || 200, outcome.outcome.body);
+    }
+
     if (action === "game_start" || action === "game_start_cancel") {
       const starting = action === "game_start";
       const outcome = await mutateRoom(code, (room) => {
@@ -547,7 +563,10 @@ module.exports = async function handler(req, res) {
           return { write: false, status: 403, body: { error: "Your room seat has expired. Rejoin the room." } };
         }
         activePlayer.lastSeen = now;
-        if (typeof body.ready === "boolean") activePlayer.ready = body.ready;
+        if (typeof body.ready === "boolean") {
+          activePlayer.ready = body.ready;
+          if (!body.ready && !room.gameStartedAt) delete activePlayer.discFingerprint;
+        }
         const active = activePlayers(room, now);
         room.status = active.length >= 2 && active.every((entry) => entry.ready) ? "ready" : "waiting";
         room.updatedAt = now;

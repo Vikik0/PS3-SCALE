@@ -234,6 +234,22 @@ static int session_is_room_host(const CBOnlineSession *session,
     return host_id[0] && strcmp(host_id, session->player_id) == 0;
 }
 
+static int clear_disc_confirmation(CBOnlineSession *session,
+                                     CBOnlineRoomView *view,
+                                     char *error, size_t error_size)
+{
+    int i;
+    if (!session || !view) return -1;
+    if (view->game_started) return 0;
+    for (i = 0; i < view->player_count; i++) {
+        if (strcmp(view->players[i].id, session->player_id) == 0 &&
+            view->players[i].disc_fingerprint[0]) {
+            return cb_online_clear_disc_fingerprint(session, view, error, error_size);
+        }
+    }
+    return 0;
+}
+
 static void make_netplay_nickname(char *output, size_t output_size,
                                   const CBOnlineSession *session,
                                   const CBOnlineRoomView *view, int is_host)
@@ -454,25 +470,37 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
             draw_join_code(join_code, code_cursor, status);
         } else if (screen == SCREEN_DISC_SELECT) {
             if (up && !old_up && disc_count > 0) {
-                disc_selected = (disc_selected + disc_count - 1) % disc_count;
-                netplay_waiting = 0; host_disc_waiting = 0;
-                snprintf(status, status_size, "Selection changed. Press CROSS to confirm this disc.");
+                if (clear_disc_confirmation(&session, &view, error, sizeof(error)) != 0) {
+                    snprintf(status, status_size, "Could not clear disc confirmation: %.90s", error);
+                } else {
+                    disc_selected = (disc_selected + disc_count - 1) % disc_count;
+                    netplay_waiting = 0; host_disc_waiting = 0; host_disc_selected = -1;
+                    snprintf(status, status_size, "Selection changed. Press CROSS to confirm this disc.");
+                }
             }
             if (down && !old_down && disc_count > 0) {
-                disc_selected = (disc_selected + 1) % disc_count;
-                netplay_waiting = 0; host_disc_waiting = 0;
-                snprintf(status, status_size, "Selection changed. Press CROSS to confirm this disc.");
+                if (clear_disc_confirmation(&session, &view, error, sizeof(error)) != 0) {
+                    snprintf(status, status_size, "Could not clear disc confirmation: %.90s", error);
+                } else {
+                    disc_selected = (disc_selected + 1) % disc_count;
+                    netplay_waiting = 0; host_disc_waiting = 0; host_disc_selected = -1;
+                    snprintf(status, status_size, "Selection changed. Press CROSS to confirm this disc.");
+                }
             }
             if (square && !old_square) {
                 size_t scanned = 0;
-                netplay_waiting = 0; host_disc_waiting = 0;
-                if (cb_disc_scan(discs, CB_DISC_MAX, &scanned) == 0) {
-                    disc_count = (int)scanned;
-                    if (disc_count == 0) disc_selected = 0;
-                    else if (disc_selected >= disc_count) disc_selected = disc_count - 1;
-                    snprintf(status, status_size, "Found %d CUE file(s).", disc_count);
+                if (clear_disc_confirmation(&session, &view, error, sizeof(error)) != 0) {
+                    snprintf(status, status_size, "Could not clear disc confirmation: %.90s", error);
                 } else {
-                    snprintf(status, status_size, "Disc scan failed.");
+                    netplay_waiting = 0; host_disc_waiting = 0; host_disc_selected = -1;
+                    if (cb_disc_scan(discs, CB_DISC_MAX, &scanned) == 0) {
+                        disc_count = (int)scanned;
+                        if (disc_count == 0) disc_selected = 0;
+                        else if (disc_selected >= disc_count) disc_selected = disc_count - 1;
+                        snprintf(status, status_size, "Found %d CUE file(s).", disc_count);
+                    } else {
+                        snprintf(status, status_size, "Disc scan failed.");
+                    }
                 }
             }
             if (cross && !old_cross && disc_count > 0) {
@@ -531,8 +559,12 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                 }
             }
             if (circle && !old_circle) {
-                netplay_waiting = 0; host_disc_waiting = 0;
-                screen = SCREEN_ROOM;
+                if (clear_disc_confirmation(&session, &view, error, sizeof(error)) != 0) {
+                    snprintf(status, status_size, "Could not clear disc confirmation: %.90s", error);
+                } else {
+                    netplay_waiting = 0; host_disc_waiting = 0; host_disc_selected = -1;
+                    screen = SCREEN_ROOM;
+                }
             }
             draw_disc_select(discs, disc_count, disc_selected, &session,
                              session_is_room_host(&session, &view), status);

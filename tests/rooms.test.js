@@ -794,6 +794,60 @@ test("Netplay start requires every active player to confirm the same disc conten
   assert.equal(locked.statusCode, 409);
 });
 
+test("clearing a disc selection blocks launch until the player confirms again", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  await confirmMatchingDisc(host.body.token, guest.body.token);
+
+  const cleared = await call("POST", { action: "clear_disc" }, guest.body.token);
+  assert.equal(cleared.statusCode, 200);
+  assert.equal(cleared.body.ok, true);
+  assert.equal(cleared.body.discSelectionCount, 1);
+  assert.equal(cleared.body.discMatch, false);
+
+  const blocked = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(blocked.statusCode, 409);
+  assert.equal(blocked.body.state, "waiting_for_disc_selection");
+
+  const confirmed = await call("POST", {
+    action: "set_disc",
+    fingerprint: "0123456789ABCDEF"
+  }, guest.body.token);
+  assert.equal(confirmed.statusCode, 200);
+  assert.equal(confirmed.body.discMatch, true);
+
+  const started = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(started.statusCode, 200);
+  const locked = await call("POST", { action: "clear_disc" }, guest.body.token);
+  assert.equal(locked.statusCode, 409);
+});
+
+test("marking a player not ready clears their previous disc confirmation", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  await confirmMatchingDisc(host.body.token, guest.body.token);
+
+  const unready = await call("POST", { action: "heartbeat", ready: false }, guest.body.token);
+  assert.equal(unready.statusCode, 200);
+  assert.equal(unready.body.discSelectionCount, 1);
+  assert.equal(unready.body.discMatch, false);
+
+  const readyAgain = await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  assert.equal(readyAgain.statusCode, 200);
+  assert.equal(readyAgain.body.discMatch, false);
+  const roomAfterReady = await call("GET", {}, guest.body.token, { code: host.body.room.code });
+  assert.equal(roomAfterReady.body.room.status, "ready");
+  assert.equal(roomAfterReady.body.room.discMatch, false);
+
+  const blocked = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(blocked.statusCode, 409);
+  assert.equal(blocked.body.state, "waiting_for_disc_selection");
+});
+
 test("only the host can start Netplay and a started room rejects late joins", async () => {
   const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });

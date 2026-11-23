@@ -53,6 +53,7 @@ The separate **Crash Bash Enhanced Lobby** PKG (`CBEN00001`) provides an optiona
 3. Every active player marks **READY**. Press **START** to open the CUE picker.
 4. The host selects the same Crash Bash CUE used by everyone else and presses **CROSS**. The room is locked against late joins before RetroArch starts hosting.
 5. Each player selects their CUE file and presses **CROSS** to confirm it. The companion fingerprints the CUE track layout and referenced track-file contents; the host waits until every active player has confirmed an identical disc before starting.
+   - Changing the selected CUE, rescanning the disc list or backing out of the picker clears that player's previous confirmation. Toggling READY off also clears it; everyone must confirm again before the host can start.
 6. Each client then discovers the host's public RetroArch lobby entry and starts RetroArch with the authenticated relay endpoint and session ID.
 7. If the client returns to the room after the match starts, the room displays **MATCH STARTED**; press **START** and select the same CUE to retry joining.
 
