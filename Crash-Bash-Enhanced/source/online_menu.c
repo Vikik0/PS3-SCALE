@@ -443,11 +443,6 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
     memset(&view, 0, sizeof(view));
     memset(&endpoint, 0, sizeof(endpoint));
     memset(rooms, 0, sizeof(rooms));
-
-    memset(&session, 0, sizeof(session));
-    memset(&view, 0, sizeof(view));
-    memset(&endpoint, 0, sizeof(endpoint));
-    memset(rooms, 0, sizeof(rooms));
     memset(&worker, 0, sizeof(worker));
 
     if (ensure_network_stack(network_state, online_state, status, status_size) == 0) {
