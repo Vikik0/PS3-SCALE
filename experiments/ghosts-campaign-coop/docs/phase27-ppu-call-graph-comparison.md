@@ -13,7 +13,9 @@ Phase 27 adds resolved internal function-entry edges to the inventory and compar
 - The Python reader remains backward compatible with inventories that do not contain `call_target_entries`.
 - The comparer builds per-build internal call graphs using exact entry addresses from the same inventory.
 - For matching function fingerprints, it reports callee-fingerprint changes between Campaign and Multiplayer.
-- For Multiplayer-only candidates, it reports incoming callers, outgoing callee fingerprints, callees whose fingerprints also occur in Campaign, and Multiplayer-only callees.
+- For Multiplayer-only candidates, it reports incoming callers, outgoing callee names/entries/fingerprints, callees whose fingerprints also occur in Campaign, and Multiplayer-only callees.
+- The reader rejects duplicate function entry addresses so one call-graph node cannot silently overwrite another.
+- Incoming callers' own outgoing symbol matches are labelled as caller context; they are not presented as the symbol that directly called the candidate.
 - Incoming caller names and their target symbols contribute to candidate ranking. This can surface a generically named function called by a meaningful `SV_InitLocalClient`-style routine.
 - The summary reports resolved internal edge counts and the number of matching caller fingerprints with changed callee sets.
 
