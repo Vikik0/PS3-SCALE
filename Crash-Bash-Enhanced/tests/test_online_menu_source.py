@@ -37,7 +37,7 @@ print("Native lobby polling and expired-session recovery checks passed.")
 main_source = (root / "source/main.c").read_text(encoding="utf-8")
 online_source = (root / "source/online.c").read_text(encoding="utf-8")
 assert "cb_online_heartbeat" in online_source
-assert '"set_ready"' in online_source
+assert r'\"set_ready\"' in online_source
 assert "cb_online_set_ready(&session, next_ready" in source
 launcher = (root / "source/game_launcher.c").read_text(encoding="utf-8")
 assert "BTN_START" in source
