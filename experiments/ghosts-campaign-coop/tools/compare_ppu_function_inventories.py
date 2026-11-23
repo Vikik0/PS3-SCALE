@@ -119,14 +119,28 @@ def _entry_map(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     return {row["entry"]: row for row in rows}
 
 
+def _target_functions(
+    row: dict[str, Any],
+    functions_by_entry: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    targets = {
+        entry: functions_by_entry[entry]
+        for entry in _values(row.get("call_target_entries"))
+        if entry in functions_by_entry
+    }
+    return sorted(
+        targets.values(),
+        key=lambda item: (item["fingerprint"], item["entry"], item["name"]),
+    )
+
+
 def _target_fingerprints(
     row: dict[str, Any],
     functions_by_entry: dict[str, dict[str, Any]],
 ) -> set[str]:
     return {
-        functions_by_entry[entry]["fingerprint"]
-        for entry in _values(row.get("call_target_entries"))
-        if entry in functions_by_entry
+        target["fingerprint"]
+        for target in _target_functions(row, functions_by_entry)
     }
 
 
@@ -179,6 +193,16 @@ def compare(
                 _target_fingerprints(row, multiplayer_by_entry) for row in m_rows
             ))
             if campaign_targets != multiplayer_targets:
+                campaign_callees = {
+                    target["entry"]: target
+                    for row in c_rows
+                    for target in _target_functions(row, campaign_by_entry)
+                }
+                multiplayer_callees = {
+                    target["entry"]: target
+                    for row in m_rows
+                    for target in _target_functions(row, multiplayer_by_entry)
+                }
                 call_graph_deltas.append({
                     "caller_fingerprint": fingerprint,
                     "campaign_functions": [
@@ -189,6 +213,28 @@ def compare(
                     ],
                     "campaign_callee_fingerprints": sorted(campaign_targets),
                     "multiplayer_callee_fingerprints": sorted(multiplayer_targets),
+                    "campaign_callee_functions": [
+                        {
+                            "name": target["name"],
+                            "entry": target["entry"],
+                            "fingerprint": target["fingerprint"],
+                        }
+                        for target in sorted(
+                            campaign_callees.values(),
+                            key=lambda item: (item["fingerprint"], item["entry"]),
+                        )
+                    ],
+                    "multiplayer_callee_functions": [
+                        {
+                            "name": target["name"],
+                            "entry": target["entry"],
+                            "fingerprint": target["fingerprint"],
+                        }
+                        for target in sorted(
+                            multiplayer_callees.values(),
+                            key=lambda item: (item["fingerprint"], item["entry"]),
+                        )
+                    ],
                     "multiplayer_only_callee_fingerprints": sorted(
                         multiplayer_targets - campaign_targets
                     ),
@@ -245,7 +291,10 @@ def compare(
                     "context_call_target_keyword_hits": caller_target_hits,
                 })
 
-            outgoing_targets = _target_fingerprints(function, multiplayer_by_entry)
+            outgoing_target_functions = _target_functions(function, multiplayer_by_entry)
+            outgoing_targets = {
+                target["fingerprint"] for target in outgoing_target_functions
+            }
             outgoing_shared = outgoing_targets & campaign_fingerprints
             outgoing_multiplayer_only = outgoing_targets - campaign_fingerprints
             incoming_name_hit_list = sorted(incoming_name_hits)
@@ -266,6 +315,17 @@ def compare(
                     "incoming_caller_context_target_keyword_hits": incoming_target_hit_list,
                     "incoming_callers": incoming_callers,
                     "outgoing_target_fingerprints": sorted(outgoing_targets),
+                    "outgoing_target_functions": [
+                        {
+                            "name": target["name"],
+                            "entry": target["entry"],
+                            "fingerprint": target["fingerprint"],
+                            "fingerprint_present_in_campaign": (
+                                target["fingerprint"] in campaign_fingerprints
+                            ),
+                        }
+                        for target in outgoing_target_functions
+                    ],
                     "outgoing_shared_target_fingerprints": sorted(outgoing_shared),
                     "outgoing_multiplayer_only_target_fingerprints": sorted(
                         outgoing_multiplayer_only
