@@ -1,4 +1,5 @@
 name: PS3 SCALE build
+# Temporary stacked-PR validation of the current Alpha 0.30 source tree
 
 on:
   push:
