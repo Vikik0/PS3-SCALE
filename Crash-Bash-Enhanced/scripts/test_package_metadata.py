@@ -9,6 +9,9 @@ build_script = (ROOT / "scripts/build_online_pkg_clean.sh").read_text()
 makefile = (ROOT / "Makefile").read_text()
 launcher = (ROOT / "source/game_launcher.c").read_text()
 online = (ROOT / "source/online.c").read_text()
+disc_browser = (ROOT / "source/disc_browser.c").read_text()
+stage_script = (ROOT / "scripts/stage_game_disc.py").read_text()
+personal_builder = (ROOT / "scripts/build_personal_pkg.sh").read_text()
 workflow = (ROOT.parent / ".github/workflows/crash-bash-build.yml").read_text()
 sfo_root = ET.parse(ROOT / "sfo.xml").getroot()
 sfo_values = {
@@ -46,7 +49,14 @@ assert 'make_self_npdrm "$RA/build/retroarch_psl1ght.elf" "$USRDIR/EBOOT.BIN" "$
 assert 'sfo --title "$APP_TITLE" --appid "$APP_ID" -f "$ROOT/sfo.xml"' in build_script
 assert '"$NM" -g "$RA/retroarch_psl1ght.elf"' in build_script
 
-# CI must embed the runtime before building and publish exactly one installable PKG.
+# The private personal builder embeds the supplied BIN/CUE in the same one-PKG app.
+assert '"/dev_hdd0/game/CBON00001/USRDIR/PSXISO"' in disc_browser
+assert "stage_game_disc.py" in personal_builder
+assert "--required" in personal_builder
+assert "USRDIR/PSXISO" in stage_script
+assert "Crash-Bash-Online-Personal-PS3.pkg" in personal_builder
+
+# Public CI embeds the runtime and publishes one installable PKG without game data.
 assert "needs: online-package-build" in workflow
 assert "name: Crash-Bash-RetroArch-Stage" in workflow
 assert "Crash-Bash-Online-Unified-PS3.pkg" in workflow

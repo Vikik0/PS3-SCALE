@@ -375,10 +375,10 @@ static void draw_disc_select(const CBGameDisc *discs, int count, int selected,
 
     if (count == 0) {
         draw_rect(58, 130, 720, 170, 0x0b1720ff);
-        draw_text(82, 158, 18, 0xffc18aff, "No CUE files were found.");
-        draw_text(82, 198, 14, 0xc2d0d8ff, "Copy your Crash Bash disc dump to one of these folders:");
-        draw_text(82, 232, 14, 0x9bb4c2ff, "/dev_hdd0/PSXISO/");
-        draw_text(82, 258, 14, 0x9bb4c2ff, "/dev_usb000/PSXISO/ (or another USB port)");
+        draw_text(82, 158, 18, 0xffc18aff, "No built-in or external CUE file was found.");
+        draw_text(82, 198, 14, 0xc2d0d8ff, "Check the installed package game folder:");
+        draw_text(82, 232, 14, 0x9bb4c2ff, "/dev_hdd0/game/CBON00001/USRDIR/PSXISO/");
+        draw_text(82, 258, 14, 0x9bb4c2ff, "External dumps: /dev_hdd0/PSXISO/ or USB.");
     } else {
         for (i = 0; i < count; i++) {
             u32 background = i == selected ? 0x28594fff : 0x172a36ff;

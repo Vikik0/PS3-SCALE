@@ -47,7 +47,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check PS3 package build script syntax
-        run: bash -n Crash-Bash-Enhanced/scripts/build_online_pkg_clean.sh
+        run: |
+          bash -n Crash-Bash-Enhanced/scripts/build_online_pkg_clean.sh
+          bash -n Crash-Bash-Enhanced/scripts/build_personal_pkg.sh
+          python3 -m py_compile Crash-Bash-Enhanced/scripts/stage_game_disc.py
       - name: Validate PS3 package metadata
         run: python3 Crash-Bash-Enhanced/scripts/test_package_metadata.py
       - name: Run protocol tests

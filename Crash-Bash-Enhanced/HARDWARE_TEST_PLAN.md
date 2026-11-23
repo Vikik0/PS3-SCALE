@@ -12,7 +12,7 @@ RetroArch's current Netplay FAQ cautions that PSX netplay is generally unsuitabl
 
 - Two jailbroken PS3 consoles on the same compatible firmware family.
 - The exact same `Crash-Bash-Online-Unified-PS3.pkg` installed on both consoles.
-- A legal BIN/CUE dump of the same Crash Bash disc revision on both consoles.
+- The same game-inclusive personal PKG installed on both consoles, with the user-supplied BIN/CUE embedded under `USRDIR/PSXISO/`. If testing the public CI package instead, use a legal BIN/CUE dump of the same Crash Bash disc revision on both consoles.
 - The exact same CUE file and byte-identical contents for every referenced BIN track.
 - The same BIOS file on both consoles, or both consoles using the same HLE mode. A BIOS dumped from the user's own PS1 is recommended.
 - A stable wired network for the first test; internet access for the relay test.
