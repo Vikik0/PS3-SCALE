@@ -12,7 +12,7 @@ from tools.compare_splitscreen_builtin_xrefs import (
 
 XF = [
     "program", "builtin", "string_address", "reference_address", "reference_type",
-    "is_call", "is_data", "source_type", "caller_name", "caller_entry",
+    "is_call", "is_data", "is_computed", "source_type", "caller_name", "caller_entry",
     "caller_body_start", "caller_body_end", "instruction",
 ]
 IF = ["program", "name", "entry", "body_address_count", "instruction_count", "fingerprint"]
@@ -36,7 +36,7 @@ def inv(name, entry, fingerprint):
     }
 
 
-def xref(builtin, string_address, reference_address, entry="", name="", *, is_call=False, is_data=True):
+def xref(builtin, string_address, reference_address, entry="", name="", *, is_call=False, is_data=True, is_computed=False):
     return {
         "program": "Ghosts",
         "builtin": builtin,
@@ -45,6 +45,7 @@ def xref(builtin, string_address, reference_address, entry="", name="", *, is_ca
         "reference_type": "UNCONDITIONAL_CALL" if is_call else ("DATA" if is_data else "READ"),
         "is_call": str(is_call).lower(),
         "is_data": str(is_data).lower(),
+        "is_computed": str(is_computed).lower(),
         "source_type": "ANALYSIS",
         "caller_name": name,
         "caller_entry": entry,
@@ -59,7 +60,8 @@ def manual_call_row(fingerprint, entry, name):
         "builtin": "isSplitScreen",
         "is_call": True,
         "is_data": False,
-        "reference_kind": "call_xref",
+        "is_computed": False,
+        "reference_kind": "direct_call_xref",
         "caller_fingerprint": fingerprint,
         "caller_inventory_match": True,
         "caller_entry_key": entry,
@@ -123,6 +125,7 @@ class BuiltinXrefTests(unittest.TestCase):
             "builtin": "PlayerCMD_Spawn",
             "is_call": False,
             "is_data": True,
+            "is_computed": False,
             "reference_kind": "data_xref",
             "caller_fingerprint": None,
             "caller_inventory_match": False,
@@ -139,7 +142,8 @@ class BuiltinXrefTests(unittest.TestCase):
             "builtin": "PlayerCMD_Spawn",
             "is_call": True,
             "is_data": False,
-            "reference_kind": "call_xref",
+            "is_computed": False,
+            "reference_kind": "direct_call_xref",
             "caller_fingerprint": None,
             "caller_inventory_match": False,
             "caller_entry_key": None,
@@ -150,7 +154,7 @@ class BuiltinXrefTests(unittest.TestCase):
         self.assertEqual(lead["priority"], "MP_ONLY_CALL_REFERENCE")
         self.assertEqual(lead["multiplayer_only_caller_count"], 0)
 
-    def test_xref_kinds_distinguish_calls_data_and_unreferenced_strings(self):
+    def test_xref_kinds_distinguish_direct_computed_data_and_unreferenced_strings(self):
         inventory = {
             "0000000000001000": {"name": "caller", "entry": "0x1000", "fingerprint": "a" * 64}
         }
@@ -158,12 +162,13 @@ class BuiltinXrefTests(unittest.TestCase):
         write(path, XF, [
             xref("isSplitScreen", "0x3000", "0x1001", "0x1000", is_call=True, is_data=False),
             xref("PlayerCMD_Spawn", "0x4000", "0x5000", is_call=False, is_data=True),
+            xref("SV_InitLocalClient", "0x5000", "0x5001", "0x1000", is_call=True, is_data=False, is_computed=True),
             xref("Clone", "0x6000", "", is_call=False, is_data=False),
         ])
         rows = read_xrefs(path, inventory)
         self.assertEqual(
             [row["reference_kind"] for row in rows],
-            ["call_xref", "data_xref", "string_without_recorded_xref"],
+            ["direct_call_xref", "data_xref", "computed_call_xref", "string_without_recorded_xref"],
         )
 
     def test_unknown_call_caller_is_not_guessed(self):
@@ -237,7 +242,8 @@ class BuiltinXrefTests(unittest.TestCase):
             "getReferenceType().toString()",
             "getReferenceType().isCall()",
             "getReferenceType().isData()",
-            "is_call,is_data",
+            "getReferenceType().isComputed()",
+            "is_call,is_data,is_computed",
             "Files.newBufferedWriter",
             "StandardCharsets.UTF_8",
             'reference == null ? "false"',
@@ -267,6 +273,34 @@ class BuiltinXrefTests(unittest.TestCase):
             "campaign_xrefs", "multiplayer_xrefs", "campaign_inventory", "multiplayer_inventory"
         })
 
+
+    def test_computed_call_lead_is_ranked_below_direct_call_lead(self):
+        inventory = {"1": {"name": "mp", "entry": "1", "fingerprint": "a" * 64}}
+        computed_row = {
+            "builtin": "ComputedBuiltin",
+            "is_call": True,
+            "is_data": False,
+            "is_computed": True,
+            "reference_kind": "computed_call_xref",
+            "caller_fingerprint": "a" * 64,
+            "caller_inventory_match": True,
+            "caller_entry_key": "1",
+            "caller_inventory_name": "mp",
+            "caller_entry": "1",
+        }
+        direct_row = {
+            **computed_row,
+            "builtin": "DirectBuiltin",
+            "is_computed": False,
+            "reference_kind": "direct_call_xref",
+        }
+        result = compare([], [computed_row, direct_row], {}, inventory)
+        self.assertEqual(
+            [lead["priority"] for lead in result["multiplayer_only_leads"]],
+            ["MP_ONLY_DIRECT_CALL_REFERENCE", "MP_ONLY_COMPUTED_CALL_REFERENCE"],
+        )
+        self.assertEqual(result["multiplayer"]["direct_call_xref_rows"], 1)
+        self.assertEqual(result["multiplayer"]["computed_call_xref_rows"], 1)
 
 if __name__ == "__main__":
     unittest.main()

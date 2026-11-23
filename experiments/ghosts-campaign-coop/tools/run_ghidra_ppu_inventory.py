@@ -312,6 +312,8 @@ def generate_inventories(
                 "builtin_xref_sha256": sha256_file(campaign_xref_csv),
                 "builtin_xref_rows": len(campaign_xref_rows),
                 "builtin_xref_call_rows": sum(row["is_call"] for row in campaign_xref_rows),
+                "builtin_xref_direct_call_rows": sum(row["is_call"] and not row["is_computed"] for row in campaign_xref_rows),
+                "builtin_xref_computed_call_rows": sum(row["is_call"] and row["is_computed"] for row in campaign_xref_rows),
                 "builtin_xref_data_rows": sum(row["is_data"] for row in campaign_xref_rows),
                 "opd_seeding": (
                     {
@@ -335,6 +337,8 @@ def generate_inventories(
                 "builtin_xref_sha256": sha256_file(multiplayer_xref_csv),
                 "builtin_xref_rows": len(multiplayer_xref_rows),
                 "builtin_xref_call_rows": sum(row["is_call"] for row in multiplayer_xref_rows),
+                "builtin_xref_direct_call_rows": sum(row["is_call"] and not row["is_computed"] for row in multiplayer_xref_rows),
+                "builtin_xref_computed_call_rows": sum(row["is_call"] and row["is_computed"] for row in multiplayer_xref_rows),
                 "builtin_xref_data_rows": sum(row["is_data"] for row in multiplayer_xref_rows),
                 "opd_seeding": (
                     {

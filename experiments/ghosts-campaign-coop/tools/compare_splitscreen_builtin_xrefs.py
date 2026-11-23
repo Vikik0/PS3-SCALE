@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare actual call references to split-screen builtins across Campaign/Multiplayer."""
+"""Compare direct and computed call references to split-screen builtins."""
 from __future__ import annotations
 
 import argparse
@@ -13,8 +13,8 @@ from pathlib import Path
 
 XREF_FIELDS = {
     "program", "builtin", "string_address", "reference_address", "reference_type",
-    "is_call", "is_data", "source_type", "caller_name", "caller_entry",
-    "caller_body_start", "caller_body_end", "instruction",
+    "is_call", "is_data", "is_computed", "source_type", "caller_name",
+    "caller_entry", "caller_body_start", "caller_body_end", "instruction",
 }
 INVENTORY_FIELDS = {"name", "entry", "fingerprint"}
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -102,29 +102,26 @@ def read_xrefs(path, inventory):
             caller_addr = address_key(raw.get("caller_entry", ""))
             is_call = parse_flag(raw.get("is_call"), "is_call", path, line)
             is_data = parse_flag(raw.get("is_data"), "is_data", path, line)
+            is_computed = parse_flag(raw.get("is_computed"), "is_computed", path, line)
             if not builtin or not program:
-                raise BuiltinXrefError(
-                    f"{path}:{line}: builtin and program are required"
-                )
+                raise BuiltinXrefError(f"{path}:{line}: builtin and program are required")
             if is_call and is_data:
-                raise BuiltinXrefError(
-                    f"{path}:{line}: a Ghidra reference cannot be both call and data"
-                )
-            if (is_call or is_data) and ref_addr is None:
-                raise BuiltinXrefError(
-                    f"{path}:{line}: call/data reference requires a reference address"
-                )
-            key = (builtin, string_addr, ref_addr or "")
+                raise BuiltinXrefError(f"{path}:{line}: a Ghidra reference cannot be both call and data")
+            if (is_call or is_data or is_computed) and ref_addr is None:
+                raise BuiltinXrefError(f"{path}:{line}: typed reference requires a reference address")
+            reference_type = (raw.get("reference_type") or "").strip()
+            source_type = (raw.get("source_type") or "").strip()
+            key = (builtin, string_addr, ref_addr or "", reference_type, source_type)
             if key in seen:
-                raise BuiltinXrefError(
-                    f"{path}:{line}: duplicate xref row for {builtin} at {ref_addr}"
-                )
+                raise BuiltinXrefError(f"{path}:{line}: duplicate xref row for {builtin} at {ref_addr}")
             seen.add(key)
             function = inventory.get(caller_addr or "")
             if is_call:
-                reference_kind = "call_xref"
+                reference_kind = "computed_call_xref" if is_computed else "direct_call_xref"
             elif is_data:
                 reference_kind = "data_xref"
+            elif is_computed:
+                reference_kind = "computed_non_call_xref"
             elif ref_addr:
                 reference_kind = "other_xref"
             else:
@@ -134,10 +131,11 @@ def read_xrefs(path, inventory):
                 "builtin": builtin,
                 "string_address": raw["string_address"].strip(),
                 "reference_address": raw.get("reference_address", "").strip(),
-                "reference_type": (raw.get("reference_type") or "").strip(),
+                "reference_type": reference_type,
                 "is_call": is_call,
                 "is_data": is_data,
-                "source_type": (raw.get("source_type") or "").strip(),
+                "is_computed": is_computed,
+                "source_type": source_type,
                 "caller_name": (raw.get("caller_name") or "").strip(),
                 "caller_entry": raw.get("caller_entry", "").strip(),
                 "caller_entry_key": caller_addr,
@@ -163,8 +161,14 @@ def caller_summary(rows):
             "entry": row["caller_entry"],
             "fingerprint": fingerprint,
             "xref_count": 0,
+            "direct_call_xref_count": 0,
+            "computed_call_xref_count": 0,
         })
         item["xref_count"] += 1
+        if row["is_computed"]:
+            item["computed_call_xref_count"] += 1
+        else:
+            item["direct_call_xref_count"] += 1
     return sorted(grouped.values(), key=lambda item: (item["name"].lower(), item["entry"]))
 
 
@@ -172,8 +176,11 @@ def _reference_counts(rows):
     return {
         "xref_rows": len(rows),
         "call_xref_rows": sum(row["is_call"] for row in rows),
+        "direct_call_xref_rows": sum(row["is_call"] and not row["is_computed"] for row in rows),
+        "computed_call_xref_rows": sum(row["is_call"] and row["is_computed"] for row in rows),
         "data_xref_rows": sum(row["is_data"] for row in rows),
-        "other_xref_rows": sum(not row["is_call"] and not row["is_data"] for row in rows),
+        "computed_non_call_xref_rows": sum(row["is_computed"] and not row["is_call"] for row in rows),
+        "other_xref_rows": sum(not row["is_call"] and not row["is_data"] and not row["is_computed"] for row in rows),
         "caller_inventory_misses": sum(
             row["caller_entry_key"] is not None and not row["caller_inventory_match"]
             for row in rows
@@ -213,39 +220,47 @@ def compare(campaign_xrefs, multiplayer_xrefs, campaign_inventory, multiplayer_i
             "multiplayer_only_caller_fingerprints": multiplayer_only,
             "campaign_only_caller_fingerprints": sorted(campaign_fingerprints - multiplayer_fingerprints),
             "interpretation": (
-                "Only Ghidra references explicitly typed as calls contribute to caller fingerprints. "
-                "Data and other references are reported separately and are not treated as call sites."
+                "Only explicit Ghidra call references contribute to caller fingerprints. "
+                "Direct and computed calls are separated; data and other references are not call sites."
             ),
         })
 
-        # A data/string reference alone is never promoted to a native call-path lead.
         if multiplayer_calls and (not campaign_calls or multiplayer_only):
+            if campaign_calls:
+                priority = "MP_ONLY_CALLER_FINGERPRINT"
+            elif any(not row["is_computed"] for row in multiplayer_calls):
+                priority = "MP_ONLY_DIRECT_CALL_REFERENCE"
+            else:
+                priority = "MP_ONLY_COMPUTED_CALL_REFERENCE"
             leads.append({
                 "builtin": builtin,
                 "campaign_call_xref_rows": len(campaign_calls),
                 "multiplayer_call_xref_rows": len(multiplayer_calls),
+                "multiplayer_direct_call_xref_rows": sum(not row["is_computed"] for row in multiplayer_calls),
+                "multiplayer_computed_call_xref_rows": sum(row["is_computed"] for row in multiplayer_calls),
                 "multiplayer_only_caller_count": len(multiplayer_only),
                 "multiplayer_only_callers": [
                     item for item in multiplayer_callers
                     if item["fingerprint"] in set(multiplayer_only)
                 ],
                 "shared_caller_count": len(shared),
-                "priority": (
-                    "MP_ONLY_CALL_REFERENCE"
-                    if not campaign_calls
-                    else "MP_ONLY_CALLER_FINGERPRINT"
-                ),
+                "priority": priority,
             })
 
+    priority_order = {
+        "MP_ONLY_DIRECT_CALL_REFERENCE": 0,
+        "MP_ONLY_COMPUTED_CALL_REFERENCE": 1,
+        "MP_ONLY_CALLER_FINGERPRINT": 2,
+    }
     leads.sort(key=lambda item: (
-        0 if item["priority"] == "MP_ONLY_CALL_REFERENCE" else 1,
+        priority_order[item["priority"]],
         -item["multiplayer_only_caller_count"],
         -item["multiplayer_call_xref_rows"],
         item["builtin"].lower(),
     ))
     result = {
-        "schema_version": 2,
-        "status": "SPLITSCREEN_BUILTIN_CALL_XREF_COMPARISON_COMPLETED",
+        "schema_version": 3,
+        "status": "SPLITSCREEN_BUILTIN_CALL_KIND_COMPARISON_COMPLETED",
         "campaign": {
             **_reference_counts(campaign_xrefs),
             "inventory_functions": len(campaign_inventory),
@@ -260,8 +275,9 @@ def compare(campaign_xrefs, multiplayer_xrefs, campaign_inventory, multiplayer_i
         "multiplayer_only_leads": leads,
         "limitations": [
             "Only explicit Ghidra call references are used to form caller fingerprints and Multiplayer-only leads.",
-            "Data references and non-call references may still reveal registration tables or state, but are not call-site proof.",
-            "The tool does not resolve indirect calls, virtual dispatch, callback execution, or runtime-only registration.",
+            "Direct and computed call references are reported separately; computed references can be indirect.",
+            "Data references and non-call references may reveal registration tables or state, but are not call-site proof.",
+            "The tool does not resolve indirect calls, virtual dispatch, callback execution, or runtime-only registration beyond Ghidra's references.",
             "Matching instruction fingerprints are navigation evidence, not proof of identical semantics or runtime behavior.",
             "No address is approved as a hook; verify exact executable, function boundary, TOC, calling convention, globals and lifecycle.",
             "A Multiplayer-only call reference does not prove Campaign can initialize a second local client.",

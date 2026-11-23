@@ -106,8 +106,8 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
 
     def test_optional_ghidra_analysis_adds_six_outputs_and_summary_evidence(self):
         fake_manifest = {
-            "campaign": {"function_records": 100, "builtin_xref_rows": 4, "builtin_xref_call_rows": 2},
-            "multiplayer": {"function_records": 120, "builtin_xref_rows": 8, "builtin_xref_call_rows": 5},
+            "campaign": {"function_records": 100, "builtin_xref_rows": 4, "builtin_xref_call_rows": 2, "builtin_xref_direct_call_rows": 2, "builtin_xref_computed_call_rows": 0},
+            "multiplayer": {"function_records": 120, "builtin_xref_rows": 8, "builtin_xref_call_rows": 5, "builtin_xref_direct_call_rows": 3, "builtin_xref_computed_call_rows": 2},
         }
         fake_comparison = {"multiplayer_only_leads": [{"builtin": "isSplitScreen"}]}
 
@@ -133,6 +133,8 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
         self.assertEqual(result["ppu_analysis"]["campaign_function_records"], 100)
         self.assertEqual(result["ppu_analysis"]["campaign_builtin_call_xref_rows"], 2)
         self.assertEqual(result["ppu_analysis"]["multiplayer_builtin_call_xref_rows"], 5)
+        self.assertEqual(result["ppu_analysis"]["campaign_builtin_direct_call_xref_rows"], 2)
+        self.assertEqual(result["ppu_analysis"]["multiplayer_builtin_computed_call_xref_rows"], 2)
         self.assertEqual(result["player_two_gate"]["status"], "NOT_PROVEN")
         for name in analyzer.GHIDRA_OUTPUT_NAMES:
             self.assertTrue((self.output_dir / name).is_file(), name)

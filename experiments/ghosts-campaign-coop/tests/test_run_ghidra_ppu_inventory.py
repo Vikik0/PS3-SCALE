@@ -69,7 +69,7 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
     def _write_xrefs(self, path, program):
         fields = [
             "program", "builtin", "string_address", "reference_address",
-            "reference_type", "is_call", "is_data", "source_type", "caller_name", "caller_entry",
+            "reference_type", "is_call", "is_data", "is_computed", "source_type", "caller_name", "caller_entry",
             "caller_body_start", "caller_body_end", "instruction",
         ]
         with path.open("w", encoding="utf-8", newline="") as stream:
@@ -78,7 +78,7 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
             writer.writerow({
                 "program": program, "builtin": "isSplitScreen",
                 "string_address": "0x5000", "reference_address": "0x1001",
-                "reference_type": "UNCONDITIONAL_CALL", "is_call": "true", "is_data": "false",
+                "reference_type": "UNCONDITIONAL_CALL", "is_call": "true", "is_data": "false", "is_computed": "false",
                 "source_type": "ANALYSIS", "caller_name": "FUN_fixture", "caller_entry": "0x1000",
                 "caller_body_start": "0x1000", "caller_body_end": "0x1010",
                 "instruction": "load r3, 0x5000",
@@ -138,6 +138,8 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         self.assertEqual(saved["multiplayer"]["builtin_xref_rows"], 1)
         self.assertEqual(saved["campaign"]["builtin_xref_call_rows"], 1)
         self.assertEqual(saved["multiplayer"]["builtin_xref_call_rows"], 1)
+        self.assertEqual(saved["campaign"]["builtin_xref_direct_call_rows"], 1)
+        self.assertEqual(saved["campaign"]["builtin_xref_computed_call_rows"], 0)
         self.assertEqual(saved["campaign"]["builtin_xref_data_rows"], 0)
         self.assertEqual(saved["multiplayer_only_builtin_lead_count"], 1)
         self.assertEqual(saved["builtin_xref_comparison_file"], "splitscreen_builtin_xrefs.json")

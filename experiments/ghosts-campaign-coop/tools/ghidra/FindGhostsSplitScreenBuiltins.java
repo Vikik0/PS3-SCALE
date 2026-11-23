@@ -46,6 +46,7 @@ public class FindGhostsSplitScreenBuiltins extends GhidraScript {
         writer.write(csv(reference == null ? "" : reference.getReferenceType().toString()) + ",");
         writer.write(csv(reference == null ? "false" : Boolean.toString(reference.getReferenceType().isCall())) + ",");
         writer.write(csv(reference == null ? "false" : Boolean.toString(reference.getReferenceType().isData())) + ",");
+        writer.write(csv(reference == null ? "false" : Boolean.toString(reference.getReferenceType().isComputed())) + ",");
         writer.write(csv(reference == null ? "" : reference.getSource().toString()) + ",");
         writer.write(csv(caller == null ? "" : caller.getName()) + ",");
         writer.write(csv(caller == null ? "" : caller.getEntryPoint().toString()) + ",");
@@ -65,7 +66,7 @@ public class FindGhostsSplitScreenBuiltins extends GhidraScript {
         int stringHits = 0, referenceHits = 0, functionsResolved = 0;
         MemoryBlock[] blocks = currentProgram.getMemory().getBlocks();
         try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(args[0]), StandardCharsets.UTF_8)) {
-            writer.write("program,builtin,string_address,reference_address,reference_type,is_call,is_data,source_type,caller_name,caller_entry,caller_body_start,caller_body_end,instruction\n");
+            writer.write("program,builtin,string_address,reference_address,reference_type,is_call,is_data,is_computed,source_type,caller_name,caller_entry,caller_body_start,caller_body_end,instruction\n");
             for (MemoryBlock block : blocks) {
                 monitor.checkCancelled();
                 if (!block.isInitialized()) continue;
