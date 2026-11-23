@@ -14,6 +14,6 @@ The OPD helper accepts an address and size from the ELF inspector. Before this p
 
 ## Validation
 
-Phase 40 passed all five CI jobs and 313 Python tests. Phase 41 adds two OPD-boundary tests; the latest workflow run will validate the updated suite.
+GitHub Actions run 45263357751 passed all five jobs and 315 Python tests, including the Phase 41 OPD boundary tests.
 
 This is input validation only. OPD values still must come from the exact user's ELF inspector output; no range is guessed, and no hook is approved.
