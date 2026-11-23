@@ -187,7 +187,7 @@ def compare(
             "Function boundaries depend on Ghidra auto-analysis and OPD/function seeding quality.",
             "The fingerprint normalizes long absolute addresses and auto-generated labels; collisions and missed matches are possible.",
             "A matching fingerprint is a navigation lead, not proof that a function has identical runtime context or is safe to transplant.",
-            "A Multiplayer-only function name match is a search priority, not a local-client creation proof.",
+            "A Multiplayer-only function name or resolved call-target symbol match is a search priority, not a local-client creation proof.",
             "Do not copy a function body or call target into Campaign until TOC, imports, global state, calling convention and runtime lifecycle are verified.",
             "This tool never identifies or approves hook addresses.",
         ],
