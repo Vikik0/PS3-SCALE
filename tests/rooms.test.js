@@ -754,6 +754,34 @@ test("Netplay endpoint ignores a stale public-lobby host entry", async () => {
 });
 
 
+test("Netplay start requires every active player to confirm the same disc content", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  const invalid = await call("POST", { action: "set_disc", fingerprint: "not-a-fingerprint" }, host.body.token);
+  assert.equal(invalid.statusCode, 400);
+  const first = await call("POST", { action: "set_disc", fingerprint: "0123456789ABCDEF" }, host.body.token);
+  assert.equal(first.body.discSelectionCount, 1);
+  assert.equal(first.body.discMatch, false);
+  const missing = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(missing.statusCode, 409);
+  assert.equal(missing.body.state, "waiting_for_disc_selection");
+  const second = await call("POST", { action: "set_disc", fingerprint: "FEDCBA9876543210" }, guest.body.token);
+  assert.equal(second.body.discMismatch, true);
+  const mismatch = await call("POST", { action: "netplay" }, guest.body.token);
+  assert.equal(mismatch.body.state, "disc_mismatch");
+  const blocked = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(blocked.statusCode, 409);
+  assert.equal(blocked.body.state, "disc_mismatch");
+  const corrected = await call("POST", { action: "set_disc", fingerprint: "0123456789ABCDEF" }, guest.body.token);
+  assert.equal(corrected.body.discMatch, true);
+  const started = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(started.statusCode, 200);
+  const locked = await call("POST", { action: "set_disc", fingerprint: "0123456789ABCDEF" }, guest.body.token);
+  assert.equal(locked.statusCode, 409);
+});
+
 test("only the host can start Netplay and a started room rejects late joins", async () => {
   const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });

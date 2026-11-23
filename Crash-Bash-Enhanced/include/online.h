@@ -14,14 +14,15 @@
 #define CB_ONLINE_API_BASE "https://crash-bash-enhanced.vercel.app"
 #endif
 typedef struct { char code[7]; char host[CB_ONLINE_NAME_MAX]; int players; int max_players; } CBOnlineRoom;
-typedef struct { char id[CB_ONLINE_ID_MAX]; char name[CB_ONLINE_NAME_MAX]; int ready; } CBOnlinePlayer;
+typedef struct { char id[CB_ONLINE_ID_MAX]; char name[CB_ONLINE_NAME_MAX]; int ready; char disc_fingerprint[17]; } CBOnlinePlayer;
 typedef struct { char code[7]; char token[CB_ONLINE_TOKEN_MAX]; char player_id[CB_ONLINE_ID_MAX]; char player_name[CB_ONLINE_NAME_MAX]; int ready; } CBOnlineSession;
-typedef struct { char code[7]; char host_player_id[CB_ONLINE_ID_MAX]; char netplay_id[CB_ONLINE_NETPLAY_ID_MAX]; int is_private; int is_ready; int game_started; int player_count; CBOnlinePlayer players[CB_ONLINE_PLAYER_MAX]; } CBOnlineRoomView;
+typedef struct { char code[7]; char host_player_id[CB_ONLINE_ID_MAX]; char netplay_id[CB_ONLINE_NETPLAY_ID_MAX]; int is_private; int is_ready; int game_started; int player_count; int disc_selection_count; int disc_match; int disc_mismatch; CBOnlinePlayer players[CB_ONLINE_PLAYER_MAX]; } CBOnlineRoomView;
 typedef struct {
     char address[CB_ONLINE_NETPLAY_HOST_MAX];
     char port[8];
     char mitm_session[CB_ONLINE_NETPLAY_SESSION_MAX];
     char mode[8];
+    char state[32];
     char game_name[CB_ONLINE_NETPLAY_TEXT_MAX];
     char core_name[CB_ONLINE_NETPLAY_TEXT_MAX];
     char core_version[CB_ONLINE_NETPLAY_TEXT_MAX];
@@ -35,6 +36,7 @@ int cb_online_join_room(const char *code, const char *display_name, CBOnlineSess
 int cb_online_join_any_room(const char *display_name, CBOnlineSession *session, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_get_room(CBOnlineSession *session, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_set_ready(CBOnlineSession *session, int ready, CBOnlineRoomView *view, char *error, size_t error_size);
+int cb_online_set_disc_fingerprint(CBOnlineSession *session, const char *fingerprint, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_get_netplay_endpoint(CBOnlineSession *session, CBOnlineNetplayEndpoint *endpoint, char *error, size_t error_size);
 int cb_online_mark_game_started(CBOnlineSession *session, char *error, size_t error_size);
 int cb_online_cancel_game_start(CBOnlineSession *session, char *error, size_t error_size);

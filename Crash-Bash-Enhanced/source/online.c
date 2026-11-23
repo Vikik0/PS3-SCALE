@@ -92,6 +92,7 @@ static void parse_players(const char *json, const cb_json_token *tokens, int cou
         memset(player, 0, sizeof(*player));
         get_string_field(json, tokens, count, item, "id", player->id, sizeof(player->id));
         get_string_field(json, tokens, count, item, "name", player->name, sizeof(player->name));
+        get_string_field(json, tokens, count, item, "discFingerprint", player->disc_fingerprint, sizeof(player->disc_fingerprint));
         ready_token = cb_json_object_get(json, tokens, count, item, "ready");
         player->ready = cb_json_bool(json, ready_token >= 0 ? &tokens[ready_token] : NULL, 0);
         view->player_count++;
@@ -102,6 +103,7 @@ static void parse_players(const char *json, const cb_json_token *tokens, int cou
 static int parse_room_view(const char *json, CBOnlineRoomView *view) {
     cb_json_token tokens[CB_JSON_TOKEN_COUNT]; int count = cb_json_parse(json, tokens, CB_JSON_TOKEN_COUNT);
     int room, players, status, private_token, game_started_token;
+    int disc_count_token, disc_match_token, disc_mismatch_token;
     if (count <= 0 || !view) return -1;
     room = cb_json_object_get(json, tokens, count, 0, "room");
     if (room < 0 || tokens[room].type != CB_JSON_OBJECT) return -1;
@@ -120,6 +122,12 @@ static int parse_room_view(const char *json, CBOnlineRoomView *view) {
     view->is_private = cb_json_bool(json, private_token >= 0 ? &tokens[private_token] : NULL, 0);
     game_started_token = cb_json_object_get(json, tokens, count, room, "gameStarted");
     view->game_started = cb_json_bool(json, game_started_token >= 0 ? &tokens[game_started_token] : NULL, 0);
+    disc_count_token = cb_json_object_get(json, tokens, count, room, "discSelectionCount");
+    disc_match_token = cb_json_object_get(json, tokens, count, room, "discMatch");
+    disc_mismatch_token = cb_json_object_get(json, tokens, count, room, "discMismatch");
+    view->disc_selection_count = cb_json_int(json, disc_count_token >= 0 ? &tokens[disc_count_token] : NULL, 0);
+    view->disc_match = cb_json_bool(json, disc_match_token >= 0 ? &tokens[disc_match_token] : NULL, 0);
+    view->disc_mismatch = cb_json_bool(json, disc_mismatch_token >= 0 ? &tokens[disc_mismatch_token] : NULL, 0);
     players = cb_json_object_get(json, tokens, count, room, "players");
     parse_players(json, tokens, count, players, view);
     if (view->game_started) view->is_ready = 1;
@@ -141,13 +149,20 @@ static int parse_session(const char *json, CBOnlineSession *session) {
 }
 static int parse_heartbeat(const char *json, CBOnlineRoomView *view) {
     cb_json_token tokens[CB_JSON_TOKEN_COUNT]; int count = cb_json_parse(json, tokens, CB_JSON_TOKEN_COUNT);
-    int players, game_started_token; if (count <= 0 || !view) return -1;
+    int players, game_started_token, disc_count_token, disc_match_token, disc_mismatch_token;
+    if (count <= 0 || !view) return -1;
     get_string_field(json, tokens, count, 0, "hostPlayerId",
                      view->host_player_id, sizeof(view->host_player_id));
     get_string_field(json, tokens, count, 0, "netplayId",
                      view->netplay_id, sizeof(view->netplay_id));
     game_started_token = cb_json_object_get(json, tokens, count, 0, "gameStarted");
     view->game_started = cb_json_bool(json, game_started_token >= 0 ? &tokens[game_started_token] : NULL, 0);
+    disc_count_token = cb_json_object_get(json, tokens, count, 0, "discSelectionCount");
+    disc_match_token = cb_json_object_get(json, tokens, count, 0, "discMatch");
+    disc_mismatch_token = cb_json_object_get(json, tokens, count, 0, "discMismatch");
+    view->disc_selection_count = cb_json_int(json, disc_count_token >= 0 ? &tokens[disc_count_token] : NULL, 0);
+    view->disc_match = cb_json_bool(json, disc_match_token >= 0 ? &tokens[disc_match_token] : NULL, 0);
+    view->disc_mismatch = cb_json_bool(json, disc_mismatch_token >= 0 ? &tokens[disc_mismatch_token] : NULL, 0);
     players = cb_json_object_get(json, tokens, count, 0, "players");
     parse_players(json, tokens, count, players, view);
     if (view->game_started) view->is_ready = 1;
@@ -257,6 +272,27 @@ int cb_online_get_room(CBOnlineSession *session, CBOnlineRoomView *view, char *e
     for (i = 0; i < view->player_count; i++) if (strcmp(view->players[i].id, session->player_id) == 0) session->ready = view->players[i].ready;
     return 0;
 }
+int cb_online_set_disc_fingerprint(CBOnlineSession *session, const char *fingerprint,
+                                   CBOnlineRoomView *view, char *error, size_t error_size) {
+    char body[128], response[CB_HTTP_BUFFER];
+    size_t i;
+    if (!session || !session->token[0] || !fingerprint || strlen(fingerprint) != 16 || !view) {
+        set_error(error, error_size, "Invalid disc fingerprint or room session");
+        return -1;
+    }
+    for (i = 0; i < 16; i++) {
+        char c = fingerprint[i];
+        if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'))) {
+            set_error(error, error_size, "Disc fingerprint must be 16 uppercase hexadecimal characters");
+            return -1;
+        }
+    }
+    snprintf(body, sizeof(body), "{\\"action\\":\\"set_disc\\",\\"fingerprint\\":\\"%.16s\\"}", fingerprint);
+    if (http_request("POST", "/api/rooms", body, session->token,
+                     response, sizeof(response), error, error_size) < 0) return -1;
+    return cb_online_get_room(session, view, error, error_size);
+}
+
 int cb_online_set_ready(CBOnlineSession *session, int ready, CBOnlineRoomView *view, char *error, size_t error_size) {
     char body[64], response[CB_HTTP_BUFFER];
     if (!session || !session->token[0] || !view) { set_error(error, error_size, "No active room session"); return -1; }
@@ -330,6 +366,7 @@ int cb_online_get_netplay_endpoint(CBOnlineSession *session,
         set_error(error, error_size, "Invalid Netplay endpoint response");
         return -1;
     }
+    get_string_field(response, tokens, count, 0, "state", endpoint->state, sizeof(endpoint->state));
     ready = cb_json_object_get(response, tokens, count, 0, "ready");
     if (!cb_json_bool(response, ready >= 0 ? &tokens[ready] : NULL, 0)) {
         if (error && error_size) error[0] = '\0';

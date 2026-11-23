@@ -7,8 +7,9 @@ tmp_archive="${TMPDIR:-/tmp}/cb-archive-test-$$"
 tmp_netcode="${TMPDIR:-/tmp}/cb-netcode-test-$$"
 tmp_peer="${TMPDIR:-/tmp}/cb-peer-test-$$"
 tmp_disc="${TMPDIR:-/tmp}/cb-disc-test-$$"
-tmp_launch="${TMPDIR:-/tmp}/cb-launch-test-$$"
-trap 'rm -f "$tmp" "$tmp_json" "$tmp_archive" "$tmp_netcode" "$tmp_peer" "$tmp_disc" "$tmp_launch" "$ROOT/cb_archive_test.dat"' EXIT
+tmp_launch="${TMPDIR:-/tmp}/cb-launch-test-$"
+tmp_fingerprint="${TMPDIR:-/tmp}/cb-fingerprint-test-$"
+trap 'rm -f "$tmp" "$tmp_json" "$tmp_archive" "$tmp_netcode" "$tmp_peer" "$tmp_disc" "$tmp_launch" "$ROOT/cb_archive_test.dat" "$tmp_fingerprint"' EXIT
 
 cc -std=c11 -Wall -Wextra -Werror "$ROOT/tests/test_protocol.c" -o "$tmp"
 "$tmp"
@@ -31,6 +32,9 @@ cc -std=c11 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -I"$ROOT/include" "$
 cc -std=c11 -Wall -Wextra -Werror -I"$ROOT/include" "$ROOT/source/game_launch_args.c" "$ROOT/tests/test_game_launch_args.c" -o "$tmp_launch"
 "$tmp_launch"
 
+cc -std=c11 -Wall -Wextra -Werror -I"$ROOT/include" "$ROOT/source/disc_fingerprint.c" "$ROOT/tests/test_disc_fingerprint.c" -o "$tmp_fingerprint"
+"$tmp_fingerprint"
+
 python3 "$ROOT/tests/test_extract_disc.py"
 python3 "$ROOT/tests/test_online_menu_source.py"
-echo "Host protocol, JSON, archive, netcode, UDP peer, disc browser, game launch args, disc extractor and native lobby tests passed."
+echo "Host protocol, JSON, archive, netcode, UDP peer, disc browser, disc fingerprint, game launch args, disc extractor and native lobby tests passed."

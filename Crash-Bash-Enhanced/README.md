@@ -52,8 +52,9 @@ The separate **Crash Bash Enhanced Lobby** PKG (`CBEN00001`) provides an optiona
 2. Open **ONLINE ROOMS** in the native companion. One player creates a room; the others join with its six-character invite code.
 3. Every active player marks **READY**. Press **START** to open the CUE picker.
 4. The host selects the same Crash Bash CUE used by everyone else and presses **CROSS**. The room is locked against late joins before RetroArch starts hosting.
-5. Each client selects the identical CUE file and presses **CROSS** once. The companion discovers the host's public RetroArch lobby entry and starts RetroArch with the authenticated relay endpoint and session ID.
-6. If the client returns to the room after the match starts, the room displays **MATCH STARTED**; press **START** and select the same CUE to retry joining.
+5. Each player selects their CUE file and presses **CROSS** to confirm it. The companion fingerprints the CUE track layout and referenced track-file contents; the host waits until every active player has confirmed an identical disc before starting.
+6. Each client then discovers the host's public RetroArch lobby entry and starts RetroArch with the authenticated relay endpoint and session ID.
+7. If the client returns to the room after the match starts, the room displays **MATCH STARTED**; press **START** and select the same CUE to retry joining.
 
 When using this assisted flow, players do not need to open **Netplay Host List** manually. The lobby API coordinates rooms and discovers the relay; RetroArch Netplay still carries and synchronizes the game session. The **OPEN CRASH BASH ONLINE** home-menu item opens the standalone RetroArch menu for local play or the manual Netplay flow above.
 

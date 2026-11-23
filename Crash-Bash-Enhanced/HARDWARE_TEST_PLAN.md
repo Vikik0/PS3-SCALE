@@ -28,11 +28,13 @@ Do not change the core version, CUE/BIN content, region, BIOS file (or HLE choic
 4. Mark both players Ready. Confirm the room becomes launch-ready with two players; a four-seat room is not required.
 5. Press START in the room on both consoles and confirm the CUE picker appears.
 6. On the host console, select the Crash Bash CUE and press CROSS. Confirm the API locks the ready room before RetroArch starts hosting and publishes its private relay session.
-7. On the client console, select the same CUE and press CROSS once. Confirm the companion finds the host through the RetroArch public lobby and starts RetroArch with `--connect` and `--mitm-session`, without manual Host List selection.
-8. From the companion's home menu, also test **OPEN CRASH BASH ONLINE**.
-9. Temporarily test without the RetroArch package installed and confirm the launcher reports the missing app rather than crashing.
-10. After the host starts, return the client to the room screen and confirm it shows **MATCH STARTED**, not the pre-match READY prompt. Press START, choose the same CUE and retry the automatic join flow.
-11. Press CIRCLE during relay discovery to return to the room; verify the client can reopen the CUE picker without changing the already-started room lock.
+7. On each console, select the intended CUE and press CROSS to confirm. Confirm the host waits for all active players and the same disc fingerprint is reported before it starts RetroArch.
+8. Deliberately select a different CUE on one client. Confirm the room reports a disc mismatch and does not launch either console. Correct the selection and confirm the host proceeds only after the fingerprints match.
+9. On the client console, select the same CUE and confirm the companion finds the host through the RetroArch public lobby and starts RetroArch with `--connect` and `--mitm-session`, without manual Host List selection.
+10. From the companion's home menu, also test **OPEN CRASH BASH ONLINE**.
+11. Temporarily test without the RetroArch package installed and confirm the launcher reports the missing app rather than crashing.
+12. After the host starts, return the client to the room screen and confirm it shows **MATCH STARTED**, not the pre-match READY prompt. Press START, choose the same CUE and retry the automatic join flow.
+13. Press CIRCLE during relay discovery to return to the room; verify the client can reopen the CUE picker without changing the already-started room lock.
 
 Pass criteria: both players see the same room membership and Ready state; only the host can lock the room for launch; late joins are rejected; the client resolves the exact host entry, receives the relay endpoint only through its authenticated room token, and automatically joins. Started seats remain reserved for the match window. The missing-package path is handled cleanly. The Vercel companion does not carry game frames; actual synchronization is provided by RetroArch Netplay.
 

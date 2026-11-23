@@ -70,6 +70,11 @@ assert 'argv[used++] = "--mitm-session";' in launch_args
 assert "endpoint->mitm_session[0]" in launch_args
 assert "cb_online_get_netplay_endpoint(&session, &endpoint" in source
 assert "cb_online_mark_game_started(&session" in source
+assert "cb_disc_fingerprint(" in source
+assert "cb_online_set_disc_fingerprint(" in source
+assert "host_disc_waiting" in source
+assert "view.disc_match" in source
+assert "disc_mismatch" in online_source
 assert "MATCH STARTED - PRESS START, THEN SELECT THE SAME CUE TO JOIN" in source
 assert "START JOIN MATCH  SQUARE REFRESH  CIRCLE BACK" in source
 assert '"HOST" : "CLIENT"' in source

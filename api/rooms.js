@@ -110,6 +110,13 @@ function prunePlayers(room, now = Date.now()) {
   return active;
 }
 
+function discSelection(room, players = room.players || []) {
+  const selected = players.map((player) => typeof player.discFingerprint === "string" ? player.discFingerprint : "")
+    .filter((fingerprint) => /^[A-F0-9]{16}$/.test(fingerprint));
+  const mismatch = new Set(selected).size > 1;
+  return { discSelectionCount: selected.length, discMatch: players.length >= 2 && selected.length === players.length && !mismatch, discMismatch: mismatch };
+}
+
 function publicRoom(room) {
   const active = activePlayers(room);
   return {
@@ -288,7 +295,8 @@ module.exports = async function handler(req, res) {
           netplayId: record.room.netplayId || "",
           gameStarted: Boolean(record.room.gameStartedAt),
           isPrivate: record.room.isPrivate,
-          players: active.map(({ id, name, ready }) => ({ id, name, ready: inactiveSeats ? false : ready })),
+          players: active.map(({ id, name, ready, discFingerprint }) => ({ id, name, ready: inactiveSeats ? false : ready, discFingerprint: discFingerprint || "" })),
+          ...discSelection(record.room, active),
           selfPlayerId: claims.sub,
           maxPlayers: MAX_PLAYERS,
           createdAt: record.room.createdAt,
@@ -320,7 +328,7 @@ module.exports = async function handler(req, res) {
           updatedAt: now,
           hostPlayerId: playerId,
           netplayId: crypto.randomBytes(6).toString("hex").toUpperCase(),
-          players: [{ id: playerId, name, ready: false, joinedAt: now, lastSeen: now }],
+          players: [{ id: playerId, name, ready: false, discFingerprint: "", joinedAt: now, lastSeen: now }],
           signals: [],
           nextSignalId: 1
         };
@@ -347,7 +355,7 @@ module.exports = async function handler(req, res) {
           if (room.gameStartedAt || room.isPrivate || room.status !== "waiting" || room.players.length >= MAX_PLAYERS) {
             return { write: false, skip: true };
           }
-          room.players.push({ id: playerId, name, ready: false, joinedAt: now, lastSeen: now });
+          room.players.push({ id: playerId, name, ready: false, discFingerprint: "", joinedAt: now, lastSeen: now });
           room.updatedAt = now;
           return {
             status: 200,
@@ -406,6 +414,24 @@ module.exports = async function handler(req, res) {
     const player = findPlayer(record.room, claims.sub);
     if (!player) return reply(res, 403, { error: "You are not a member of this room." });
 
+    if (action === "set_disc") {
+      const fingerprint = String(body.fingerprint || "").toUpperCase();
+      if (!/^[A-F0-9]{16}$/.test(fingerprint)) return reply(res, 400, { error: "A valid 16-character disc fingerprint is required." });
+      const outcome = await mutateRoom(code, (room) => {
+        const now = Date.now();
+        const active = prunePlayers(room, now);
+        const currentPlayer = active.find((entry) => entry.id === claims.sub);
+        if (!currentPlayer) return { write: false, status: 403, body: { error: "Your room seat has expired. Rejoin the room." } };
+        if (room.gameStartedAt) return { write: false, status: 409, body: { error: "The match has already started; disc selection is locked." } };
+        currentPlayer.discFingerprint = fingerprint;
+        currentPlayer.lastSeen = now;
+        room.updatedAt = now;
+        return { status: 200, body: { ok: true, playerCount: active.length, ...discSelection(room, active) } };
+      });
+      if (!outcome.found) return reply(res, 404, { error: "Room not found." });
+      return reply(res, outcome.outcome.status || 200, outcome.outcome.body);
+    }
+
     if (action === "game_start" || action === "game_start_cancel") {
       const starting = action === "game_start";
       const outcome = await mutateRoom(code, (room) => {
@@ -423,12 +449,14 @@ module.exports = async function handler(req, res) {
         }
 
         if (starting) {
-          if (room.status !== "ready" ||
-              active.length < 2 ||
-              active.length !== (room.players || []).length ||
-              !active.every((entry) => entry.ready)) {
+          if (room.status !== "ready" || active.length < 2 || active.length !== (room.players || []).length || !active.every((entry) => entry.ready)) {
             return { write: false, status: 409, body: { error: "Every active player must be READY before starting Netplay." } };
           }
+          const selection = discSelection(room, active);
+          if (!selection.discMatch) return { write: false, status: 409, body: {
+            error: selection.discMismatch ? "Players selected different disc images." : "Every player must confirm the same disc image before starting.",
+            state: selection.discMismatch ? "disc_mismatch" : "waiting_for_disc_selection", ...selection
+          } };
           if (!room.gameStartedAt) room.gameStartedAt = now;
           room.updatedAt = now;
           return { status: 200, body: { ok: true, gameStartedAt: room.gameStartedAt } };
@@ -459,7 +487,10 @@ module.exports = async function handler(req, res) {
             error: "Every active player must be READY before Netplay can start."
           });
         }
-        return reply(res, 200, { ready: false, state: "waiting_for_host_start" });
+        const selection = discSelection(record.room, active);
+        if (selection.discMismatch) return reply(res, 200, { ready: false, state: "disc_mismatch", ...selection });
+        if (!selection.discMatch) return reply(res, 200, { ready: false, state: "waiting_for_disc_selection", ...selection });
+        return reply(res, 200, { ready: false, state: "waiting_for_host_start", ...selection });
       }
 
       const hostPlayerId = active.some((entry) => entry.id === record.room.hostPlayerId)
@@ -527,7 +558,8 @@ module.exports = async function handler(req, res) {
             hostPlayerId: room.hostPlayerId || active[0]?.id || "",
             netplayId: room.netplayId || "",
             gameStarted: Boolean(room.gameStartedAt),
-            players: active.map(({ id, name, ready }) => ({ id, name, ready }))
+            players: active.map(({ id, name, ready, discFingerprint }) => ({ id, name, ready, discFingerprint: discFingerprint || "" })),
+            ...discSelection(room, active)
           }
         };
       });

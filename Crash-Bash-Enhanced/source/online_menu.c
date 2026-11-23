@@ -2,6 +2,7 @@ struct timeval;
 #include "online_menu.h"
 #include "game_launcher.h"
 #include "disc_browser.h"
+#include "disc_fingerprint.h"
 #include "online.h"
 #include <stdio.h>
 #include <string.h>
@@ -205,6 +206,15 @@ static void draw_room(const CBOnlineRoomView *view, const CBOnlineSession *sessi
     } else {
         draw_text(58, 338, 15, 0x9bb4c2ff, "Waiting for every player to mark READY.");
     }
+    if (view->disc_mismatch) {
+        draw_text(58, 365, 13, 0xff9a80ff, "DISC MISMATCH - ALL PLAYERS MUST SELECT THE SAME CUE CONTENT");
+    } else if (view->disc_match) {
+        draw_text(58, 365, 13, 0x7ce0a8ff, "DISC CONTENT MATCHED ON ALL PLAYERS");
+    } else {
+        char disc_status[80];
+        snprintf(disc_status, sizeof(disc_status), "DISC CONFIRMATION: %d/%d PLAYERS", view->disc_selection_count, view->player_count);
+        draw_text(58, 365, 13, 0x9bb4c2ff, disc_status);
+    }
     draw_rect(58, 390, 720, 38, 0x0b1720ff);
     draw_text(72, 398, 14, 0x9bb4c2ff, status);
     if (view->game_started)
@@ -280,9 +290,9 @@ static void draw_disc_select(const CBGameDisc *discs, int count, int selected,
     }
 
     if (is_host) {
-        draw_text(58, 398, 13, 0x7ce0a8ff, "HOST: CROSS starts Netplay and publishes the private relay.");
+        draw_text(58, 398, 13, 0x7ce0a8ff, "HOST: CROSS CONFIRMS DISC; LAUNCHES WHEN ALL MATCH.");
     } else {
-        draw_text(58, 398, 13, 0xffc18aff, "CLIENT: CROSS joins the host using the same CUE file.");
+        draw_text(58, 398, 13, 0xffc18aff, "CLIENT: CROSS CONFIRMS DISC; THEN WAITS FOR HOST.");
     }
     draw_text(58, 450, 13, 0x9bb4c2ff, status ? status : "");
     draw_text(56, 474, 12, 0x6d8794ff, "UP/DOWN SELECT  CROSS START / JOIN  SQUARE RESCAN  CIRCLE BACK");
@@ -309,6 +319,9 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
     int disc_selected = 0;
     int netplay_waiting = 0;
     int netplay_wait_attempts = 0;
+    int host_disc_waiting = 0;
+    int host_disc_selected = -1;
+    unsigned int disc_poll_frames = 0;
     unsigned int netplay_poll_frames = 0;
     int curl_initialized = 0;
     int lobby_ready = 0;
@@ -442,12 +455,17 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
         } else if (screen == SCREEN_DISC_SELECT) {
             if (up && !old_up && disc_count > 0) {
                 disc_selected = (disc_selected + disc_count - 1) % disc_count;
+                netplay_waiting = 0; host_disc_waiting = 0;
+                snprintf(status, status_size, "Selection changed. Press CROSS to confirm this disc.");
             }
             if (down && !old_down && disc_count > 0) {
                 disc_selected = (disc_selected + 1) % disc_count;
+                netplay_waiting = 0; host_disc_waiting = 0;
+                snprintf(status, status_size, "Selection changed. Press CROSS to confirm this disc.");
             }
             if (square && !old_square) {
                 size_t scanned = 0;
+                netplay_waiting = 0; host_disc_waiting = 0;
                 if (cb_disc_scan(discs, CB_DISC_MAX, &scanned) == 0) {
                     disc_count = (int)scanned;
                     if (disc_count == 0) disc_selected = 0;
@@ -457,42 +475,63 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                     snprintf(status, status_size, "Disc scan failed.");
                 }
             }
-            if (cross && !old_cross && disc_count > 0 && !netplay_waiting) {
+            if (cross && !old_cross && disc_count > 0) {
                 if (!view.is_ready) {
                     screen = SCREEN_ROOM;
                     snprintf(status, status_size, "Room changed. All active players must be READY again.");
                 } else {
                     int is_host = session_is_room_host(&session, &view);
-                    make_netplay_nickname(netplay_nickname, sizeof(netplay_nickname),
-                                          &session, &view, is_host);
-                    if (is_host) {
+                    char fingerprint[17];
+                    if (cb_disc_fingerprint(discs[disc_selected].path, fingerprint, sizeof(fingerprint)) != 0) {
+                        snprintf(status, status_size, "Could not read the selected CUE or one of its track files.");
+                    } else if (cb_online_set_disc_fingerprint(&session, fingerprint, &view, error, sizeof(error)) != 0) {
+                        snprintf(status, status_size, "Disc confirmation: %.110s", error);
+                    } else if (view.disc_mismatch) {
+                        netplay_waiting = 0;
+                        host_disc_waiting = is_host;
+                        host_disc_selected = disc_selected;
+                        disc_poll_frames = 0;
+                        snprintf(status, status_size, "Disc mismatch. All players must select identical CUE content.");
+                    } else if (!view.disc_match) {
+                        if (is_host) {
+                            host_disc_waiting = 1;
+                            host_disc_selected = disc_selected;
+                            disc_poll_frames = 0;
+                            snprintf(status, status_size, "Disc confirmed: %d/%d players. Waiting...",
+                                     view.disc_selection_count, view.player_count);
+                        } else {
+                            netplay_waiting = 1;
+                            netplay_wait_attempts = 0;
+                            netplay_poll_frames = NETPLAY_DISCOVERY_POLL_FRAMES - 1;
+                            snprintf(status, status_size, "Disc confirmed. Waiting for all players and the host...");
+                        }
+                    } else if (is_host) {
+                        host_disc_waiting = 0;
+                        make_netplay_nickname(netplay_nickname, sizeof(netplay_nickname), &session, &view, 1);
                         if (cb_online_mark_game_started(&session, error, sizeof(error)) != 0) {
                             snprintf(status, status_size, "Could not lock the room for launch: %.100s", error);
                         } else {
-                            int launch_result = cb_launch_game(discs[disc_selected].path, 1,
-                                                               netplay_nickname, NULL,
-                                                               error, sizeof(error));
+                            int launch_result = cb_launch_game(discs[disc_selected].path, 1, netplay_nickname, NULL, error, sizeof(error));
                             if (launch_result < 0) {
                                 char launch_error[160];
                                 snprintf(launch_error, sizeof(launch_error), "%.150s", error);
-                                if (cb_online_cancel_game_start(&session, error, sizeof(error)) == 0) {
+                                if (cb_online_cancel_game_start(&session, error, sizeof(error)) == 0)
                                     snprintf(status, status_size, "%.120s", launch_error);
-                                } else {
-                                    snprintf(status, status_size, "Launch failed: %.52s / unlock failed: %.52s",
-                                             launch_error, error);
-                                }
+                                else
+                                    snprintf(status, status_size, "Launch failed: %.52s / unlock failed: %.52s", launch_error, error);
                             }
                         }
                     } else {
+                        host_disc_waiting = 0;
                         netplay_waiting = 1;
                         netplay_wait_attempts = 0;
                         netplay_poll_frames = NETPLAY_DISCOVERY_POLL_FRAMES - 1;
-                        snprintf(status, status_size, "Finding the host relay. The game will launch automatically.");
+                        snprintf(status, status_size, "Disc content matches. Waiting for the host to start...");
                     }
                 }
             }
             if (circle && !old_circle) {
-                netplay_waiting = 0;
+                netplay_waiting = 0; host_disc_waiting = 0;
                 screen = SCREEN_ROOM;
             }
             draw_disc_select(discs, disc_count, disc_selected, &session,
@@ -558,6 +597,44 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                     } else snprintf(status, status_size, "Heartbeat: %.120s", error);
                 }
             }
+            if (screen == SCREEN_DISC_SELECT && host_disc_waiting &&
+                ++disc_poll_frames >= NETPLAY_DISCOVERY_POLL_FRAMES) {
+                int launch_result;
+                int launch_disc = host_disc_selected >= 0 && host_disc_selected < disc_count
+                    ? host_disc_selected : disc_selected;
+                disc_poll_frames = 0;
+                if (cb_online_get_room(&session, &view, error, sizeof(error)) != 0) {
+                    if (session_is_gone(error)) {
+                        host_disc_waiting = 0;
+                        return_to_rooms(&session, &view, &ready, &screen, &poll_frames,
+                                        rooms, &room_count, &selected, status, status_size);
+                    } else snprintf(status, status_size, "Disc check: %.110s", error);
+                } else if (!view.is_ready) {
+                    host_disc_waiting = 0; screen = SCREEN_ROOM;
+                    snprintf(status, status_size, "Room changed. All active players must be READY again.");
+                } else if (view.disc_match) {
+                    host_disc_waiting = 0;
+                    make_netplay_nickname(netplay_nickname, sizeof(netplay_nickname), &session, &view, 1);
+                    if (cb_online_mark_game_started(&session, error, sizeof(error)) != 0) {
+                        snprintf(status, status_size, "Could not lock the room for launch: %.100s", error);
+                    } else {
+                        launch_result = cb_launch_game(discs[launch_disc].path, 1, netplay_nickname, NULL, error, sizeof(error));
+                        if (launch_result < 0) {
+                            char launch_error[160];
+                            snprintf(launch_error, sizeof(launch_error), "%.150s", error);
+                            if (cb_online_cancel_game_start(&session, error, sizeof(error)) == 0)
+                                snprintf(status, status_size, "%.120s", launch_error);
+                            else
+                                snprintf(status, status_size, "Launch failed: %.52s / unlock failed: %.52s", launch_error, error);
+                        }
+                    }
+                } else if (view.disc_mismatch) {
+                    snprintf(status, status_size, "Disc mismatch. Select identical CUE content on every console.");
+                } else {
+                    snprintf(status, status_size, "Disc confirmation: %d/%d players. Waiting...",
+                             view.disc_selection_count, view.player_count);
+                }
+            }
             if (screen == SCREEN_DISC_SELECT && netplay_waiting &&
                 ++netplay_poll_frames >= NETPLAY_DISCOVERY_POLL_FRAMES) {
                 int endpoint_result;
@@ -579,13 +656,20 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                                        &endpoint, error, sizeof(error));
                         snprintf(status, status_size, "%.120s", error);
                     } else if (endpoint_result == 1) {
-                        netplay_wait_attempts++;
+                        if (strcmp(endpoint.state, "disc_mismatch") == 0) {
+                            netplay_waiting = 0;
+                            snprintf(status, status_size, "Disc mismatch. Select the same CUE content as the other players.");
+                        } else {
+                            netplay_wait_attempts++;
                         if (netplay_wait_attempts >= NETPLAY_DISCOVERY_MAX_ATTEMPTS) {
                             netplay_waiting = 0;
                             snprintf(status, status_size, "Host was not found after 2 minutes. Check that the host started Netplay.");
                         } else {
-                            snprintf(status, status_size, "Waiting for host relay... attempt %d/%d",
-                                     netplay_wait_attempts, NETPLAY_DISCOVERY_MAX_ATTEMPTS);
+                            if (strcmp(endpoint.state, "waiting_for_disc_selection") == 0)
+                                snprintf(status, status_size, "Waiting for all players to confirm the same disc...");
+                            else
+                                snprintf(status, status_size, "Waiting for host relay... attempt %d/%d",
+                                         netplay_wait_attempts, NETPLAY_DISCOVERY_MAX_ATTEMPTS);
                         }
                     } else if (session_is_gone(error)) {
                         netplay_waiting = 0;
