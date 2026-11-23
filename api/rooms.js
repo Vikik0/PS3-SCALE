@@ -598,7 +598,11 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    if (action === "heartbeat") {
+    if (action === "heartbeat" || action === "set_ready") {
+      const explicitReady = action === "set_ready";
+      if (explicitReady && typeof body.ready !== "boolean") {
+        return reply(res, 400, { error: "A boolean READY value is required." });
+      }
       const outcome = await mutateRoom(code, (room) => {
         const currentPlayer = findPlayer(room, claims.sub);
         if (!currentPlayer) {
@@ -611,7 +615,7 @@ module.exports = async function handler(req, res) {
           return { write: false, status: 403, body: { error: "Your room seat has expired. Rejoin the room." } };
         }
         activePlayer.lastSeen = now;
-        if (typeof body.ready === "boolean") {
+        if (explicitReady) {
           activePlayer.ready = body.ready;
           if (!body.ready && !room.gameStartedAt) delete activePlayer.discFingerprint;
         }

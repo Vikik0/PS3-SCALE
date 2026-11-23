@@ -305,13 +305,38 @@ int cb_online_clear_disc_fingerprint(CBOnlineSession *session, CBOnlineRoomView 
     return cb_online_get_room(session, view, error, error_size);
 }
 
+static void sync_session_ready(CBOnlineSession *session, const CBOnlineRoomView *view) {
+    int i;
+    if (!session || !view) return;
+    session->ready = 0;
+    for (i = 0; i < view->player_count; i++) {
+        if (strcmp(view->players[i].id, session->player_id) == 0) {
+            session->ready = view->players[i].ready;
+            return;
+        }
+    }
+}
+
 int cb_online_set_ready(CBOnlineSession *session, int ready, CBOnlineRoomView *view, char *error, size_t error_size) {
     char body[64], response[CB_HTTP_BUFFER];
     if (!session || !session->token[0] || !view) { set_error(error, error_size, "No active room session"); return -1; }
-    snprintf(body, sizeof(body), "{\"action\":\"heartbeat\",\"ready\":%s}", ready ? "true" : "false");
+    snprintf(body, sizeof(body), "{\"action\":\"set_ready\",\"ready\":%s}", ready ? "true" : "false");
     if (http_request("POST", "/api/rooms", body, session->token, response, sizeof(response), error, error_size) < 0) return -1;
-    if (parse_heartbeat(response, view) < 0) { set_error(error, error_size, "Invalid room heartbeat response"); return -1; }
-    snprintf(view->code, sizeof(view->code), "%s", session->code); session->ready = ready; return 0;
+    if (parse_heartbeat(response, view) < 0) { set_error(error, error_size, "Invalid READY response"); return -1; }
+    snprintf(view->code, sizeof(view->code), "%s", session->code);
+    sync_session_ready(session, view);
+    return 0;
+}
+
+int cb_online_heartbeat(CBOnlineSession *session, CBOnlineRoomView *view, char *error, size_t error_size) {
+    char response[CB_HTTP_BUFFER];
+    if (!session || !session->token[0] || !view) { set_error(error, error_size, "No active room session"); return -1; }
+    if (http_request("POST", "/api/rooms", "{\"action\":\"heartbeat\"}",
+                     session->token, response, sizeof(response), error, error_size) < 0) return -1;
+    if (parse_heartbeat(response, view) < 0) { set_error(error, error_size, "Invalid heartbeat response"); return -1; }
+    snprintf(view->code, sizeof(view->code), "%s", session->code);
+    sync_session_ready(session, view);
+    return 0;
 }
 int cb_online_leave_room(CBOnlineSession *session, char *error, size_t error_size) {
     char response[CB_HTTP_BUFFER]; if (!session || !session->token[0]) return 0;

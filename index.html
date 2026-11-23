@@ -333,11 +333,12 @@ function renderRoom(){
   $("roomNotice").className="notice"+(allReady?"":" warnbox");
   $("readyBtn").textContent=state.ready?"CANCEL READY":"I'M READY";
 }
-async function sendHeartbeat(){
+async function updateRoomPresence(action,ready){
   if(!state.token||!state.code||state.heartbeatInFlight)return false;
   state.heartbeatInFlight=true;
   try{
-    const data=await api("/api/rooms","POST",{action:"heartbeat",ready:state.ready});
+    const payload=action==="set_ready"?{action,ready}:{action};
+    const data=await api("/api/rooms","POST",payload);
     state.room={...(state.room||{}),players:data.players};
     const me=data.players.find(player=>player.id===state.player?.id);
     if(!me){
@@ -359,11 +360,11 @@ async function sendHeartbeat(){
     state.heartbeatInFlight=false;
   }
 }
+async function sendHeartbeat(){
+  return updateRoomPresence("heartbeat");
+}
 async function toggleReady(){
-  const previous=state.ready;
-  state.ready=!previous;
-  const updated=await sendHeartbeat();
-  if(!updated&&state.token){state.ready=previous;renderRoom();}
+  return updateRoomPresence("set_ready",!state.ready);
 }
 async function leaveRoom(){
   try{await api("/api/rooms","POST",{action:"leave"});}catch{}

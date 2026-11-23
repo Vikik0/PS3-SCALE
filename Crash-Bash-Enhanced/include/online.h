@@ -36,6 +36,7 @@ int cb_online_join_room(const char *code, const char *display_name, CBOnlineSess
 int cb_online_join_any_room(const char *display_name, CBOnlineSession *session, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_get_room(CBOnlineSession *session, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_set_ready(CBOnlineSession *session, int ready, CBOnlineRoomView *view, char *error, size_t error_size);
+int cb_online_heartbeat(CBOnlineSession *session, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_set_disc_fingerprint(CBOnlineSession *session, const char *fingerprint, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_clear_disc_fingerprint(CBOnlineSession *session, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_get_netplay_endpoint(CBOnlineSession *session, CBOnlineNetplayEndpoint *endpoint, char *error, size_t error_size);

@@ -622,11 +622,13 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
             if ((screen == SCREEN_ROOM || screen == SCREEN_DISC_SELECT) &&
                 ++poll_frames >= ROOM_HEARTBEAT_FRAMES) {
                 poll_frames = 0;
-                if (cb_online_set_ready(&session, ready, &view, error, sizeof(error)) != 0) {
+                if (cb_online_heartbeat(&session, &view, error, sizeof(error)) != 0) {
                     if (session_is_gone(error)) {
                         return_to_rooms(&session, &view, &ready, &screen, &poll_frames,
                                         rooms, &room_count, &selected, status, status_size);
                     } else snprintf(status, status_size, "Heartbeat: %.120s", error);
+                } else {
+                    ready = session.ready;
                 }
             }
             if (screen == SCREEN_DISC_SELECT && host_disc_waiting &&

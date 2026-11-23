@@ -90,7 +90,7 @@ Pass criteria: all four players can control their own Crash Bash character witho
 1. Set a Netplay Server Password on the host.
 2. Confirm that an uninvited client cannot join without the password.
 3. Confirm that an invited client can join with the password.
-4. Disconnect one waiting player or stop its heartbeat for more than 90 seconds but less than 10 minutes. Confirm the seat remains visible, but READY and the disc confirmation expire; after reconnecting, the player must mark READY and confirm the disc again.
+4. Disconnect one waiting player or stop its heartbeat for more than 90 seconds but less than 10 minutes. Confirm the seat remains visible, but READY and the disc confirmation expire. Send a heartbeat with the old cached READY value and confirm it does not restore READY; the player must explicitly press READY and confirm the disc again.
 5. Remove one player from a three-player room. Confirm the remaining players lose READY and their previous disc confirmations before another launch.
 6. Close RetroArch normally and relaunch it to confirm settings persist.
 
