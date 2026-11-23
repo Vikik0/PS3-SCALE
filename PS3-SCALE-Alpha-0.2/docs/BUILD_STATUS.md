@@ -15,7 +15,15 @@
 - If the game identity or update version changes between arming and launch, PS3 SCALE removes only its own pending profile script and refuses the enhanced launch.
 - Added bounded file-size checks before decoding local cover and before/after PNGs; missing, non-regular or oversized images are skipped.
 - Added a dedicated host regression test for worker-only validation, static scan storage and bounded preview loading.
-- GitHub Actions validation: pending for this commit. Physical PS3 Slim / CFW 4.93 / Cobra 8.5 verification remains required.
+- GitHub Actions run #573: **PASS**. Host regression tests, PS3 ELF link, CEX SELF generation, standard PKG generation, GNPDRM PKG generation and package integrity checks all passed. Physical-console verification remains required.
+- Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/45086065984
+- Build artifact: `PS3-SCALE-Alpha-0.29-build-with-embedded-theme` (24,692,403 bytes).
+- ELF: 3,504,263 bytes — SHA-256 `1cfa4cd1d468b10e4fb5fdf7b7ca6790b27a09c8e33f6e2d1b404659d26772d8`
+- SELF: 779,456 bytes — SHA-256 `087137f815e3502cba7be1fded27177b565b137c447894f57dfb72331ffba129`
+- Standard PKG: 11,402,544 bytes — SHA-256 `42eb0d4ae13787d317dde21cd1672409c89c1aa14f628fdec215a455b9ae933b`
+- GNPDRM PKG: 11,402,544 bytes — SHA-256 `3915cffd99d6dcf4b4a0fea061df226d206c5cddfaa8e28f9625a68acda72466`
+- ZIP SHA-256: `9ba743c22176cb6377cbae1f75c9cc1fb9db0cd4c82a972177827f583d0ade5a`
+- Target console: PS3 Slim / CFW 4.93 / Cobra 8.5 (user-reported); actual game launch and controller checks still need to be performed on the console.
 
 ## Alpha 0.28 — PS2 ISO format compatibility
 
