@@ -117,7 +117,7 @@ Consequently, the current PS3 RetroArch Netplay package and this repository's Ve
 The game files are never committed to this public repository or uploaded as public CI artifacts. To build one personal PKG containing the supplied disc dump:
 
 1. Place exactly one legally obtained `.cue` file and all BIN tracks it references in `Crash-Bash-Enhanced/game/` (preserve the filenames referenced by the CUE).
-2. Ensure the embedded RetroArch runtime already exists at `Crash-Bash-Enhanced/pkgfiles/USRDIR/retroarch/` with `EBOOT.BIN` and the PCSX-ReARMed core metadata SELF. This is the runtime staged by the PS3 build workflow.
+2. Download the `Crash-Bash-RetroArch-Stage` artifact from a successful PS3 build workflow run and extract its contents directly into `Crash-Bash-Enhanced/pkgfiles/USRDIR/retroarch/`. Confirm that `EBOOT.BIN` and `cores/pcsx_rearmed_libretro_psl1ght.SELF` exist there.
 3. Run `scripts/build_personal_pkg.sh` from a PS3DEV/PSL1GHT environment. The script validates the CUE references and sector alignment, stages the game under `USRDIR/PSXISO/`, builds one finalized PKG, and writes a checksum and manifest locally.
 
 The public CI workflow remains game-free. The personal output is `build-artifacts/Crash-Bash-Online-Personal-PS3.pkg` and is not uploaded automatically.
