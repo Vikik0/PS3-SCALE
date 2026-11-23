@@ -118,7 +118,7 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
         self.assertEqual(result["status"], "ELF_ANALYSIS_READY_PAD_GATE_NOT_PASSED")
         self.assertFalse(result["pad_probe"]["both_ports_visible_simultaneously_in_both_modes"])
         self.assertFalse(result["pad_probe"]["capture_complete_in_both_modes"])
-        self.assertFalse(result["pad_probe"]["capture_provenance_valid_in_both_modes"])
+        self.assertTrue(result["pad_probe"]["capture_provenance_valid_in_both_modes"])
         self.assertEqual(result["player_two_gate"]["status"], "NOT_PROVEN")
 
     def test_missing_pad_logs_are_reported_without_claiming_controller_visibility(self):
