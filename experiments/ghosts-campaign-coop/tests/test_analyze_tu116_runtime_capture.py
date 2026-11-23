@@ -54,16 +54,20 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
 
     def write_log(self, name, mode):
         path = self.root / name
-        path.write_text(
-            "\n".join([
-                "Ghosts Campaign Co-op Pad Probe v4",
-                f"MODE={mode}",
-                "MODE_SOURCE=manual_mode_file",
-                "MODE_LABEL_IS_OPERATOR_SELECTED=1",
-                "sample=0 result=OK max_connect=7 now_connect=2 system_info=0x00000000 port_mask=0x03",
-            ]) + "\n",
-            encoding="utf-8",
-        )
+        lines = [
+            "Ghosts Campaign Co-op Pad Probe v4",
+            "READ_ONLY=1",
+            f"MODE={mode}",
+            "MODE_SOURCE=manual_mode_file",
+            "MODE_LABEL_IS_OPERATOR_SELECTED=1",
+        ]
+        for sample_index in (0, 5, 10, 15, 20, 25):
+            lines.append(
+                f"sample={sample_index} result=OK max_connect=7 now_connect=2 "
+                "system_info=0x00000000 port_mask=0x03"
+            )
+        lines.append("Pad probe finished.")
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         return path
 
     def run_analyzer(self, **kwargs):
@@ -96,6 +100,21 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
         self.assertTrue((self.output_dir / "campaign_tu116_runtime.elf").is_file())
         self.assertTrue((self.output_dir / "multiplayer_tu116_runtime.elf").is_file())
         self.assertTrue((self.output_dir / "capture_summary.json").is_file())
+
+    def test_truncated_pad_capture_cannot_pass_engine_review_gate(self):
+        campaign_log = self.write_log("campaign.log", "CAMPAIGN")
+        multiplayer_log = self.write_log("multiplayer.log", "MULTIPLAYER")
+        campaign_log.write_text(
+            campaign_log.read_text(encoding="utf-8").replace("Pad probe finished.\\n", ""),
+            encoding="utf-8",
+        )
+
+        result = self.run_analyzer(campaign_log=campaign_log, multiplayer_log=multiplayer_log)
+
+        self.assertEqual(result["pad_probe"]["status"], "INCONCLUSIVE_INCOMPLETE_CAPTURE")
+        self.assertEqual(result["status"], "ELF_ANALYSIS_READY_PAD_GATE_NOT_PASSED")
+        self.assertFalse(result["pad_probe"]["both_ports_visible_simultaneously_in_both_modes"])
+        self.assertEqual(result["player_two_gate"]["status"], "NOT_PROVEN")
 
     def test_missing_pad_logs_are_reported_without_claiming_controller_visibility(self):
         result = self.run_analyzer()
