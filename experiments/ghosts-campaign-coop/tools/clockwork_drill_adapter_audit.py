@@ -195,7 +195,7 @@ def _has(body: str, pattern: str) -> bool:
 
 def _literal_call_sites(literal_bodies: dict[str, str], method: str, asset: str) -> list[dict]:
     pattern = re.compile(
-        rf'\\b{re.escape(method)}\\s*\\(\\s*["\\']{re.escape(asset)}["\\']\\s*\\)'
+        rf'\b{re.escape(method)}\s*\(\s*"{re.escape(asset)}"\s*\)'
     )
     sites = []
     for function, source in literal_bodies.items():
