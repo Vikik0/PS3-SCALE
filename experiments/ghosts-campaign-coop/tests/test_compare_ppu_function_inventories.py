@@ -23,8 +23,8 @@ def write_inventory(path: Path, rows, fields=FIELDS):
         writer.writerows(rows)
 
 
-def row(name, entry, fingerprint, calls=""):
-    return {
+def row(name, entry, fingerprint, calls="", symbols=None):
+    result = {
         "program": "Ghosts",
         "name": name,
         "entry": entry,
@@ -33,6 +33,9 @@ def row(name, entry, fingerprint, calls=""):
         "fingerprint": fingerprint,
         "call_targets": calls,
     }
+    if symbols is not None:
+        result["call_target_symbols"] = symbols
+    return result
 
 
 class ComparePpuFunctionInventoriesTests(unittest.TestCase):
@@ -63,6 +66,45 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
         self.assertEqual(result["summary"]["priority_multiplayer_only_name_matches"], 2)
         names = {item["function"]["name"] for item in result["priority_multiplayer_only"]}
         self.assertEqual(names, {"SV_InitLocalClient", "G_ClientThink"})
+
+    def test_ranks_multiplayer_only_functions_by_resolved_call_target_symbols(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            campaign_path = root / "campaign.csv"
+            multiplayer_path = root / "multiplayer.csv"
+            fields = FIELDS + ["call_target_symbols"]
+            common = "a" * 64
+            lead = "f" * 64
+            write_inventory(campaign_path, [row("FUN_shared", "0x1000", common)], fields=fields)
+            write_inventory(multiplayer_path, [
+                row("FUN_shared_mp", "0x9000", common),
+                row(
+                    "FUN_opaque_9100",
+                    "0x9100",
+                    lead,
+                    calls="0x1234;0x5678",
+                    symbols="0x1234:PlayerCMD_Spawn;0x5678:SV_InitLocalClient",
+                ),
+            ], fields=fields)
+
+            campaign = read_inventory(campaign_path)
+            multiplayer = read_inventory(multiplayer_path)
+            result = compare(campaign, multiplayer)
+
+            self.assertEqual(result["summary"]["priority_multiplayer_only_name_matches"], 0)
+            self.assertEqual(result["summary"]["priority_multiplayer_only_call_target_matches"], 1)
+            self.assertEqual(result["summary"]["priority_multiplayer_only_leads"], 1)
+            lead_result = result["priority_multiplayer_only"][0]
+            self.assertEqual(lead_result["function"]["name"], "FUN_opaque_9100")
+            self.assertIn("spawn", lead_result["call_target_keyword_hits"])
+            self.assertIn("client", lead_result["call_target_keyword_hits"])
+
+    def test_legacy_inventory_without_call_target_symbols_remains_supported(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "legacy.csv"
+            write_inventory(path, [row("FUN_legacy", "0x1000", "a" * 64)])
+            rows = read_inventory(path)
+            self.assertEqual(rows[0]["call_target_symbols"], [])
 
     def test_preserves_duplicate_fingerprint_multiplicity(self):
         duplicate = "d" * 64
