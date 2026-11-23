@@ -5,7 +5,7 @@ module.exports = function handler(_req, res) {
   return res.status(200).json({
     ok: true,
     service: "Crash Bash Enhanced lobby",
-    version: "0.8.1",
+    version: "0.8.2",
     roomTtlMinutes: 30,
     playerTtlMinutes: 10,
     minimumReadyPlayers: 2,
@@ -15,7 +15,8 @@ module.exports = function handler(_req, res) {
     nativeDiscPicker: "psxiso-hdd-usb",
     nativeLaunchModes: ["retroarch-host", "retroarch-auto-connect"],
     discFingerprintVerification: "fnv1a-64-content-and-track-layout",
-    discConfirmationReset: "on-selection-change-or-unready",
+    discConfirmationReset: "on-selection-change-or-unready-or-membership-change",
+    readyLeaseSeconds: 90,
     automaticHostDiscovery: "retroarch-public-lobby-relay",
     roomLaunchLock: "host-started-netplay-session",
     psnRequired: false,

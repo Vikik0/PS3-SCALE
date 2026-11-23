@@ -13,6 +13,7 @@ const ACCESS = "private";
 const PREFIX = "cb-rooms/";
 const ROOM_TTL_MS = 30 * 60 * 1000;
 const PLAYER_TTL_MS = 10 * 60 * 1000;
+const READY_TTL_MS = 90 * 1000;
 const MAX_PLAYERS = 4;
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const LIBRETRO_LOBBY_LIST_URL = "http://lobby.libretro.com/list";
@@ -83,8 +84,27 @@ function activePlayers(room, now = Date.now()) {
   return (room.players || []).filter((player) => now - player.lastSeen <= ttl);
 }
 
+function expireStaleReadyPlayers(room, now = Date.now()) {
+  if (room.gameStartedAt) return false;
+  let changed = false;
+  for (const player of room.players || []) {
+    const lastSeen = Number(player.lastSeen);
+    const stale = !Number.isFinite(lastSeen) || now - lastSeen > READY_TTL_MS;
+    if (!stale && player.ready) continue;
+    if (player.ready || player.discFingerprint) changed = true;
+    player.ready = false;
+    delete player.discFingerprint;
+  }
+  if (changed) {
+    const active = activePlayers(room, now);
+    room.status = active.length >= 2 && active.every((player) => player.ready) ? "ready" : "waiting";
+  }
+  return changed;
+}
+
 function prunePlayers(room, now = Date.now()) {
   const previous = room.players || [];
+  expireStaleReadyPlayers(room, now);
   const active = activePlayers(room, now);
   // Once RetroArch has started, its relay identity must remain pinned to the
   // original host. A lobby-seat timeout cannot migrate an active Netplay host.
@@ -99,7 +119,10 @@ function prunePlayers(room, now = Date.now()) {
     }
   }
   if (active.length !== previous.length) {
-    active.forEach((player) => { player.ready = false; });
+    active.forEach((player) => {
+      player.ready = false;
+      delete player.discFingerprint;
+    });
     const activeIds = new Set(active.map((player) => player.id));
     room.signals = (room.signals || []).filter((signal) =>
       activeIds.has(signal.from) && activeIds.has(signal.to)
@@ -118,14 +141,27 @@ function discSelection(room, players = room.players || []) {
 }
 
 function publicRoom(room) {
-  const active = activePlayers(room);
+  const now = Date.now();
+  expireStaleReadyPlayers(room, now);
+  const active = activePlayers(room, now);
+  const inactiveSeats = active.length !== (room.players || []).length;
+  if (inactiveSeats && !room.gameStartedAt) {
+    active.forEach((player) => {
+      player.ready = false;
+      delete player.discFingerprint;
+    });
+    room.status = "waiting";
+  }
+  const ready = active.length >= 2 &&
+    active.length === (room.players || []).length &&
+    active.every((player) => player.ready);
   return {
     code: room.code,
     host: active[0]?.name || "Guest",
     players: active.length,
     maxPlayers: MAX_PLAYERS,
     createdAt: room.createdAt,
-    status: room.status === "ready" && (active.length < 2 || active.length !== (room.players || []).length) ? "waiting" : room.status
+    status: ready ? "ready" : "waiting"
   };
 }
 
@@ -154,6 +190,7 @@ async function listRooms() {
         if (!record) return null;
         const room = record.room;
         const now = Date.now();
+        expireStaleReadyPlayers(room, now);
         const active = activePlayers(room, now);
         if (!Number.isFinite(room.updatedAt) || now - room.updatedAt > ROOM_TTL_MS || active.length === 0) {
           await deleteExpiredRoom(code, record.etag);
@@ -280,8 +317,17 @@ module.exports = async function handler(req, res) {
       if (!Number.isFinite(record.room.updatedAt) || Date.now() - record.room.updatedAt > ROOM_TTL_MS) {
         return reply(res, 410, { error: "This battle room has expired. Create a new room." });
       }
-      const active = activePlayers(record.room);
+      const now = Date.now();
+      expireStaleReadyPlayers(record.room, now);
+      const active = activePlayers(record.room, now);
       const inactiveSeats = active.length !== (record.room.players || []).length;
+      if (inactiveSeats && !record.room.gameStartedAt) {
+        active.forEach((entry) => {
+          entry.ready = false;
+          delete entry.discFingerprint;
+        });
+        record.room.status = "waiting";
+      }
       const player = active.find((entry) => entry.id === claims.sub);
       if (!player) {
         return reply(res, 403, { error: "Your room seat has expired. Rejoin the room." });
@@ -290,12 +336,14 @@ module.exports = async function handler(req, res) {
       return reply(res, 200, {
         room: {
           code: record.room.code,
-          status: record.room.status === "ready" && (active.length < 2 || active.length !== (record.room.players || []).length) ? "waiting" : record.room.status,
+          status: active.length >= 2 &&
+            active.length === (record.room.players || []).length &&
+            active.every((entry) => entry.ready) ? "ready" : "waiting",
           hostPlayerId: record.room.hostPlayerId || active[0]?.id || "",
           netplayId: record.room.netplayId || "",
           gameStarted: Boolean(record.room.gameStartedAt),
           isPrivate: record.room.isPrivate,
-          players: active.map(({ id, name, ready, discFingerprint }) => ({ id, name, ready: inactiveSeats ? false : ready, discFingerprint: discFingerprint || "" })),
+          players: active.map(({ id, name, ready, discFingerprint }) => ({ id, name, ready, discFingerprint: discFingerprint || "" })),
           ...discSelection(record.room, active),
           selfPlayerId: claims.sub,
           maxPlayers: MAX_PLAYERS,
@@ -661,7 +709,10 @@ module.exports = async function handler(req, res) {
               room.netplayId = crypto.randomBytes(6).toString("hex").toUpperCase();
             }
           }
-          room.players.forEach((entry) => { entry.ready = false; });
+          room.players.forEach((entry) => {
+            entry.ready = false;
+            delete entry.discFingerprint;
+          });
           room.status = room.players.length === 0 ? "closed" : "waiting";
         }
         room.signals = (room.signals || []).filter((signal) =>

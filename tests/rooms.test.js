@@ -848,6 +848,67 @@ test("marking a player not ready clears their previous disc confirmation", async
   assert.equal(blocked.body.state, "waiting_for_disc_selection");
 });
 
+test("a membership change clears every remaining disc confirmation", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guestOne = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest One" });
+  const guestTwo = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest Two" });
+  for (const token of [host.body.token, guestOne.body.token, guestTwo.body.token]) {
+    await call("POST", { action: "heartbeat", ready: true }, token);
+  }
+  for (const token of [host.body.token, guestOne.body.token, guestTwo.body.token]) {
+    await call("POST", { action: "set_disc", fingerprint: "0123456789ABCDEF" }, token);
+  }
+
+  const left = await call("POST", { action: "leave" }, guestTwo.body.token);
+  assert.equal(left.statusCode, 200);
+  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  await call("POST", { action: "heartbeat", ready: true }, guestOne.body.token);
+
+  const room = await call("GET", {}, host.body.token, { code: host.body.room.code });
+  assert.equal(room.body.room.status, "ready");
+  assert.equal(room.body.room.players.length, 2);
+  assert.equal(room.body.room.discSelectionCount, 0);
+  assert.equal(room.body.room.discMatch, false);
+
+  const blocked = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(blocked.statusCode, 409);
+  assert.equal(blocked.body.state, "waiting_for_disc_selection");
+});
+
+test("a stale READY lease expires without deleting the player's room seat", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "heartbeat", ready: true }, host.body.token);
+  await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  await confirmMatchingDisc(host.body.token, guest.body.token);
+
+  const pathname = "cb-rooms/" + host.body.room.code + ".json";
+  const stored = JSON.parse(blobs.get(pathname).body);
+  const guestRecord = stored.players.find((entry) => entry.id === guest.body.player.id);
+  guestRecord.lastSeen = Date.now() - 90001;
+  blobs.set(pathname, { body: JSON.stringify(stored), etag: String(++etagSequence) });
+
+  const room = await call("GET", {}, guest.body.token, { code: host.body.room.code });
+  assert.equal(room.statusCode, 200);
+  assert.equal(room.body.room.players.length, 2);
+  assert.equal(room.body.room.players.find((entry) => entry.id === guest.body.player.id).ready, false);
+  assert.equal(room.body.room.players.find((entry) => entry.id === guest.body.player.id).discFingerprint, "");
+  assert.equal(room.body.room.status, "waiting");
+  assert.equal(room.body.room.discSelectionCount, 1);
+  assert.equal(room.body.room.discMatch, false);
+
+  const blockedUntilReady = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(blockedUntilReady.statusCode, 409);
+  assert.match(blockedUntilReady.body.error, /Every active player must be READY/);
+
+  const readyAgain = await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  assert.equal(readyAgain.statusCode, 200);
+  assert.equal(readyAgain.body.discMatch, false);
+  const blockedUntilConfirmed = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(blockedUntilConfirmed.statusCode, 409);
+  assert.equal(blockedUntilConfirmed.body.state, "waiting_for_disc_selection");
+});
+
 test("only the host can start Netplay and a started room rejects late joins", async () => {
   const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
