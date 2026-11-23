@@ -7,7 +7,7 @@ struct timeval;
 #include <stdlib.h>
 #include <string.h>
 #ifndef CB_CA_BUNDLE
-#define CB_CA_BUNDLE "/dev_hdd0/game/CBEN00001/USRDIR/cacert.pem"
+#define CB_CA_BUNDLE "/dev_hdd0/game/CBON00001/USRDIR/cacert.pem"
 #endif
 #define CB_HTTP_BUFFER 16384
 #define CB_JSON_TOKEN_COUNT 1024

@@ -11,7 +11,7 @@ RetroArch's current Netplay FAQ cautions that PSX netplay is generally unsuitabl
 ## Required setup
 
 - Two jailbroken PS3 consoles on the same compatible firmware family.
-- The exact same `Crash-Bash-Online-PS3.pkg` installed on both consoles.
+- The exact same `Crash-Bash-Online-Unified-PS3.pkg` installed on both consoles.
 - A legal BIN/CUE dump of the same Crash Bash disc revision on both consoles.
 - The exact same CUE file and byte-identical contents for every referenced BIN track.
 - The same BIOS file on both consoles, or both consoles using the same HLE mode. A BIOS dumped from the user's own PS1 is recommended.
@@ -22,8 +22,8 @@ Do not change the core version, CUE/BIN content, region, BIOS file (or HLE choic
 
 ## Test 0 — Native lobby handoff
 
-1. Install both the RetroArch game package (`CBON00001`) and the native lobby companion (`CBEN00001`) on two compatible PS3 consoles.
-2. Launch the native lobby companion on the first console and create a public or private room.
+1. Install the single unified `Crash-Bash-Online-Unified-PS3.pkg` on both compatible PS3 consoles.
+2. Launch **Crash Bash Online** from the XMB on the first console and create a public or private room from its built-in lobby.
 3. Join the room from the second console using the six-character invite code.
 4. Mark both players Ready. Confirm the room becomes launch-ready with two players; a four-seat room is not required.
 5. Press START in the room on both consoles and confirm the CUE picker appears.
@@ -34,7 +34,7 @@ Do not change the core version, CUE/BIN content, region, BIOS file (or HLE choic
 10. Toggle READY off and on after confirming a CUE. Confirm the disc confirmation is cleared and must be repeated.
 11. On the client console, select the same CUE and confirm the companion finds the host through the RetroArch public lobby and starts RetroArch with `--connect` and `--mitm-session`, without manual Host List selection.
 12. From the companion's home menu, also test **OPEN CRASH BASH ONLINE**.
-13. Temporarily test without the RetroArch package installed and confirm the launcher reports the missing app rather than crashing.
+13. For a controlled fault test, temporarily rename `USRDIR/retroarch` on one test console and confirm the lobby reports the missing embedded runtime rather than crashing; restore the folder after the test.
 14. After the host starts, return the client to the room screen and confirm it shows **MATCH STARTED**, not the pre-match READY prompt. Press START, choose the same CUE and retry the automatic join flow.
 15. Press CIRCLE during relay discovery to return to the room; verify the client can reopen the CUE picker without changing the already-started room lock.
 
@@ -42,8 +42,8 @@ Pass criteria: both players see the same room membership and Ready state; only t
 
 ## Test 1 — Single-console baseline
 
-1. Launch Crash Bash Online from the XMB.
-2. Load the game's CUE file.
+1. Launch the single Crash Bash Online icon from the XMB.
+2. Choose **OPEN CRASH BASH ONLINE** in the built-in lobby to start the local game using the selected CUE.
 3. Start a local game and reach a playable arena.
 4. Confirm video, audio, controller response and all four local controller slots.
 5. Play for at least 10 minutes, including a busy arena with multiple effects.

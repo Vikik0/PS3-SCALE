@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sfo>
-  <value name="APP_VER" type="string">00.11</value>
+  <value name="APP_VER" type="string">00.12</value>
   <value name="ATTRIBUTE" type="integer">0</value>
   <value name="BOOTABLE" type="integer">1</value>
   <value name="CATEGORY" type="string">HG</value>
@@ -9,7 +9,7 @@
   <value name="PS3_SYSTEM_VER" type="string">03.4000</value>
   <value name="RESOLUTION" type="integer">63</value>
   <value name="SOUND_FORMAT" type="integer">279</value>
-  <value name="TITLE" type="string">Crash Bash Enhanced</value>
-  <value name="TITLE_ID" type="string">CBEN00001</value>
-  <value name="VERSION" type="string">00.11</value>
+  <value name="TITLE" type="string">Crash Bash Online</value>
+  <value name="TITLE_ID" type="string">CBON00001</value>
+  <value name="VERSION" type="string">00.12</value>
 </sfo>

@@ -54,7 +54,8 @@ jobs:
         run: sh Crash-Bash-Enhanced/scripts/test_host.sh
 
   native-lobby-build:
-    name: Build native Tiny3D lobby companion PKG
+    name: Build unified Crash Bash Online PS3 PKG (Lobby + RetroArch)
+    needs: online-package-build
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
@@ -74,35 +75,60 @@ jobs:
           command -v sfo
           command -v wget
           test -s "$PS3DEV/bin/sfo.xml"
-      - name: Build the native Tiny3D lobby app
+      - name: Download embedded RetroArch runtime
+        uses: actions/download-artifact@v4
+        with:
+          name: Crash-Bash-RetroArch-Stage
+          path: Crash-Bash-Enhanced/pkgfiles/USRDIR/retroarch
+      - name: Verify embedded RetroArch runtime
+        run: |
+          set -eu
+          test -s Crash-Bash-Enhanced/pkgfiles/USRDIR/retroarch/EBOOT.BIN
+          test -s Crash-Bash-Enhanced/pkgfiles/USRDIR/retroarch/cores/pcsx_rearmed_libretro_psl1ght.SELF
+          test -s Crash-Bash-Enhanced/pkgfiles/USRDIR/retroarch/system/README-BIOS.txt
+      - name: Build the unified native lobby + RetroArch app
         run: |
           set -eu
           make -C Crash-Bash-Enhanced clean
           make -C Crash-Bash-Enhanced pkg
           test -s Crash-Bash-Enhanced/crashbash.pkg
+          test -s Crash-Bash-Enhanced/build/pkg/USRDIR/EBOOT.BIN
+          test -s Crash-Bash-Enhanced/build/pkg/USRDIR/retroarch/EBOOT.BIN
+          test -s Crash-Bash-Enhanced/build/pkg/USRDIR/retroarch/cores/pcsx_rearmed_libretro_psl1ght.SELF
       - name: Verify and checksum native lobby PKG
         run: |
           set -eu
           PKG="Crash-Bash-Enhanced/crashbash.pkg"
+          test -s "$PKG"
           MAGIC="$(od -An -tx1 -N4 "$PKG" | tr -d ' \\n')"
           REVISION="$(od -An -tx1 -j4 -N2 "$PKG" | tr -d ' \\n')"
           printf 'Native lobby PKG magic=%s revision=%s\\n' "$MAGIC" "$REVISION"
           test "$MAGIC" = "7f504b47"
           test "$REVISION" = "8000"
           mkdir -p Crash-Bash-Enhanced/build-artifacts
-          cp "$PKG" Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Enhanced-Native-Lobby-PS3.pkg
+          cp "$PKG" Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-Unified-PS3.pkg
           cd Crash-Bash-Enhanced/build-artifacts
-          sha256sum Crash-Bash-Enhanced-Native-Lobby-PS3.pkg > Crash-Bash-Enhanced-Native-Lobby-PS3.pkg.sha256
-          sha256sum -c Crash-Bash-Enhanced-Native-Lobby-PS3.pkg.sha256
-      - name: Upload native lobby PKG
+          sha256sum Crash-Bash-Online-Unified-PS3.pkg > Crash-Bash-Online-Unified-PS3.pkg.sha256
+          sha256sum -c Crash-Bash-Online-Unified-PS3.pkg.sha256
+          cat > BUILD-MANIFEST.txt <<EOF
+          Package: Crash Bash Online — unified PS3 application
+          Application ID: CBON00001
+          XMB entry: native Tiny3D room lobby (root EBOOT.BIN)
+          Embedded runtime: RetroArch + PCSX-ReARMed (USRDIR/retroarch/)
+          Online synchronization: RetroArch Netplay with lockstep and Madrid relay defaults
+          Installable packages: one PKG only
+          Game disc image and BIOS: not included; provide your own legal BIN/CUE dump and optional BIOS
+          EOF
+      - name: Upload single unified PS3 PKG
         uses: actions/upload-artifact@v4
         with:
-          name: Crash-Bash-Enhanced-Native-Lobby-PS3-PKG
+          name: Crash-Bash-Online-Unified-PS3-PKG
           if-no-files-found: error
           compression-level: 0
           path: |
-            Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Enhanced-Native-Lobby-PS3.pkg
-            Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Enhanced-Native-Lobby-PS3.pkg.sha256
+            Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-Unified-PS3.pkg
+            Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-Unified-PS3.pkg.sha256
+            Crash-Bash-Enhanced/build-artifacts/BUILD-MANIFEST.txt
 
   online-package-build:
     name: Build Crash Bash Online PS3 package (RetroArch Netplay + PCSX-ReARMed)
@@ -141,13 +167,10 @@ jobs:
           REVISION="$(od -An -tx1 -j4 -N2 Crash-Bash-Online-PS3.pkg | tr -d ' \\n')"
           test "$MAGIC" = "7f504b47"
           test "$REVISION" = "8000"
-      - name: Upload installable PS3 package and build manifest
+      - name: Upload embedded RetroArch runtime for unified packaging
         uses: actions/upload-artifact@v4
         with:
-          name: Crash-Bash-Online-PS3-PKG
+          name: Crash-Bash-RetroArch-Stage
           if-no-files-found: error
           compression-level: 0
-          path: |
-            Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-PS3.pkg
-            Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-PS3.pkg.sha256
-            Crash-Bash-Enhanced/build-artifacts/BUILD-MANIFEST.txt
+          path: Crash-Bash-Enhanced/build-artifacts/retroarch-stage/USRDIR/retroarch/**

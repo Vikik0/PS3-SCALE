@@ -76,7 +76,7 @@ A successful CI build confirms compilation, package creation, SELF/SFO validatio
 
 ## PS3 launch fix
 
-The XMB entry now launches the static-core RetroArch executable directly through a finalized NPDRM EBOOT. The earlier Salamander second-stage spawn has been removed. See [LAUNCH_FIX.md](LAUNCH_FIX.md) for the rationale and the remaining physical-console validation steps.
+The single XMB entry now launches the native Tiny3D lobby. Its launcher starts the embedded static-core RetroArch executable from `USRDIR/retroarch/EBOOT.BIN`; both executables share the `CBON00001` title identity. The earlier separate-app install requirement is removed. See [LAUNCH_FIX.md](LAUNCH_FIX.md) for the launch rationale and remaining physical-console validation steps.
 
 ## Build and CI
 

@@ -5,7 +5,7 @@
 #include <sys/process.h>
 #include <sys/stat.h>
 
-#define CB_GAME_EBOOT "/dev_hdd0/game/CBON00001/USRDIR/EBOOT.BIN"
+#define CB_GAME_EBOOT "/dev_hdd0/game/CBON00001/USRDIR/retroarch/EBOOT.BIN"
 
 int cb_launch_game(const char *content_path, int is_host, const char *nickname,
                    const CBOnlineNetplayEndpoint *endpoint,
@@ -35,7 +35,7 @@ int cb_launch_game(const char *content_path, int is_host, const char *nickname,
     if (stat(CB_GAME_EBOOT, &target) != 0 || !S_ISREG(target.st_mode)) {
         if (error && error_size) {
             snprintf(error, error_size,
-                     "Install Crash Bash Online (CBON00001) before launching the game.");
+                     "The embedded RetroArch runtime is missing from this Crash Bash Online installation.");
         }
         return -1;
     }

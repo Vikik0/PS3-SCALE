@@ -2,13 +2,13 @@
 ifeq ($(strip $(PSL1GHT)),)
 $(error "Please set PSL1GHT in your environment (normally $$PS3DEV).")
 endif
-TITLE := Crash Bash Enhanced
-APPID := CBEN00001
-CONTENTID := UP0001-$(APPID)_00-0000000000000000
+TITLE := Crash Bash Online
+APPID := CBON00001
+CONTENTID := UP0001-$(APPID)_00-0000000000000001
 ICON0 := $(CURDIR)/pkgfiles/ICON0.PNG
 PKGFILES := $(CURDIR)/pkgfiles
 CA_BUNDLE := $(PKGFILES)/USRDIR/cacert.pem
-SFOXML := $(CURDIR)/sfo-native.xml
+SFOXML := $(CURDIR)/sfo.xml
 include $(PSL1GHT)/ppu_rules
 TARGET := crashbash
 BUILD := build

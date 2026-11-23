@@ -61,7 +61,7 @@ assert "if (view->game_started)" in source
 assert "view->player_count >= 2" in online_source
 assert "OPEN CRASH BASH ONLINE" in main_source
 assert 'cb_launch_game(discs[0].path, 0, "CrashBashPlayer"' in main_source
-assert "/dev_hdd0/game/CBON00001/USRDIR/EBOOT.BIN" in launcher
+assert "/dev_hdd0/game/CBON00001/USRDIR/retroarch/EBOOT.BIN" in launcher
 assert "sysProcessExitSpawn2(CB_GAME_EBOOT, arguments" in launcher
 assert "TRAINING ARENA" not in main_source
 assert "OFFLINE ARENA TEST" not in main_source

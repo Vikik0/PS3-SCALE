@@ -318,8 +318,9 @@ EOF
 cat > "$USRDIR/README-Crash-Bash-Online.txt" <<'EOF'
 CRASH BASH ONLINE — PLAYSTATION 3
 
-This package starts RetroArch directly from EBOOT.BIN with the PCSX-ReARMed
-PlayStation 1 core statically linked into the same executable. It does not contain the Crash Bash game disc image or a
+This unified application starts the native Tiny3D lobby from the XMB. The lobby launches
+embedded RetroArch from USRDIR/retroarch/EBOOT.BIN with the PCSX-ReARMed PlayStation 1
+core statically linked into it. The package does not contain the Crash Bash disc image or a
 Sony PlayStation BIOS.
 
 GETTING THE GAME
@@ -327,21 +328,20 @@ GETTING THE GAME
 2. Copy both files to /dev_hdd0/PSXISO/ or to a /PSXISO/ folder on USB.
 3. Keep the BIN filename referenced by the CUE file exactly correct.
 4. A BIOS dumped from your own PS1 is recommended. If you use one, place the
-   same BIOS file in /dev_hdd0/game/CBON00001/USRDIR/system/ on each console.
+   same BIOS file in /dev_hdd0/game/CBON00001/USRDIR/retroarch/system/ on each console.
 5. Settings and logs are kept in the app-specific profile under
    /dev_hdd0/home/<user-id>/retroarch/CBON00001/.
 
 LOCAL PLAY
-1. Launch Crash Bash Online from the PS3 XMB.
-2. Choose Load Content and open the game's CUE file.
+1. Launch the single Crash Bash Online icon from the PS3 XMB.
+2. Choose OPEN CRASH BASH ONLINE in the built-in lobby; it launches the embedded RetroArch runtime.
 3. The included core has Multitap Mode set to Port 1.
 
 ONLINE PLAY
-1. Both consoles install the same PKG and use identical game dumps.
-2. Both players load the same CUE file with the included PCSX-ReARMed core.
-3. Open RetroArch's Netplay menu.
-4. The host selects Start Netplay Host.
-5. Other players refresh the Netplay Host List and join the host.
+1. All consoles install the same unified PKG and use identical game dumps.
+2. Open ONLINE ROOMS in the built-in lobby and create or join a room with its invite code.
+3. Every player marks READY and confirms the same CUE file when prompted.
+4. The host starts the match; clients discover the host and connect automatically through RetroArch Netplay.
 6. The host is configured to accept up to three remote clients (four participants
    total); four-player performance has not yet been validated on PS3 hardware.
 
