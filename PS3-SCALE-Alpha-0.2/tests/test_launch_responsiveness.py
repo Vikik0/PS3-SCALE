@@ -61,7 +61,16 @@ launch_worker = section("static void game_launch_worker(void *arg)\n{", "static 
 assert "find_installed_game(&g_game_launch_target)" in launch_worker
 assert "find_mounted_game(&g_game_launch_target, &mounted)" in launch_worker
 assert "PS3SCALE_GAME_LAUNCH_ERROR_IDENTITY" in launch_worker
+assert "cleanup_result = ps3scale_profile_script_remove(" in launch_worker
+assert "if (cleanup_result == -2)" in launch_worker
+assert "PS3SCALE_GAME_LAUNCH_ERROR_SCRIPT" in launch_worker
 assert launch_worker.index("identity_valid") < launch_worker.index("ps3scale_webman_start_game")
+
+service_launch = section("static void service_game_launch(void)\\n{", "static void start_selected_game(void)\\n{")
+assert "selected_game_matches_game_launch_target()" in service_launch
+assert "g_force_unmodified_launch = 1;" in service_launch
+assert "PS3SCALE_GAME_LAUNCH_ERROR_SCRIPT" in service_launch
+assert "PROFILE SCRIPT COULD NOT BE SAFELY REMOVED. GAME NOT STARTED." in service_launch
 
 # Missing or oversized screenshots must not reach the PNG decoder.
 preview = section("static void update_selected_preview(void)\n{", "static void draw_details(void)\n{")
