@@ -21,6 +21,20 @@ Run `ExportGhostsPpuFunctionInventory.java` separately in Ghidra on the exact ve
 
 The Ghidra inventory must be generated after auto-analysis and, where appropriate, after using the OPD seeding helper with OPD bounds obtained from the ELF inspector. Do not guess the OPD range.
 
+## Operator workflow
+
+1. Complete the TU 1.16 Campaign and Multiplayer capture intake described in `docs/phase10-capture-intake.md`.
+2. Open the two reconstructed analysis ELFs separately in Ghidra as `PowerPC:BE:64:default` and complete auto-analysis.
+3. Use `SeedGhostsOpdFunctions.java` only with OPD virtual address and size values reported by the ELF inspector; do not guess either value.
+4. Run `ExportGhostsPpuFunctionInventory.java` once per program, producing `campaign_ppu_inventory.csv` and `multiplayer_ppu_inventory.csv`.
+5. Compare the derived inventories from the project root:
+
+~~~powershell
+python tools/compare_ppu_function_inventories.py --campaign "D:\Ghosts\analysis\campaign_ppu_inventory.csv" --multiplayer "D:\Ghosts\analysis\multiplayer_ppu_inventory.csv" --output "D:\Ghosts\analysis\ppu_function_comparison.json"
+~~~
+
+The useful shareable outputs are the two derived CSV inventories, `ppu_function_comparison.json`, `capture_summary.json`, and `pad_probe_comparison.json`. Keep raw SELF files and memory dumps local unless a specific byte range is later required. Do not include PSN credentials, IDPS, PSID, or license files.
+
 ## Validation boundary
 
 This change improves static-analysis navigation only. A call-target symbol match is not proof that the function creates a local client, and it does not approve a hook address or prove that a Multiplayer routine is safe in Campaign. Exact executable hashes, calling convention, TOC, global state, runtime lifecycle and target-console evidence remain required.
