@@ -240,6 +240,8 @@ class BuiltinXrefTests(unittest.TestCase):
             "is_call,is_data",
             "Files.newBufferedWriter",
             "StandardCharsets.UTF_8",
+            'reference == null ? "false"',
+
             "PlayerCMD_Spawn",
             "CL_InitLocalClients",
         ):

@@ -44,8 +44,8 @@ public class FindGhostsSplitScreenBuiltins extends GhidraScript {
         writer.write(csv(currentProgram.getName()) + "," + csv(builtin) + "," + csv(stringAddress.toString()) + ",");
         writer.write(csv(from == null ? "" : from.toString()) + ",");
         writer.write(csv(reference == null ? "" : reference.getReferenceType().toString()) + ",");
-        writer.write(csv(reference == null ? "" : Boolean.toString(reference.getReferenceType().isCall())) + ",");
-        writer.write(csv(reference == null ? "" : Boolean.toString(reference.getReferenceType().isData())) + ",");
+        writer.write(csv(reference == null ? "false" : Boolean.toString(reference.getReferenceType().isCall())) + ",");
+        writer.write(csv(reference == null ? "false" : Boolean.toString(reference.getReferenceType().isData())) + ",");
         writer.write(csv(reference == null ? "" : reference.getSource().toString()) + ",");
         writer.write(csv(caller == null ? "" : caller.getName()) + ",");
         writer.write(csv(caller == null ? "" : caller.getEntryPoint().toString()) + ",");

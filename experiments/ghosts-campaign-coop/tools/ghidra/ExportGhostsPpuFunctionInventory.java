@@ -10,8 +10,9 @@ import ghidra.program.model.listing.Instruction;
 import ghidra.program.model.listing.InstructionIterator;
 import ghidra.program.model.symbol.Reference;
 import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.TreeSet;
 
@@ -53,7 +54,7 @@ public class ExportGhostsPpuFunctionInventory extends GhidraScript {
 
         int exported = 0;
         int skipped = 0;
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(args[0]))) {
+        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(args[0]), StandardCharsets.UTF_8)) {
             writer.write("program,name,entry,body_address_count,instruction_count,fingerprint,call_targets,call_target_symbols,call_target_entries\n");
 
             FunctionIterator functions = currentProgram.getFunctionManager().getFunctions(true);

@@ -380,5 +380,13 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
                 read_inventory(path)
 
 
+    def test_ghidra_inventory_exporter_writes_utf8_csv(self):
+        source = (
+            Path(__file__).resolve().parents[1] / "tools" / "ghidra"
+            / "ExportGhostsPpuFunctionInventory.java"
+        ).read_text()
+        self.assertIn("Files.newBufferedWriter", source)
+        self.assertIn("StandardCharsets.UTF_8", source)
+
 if __name__ == "__main__":
     unittest.main()
