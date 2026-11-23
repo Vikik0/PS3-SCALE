@@ -58,6 +58,7 @@ def manual_call_row(fingerprint, entry, name):
     return {
         "builtin": "isSplitScreen",
         "is_call": True,
+        "is_data": False,
         "reference_kind": "call_xref",
         "caller_fingerprint": fingerprint,
         "caller_inventory_match": True,
@@ -242,7 +243,7 @@ class BuiltinXrefTests(unittest.TestCase):
         ):
             with self.subTest(token=token):
                 self.assertIn(token, source)
-        self.assertIn("A string xref may be a registration/data reference", source)
+        self.assertIn("Call and data reference types are exported separately", source)
 
     def test_hashes_all_four_inputs(self):
         fingerprint = "a" * 64
