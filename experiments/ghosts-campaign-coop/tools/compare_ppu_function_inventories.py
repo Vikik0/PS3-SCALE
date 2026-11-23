@@ -140,6 +140,10 @@ def compare(
             haystack = function["name"].lower()
             hits = [keyword for keyword in keyword_values if keyword in haystack]
             target_symbols = function.get("call_target_symbols", [])
+            if isinstance(target_symbols, str):
+                target_symbols = [
+                    value for value in target_symbols.split(";") if value
+                ]
             target_hits = [
                 keyword for keyword in keyword_values
                 if any(keyword in symbol.lower() for symbol in target_symbols)
