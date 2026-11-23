@@ -39,6 +39,18 @@ start_game = section("static void start_selected_game(void)\n{", "static void lo
 assert "find_installed_game(" not in start_game
 assert "find_mounted_game(" not in start_game
 assert "game_launch_worker" in start_game
+assert "force_unmodified = g_force_unmodified_launch" in start_game
+assert "if (!is_ps2_iso && !force_unmodified)" in start_game
+assert "PROFILE NOT APPLIED. STARTING GAME UNMODIFIED." in start_game
+
+# If profile arming fails for a recoverable reason, explicit CROSS/START
+# still launches the selected title unmodified when webMAN can handle it.
+profile_service = section("static void service_profile_arm(void)\\n{", "static void confirm_profile_install(void)\\n{")
+assert "result == -101 || result == -102" in profile_service
+assert "result == -1 || result == -4 || result == -5" in profile_service
+assert "selected_game_matches_auto_launch_target()" in profile_service
+assert "g_force_unmodified_launch = 1;" in profile_service
+assert "GAME SELECTION CHANGED. NO GAME WAS STARTED." in profile_service
 
 # A pre-armed profile is revalidated on the launch worker before PS3MAPI or
 # webMAN is called. A mismatch removes only PS3 SCALE's own pending script.
