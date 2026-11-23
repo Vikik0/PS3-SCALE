@@ -938,6 +938,25 @@ test("a stale READY lease expires without deleting the player's room seat", asyn
   assert.equal(blockedUntilConfirmed.body.state, "waiting_for_disc_selection");
 });
 
+test("READY changes are rejected after the host starts the match", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "set_ready", ready: true }, host.body.token);
+  await call("POST", { action: "set_ready", ready: true }, guest.body.token);
+  await confirmMatchingDisc(host.body.token, guest.body.token);
+
+  const started = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(started.statusCode, 200);
+
+  const changed = await call("POST", { action: "set_ready", ready: false }, guest.body.token);
+  assert.equal(changed.statusCode, 409);
+  assert.match(changed.body.error, /READY is locked/);
+
+  const room = await call("GET", {}, guest.body.token, { code: host.body.room.code });
+  assert.equal(room.body.room.gameStarted, true);
+  assert.equal(room.body.room.players.find((player) => player.id === guest.body.player.id).ready, true);
+});
+
 test("only the host can start Netplay and a started room rejects late joins", async () => {
   const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });

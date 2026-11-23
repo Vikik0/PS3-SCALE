@@ -614,6 +614,9 @@ module.exports = async function handler(req, res) {
         if (!activePlayer) {
           return { write: false, status: 403, body: { error: "Your room seat has expired. Rejoin the room." } };
         }
+        if (explicitReady && room.gameStartedAt) {
+          return { write: false, status: 409, body: { error: "The match has already started; READY is locked." } };
+        }
         activePlayer.lastSeen = now;
         if (explicitReady) {
           activePlayer.ready = body.ready;
