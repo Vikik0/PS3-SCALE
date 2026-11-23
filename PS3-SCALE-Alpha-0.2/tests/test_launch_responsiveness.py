@@ -50,6 +50,9 @@ assert "result == -101 || result == -102" in profile_service
 assert "result == -1 || result == -4 || result == -5" in profile_service
 assert "selected_game_matches_auto_launch_target()" in profile_service
 assert "g_force_unmodified_launch = 1;" in profile_service
+assert "cleanup_result = ps3scale_profile_script_remove(" in profile_service
+assert "if (cleanup_result == -2)" in profile_service
+assert "USER WEBMAN SCRIPT EXISTS OR CANNOT BE VERIFIED. LAUNCH CANCELLED." in profile_service
 assert "GAME SELECTION CHANGED. NO GAME WAS STARTED." in profile_service
 
 # A pre-armed profile is revalidated on the launch worker before PS3MAPI or
