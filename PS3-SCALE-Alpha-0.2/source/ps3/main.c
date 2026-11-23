@@ -2648,6 +2648,7 @@ static void service_profile_arm(void)
 {
     int result;
     int auto_launch;
+    int cleanup_result;
 
     if (!g_profile_arm_done)
         return;
@@ -2685,9 +2686,18 @@ static void service_profile_arm(void)
         /* A failed/unsafe enhancement must not prevent a normal launch when
            webMAN can still start the selected title. Keep selection identity. */
         if (selected_game_matches_auto_launch_target()) {
-            g_force_unmodified_launch = 1;
-            set_details_message("PROFILE NOT APPLIED. STARTING GAME UNMODIFIED.");
-            start_selected_game();
+            /* Remove only an owned leftover script. A foreign/unreadable script
+               blocks fallback rather than being launched or overwritten. */
+            cleanup_result = ps3scale_profile_script_remove(
+                g_auto_launch_target.title_id);
+            if (cleanup_result == -2) {
+                set_details_message(
+                    "USER WEBMAN SCRIPT EXISTS OR CANNOT BE VERIFIED. LAUNCH CANCELLED.");
+            } else {
+                g_force_unmodified_launch = 1;
+                set_details_message("PROFILE NOT APPLIED. STARTING GAME UNMODIFIED.");
+                start_selected_game();
+            }
         } else {
             set_details_message("GAME SELECTION CHANGED. NO GAME WAS STARTED.");
         }
