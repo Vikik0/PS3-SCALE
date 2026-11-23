@@ -80,7 +80,7 @@ assert re.search(
 ), "Client launch must pass the selected disc and client role."
 assert "if ((screen == SCREEN_ROOM || screen == SCREEN_DISC_SELECT)" in source
 assert "CB-%.12s-HOST" in source
-assert "No CUE files were found." in source
+assert "No built-in or external CUE file was found." in source
 assert '"/dev_hdd0/game/CBON00001/USRDIR/PSXISO"' in disc_source
 assert '"/dev_hdd0/PSXISO"' in disc_source
 assert '"/dev_usb000/PSXISO"' in disc_source
