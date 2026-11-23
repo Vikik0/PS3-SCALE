@@ -242,7 +242,7 @@ def compare(
                     "entry": caller["entry"],
                     "fingerprint": caller["fingerprint"],
                     "name_keyword_hits": caller_name_hits,
-                    "call_target_keyword_hits": caller_target_hits,
+                    "context_call_target_keyword_hits": caller_target_hits,
                 })
 
             outgoing_targets = _target_fingerprints(function, multiplayer_by_entry)
@@ -263,7 +263,7 @@ def compare(
                     "keyword_hits": name_hits,
                     "call_target_keyword_hits": target_hits,
                     "incoming_caller_keyword_hits": incoming_name_hit_list,
-                    "incoming_caller_target_keyword_hits": incoming_target_hit_list,
+                    "incoming_caller_context_target_keyword_hits": incoming_target_hit_list,
                     "incoming_callers": incoming_callers,
                     "outgoing_target_fingerprints": sorted(outgoing_targets),
                     "outgoing_shared_target_fingerprints": sorted(outgoing_shared),
@@ -304,7 +304,7 @@ def compare(
             "priority_multiplayer_only_incoming_caller_matches": sum(
                 1 for item in priority
                 if item["incoming_caller_keyword_hits"]
-                or item["incoming_caller_target_keyword_hits"]
+                or item["incoming_caller_context_target_keyword_hits"]
             ),
             "priority_multiplayer_only_leads": len(priority),
             "campaign_resolved_internal_call_edges": campaign_edges,
