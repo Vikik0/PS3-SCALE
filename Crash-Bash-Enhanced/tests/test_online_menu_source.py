@@ -21,7 +21,7 @@ assert "Your room ended or your seat expired." in source
 heartbeat = re.search(
     r"if \(\(screen == SCREEN_ROOM \|\| screen == SCREEN_DISC_SELECT\)\s*"
     r"&&\s*\+\+poll_frames >= ROOM_HEARTBEAT_FRAMES\)"
-    r"(.*?)(?=\n            if \(screen == SCREEN_ROOM\) draw_room)",
+    r"(.*?)(?=\n            if \(screen == SCREEN_DISC_SELECT && host_disc_waiting|\n            if \(screen == SCREEN_ROOM\) draw_room)",
     source,
     re.S,
 )
@@ -78,8 +78,8 @@ assert "disc_mismatch" in online_source
 assert "MATCH STARTED - PRESS START, THEN SELECT THE SAME CUE TO JOIN" in source
 assert "START JOIN MATCH  SQUARE REFRESH  CIRCLE BACK" in source
 assert '"HOST" : "CLIENT"' in source
-assert "HOST: CROSS starts Netplay and publishes the private relay." in source
-assert "CLIENT: CROSS joins the host using the same CUE file." in source
+assert "HOST: CROSS CONFIRMS DISC; LAUNCHES WHEN ALL MATCH." in source
+assert "CLIENT: CROSS CONFIRMS DISC; THEN WAITS FOR HOST." in source
 assert "cb_online_cancel_game_start(&session" in source
 assert "NETPLAY_DISCOVERY_MAX_ATTEMPTS" in source
 assert "CB-%.12s-HOST" in source

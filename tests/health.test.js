@@ -18,7 +18,8 @@ test("health endpoint reports lobby readiness without claiming gameplay transpor
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.headers["Cache-Control"], "no-store");
-  assert.equal(response.body.version, "0.7.0");
+  assert.equal(response.body.version, "0.8.0");
+  assert.equal(response.body.discFingerprintVerification, "fnv1a-64-content-and-track-layout");
   assert.equal(response.body.roomTtlMinutes, 30);
   assert.equal(response.body.playerTtlMinutes, 10);
   assert.equal(response.body.minimumReadyPlayers, 2);
