@@ -42,6 +42,8 @@ assert "game_launch_worker" in start_game
 assert "force_unmodified = g_force_unmodified_launch" in start_game
 assert "if (!is_ps2_iso && !force_unmodified)" in start_game
 assert "PROFILE NOT APPLIED. STARTING GAME UNMODIFIED." in start_game
+assert "cleanup_result = ps3scale_profile_script_remove(game->title_id);" in start_game
+assert "if (cleanup_result == -2)" in start_game
 
 # If profile arming fails for a recoverable reason, explicit CROSS/START
 # still launches the selected title unmodified when webMAN can handle it.
