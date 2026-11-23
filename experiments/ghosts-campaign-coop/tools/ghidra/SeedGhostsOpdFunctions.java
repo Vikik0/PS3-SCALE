@@ -60,12 +60,15 @@ public class SeedGhostsOpdFunctions extends GhidraScript {
             throw new IllegalArgumentException("OPD range is not mapped in the Ghidra program.");
         }
 
-        int descriptors = 0;
+        int descriptorSlotsScanned = 0;
+        int emptyDescriptors = 0;
+        int nonemptyDescriptors = 0;
+        int unreadableDescriptors = 0;
         int validCodePointers = 0;
+        int invalidCodePointers = 0;
         int created = 0;
         int alreadyPresent = 0;
         int failedToCreate = 0;
-        int invalid = 0;
         int zeroTocDescriptors = 0;
         Set<Long> tocValues = new HashSet<>();
         Set<Long> mappedTocValues = new HashSet<>();
@@ -73,6 +76,7 @@ public class SeedGhostsOpdFunctions extends GhidraScript {
 
         for (long offset = 0; offset < opdSize; offset += 8) {
             monitor.checkCancelled();
+            descriptorSlotsScanned++;
             Address descriptor = toAddr(opdVa + offset);
             final int code;
             final int toc;
@@ -81,14 +85,15 @@ public class SeedGhostsOpdFunctions extends GhidraScript {
                 code = getInt(descriptor);
                 toc = getInt(descriptor.add(4));
             } catch (Exception readError) {
-                invalid++;
+                unreadableDescriptors++;
                 continue;
             }
 
             if (code == 0 && toc == 0) {
+                emptyDescriptors++;
                 continue;
             }
-            descriptors++;
+            nonemptyDescriptors++;
             long tocUnsigned = Integer.toUnsignedLong(toc);
             if (tocUnsigned == 0L) {
                 zeroTocDescriptors++;
@@ -102,21 +107,21 @@ public class SeedGhostsOpdFunctions extends GhidraScript {
                 }
             }
             long codeUnsigned = Integer.toUnsignedLong(code);
-            if ((codeUnsigned & 3L) != 0L) {
-                invalid++;
+            if (codeUnsigned == 0L || (codeUnsigned & 3L) != 0L) {
+                invalidCodePointers++;
                 continue;
             }
             Address codeAddress;
             try {
                 codeAddress = toAddr(codeUnsigned);
             } catch (Exception badAddress) {
-                invalid++;
+                invalidCodePointers++;
                 continue;
             }
 
             MemoryBlock block = currentProgram.getMemory().getBlock(codeAddress);
             if (block == null || !block.isExecute()) {
-                invalid++;
+                invalidCodePointers++;
                 continue;
             }
             validCodePointers++;
@@ -144,16 +149,19 @@ public class SeedGhostsOpdFunctions extends GhidraScript {
         int seededFunctions = created + alreadyPresent;
         String status = seededFunctions > 0 ? "OPD_SEEDING_COMPLETED" : "OPD_SEEDING_EMPTY";
         String summary = "{\n" +
-            "  \"schema_version\": 1,\n" +
+            "  \"schema_version\": 2,\n" +
             "  \"status\": \"" + status + "\",\n" +
             "  \"opd_va\": \"0x" + Long.toHexString(opdVa).toUpperCase() + "\",\n" +
             "  \"opd_size\": \"0x" + Long.toHexString(opdSize).toUpperCase() + "\",\n" +
-            "  \"descriptors_visited\": " + descriptors + ",\n" +
+            "  \"descriptor_slots_scanned\": " + descriptorSlotsScanned + ",\n" +
+            "  \"empty_descriptors\": " + emptyDescriptors + ",\n" +
+            "  \"nonempty_descriptors\": " + nonemptyDescriptors + ",\n" +
+            "  \"unreadable_descriptors\": " + unreadableDescriptors + ",\n" +
             "  \"valid_code_pointers\": " + validCodePointers + ",\n" +
+            "  \"invalid_code_pointers\": " + invalidCodePointers + ",\n" +
             "  \"functions_created\": " + created + ",\n" +
             "  \"functions_already_present\": " + alreadyPresent + ",\n" +
             "  \"functions_failed_to_create\": " + failedToCreate + ",\n" +
-            "  \"invalid_entries\": " + invalid + ",\n" +
             "  \"distinct_toc_values\": " + tocValues.size() + ",\n" +
             "  \"mapped_toc_values\": " + mappedTocValues.size() + ",\n" +
             "  \"unmapped_toc_values\": " + unmappedTocValues.size() + ",\n" +
@@ -162,12 +170,15 @@ public class SeedGhostsOpdFunctions extends GhidraScript {
         Files.write(Paths.get(args[2]), summary.getBytes(StandardCharsets.UTF_8));
 
         println("Ghosts PS3 PPU OPD seeding finished.");
-        println("OPD descriptors visited: " + descriptors);
+        println("OPD descriptor slots scanned: " + descriptorSlotsScanned);
+        println("Empty descriptors: " + emptyDescriptors);
+        println("Non-empty descriptors: " + nonemptyDescriptors);
+        println("Unreadable descriptors: " + unreadableDescriptors);
         println("Pointers into executable blocks: " + validCodePointers);
+        println("Invalid code pointers: " + invalidCodePointers);
         println("New functions created: " + created);
         println("Functions already present: " + alreadyPresent);
         println("Functions failed to create: " + failedToCreate);
-        println("Invalid/unreadable entries: " + invalid);
         println("Distinct TOC values: " + tocValues.size());
         println("Mapped TOC values: " + mappedTocValues.size());
         println("Unmapped TOC values: " + unmappedTocValues.size());

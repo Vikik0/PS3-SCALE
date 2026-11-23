@@ -86,7 +86,10 @@ def _validate_opd_tuple(opd: tuple[int, int] | None, label: str) -> None:
     if not isinstance(opd, tuple) or len(opd) != 2:
         raise ValueError(f"{label}: OPD range must be a (virtual_address, size) pair")
     address, size = opd
-    if not isinstance(address, int) or not isinstance(size, int):
+    if (
+        isinstance(address, bool) or isinstance(size, bool)
+        or not isinstance(address, int) or not isinstance(size, int)
+    ):
         raise ValueError(f"{label}: OPD address and size must be integers")
     if address < 0:
         raise ValueError(f"{label}: OPD virtual address cannot be negative")
@@ -114,7 +117,7 @@ def _read_opd_seed_summary(
         report = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise ValueError(f"{label}: Ghidra OPD seeder summary is not valid JSON") from exc
-    if not isinstance(report, dict) or report.get("schema_version") != 1:
+    if not isinstance(report, dict) or report.get("schema_version") != 2:
         raise ValueError(f"{label}: unsupported Ghidra OPD seeder summary schema")
     if report.get("status") != "OPD_SEEDING_COMPLETED":
         raise ValueError(f"{label}: Ghidra OPD seeding did not complete successfully")
@@ -124,12 +127,15 @@ def _read_opd_seed_summary(
     if str(report.get("opd_size", "")).lower() != expected_size.lower():
         raise ValueError(f"{label}: OPD seeder summary size does not match the requested range")
     count_fields = (
-        "descriptors_visited",
+        "descriptor_slots_scanned",
+        "empty_descriptors",
+        "nonempty_descriptors",
+        "unreadable_descriptors",
         "valid_code_pointers",
+        "invalid_code_pointers",
         "functions_created",
         "functions_already_present",
         "functions_failed_to_create",
-        "invalid_entries",
         "distinct_toc_values",
         "mapped_toc_values",
         "unmapped_toc_values",
@@ -141,6 +147,22 @@ def _read_opd_seed_summary(
         if isinstance(value, bool) or not isinstance(value, int) or value < 0:
             raise ValueError(f"{label}: OPD seeder summary field {field} must be a non-negative integer")
         counts[field] = value
+
+    expected_slots = opd[1] // 8
+    if counts["descriptor_slots_scanned"] != expected_slots:
+        raise ValueError(f"{label}: OPD descriptor slot count does not match the requested size")
+    classified_slots = (
+        counts["empty_descriptors"]
+        + counts["nonempty_descriptors"]
+        + counts["unreadable_descriptors"]
+    )
+    if classified_slots != counts["descriptor_slots_scanned"]:
+        raise ValueError(f"{label}: OPD descriptor classifications do not reconcile")
+    classified_code_pointers = (
+        counts["valid_code_pointers"] + counts["invalid_code_pointers"]
+    )
+    if classified_code_pointers != counts["nonempty_descriptors"]:
+        raise ValueError(f"{label}: OPD code-pointer counts do not reconcile")
     if counts["valid_code_pointers"] == 0:
         raise ValueError(f"{label}: OPD seeder found no code pointers in executable memory")
     accounted = (
@@ -152,12 +174,14 @@ def _read_opd_seed_summary(
         raise ValueError(f"{label}: OPD seeder function counts do not reconcile")
     if counts["functions_created"] + counts["functions_already_present"] == 0:
         raise ValueError(f"{label}: OPD seeder created or found no functions")
-    if counts["descriptors_visited"] < counts["valid_code_pointers"]:
-        raise ValueError(f"{label}: OPD seeder descriptor counts do not reconcile")
     if counts["distinct_toc_values"] != counts["mapped_toc_values"] + counts["unmapped_toc_values"]:
         raise ValueError(f"{label}: OPD TOC mapping counts do not reconcile")
-    if counts["zero_toc_descriptors"] > counts["descriptors_visited"]:
+    if counts["zero_toc_descriptors"] > counts["nonempty_descriptors"]:
         raise ValueError(f"{label}: OPD zero-TOC descriptor count is invalid")
+    if counts["distinct_toc_values"] > (
+        counts["nonempty_descriptors"] - counts["zero_toc_descriptors"]
+    ):
+        raise ValueError(f"{label}: OPD distinct TOC count exceeds non-zero TOC descriptors")
     return report
 
 def _run_headless(

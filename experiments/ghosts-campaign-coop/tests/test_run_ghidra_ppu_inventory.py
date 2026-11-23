@@ -104,12 +104,16 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
                 "status": "OPD_SEEDING_COMPLETED",
                 "opd_va": command[seed_index + 1],
                 "opd_size": command[seed_index + 2],
-                "descriptors_visited": 4,
+                "schema_version": 2,
+                "descriptor_slots_scanned": 8,
+                "empty_descriptors": 4,
+                "nonempty_descriptors": 4,
+                "unreadable_descriptors": 0,
                 "valid_code_pointers": 3,
+                "invalid_code_pointers": 1,
                 "functions_created": 2,
                 "functions_already_present": 1,
                 "functions_failed_to_create": 0,
-                "invalid_entries": 1,
                 "distinct_toc_values": 2,
                 "mapped_toc_values": 2,
                 "unmapped_toc_values": 0,
@@ -370,6 +374,11 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
             "OPD_SEEDING_COMPLETED",
             "OPD_SEEDING_EMPTY",
             "Files.write(Paths.get(args[2])",
+            "\"schema_version\\": 2",
+            "descriptorSlotsScanned++",
+            "emptyDescriptors++",
+            "unreadableDescriptors++",
+            "invalidCodePointers++",
             "validCodePointers == 0",
             "throw new IllegalStateException",
             "throw new IllegalArgumentException",
@@ -427,6 +436,77 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
                     campaign_opd=(0x1000, 0x40),
                 )
         self.assertFalse((self.output_dir / "campaign_ppu_inventory.csv").exists())
+
+    def test_direct_api_rejects_boolean_opd_values(self):
+        with patch("tools.run_ghidra_ppu_inventory.subprocess.run") as run:
+            with self.assertRaisesRegex(ValueError, "must be integers"):
+                generate_inventories(
+                    self.headless,
+                    self.campaign_elf,
+                    self.multiplayer_elf,
+                    self.output_dir,
+                    script_dir=self.script_dir,
+                    campaign_opd=(False, 8),
+                )
+        run.assert_not_called()
+
+    def test_opd_summary_rejects_slot_count_that_disagrees_with_range(self):
+        def fake_run(command, check):
+            self._fake_run(command, check)
+            if SEED_SCRIPT in command:
+                summary_path = Path(command[command.index(SEED_SCRIPT) + 3])
+                report = json.loads(summary_path.read_text(encoding="utf-8"))
+                report["descriptor_slots_scanned"] = 7
+                summary_path.write_text(json.dumps(report), encoding="utf-8")
+            return subprocess.CompletedProcess(command, 0)
+
+        with patch("tools.run_ghidra_ppu_inventory.subprocess.run", side_effect=fake_run):
+            with self.assertRaisesRegex(ValueError, "slot count does not match"):
+                generate_inventories(
+                    self.headless, self.campaign_elf, self.multiplayer_elf,
+                    self.output_dir, script_dir=self.script_dir,
+                    campaign_opd=(0x1000, 0x40),
+                )
+        self.assertFalse((self.output_dir / "campaign_ppu_inventory.csv").exists())
+
+    def test_opd_summary_rejects_unclassified_descriptor_slots(self):
+        def fake_run(command, check):
+            self._fake_run(command, check)
+            if SEED_SCRIPT in command:
+                summary_path = Path(command[command.index(SEED_SCRIPT) + 3])
+                report = json.loads(summary_path.read_text(encoding="utf-8"))
+                report["empty_descriptors"] = 3
+                summary_path.write_text(json.dumps(report), encoding="utf-8")
+            return subprocess.CompletedProcess(command, 0)
+
+        with patch("tools.run_ghidra_ppu_inventory.subprocess.run", side_effect=fake_run):
+            with self.assertRaisesRegex(ValueError, "descriptor classifications do not reconcile"):
+                generate_inventories(
+                    self.headless, self.campaign_elf, self.multiplayer_elf,
+                    self.output_dir, script_dir=self.script_dir,
+                    campaign_opd=(0x1000, 0x40),
+                )
+        self.assertFalse((self.output_dir / "campaign_ppu_inventory.csv").exists())
+
+    def test_opd_summary_rejects_unclassified_code_pointers(self):
+        def fake_run(command, check):
+            self._fake_run(command, check)
+            if SEED_SCRIPT in command:
+                summary_path = Path(command[command.index(SEED_SCRIPT) + 3])
+                report = json.loads(summary_path.read_text(encoding="utf-8"))
+                report["invalid_code_pointers"] = 0
+                summary_path.write_text(json.dumps(report), encoding="utf-8")
+            return subprocess.CompletedProcess(command, 0)
+
+        with patch("tools.run_ghidra_ppu_inventory.subprocess.run", side_effect=fake_run):
+            with self.assertRaisesRegex(ValueError, "code-pointer counts do not reconcile"):
+                generate_inventories(
+                    self.headless, self.campaign_elf, self.multiplayer_elf,
+                    self.output_dir, script_dir=self.script_dir,
+                    campaign_opd=(0x1000, 0x40),
+                )
+        self.assertFalse((self.output_dir / "campaign_ppu_inventory.csv").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

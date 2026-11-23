@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "phase": 44,
+  "status": "OPD_DESCRIPTOR_ACCOUNTING_RECONCILED",
+  "opd_summary_schema_version": 2,
+  "changes": [
+    "reports every OPD slot as empty, non-empty or unreadable",
+    "classifies every non-empty descriptor as valid or invalid code pointer",
+    "reconciles scanned slot count against opd_size / 8",
+    "reconciles code-pointer, function-creation and TOC mapping counts",
+    "rejects boolean values in direct Python OPD API"
+  ],
+  "validation_boundary": "Host tests with mocked Ghidra only. No real Ghidra execution or decrypted TU 1.16 PPU ELF is available."
+}
