@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "status": "THREE_CAMPAIGN_MISSIONS_EXTRACTED_AND_AUDITED",
+  "toolchain": "GSC Tool 1.6.2.364",
+  "source_files": [
+    {
+      "filename": "black_ice.ff",
+      "size_bytes": 91355961,
+      "sha256": "950726399e16f55fd565438936ec59231649940c89763a87c805409536837532",
+      "magic": "IWff0100",
+      "version": "0x0000022E",
+      "validated_blocks": 2048,
+      "unclassified_trailing_bytes": 23711611
+    },
+    {
+      "filename": "carrier.ff",
+      "size_bytes": 87088544,
+      "sha256": "e3a616545f18a7dcae006b4e32264c56b01d627650ea574f3fe710e02543caee",
+      "magic": "IWff0100",
+      "version": "0x0000022E",
+      "validated_blocks": 2048,
+      "unclassified_trailing_bytes": 13733587
+    },
+    {
+      "filename": "cornered.ff",
+      "size_bytes": 93933243,
+      "sha256": "1bcb1da55d7e5a893de2a513e6df9b5cd3786e4d642dc76e090ea551cdf39395",
+      "magic": "IWff0100",
+      "version": "0x0000022E",
+      "validated_blocks": 499,
+      "stop_reason": "zero_terminator",
+      "unclassified_trailing_bytes": 74720393
+    }
+  ],
+  "totals": {
+    "compiled_gsc_candidates": 249,
+    "decompiled_successfully": 249,
+    "decompiled_sources_recompiled_successfully": 249,
+    "raw_gsc_sources_preserved": 3,
+    "all_script_files_audited": 249,
+    "all_script_functions": 4304,
+    "all_script_functions_with_level_player": 685,
+    "all_script_level_player_refs": 2371,
+    "map_script_files": 55,
+    "map_script_functions": 2998,
+    "map_script_functions_with_level_player": 638,
+    "map_script_level_player_refs": 2255
+  },
+  "global_markers": {
+    "level_playerpiggyback_refs": 19,
+    "level_playengineeffects_refs": 4,
+    "issplitscreen_refs": 1,
+    "issplitscreenplayer_refs": 0,
+    "issplitscreenplayerprimary_refs": 0,
+    "coop_refs": 0
+  },
+  "missions": [
+    {
+      "name": "black_ice",
+      "compiled_gsc": 76,
+      "map_files": 16,
+      "map_functions": 966,
+      "map_functions_with_level_player": 203,
+      "map_level_player_refs": 569,
+      "all_file_level_player_refs": 616,
+      "notable": "1062.gsc::player_saw_kill() checks issplitscreen(); in split-screen player_scuba() is restricted to level.player."
+    },
+    {
+      "name": "carrier",
+      "compiled_gsc": 118,
+      "map_files": 21,
+      "map_functions": 923,
+      "map_functions_with_level_player": 195,
+      "map_level_player_refs": 596,
+      "all_file_level_player_refs": 656,
+      "notable": "monitorscavengerpickup() loops playerpiggyback and assigns per-player HUD/FOV; ss_util.get_different_favoriteenemy() switches AI targeting between players."
+    },
+    {
+      "name": "cornered",
+      "compiled_gsc": 55,
+      "map_files": 18,
+      "map_functions": 1109,
+      "map_functions_with_level_player": 240,
+      "map_level_player_refs": 1090,
+      "all_file_level_player_refs": 1099,
+      "notable": "Stealth/AI scripts iterate playerpiggyback for threat selection, visibility and player-array operations."
+    }
+  ],
+  "map_data": {
+    "references": [
+      "maps/black_ice.d3dbsp",
+      "maps/carrier.d3dbsp",
+      "maps/cornered.d3dbsp"
+    ],
+    "mapents_pool_records": 3,
+    "validated_inline_entity_text_candidates": 0
+  },
+  "boundary": "GSC assets were validated, decompiled and recompiled. FastFile trailing regions remain unclassified; no native Campaign second-client runtime proof or playable mod is claimed."
+}
