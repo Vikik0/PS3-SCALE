@@ -19,7 +19,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from tools.compare_ppu_function_inventories import InventoryError, read_inventory
-from tools.compare_splitscreen_builtin_xrefs import read_inventory as read_builtin_inventory, read_xrefs
+from tools.compare_splitscreen_builtin_xrefs import compare_paths as compare_builtin_xrefs, read_inventory as read_builtin_inventory, read_xrefs
 
 PROCESSOR = "PowerPC:BE:64:default"
 EXPORT_SCRIPT = "ExportGhostsPpuFunctionInventory.java"
@@ -30,6 +30,7 @@ OUTPUT_NAMES = (
     "multiplayer_ppu_inventory.csv",
     "campaign_builtin_xrefs.csv",
     "multiplayer_builtin_xrefs.csv",
+    "splitscreen_builtin_xrefs.json",
     "ppu_inventory_manifest.json",
 )
 
@@ -249,6 +250,7 @@ def generate_inventories(
         multiplayer_csv = stage_dir / OUTPUT_NAMES[1]
         campaign_xref_csv = stage_dir / OUTPUT_NAMES[2]
         multiplayer_xref_csv = stage_dir / OUTPUT_NAMES[3]
+        comparison_json = stage_dir / OUTPUT_NAMES[4]
 
         commands = {}
         commands["campaign"] = _run_headless(
@@ -279,6 +281,13 @@ def generate_inventories(
         multiplayer_rows = read_inventory(multiplayer_csv)
         multiplayer_xref_rows = read_xrefs(
             multiplayer_xref_csv, read_builtin_inventory(multiplayer_csv)
+        )
+        builtin_xref_comparison = compare_builtin_xrefs(
+            campaign_xref_csv, multiplayer_xref_csv, campaign_csv, multiplayer_csv
+        )
+        comparison_json.write_text(
+            json.dumps(builtin_xref_comparison, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
         )
 
         manifest = {
@@ -311,6 +320,9 @@ def generate_inventories(
                     if campaign_opd else {"enabled": False}
                 ),
             },
+            "builtin_xref_comparison_file": OUTPUT_NAMES[4],
+            "builtin_xref_comparison_sha256": sha256_file(comparison_json),
+            "multiplayer_only_builtin_lead_count": len(builtin_xref_comparison["multiplayer_only_leads"]),
             "multiplayer": {
                 "elf_path": str(multiplayer_elf),
                 "elf_sha256": sha256_file(multiplayer_elf),
@@ -337,7 +349,7 @@ def generate_inventories(
                 "This workflow does not identify or approve a hook, create Player 2, or modify game files.",
             ],
         }
-        manifest_path = stage_dir / OUTPUT_NAMES[4]
+        manifest_path = stage_dir / OUTPUT_NAMES[5]
         manifest_path.write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
@@ -347,7 +359,8 @@ def generate_inventories(
             OUTPUT_NAMES[1]: multiplayer_csv,
             OUTPUT_NAMES[2]: campaign_xref_csv,
             OUTPUT_NAMES[3]: multiplayer_xref_csv,
-            OUTPUT_NAMES[4]: manifest_path,
+            OUTPUT_NAMES[4]: comparison_json,
+            OUTPUT_NAMES[5]: manifest_path,
         }
         _promote_outputs(staged, final, overwrite=overwrite)
 
@@ -394,6 +407,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Multiplayer functions: {manifest['multiplayer']['function_records']}")
     print(f"Campaign builtin xref rows: {manifest['campaign']['builtin_xref_rows']}")
     print(f"Multiplayer builtin xref rows: {manifest['multiplayer']['builtin_xref_rows']}")
+    print(f"Multiplayer-only builtin leads: {manifest['multiplayer_only_builtin_lead_count']}")
     print(f"Output directory: {Path(args.output_dir).resolve()}")
     print("Review ppu_inventory_manifest.json before comparing the two inventories.")
     return 0

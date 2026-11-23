@@ -136,11 +136,15 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         self.assertEqual(saved["multiplayer"]["function_records"], 1)
         self.assertEqual(saved["campaign"]["builtin_xref_rows"], 1)
         self.assertEqual(saved["multiplayer"]["builtin_xref_rows"], 1)
+        self.assertEqual(saved["multiplayer_only_builtin_lead_count"], 1)
+        self.assertEqual(saved["builtin_xref_comparison_file"], "splitscreen_builtin_xrefs.json")
+        self.assertRegex(saved["builtin_xref_comparison_sha256"], r"^[0-9a-f]{64}$")
         self.assertRegex(saved["campaign"]["builtin_xref_sha256"], r"^[0-9a-f]{64}$")
         self.assertTrue((self.output_dir / "campaign_ppu_inventory.csv").is_file())
         self.assertTrue((self.output_dir / "multiplayer_ppu_inventory.csv").is_file())
         self.assertTrue((self.output_dir / "campaign_builtin_xrefs.csv").is_file())
         self.assertTrue((self.output_dir / "multiplayer_builtin_xrefs.csv").is_file())
+        self.assertTrue((self.output_dir / "splitscreen_builtin_xrefs.json").is_file())
 
     def test_second_mode_failure_does_not_promote_partial_inventory(self):
         calls = 0
@@ -249,7 +253,7 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         for name in (
             "campaign_ppu_inventory.csv", "multiplayer_ppu_inventory.csv",
             "campaign_builtin_xrefs.csv", "multiplayer_builtin_xrefs.csv",
-            "ppu_inventory_manifest.json",
+            "splitscreen_builtin_xrefs.json", "ppu_inventory_manifest.json",
         ):
             self.assertFalse((self.output_dir / name).exists())
 
