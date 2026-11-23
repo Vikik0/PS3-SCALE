@@ -33,7 +33,7 @@ jobs:
       - name: Validate and mask the private download URL
         shell: bash
         env:
-          DISC_ARCHIVE_URL: \${{ inputs.disc_archive_url }}
+          DISC_ARCHIVE_URL: ${{ inputs.disc_archive_url }}
         run: |
           set -euo pipefail
           test -n "$DISC_ARCHIVE_URL"
@@ -57,7 +57,7 @@ jobs:
       - name: Download the private BIN/CUE archive
         shell: bash
         env:
-          DISC_ARCHIVE_URL: \${{ inputs.disc_archive_url }}
+          DISC_ARCHIVE_URL: ${{ inputs.disc_archive_url }}
         run: |
           set -euo pipefail
           echo "::add-mask::$DISC_ARCHIVE_URL"
