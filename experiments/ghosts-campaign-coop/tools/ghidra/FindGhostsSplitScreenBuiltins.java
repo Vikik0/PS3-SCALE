@@ -43,6 +43,8 @@ public class FindGhostsSplitScreenBuiltins extends GhidraScript {
         writer.write(csv(currentProgram.getName()) + "," + csv(builtin) + "," + csv(stringAddress.toString()) + ",");
         writer.write(csv(from == null ? "" : from.toString()) + ",");
         writer.write(csv(reference == null ? "" : reference.getReferenceType().toString()) + ",");
+        writer.write(csv(reference == null ? "" : Boolean.toString(reference.getReferenceType().isCall())) + ",");
+        writer.write(csv(reference == null ? "" : Boolean.toString(reference.getReferenceType().isData())) + ",");
         writer.write(csv(reference == null ? "" : reference.getSource().toString()) + ",");
         writer.write(csv(caller == null ? "" : caller.getName()) + ",");
         writer.write(csv(caller == null ? "" : caller.getEntryPoint().toString()) + ",");
@@ -62,7 +64,7 @@ public class FindGhostsSplitScreenBuiltins extends GhidraScript {
         int stringHits = 0, referenceHits = 0, functionsResolved = 0;
         MemoryBlock[] blocks = currentProgram.getMemory().getBlocks();
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(args[0]))) {
-            writer.write("program,builtin,string_address,reference_address,reference_type,source_type,caller_name,caller_entry,caller_body_start,caller_body_end,instruction\n");
+            writer.write("program,builtin,string_address,reference_address,reference_type,is_call,is_data,source_type,caller_name,caller_entry,caller_body_start,caller_body_end,instruction\n");
             for (MemoryBlock block : blocks) {
                 monitor.checkCancelled();
                 if (!block.isInitialized()) continue;
@@ -101,7 +103,7 @@ public class FindGhostsSplitScreenBuiltins extends GhidraScript {
         println("Reference rows: " + referenceHits);
         println("References with containing functions: " + functionsResolved);
         println("Output: " + args[0]);
-        println("A string xref may be a registration/data reference, not an executable call.");
+        println("Call and data reference types are exported separately; only explicit calls are call-path leads.");
         println("No result does not prove the builtin is absent; names may be hashed, stripped, or stored elsewhere.");
     }
 }

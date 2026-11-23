@@ -297,6 +297,8 @@ def analyze(
                 "multiplayer_function_records": manifest_data["multiplayer"]["function_records"],
                 "campaign_builtin_xref_rows": manifest_data["campaign"]["builtin_xref_rows"],
                 "multiplayer_builtin_xref_rows": manifest_data["multiplayer"]["builtin_xref_rows"],
+                "campaign_builtin_call_xref_rows": manifest_data["campaign"]["builtin_xref_call_rows"],
+                "multiplayer_builtin_call_xref_rows": manifest_data["multiplayer"]["builtin_xref_call_rows"],
                 "multiplayer_only_builtin_lead_count": len(comparison["multiplayer_only_leads"]),
                 "comparison_sha256": sha256_file(ghidra_output_dir / "splitscreen_builtin_xrefs.json"),
                 "manifest_sha256": sha256_file(ghidra_manifest_path),

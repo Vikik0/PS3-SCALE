@@ -106,8 +106,8 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
 
     def test_optional_ghidra_analysis_adds_six_outputs_and_summary_evidence(self):
         fake_manifest = {
-            "campaign": {"function_records": 100, "builtin_xref_rows": 4},
-            "multiplayer": {"function_records": 120, "builtin_xref_rows": 8},
+            "campaign": {"function_records": 100, "builtin_xref_rows": 4, "builtin_xref_call_rows": 2},
+            "multiplayer": {"function_records": 120, "builtin_xref_rows": 8, "builtin_xref_call_rows": 5},
         }
         fake_comparison = {"multiplayer_only_leads": [{"builtin": "isSplitScreen"}]}
 
@@ -131,6 +131,8 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
         self.assertEqual(result["ppu_analysis"]["status"], "GHIDRA_PPU_ANALYSIS_COMPLETED")
         self.assertEqual(result["ppu_analysis"]["multiplayer_only_builtin_lead_count"], 1)
         self.assertEqual(result["ppu_analysis"]["campaign_function_records"], 100)
+        self.assertEqual(result["ppu_analysis"]["campaign_builtin_call_xref_rows"], 2)
+        self.assertEqual(result["ppu_analysis"]["multiplayer_builtin_call_xref_rows"], 5)
         self.assertEqual(result["player_two_gate"]["status"], "NOT_PROVEN")
         for name in analyzer.GHIDRA_OUTPUT_NAMES:
             self.assertTrue((self.output_dir / name).is_file(), name)

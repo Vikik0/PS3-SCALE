@@ -311,6 +311,8 @@ def generate_inventories(
                 "builtin_xref_file": OUTPUT_NAMES[2],
                 "builtin_xref_sha256": sha256_file(campaign_xref_csv),
                 "builtin_xref_rows": len(campaign_xref_rows),
+                "builtin_xref_call_rows": sum(row["is_call"] for row in campaign_xref_rows),
+                "builtin_xref_data_rows": sum(row["is_data"] for row in campaign_xref_rows),
                 "opd_seeding": (
                     {
                         "enabled": True,
@@ -332,6 +334,8 @@ def generate_inventories(
                 "builtin_xref_file": OUTPUT_NAMES[3],
                 "builtin_xref_sha256": sha256_file(multiplayer_xref_csv),
                 "builtin_xref_rows": len(multiplayer_xref_rows),
+                "builtin_xref_call_rows": sum(row["is_call"] for row in multiplayer_xref_rows),
+                "builtin_xref_data_rows": sum(row["is_data"] for row in multiplayer_xref_rows),
                 "opd_seeding": (
                     {
                         "enabled": True,
@@ -405,8 +409,8 @@ def main(argv: list[str] | None = None) -> int:
     print("Ghidra PPU inventories generated.")
     print(f"Campaign functions: {manifest['campaign']['function_records']}")
     print(f"Multiplayer functions: {manifest['multiplayer']['function_records']}")
-    print(f"Campaign builtin xref rows: {manifest['campaign']['builtin_xref_rows']}")
-    print(f"Multiplayer builtin xref rows: {manifest['multiplayer']['builtin_xref_rows']}")
+    print(f"Campaign builtin xref rows: {manifest['campaign']['builtin_xref_rows']} (calls: {manifest['campaign']['builtin_xref_call_rows']})")
+    print(f"Multiplayer builtin xref rows: {manifest['multiplayer']['builtin_xref_rows']} (calls: {manifest['multiplayer']['builtin_xref_call_rows']})")
     print(f"Multiplayer-only builtin leads: {manifest['multiplayer_only_builtin_lead_count']}")
     print(f"Output directory: {Path(args.output_dir).resolve()}")
     print("Review ppu_inventory_manifest.json before comparing the two inventories.")
