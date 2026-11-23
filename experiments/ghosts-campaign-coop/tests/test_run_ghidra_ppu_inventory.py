@@ -137,25 +137,30 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         if SEED_SCRIPT in command:
             seed_index = command.index(SEED_SCRIPT)
             summary_path = Path(command[seed_index + 3])
+            slots = int(command[seed_index + 2], 0) // 8
+            nonempty = min(4, slots)
+            valid = min(3, nonempty)
+            zero_toc = min(1, nonempty)
+            distinct_toc = max(0, nonempty - zero_toc - 1)
+            created = min(2, valid)
             summary_path.write_text(json.dumps({
-                "schema_version": 1,
+                "schema_version": 2,
                 "status": "OPD_SEEDING_COMPLETED",
                 "opd_va": command[seed_index + 1],
                 "opd_size": command[seed_index + 2],
-                "schema_version": 2,
-                "descriptor_slots_scanned": 8,
-                "empty_descriptors": 4,
-                "nonempty_descriptors": 4,
+                "descriptor_slots_scanned": slots,
+                "empty_descriptors": slots - nonempty,
+                "nonempty_descriptors": nonempty,
                 "unreadable_descriptors": 0,
-                "valid_code_pointers": 3,
-                "invalid_code_pointers": 1,
-                "functions_created": 2,
-                "functions_already_present": 1,
+                "valid_code_pointers": valid,
+                "invalid_code_pointers": nonempty - valid,
+                "functions_created": created,
+                "functions_already_present": valid - created,
                 "functions_failed_to_create": 0,
-                "distinct_toc_values": 2,
-                "mapped_toc_values": 2,
+                "distinct_toc_values": distinct_toc,
+                "mapped_toc_values": distinct_toc,
                 "unmapped_toc_values": 0,
-                "zero_toc_descriptors": 1,
+                "zero_toc_descriptors": zero_toc,
             }), encoding="utf-8")
         return subprocess.CompletedProcess(command, 0)
 
@@ -561,8 +566,8 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
             )
         command = run.call_args_list[0].args[0]
         seed_index = command.index(SEED_SCRIPT)
-        self.assertEqual(command[seed_index + 1], "0x1000")
-        self.assertEqual(command[seed_index + 2], "0x40")
+        self.assertEqual(command[seed_index + 1], "0x2000")
+        self.assertEqual(command[seed_index + 2], "0x10")
         evidence = manifest["campaign"]["opd_seeding"]["range_evidence"]
         self.assertEqual(evidence["source"], "ELF_INSPECTOR_REPORT")
         self.assertEqual(evidence["report_sha256"], hashlib.sha256(report_path.read_bytes()).hexdigest())
