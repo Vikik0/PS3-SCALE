@@ -166,6 +166,7 @@ static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 #define PS3SCALE_PS2_CLASSICS_CONFIG_DIR "/dev_hdd0/game/PS2CONFIG/USRDIR/CONFIG/ENC"
 #define PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT (PS3SCALE_PS2_CONFIG_MAX_BYTES * 2u)
 #define PS3SCALE_GAME_LAUNCH_ERROR_IDENTITY (-20)
+#define PS3SCALE_GAME_LAUNCH_ERROR_SCRIPT (-21)
 
 static audioPortParam g_audio_params;
 static audioPortConfig g_audio_config;
@@ -2635,13 +2636,23 @@ static void profile_arm_worker(void *arg)
     g_network_task_running = 0;
 }
 
-static int selected_game_matches_auto_launch_target(void)
+static int selected_game_matches_target(const ps3scale_game_t *target)
 {
     const ps3scale_game_t *current = selected_game();
-    return g_screen == SCREEN_DETAILS && current &&
-           strcmp(current->title_id, g_auto_launch_target.title_id) == 0 &&
-           strcmp(current->app_ver, g_auto_launch_target.app_ver) == 0 &&
-           strcmp(current->path, g_auto_launch_target.path) == 0;
+    return target && g_screen == SCREEN_DETAILS && current &&
+           strcmp(current->title_id, target->title_id) == 0 &&
+           strcmp(current->app_ver, target->app_ver) == 0 &&
+           strcmp(current->path, target->path) == 0;
+}
+
+static int selected_game_matches_auto_launch_target(void)
+{
+    return selected_game_matches_target(&g_auto_launch_target);
+}
+
+static int selected_game_matches_game_launch_target(void)
+{
+    return selected_game_matches_target(&g_game_launch_target);
 }
 
 static void service_profile_arm(void)
@@ -2833,6 +2844,7 @@ static void game_launch_worker(void *arg)
 {
     ps3scale_game_t mounted;
     int identity_valid = 1;
+    int cleanup_result;
     (void)arg;
 
     if (g_game_launch_profile_armed) {
@@ -2846,15 +2858,23 @@ static void game_launch_worker(void *arg)
 
         if (!identity_valid) {
             /* Never run a profile against a different or unmounted revision. */
-            (void)ps3scale_profile_script_remove(g_game_launch_target.title_id);
-            g_game_launch_result = PS3SCALE_GAME_LAUNCH_ERROR_IDENTITY;
+            cleanup_result = ps3scale_profile_script_remove(
+                g_game_launch_target.title_id);
+            g_game_launch_result = cleanup_result == -2 ?
+                PS3SCALE_GAME_LAUNCH_ERROR_SCRIPT :
+                PS3SCALE_GAME_LAUNCH_ERROR_IDENTITY;
             goto launch_finished;
         }
 
         if (ps3scale_webman_ps3mapi_available() != 0) {
-            /* A missing PS3MAPI endpoint must not block normal game launch.
-               Remove only our own one-launch script, then start cleanly. */
-            (void)ps3scale_profile_script_remove(g_game_launch_target.title_id);
+            /* A missing PS3MAPI endpoint must not block a normal launch.
+               Continue only if our own one-launch script is absent/removed. */
+            cleanup_result = ps3scale_profile_script_remove(
+                g_game_launch_target.title_id);
+            if (cleanup_result == -2) {
+                g_game_launch_result = PS3SCALE_GAME_LAUNCH_ERROR_SCRIPT;
+                goto launch_finished;
+            }
             g_game_launch_profile_skipped = 1;
         }
     }
@@ -2887,7 +2907,15 @@ static void service_game_launch(void)
             "WEBMAN ACCEPTED START REQUEST.");
         g_exit_requested = 1;
     } else if (g_game_launch_result == PS3SCALE_GAME_LAUNCH_ERROR_IDENTITY) {
-        set_details_message("GAME VERSION CHANGED OR NOT MOUNTED. PROFILE REMOVED; RESCAN.");
+        if (selected_game_matches_game_launch_target()) {
+            g_force_unmodified_launch = 1;
+            set_details_message("PROFILE REMOVED. STARTING GAME UNMODIFIED.");
+            start_selected_game();
+        } else {
+            set_details_message("GAME SELECTION CHANGED. PROFILE REMOVED; NOT LAUNCHED.");
+        }
+    } else if (g_game_launch_result == PS3SCALE_GAME_LAUNCH_ERROR_SCRIPT) {
+        set_details_message("PROFILE SCRIPT COULD NOT BE SAFELY REMOVED. GAME NOT STARTED.");
     } else if (g_game_launch_result == -2) {
         set_details_message("PS3MAPI NOT ACTIVE. PROFILE WAS NOT APPLIED.");
     } else if (g_game_launch_result == PS3SCALE_WEBMAN_ERROR_NETWORK_INIT) {
