@@ -10,7 +10,7 @@ The host ELF inspector previously exposed the section containing the ELF entry a
 - It reports distinct, mapped and unmapped TOC values, plus zero-TOC descriptor counts.
 - Each parsed entry descriptor reports code-pointer alignment/executable status and TOC mapping status.
 - The common non-zero TOC is reported only from valid code-pointer descriptors and includes an explicit mapped flag.
-- The inspector emits operator_seed_range_candidate only when the containing section is readable, 8-byte aligned by address and declared section alignment, has a size divisible by 8, fits the unsigned 32-bit PPU address space, and contains at least one valid executable code pointer.
+- The inspector emits operator_seed_range_candidate only when the containing section is readable, 8-byte aligned by address, satisfies the section's declared sh_addralign,, has a size divisible by 8, fits the unsigned 32-bit PPU address space, and contains at least one valid executable code pointer.
 - The inspector version advances to 0.1.2. It remains read-only and does not decrypt SELF files or modify game bytes.
 
 ## Validation boundary

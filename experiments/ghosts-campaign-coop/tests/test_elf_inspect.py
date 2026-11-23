@@ -204,5 +204,21 @@ class PpuElfTests(unittest.TestCase):
         self.assertIsNone(info["operator_seed_range_candidate"])
 
 
+    def test_opd_info_rejects_address_that_violates_declared_section_alignment(self):
+        data = bytearray(make_ppc64_elf_with_opd())
+        struct.pack_into(">Q", data, 24, 0x2008)
+        struct.pack_into(">Q", data, 120 + 32, 0x18)
+        struct.pack_into(">Q", data, 120 + 40, 0x18)
+        struct.pack_into(">Q", data, 0x340 + 16, 0x2008)
+        struct.pack_into(">Q", data, 0x340 + 24, 0x208)
+        struct.pack_into(">Q", data, 0x340 + 48, 16)
+        data[0x208:0x218] = struct.pack(">IIII", 0x1010, 0x3000, 0x1020, 0x3000)
+        info = PpuElf(bytes(data)).opd_info()
+        self.assertTrue(info["section_address_aligned"])
+        self.assertTrue(info["section_alignment_valid"])
+        self.assertFalse(info["section_address_matches_declared_alignment"])
+        self.assertIsNone(info["operator_seed_range_candidate"])
+
+
 if __name__ == "__main__":
     unittest.main()

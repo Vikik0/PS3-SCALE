@@ -359,6 +359,12 @@ class PpuElf:
             and section_alignment >= 8
             and (section_alignment & (section_alignment - 1)) == 0
         )
+        address_matches_declared_alignment = (
+            section_address is not None
+            and section_alignment is not None
+            and section_alignment > 0
+            and section_address % section_alignment == 0
+        )
         in_ppu_address_space = (
             section_address is not None
             and section_size is not None
@@ -372,6 +378,7 @@ class PpuElf:
             and address_aligned
             and size_aligned
             and alignment_valid
+            and address_matches_declared_alignment
             and in_ppu_address_space
             and valid_code_pointers > 0
         ):
@@ -394,6 +401,7 @@ class PpuElf:
             "section_address_aligned": address_aligned,
             "section_size_aligned": size_aligned,
             "section_alignment_valid": alignment_valid,
+            "section_address_matches_declared_alignment": address_matches_declared_alignment,
             "descriptor_slots_total": descriptor_slots_total,
             "descriptor_slots_scanned": descriptor_slots_scanned,
             "empty_descriptors": empty_descriptors,
