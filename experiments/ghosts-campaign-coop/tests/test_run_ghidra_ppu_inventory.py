@@ -15,6 +15,7 @@ from tools.run_ghidra_ppu_inventory import (
     _validate_opd_pair,
     _validate_opd_tuple,
     generate_inventories,
+    _read_elf_inspector_opd_report,
 )
 
 
@@ -84,6 +85,63 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
                 "caller_body_start": "0x1000", "caller_body_end": "0x1010",
                 "instruction": "load r3, 0x5000",
             })
+
+
+    def write_inspector_report(self, path, elf_path, *, valid=True):
+        report = {
+            "tool": "ps3_elf_inspect",
+            "tool_version": "0.1.2",
+            "input": {
+                "file_name": Path(elf_path).name,
+                "sha256": hashlib.sha256(Path(elf_path).read_bytes()).hexdigest(),
+            },
+            "operator_asserted_profile": {
+                "title_id": "BLUS31270",
+                "title_update": "1.16",
+                "firmware_family": "CEX",
+                "firmware_version": "4.93",
+            },
+            "elf": {
+                "machine": 21,
+                "endianness": "big",
+                "type_name": "ET_EXEC",
+                "opd": {
+                    "section_index": 2,
+                    "section_name": ".opd",
+                    "section_type": 1,
+                    "section_address": "0x1000",
+                    "section_size": "0x40",
+                    "section_payload_readable": True,
+                    "section_address_aligned": True,
+                    "section_size_aligned": True,
+                    "section_alignment_valid": True,
+                    "section_address_matches_declared_alignment": True,
+                    "descriptor_slots_total": 8,
+                    "descriptor_slots_scanned": 8,
+                    "empty_descriptors": 4,
+                    "nonempty_descriptors": 4,
+                    "unreadable_descriptors": 0,
+                    "valid_code_pointers": 3,
+                    "invalid_code_pointers": 1,
+                    "trailing_bytes": 0,
+                    "zero_toc_descriptors": 1,
+                    "distinct_toc_values": 2,
+                    "mapped_toc_values": 2,
+                    "unmapped_toc_values": 0,
+                    "descriptor_count": 3,
+                    "operator_seed_range_candidate": {
+                        "virtual_address": "0x1000",
+                        "size": "0x40",
+                        "section_name": ".opd",
+                        "section_index": 2,
+                    },
+                },
+            },
+        }
+        if not valid:
+            report["elf"]["opd"]["section_alignment_valid"] = False
+        Path(path).write_text(json.dumps(report), encoding="utf-8")
+        return Path(path)
 
     def _fake_run(self, command, check):
         export_index = command.index(EXPORT_SCRIPT)
@@ -506,6 +564,89 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
                     campaign_opd=(0x1000, 0x40),
                 )
         self.assertFalse((self.output_dir / "campaign_ppu_inventory.csv").exists())
+
+
+    def test_inspector_report_selects_opd_range_and_records_provenance(self):
+        report_path = self.write_inspector_report(
+            self.root / "campaign-inspector.json", self.campaign_elf
+        )
+        with patch("tools.run_ghidra_ppu_inventory.subprocess.run", side_effect=self._fake_run) as run:
+            manifest = generate_inventories(
+                self.headless,
+                self.campaign_elf,
+                self.multiplayer_elf,
+                self.output_dir,
+                script_dir=self.script_dir,
+                campaign_opd_inspector_report=report_path,
+            )
+        command = run.call_args_list[0].args[0]
+        seed_index = command.index(SEED_SCRIPT)
+        self.assertEqual(command[seed_index + 1], "0x1000")
+        self.assertEqual(command[seed_index + 2], "0x40")
+        evidence = manifest["campaign"]["opd_seeding"]["range_evidence"]
+        self.assertEqual(evidence["source"], "ELF_INSPECTOR_REPORT")
+        self.assertEqual(evidence["report_sha256"], hashlib.sha256(report_path.read_bytes()).hexdigest())
+        self.assertEqual(evidence["input_elf_sha256"], hashlib.sha256(self.campaign_elf.read_bytes()).hexdigest())
+        self.assertFalse(manifest["multiplayer"]["opd_seeding"]["enabled"])
+
+    def test_inspector_report_for_different_elf_is_rejected_before_ghidra(self):
+        report_path = self.write_inspector_report(
+            self.root / "campaign-inspector.json", self.campaign_elf
+        )
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        report["input"]["sha256"] = "0" * 64
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+        with patch("tools.run_ghidra_ppu_inventory.subprocess.run") as run:
+            with self.assertRaisesRegex(ValueError, "does not match the supplied ELF"):
+                generate_inventories(
+                    self.headless, self.campaign_elf, self.multiplayer_elf,
+                    self.output_dir, script_dir=self.script_dir,
+                    campaign_opd_inspector_report=report_path,
+                )
+        run.assert_not_called()
+
+    def test_inspector_report_with_invalid_section_flags_is_rejected(self):
+        report_path = self.write_inspector_report(
+            self.root / "campaign-inspector.json", self.campaign_elf, valid=False
+        )
+        with patch("tools.run_ghidra_ppu_inventory.subprocess.run") as run:
+            with self.assertRaisesRegex(ValueError, "section_alignment_valid"):
+                generate_inventories(
+                    self.headless, self.campaign_elf, self.multiplayer_elf,
+                    self.output_dir, script_dir=self.script_dir,
+                    campaign_opd_inspector_report=report_path,
+                )
+        run.assert_not_called()
+
+    def test_manual_opd_range_and_inspector_report_are_mutually_exclusive(self):
+        report_path = self.write_inspector_report(
+            self.root / "campaign-inspector.json", self.campaign_elf
+        )
+        with patch("tools.run_ghidra_ppu_inventory.subprocess.run") as run:
+            with self.assertRaisesRegex(ValueError, "either a manual OPD range"):
+                generate_inventories(
+                    self.headless, self.campaign_elf, self.multiplayer_elf,
+                    self.output_dir, script_dir=self.script_dir,
+                    campaign_opd=(0x1000, 0x40),
+                    campaign_opd_inspector_report=report_path,
+                )
+        run.assert_not_called()
+
+    def test_input_elf_change_during_ghidra_analysis_prevents_promotion(self):
+        def fake_run(command, check):
+            self._fake_run(command, check)
+            if "Campaign" in command[2]:
+                self.campaign_elf.write_bytes(b"mutated-during-analysis")
+            return subprocess.CompletedProcess(command, 0)
+
+        with patch("tools.run_ghidra_ppu_inventory.subprocess.run", side_effect=fake_run):
+            with self.assertRaisesRegex(ValueError, "input ELF changed during Ghidra analysis"):
+                generate_inventories(
+                    self.headless, self.campaign_elf, self.multiplayer_elf,
+                    self.output_dir, script_dir=self.script_dir,
+                )
+        self.assertFalse((self.output_dir / "campaign_ppu_inventory.csv").exists())
+        self.assertFalse((self.output_dir / "ppu_inventory_manifest.json").exists())
 
 
 if __name__ == "__main__":

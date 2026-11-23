@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "phase": 46,
+  "status": "OPD_RANGE_BOUND_TO_EXACT_ELF_INSPECTOR_REPORT",
+  "changes": [
+    "runner can consume Campaign and Multiplayer ELF inspector JSON reports directly",
+    "inspector report SHA-256 must match the exact ELF input",
+    "OPD candidate and structural counts are revalidated before Ghidra",
+    "manual OPD ranges and inspector reports are mutually exclusive per build",
+    "ELF input hashes are checked again before atomic output promotion"
+  ],
+  "validation_boundary": "Synthetic reports and mocked Ghidra only. Real decrypted TU 1.16 PPU ELFs and inspector reports remain required."
+}
