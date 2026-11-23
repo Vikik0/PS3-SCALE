@@ -253,6 +253,16 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
             with self.assertRaises(InventoryError):
                 read_inventory(path)
 
+    def test_rejects_duplicate_function_entries_as_ambiguous_call_graph_nodes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "duplicate-entry.csv"
+            write_inventory(path, [
+                row("FUN_first", "0x1000", "a" * 64),
+                row("FUN_second", "0x1000", "b" * 64),
+            ])
+            with self.assertRaisesRegex(InventoryError, "duplicate function entry"):
+                read_inventory(path)
+
     def test_rejects_empty_inventory(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "empty.csv"
