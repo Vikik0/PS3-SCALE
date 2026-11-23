@@ -35,6 +35,10 @@ python tools/gsc_callgraph_audit.py black_ice="D:\Ghosts\Phase31\missions\black_
 
 The compact source-derived findings are in reports/PHASE32_CALLGRAPH_SUMMARY.json; the Arabic analysis is in reports/PHASE32_REPORT_AR.md.
 
+## CI result
+
+GitHub Actions run 45250534837 passed all five jobs: 290 Python tests, GSC script compile, PS3 PRX bootstrap, worker check and protocol header validation.
+
 ## Validation boundary
 
 The tool is read-only and does not change GSC or FastFile inputs. Tests use synthetic GSC fixtures. The report is static call-graph evidence only; it does not establish a second native Campaign local client, controller routing, independent camera, or HUD.
