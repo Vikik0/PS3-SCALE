@@ -77,6 +77,14 @@ async function call(method, body = {}, token = "", query = {}) {
   await handler({ method, body, query, headers: token ? { authorization: "Bearer " + token } : {} }, res);
   return res;
 }
+async function confirmMatchingDisc(hostToken, guestToken) {
+  const fingerprint = "0123456789ABCDEF";
+  const host = await call("POST", { action: "set_disc", fingerprint }, hostToken);
+  const guest = await call("POST", { action: "set_disc", fingerprint }, guestToken);
+  assert.equal(host.statusCode, 200);
+  assert.equal(guest.statusCode, 200);
+  assert.equal(guest.body.discMatch, true);
+}
 test.beforeEach(() => { blobs.clear(); etagSequence = 0; refreshOnNextRead = ""; });
 test.afterEach(() => { global.fetch = originalFetch; });
 
@@ -549,6 +557,7 @@ test("a ready two-player room stays locked and is not advertised as waiting", as
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
   await call("POST", { action: "heartbeat", ready: true }, host.body.token);
   await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  await confirmMatchingDisc(host.body.token, guest.body.token);
   await call("POST", { action: "game_start" }, host.body.token);
 
   let room = await call("GET", {}, host.body.token, { code: host.body.room.code });
@@ -607,6 +616,7 @@ test("Netplay relay lookup is private to room members and resolves the matching 
   const guestReady = await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
   assert.equal(hostReady.body.netplayId, netplayId);
   assert.equal(guestReady.body.netplayId, netplayId);
+  await confirmMatchingDisc(host.body.token, guest.body.token);
   const start = await call("POST", { action: "game_start" }, host.body.token);
   assert.equal(start.statusCode, 200);
   assert.equal(start.body.ok, true);
@@ -675,6 +685,7 @@ test("Netplay endpoint lookup reports a waiting state before the host announces"
   await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
   await call("POST", { action: "game_start" }, host.body.token);
 
+  await confirmMatchingDisc(host.body.token, guest.body.token);
   global.fetch = async () => ({
     ok: true,
     status: 200,
@@ -693,6 +704,7 @@ test("Netplay endpoint uses a connectable direct host when no relay session exis
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
   await call("POST", { action: "heartbeat", ready: true }, host.body.token);
   await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  await confirmMatchingDisc(host.body.token, guest.body.token);
   await call("POST", { action: "game_start" }, host.body.token);
   const room = await call("GET", {}, guest.body.token, { code: host.body.room.code });
 
@@ -728,6 +740,7 @@ test("Netplay endpoint ignores a stale public-lobby host entry", async () => {
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
   await call("POST", { action: "heartbeat", ready: true }, host.body.token);
   await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  await confirmMatchingDisc(host.body.token, guest.body.token);
   await call("POST", { action: "game_start" }, host.body.token);
   const room = await call("GET", {}, guest.body.token, { code: host.body.room.code });
 
@@ -788,6 +801,7 @@ test("only the host can start Netplay and a started room rejects late joins", as
   await call("POST", { action: "heartbeat", ready: true }, host.body.token);
   await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
 
+  await confirmMatchingDisc(host.body.token, guest.body.token);
   const guestStart = await call("POST", { action: "game_start" }, guest.body.token);
   assert.equal(guestStart.statusCode, 403);
 
@@ -812,6 +826,7 @@ test("started rooms retain player seats for a full match window", async () => {
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
   await call("POST", { action: "heartbeat", ready: true }, host.body.token);
   await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  await confirmMatchingDisc(host.body.token, guest.body.token);
   await call("POST", { action: "game_start" }, host.body.token);
 
   const pathname = "cb-rooms/" + host.body.room.code + ".json";
@@ -836,6 +851,7 @@ test("client Netplay discovery waits for the host to mark game start", async () 
   await call("POST", { action: "heartbeat", ready: true }, host.body.token);
   await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
 
+  await confirmMatchingDisc(host.body.token, guest.body.token);
   let fetched = false;
   global.fetch = async () => {
     fetched = true;
@@ -854,6 +870,7 @@ test("a started Netplay match keeps its host identity when the host leaves the l
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
   await call("POST", { action: "heartbeat", ready: true }, host.body.token);
   await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  await confirmMatchingDisc(host.body.token, guest.body.token);
   await call("POST", { action: "game_start" }, host.body.token);
   const room = await call("GET", {}, guest.body.token, { code: host.body.room.code });
   const netplayId = room.body.room.netplayId;
@@ -903,6 +920,7 @@ test("host can roll back the room lock when RetroArch fails to launch", async ()
   await call("POST", { action: "heartbeat", ready: true }, host.body.token);
   await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
 
+  await confirmMatchingDisc(host.body.token, guest.body.token);
   const started = await call("POST", { action: "game_start" }, host.body.token);
   assert.equal(started.statusCode, 200);
   const beforeCancel = await call("GET", {}, guest.body.token, { code: host.body.room.code });
@@ -923,6 +941,7 @@ test("a started Netplay match keeps its relay identity when the host seat expire
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
   await call("POST", { action: "heartbeat", ready: true }, host.body.token);
   await call("POST", { action: "heartbeat", ready: true }, guest.body.token);
+  await confirmMatchingDisc(host.body.token, guest.body.token);
   await call("POST", { action: "game_start" }, host.body.token);
 
   const pathname = "cb-rooms/" + host.body.room.code + ".json";

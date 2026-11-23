@@ -287,7 +287,7 @@ int cb_online_set_disc_fingerprint(CBOnlineSession *session, const char *fingerp
             return -1;
         }
     }
-    snprintf(body, sizeof(body), "{\\"action\\":\\"set_disc\\",\\"fingerprint\\":\\"%.16s\\"}", fingerprint);
+    snprintf(body, sizeof(body), "{\"action\":\"set_disc\",\"fingerprint\":\"%.16s\"}", fingerprint);
     if (http_request("POST", "/api/rooms", body, session->token,
                      response, sizeof(response), error, error_size) < 0) return -1;
     return cb_online_get_room(session, view, error, error_size);

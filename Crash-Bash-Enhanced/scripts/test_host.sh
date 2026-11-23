@@ -7,8 +7,8 @@ tmp_archive="${TMPDIR:-/tmp}/cb-archive-test-$$"
 tmp_netcode="${TMPDIR:-/tmp}/cb-netcode-test-$$"
 tmp_peer="${TMPDIR:-/tmp}/cb-peer-test-$$"
 tmp_disc="${TMPDIR:-/tmp}/cb-disc-test-$$"
-tmp_launch="${TMPDIR:-/tmp}/cb-launch-test-$"
-tmp_fingerprint="${TMPDIR:-/tmp}/cb-fingerprint-test-$"
+tmp_launch="${TMPDIR:-/tmp}/cb-launch-test-$$"
+tmp_fingerprint="${TMPDIR:-/tmp}/cb-fingerprint-test-$$"
 trap 'rm -f "$tmp" "$tmp_json" "$tmp_archive" "$tmp_netcode" "$tmp_peer" "$tmp_disc" "$tmp_launch" "$ROOT/cb_archive_test.dat" "$tmp_fingerprint"' EXIT
 
 cc -std=c11 -Wall -Wextra -Werror "$ROOT/tests/test_protocol.c" -o "$tmp"

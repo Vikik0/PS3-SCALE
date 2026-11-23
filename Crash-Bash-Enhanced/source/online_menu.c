@@ -661,15 +661,15 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                             snprintf(status, status_size, "Disc mismatch. Select the same CUE content as the other players.");
                         } else {
                             netplay_wait_attempts++;
-                        if (netplay_wait_attempts >= NETPLAY_DISCOVERY_MAX_ATTEMPTS) {
-                            netplay_waiting = 0;
-                            snprintf(status, status_size, "Host was not found after 2 minutes. Check that the host started Netplay.");
-                        } else {
-                            if (strcmp(endpoint.state, "waiting_for_disc_selection") == 0)
+                            if (netplay_wait_attempts >= NETPLAY_DISCOVERY_MAX_ATTEMPTS) {
+                                netplay_waiting = 0;
+                                snprintf(status, status_size, "Host was not found after 2 minutes. Check that the host started Netplay.");
+                            } else if (strcmp(endpoint.state, "waiting_for_disc_selection") == 0) {
                                 snprintf(status, status_size, "Waiting for all players to confirm the same disc...");
-                            else
+                            } else {
                                 snprintf(status, status_size, "Waiting for host relay... attempt %d/%d",
                                          netplay_wait_attempts, NETPLAY_DISCOVERY_MAX_ATTEMPTS);
+                            }
                         }
                     } else if (session_is_gone(error)) {
                         netplay_waiting = 0;
