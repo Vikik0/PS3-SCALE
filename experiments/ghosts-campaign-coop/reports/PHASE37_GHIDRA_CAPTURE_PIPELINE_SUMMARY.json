@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "phase": 37,
+  "status": "OPTIONAL_GHIDRA_CAPTURE_PIPELINE_ADDED",
+  "tool": "tools/ps3mapi/analyze_tu116_runtime_capture.py",
+  "optional_arguments": [
+    "--analyze-headless",
+    "--ghidra-script-dir",
+    "--campaign-opd-va",
+    "--campaign-opd-size",
+    "--multiplayer-opd-va",
+    "--multiplayer-opd-size"
+  ],
+  "base_outputs": 10,
+  "additional_ghidra_outputs": 6,
+  "combined_outputs": 16,
+  "ghidra_outputs": [
+    "ppu_campaign_ppu_inventory.csv",
+    "ppu_multiplayer_ppu_inventory.csv",
+    "ppu_campaign_builtin_xrefs.csv",
+    "ppu_multiplayer_builtin_xrefs.csv",
+    "ppu_splitscreen_builtin_xrefs.json",
+    "ppu_inventory_manifest.json"
+  ],
+  "validation": {
+    "ghidra_optional": true,
+    "atomic_combined_promotion": true,
+    "ghidra_runtime_in_ci": false,
+    "real_ppu_inputs_available": false
+  },
+  "interpretation": "One-command capture and static PPU analysis workflow only. It does not create or prove a native Campaign Player 2."
+}

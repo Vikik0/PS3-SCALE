@@ -84,3 +84,29 @@ python tools/ps3mapi/analyze_tu116_runtime_capture.py --campaign-self "D:\Ghosts
 - ELF الناتج مخصص للتحليل الثابت فقط، وليس EBOOT قابلاً للتشغيل.
 - لا تعدّل الأداة ملفات اللعبة، ولا تفك تشفير SELF، ولا تعيد بناء FastFiles موقعة، ولا تنشئ PKG أو لاعباً ثانياً.
 - احتفظ بملفات SELF ولقطات الذاكرة الخام على جهازك. شارك تقارير JSON والبصمات فقط ما لم نحدد لاحقاً حاجة فعلية إلى نطاق بايتات معين.
+
+
+## Phase 37 — Optional Ghidra PPU analysis in the same capture run
+
+The capture analyzer can now continue directly from verified SELF/PS3MAPI dumps into the Ghidra PPU inventory and split-screen builtin comparison. This is optional; without the new flag, the original ten-file capture analysis remains unchanged.
+
+Add these arguments to the Windows command:
+
+~~~powershell
+--analyze-headless "C:\Tools\ghidra\support\analyzeHeadless.bat" --ghidra-script-dir "D:\Ghosts\PS3-SCALE\experiments\ghosts-campaign-coop\tools\ghidra"
+~~~
+
+The command may also include Campaign and Multiplayer OPD address/size pairs only when those exact ranges were reported by the ELF inspector. Never guess OPD values.
+
+When enabled, the analyzer appends six PPU outputs to its original ten files:
+
+- ppu_campaign_ppu_inventory.csv
+- ppu_multiplayer_ppu_inventory.csv
+- ppu_campaign_builtin_xrefs.csv
+- ppu_multiplayer_builtin_xrefs.csv
+- ppu_splitscreen_builtin_xrefs.json
+- ppu_inventory_manifest.json
+
+The capture summary records PPU analysis status, function counts, XREF row counts, Multiplayer-only lead count, and comparison/manifest hashes. All sixteen outputs are staged and promoted as one set. If either dump verification, Ghidra run, XREF validation, comparison, or promotion fails, no partial output set is left behind.
+
+This optional stage still performs static analysis only. It does not create or prove a native Campaign second player, controller routing, independent camera, or HUD.
