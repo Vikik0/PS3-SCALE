@@ -10,6 +10,8 @@ import ghidra.program.model.mem.MemoryBlock;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
 
 public class SeedGhostsOpdFunctions extends GhidraScript {
     private static final long MAX_PPU_ADDRESS = 0xFFFFFFFFL;
@@ -64,6 +66,10 @@ public class SeedGhostsOpdFunctions extends GhidraScript {
         int alreadyPresent = 0;
         int failedToCreate = 0;
         int invalid = 0;
+        int zeroTocDescriptors = 0;
+        Set<Long> tocValues = new HashSet<>();
+        Set<Long> mappedTocValues = new HashSet<>();
+        Set<Long> unmappedTocValues = new HashSet<>();
 
         for (long offset = 0; offset < opdSize; offset += 8) {
             monitor.checkCancelled();
@@ -83,6 +89,18 @@ public class SeedGhostsOpdFunctions extends GhidraScript {
                 continue;
             }
             descriptors++;
+            long tocUnsigned = Integer.toUnsignedLong(toc);
+            if (tocUnsigned == 0L) {
+                zeroTocDescriptors++;
+            } else {
+                tocValues.add(tocUnsigned);
+                Address tocAddress = toAddr(tocUnsigned);
+                if (currentProgram.getMemory().contains(tocAddress)) {
+                    mappedTocValues.add(tocUnsigned);
+                } else {
+                    unmappedTocValues.add(tocUnsigned);
+                }
+            }
             long codeUnsigned = Integer.toUnsignedLong(code);
             if ((codeUnsigned & 3L) != 0L) {
                 invalid++;
@@ -135,7 +153,11 @@ public class SeedGhostsOpdFunctions extends GhidraScript {
             "  \"functions_created\": " + created + ",\n" +
             "  \"functions_already_present\": " + alreadyPresent + ",\n" +
             "  \"functions_failed_to_create\": " + failedToCreate + ",\n" +
-            "  \"invalid_entries\": " + invalid + "\n" +
+            "  \"invalid_entries\": " + invalid + ",\n" +
+            "  \"distinct_toc_values\": " + tocValues.size() + ",\n" +
+            "  \"mapped_toc_values\": " + mappedTocValues.size() + ",\n" +
+            "  \"unmapped_toc_values\": " + unmappedTocValues.size() + ",\n" +
+            "  \"zero_toc_descriptors\": " + zeroTocDescriptors + "\n" +
             "}\n";
         Files.write(Paths.get(args[2]), summary.getBytes(StandardCharsets.UTF_8));
 
@@ -146,6 +168,10 @@ public class SeedGhostsOpdFunctions extends GhidraScript {
         println("Functions already present: " + alreadyPresent);
         println("Functions failed to create: " + failedToCreate);
         println("Invalid/unreadable entries: " + invalid);
+        println("Distinct TOC values: " + tocValues.size());
+        println("Mapped TOC values: " + mappedTocValues.size());
+        println("Unmapped TOC values: " + unmappedTocValues.size());
+        println("Zero-TOC descriptors: " + zeroTocDescriptors);
         println("Summary: " + args[2]);
         println("Note: OPD only enumerates address-taken functions; it is not a complete function list.");
 

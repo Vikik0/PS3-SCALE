@@ -110,6 +110,10 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
                 "functions_already_present": 1,
                 "functions_failed_to_create": 0,
                 "invalid_entries": 1,
+                "distinct_toc_values": 2,
+                "mapped_toc_values": 2,
+                "unmapped_toc_values": 0,
+                "zero_toc_descriptors": 1,
             }), encoding="utf-8")
         return subprocess.CompletedProcess(command, 0)
 
@@ -369,6 +373,9 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
             "validCodePointers == 0",
             "throw new IllegalStateException",
             "throw new IllegalArgumentException",
+            "mappedTocValues",
+            "unmappedTocValues",
+            "zeroTocDescriptors",
         ):
             with self.subTest(token=token):
                 self.assertIn(token, source)
@@ -387,6 +394,30 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
 
         with patch("tools.run_ghidra_ppu_inventory.subprocess.run", side_effect=fake_run):
             with self.assertRaisesRegex(ValueError, "created or found no functions"):
+                generate_inventories(
+                    self.headless,
+                    self.campaign_elf,
+                    self.multiplayer_elf,
+                    self.output_dir,
+                    script_dir=self.script_dir,
+                    campaign_opd=(0x1000, 0x40),
+                )
+        self.assertFalse((self.output_dir / "campaign_ppu_inventory.csv").exists())
+
+    def test_opd_seed_summary_rejects_unreconciled_toc_mapping_counts(self):
+        def fake_run(command, check):
+            self._fake_run(command, check)
+            if SEED_SCRIPT in command:
+                summary_path = Path(command[command.index(SEED_SCRIPT) + 3])
+                report = json.loads(summary_path.read_text(encoding="utf-8"))
+                report["distinct_toc_values"] = 3
+                report["mapped_toc_values"] = 2
+                report["unmapped_toc_values"] = 0
+                summary_path.write_text(json.dumps(report), encoding="utf-8")
+            return subprocess.CompletedProcess(command, 0)
+
+        with patch("tools.run_ghidra_ppu_inventory.subprocess.run", side_effect=fake_run):
+            with self.assertRaisesRegex(ValueError, "TOC mapping counts do not reconcile"):
                 generate_inventories(
                     self.headless,
                     self.campaign_elf,

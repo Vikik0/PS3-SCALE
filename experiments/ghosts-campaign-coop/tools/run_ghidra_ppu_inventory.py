@@ -130,6 +130,10 @@ def _read_opd_seed_summary(
         "functions_already_present",
         "functions_failed_to_create",
         "invalid_entries",
+        "distinct_toc_values",
+        "mapped_toc_values",
+        "unmapped_toc_values",
+        "zero_toc_descriptors",
     )
     counts = {}
     for field in count_fields:
@@ -150,6 +154,10 @@ def _read_opd_seed_summary(
         raise ValueError(f"{label}: OPD seeder created or found no functions")
     if counts["descriptors_visited"] < counts["valid_code_pointers"]:
         raise ValueError(f"{label}: OPD seeder descriptor counts do not reconcile")
+    if counts["distinct_toc_values"] != counts["mapped_toc_values"] + counts["unmapped_toc_values"]:
+        raise ValueError(f"{label}: OPD TOC mapping counts do not reconcile")
+    if counts["zero_toc_descriptors"] > counts["descriptors_visited"]:
+        raise ValueError(f"{label}: OPD zero-TOC descriptor count is invalid")
     return report
 
 def _run_headless(
