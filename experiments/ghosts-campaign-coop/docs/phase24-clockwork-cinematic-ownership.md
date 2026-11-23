@@ -17,7 +17,7 @@ These events are shared mission cinematics. Duplicating either call for each loc
 - Missing or duplicated call sites fail the corresponding check.
 - Added unit tests for the valid one-call case, duplicate calls, a missing event, and preservation of exactly one call site through Stage 5/6 reconstruction.
 - Added both cinematic calls to the dedicated synthetic Stage 5/6 GSC Tool fixture so compile/decompile validation covers the Bink event symbols.
-- Kept the Stage 2 patcher input fixture separate from the Stage 5/6 toolchain fixture. The toolchain fixture is explicitly synthetic and is not retail source.
+- Kept the synthetic Stage 2 patcher-input fixture separate from the synthetic Stage 5/6 toolchain fixture. Neither fixture is extracted retail source or a FastFile replacement.
 
 ## Validation boundary
 
