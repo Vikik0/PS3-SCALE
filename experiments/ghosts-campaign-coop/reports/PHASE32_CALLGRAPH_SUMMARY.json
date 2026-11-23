@@ -1,0 +1,228 @@
+{
+  "schema_version": 1,
+  "phase": 32,
+  "status": "STATIC_CALLGRAPH_COMPLETED",
+  "input_bundle": "Ghosts_Campaign_Missions_Phase31.zip",
+  "source_files": [
+    {
+      "filename": "black_ice.ff",
+      "size_bytes": 91355961,
+      "sha256": "950726399e16f55fd565438936ec59231649940c89763a87c805409536837532",
+      "version": "0x0000022E"
+    },
+    {
+      "filename": "carrier.ff",
+      "size_bytes": 87088544,
+      "sha256": "e3a616545f18a7dcae006b4e32264c56b01d627650ea574f3fe710e02543caee",
+      "version": "0x0000022E"
+    },
+    {
+      "filename": "cornered.ff",
+      "size_bytes": 93933243,
+      "sha256": "1bcb1da55d7e5a893de2a513e6df9b5cd3786e4d642dc76e090ea551cdf39395",
+      "version": "0x0000022E"
+    }
+  ],
+  "totals": {
+    "source_files": 249,
+    "function_definitions": 4304,
+    "internal_references": 7154,
+    "reference_kinds": {
+      "direct_call": 1973,
+      "thread_call": 3058,
+      "namespaced_call": 1310,
+      "function_pointer": 813
+    }
+  },
+  "mission_summaries": [
+    {
+      "mission": "black_ice",
+      "source_file_count": 76,
+      "function_definitions": 1217,
+      "internal_references": 1735,
+      "root_candidate_count": 66,
+      "targets": [
+        {
+          "function": "player_saw_kill",
+          "calls": 1,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": true
+        },
+        {
+          "function": "player_scuba",
+          "calls": 2,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": true
+        },
+        {
+          "function": "player_fail_finale_instakill",
+          "calls": 3,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": true
+        },
+        {
+          "function": "ascend_logic",
+          "calls": 1,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": true
+        },
+        {
+          "function": "event_player_turns_key",
+          "calls": 1,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": true
+        }
+      ]
+    },
+    {
+      "mission": "carrier",
+      "source_file_count": 118,
+      "function_definitions": 1537,
+      "internal_references": 2303,
+      "root_candidate_count": 90,
+      "targets": [
+        {
+          "function": "monitorscavengerpickup",
+          "calls": 0,
+          "pointers": 0,
+          "callback_reachable": false,
+          "direct_reachable": false
+        },
+        {
+          "function": "dog_monitor_goal_ent",
+          "calls": 0,
+          "pointers": 0,
+          "callback_reachable": false,
+          "direct_reachable": false
+        },
+        {
+          "function": "get_different_favoriteenemy",
+          "calls": 2,
+          "pointers": 0,
+          "callback_reachable": false,
+          "direct_reachable": false
+        },
+        {
+          "function": "handlemeleefinishattacknotetracks",
+          "calls": 0,
+          "pointers": 1,
+          "callback_reachable": true,
+          "direct_reachable": false
+        },
+        {
+          "function": "playerview_spawn",
+          "calls": 1,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": false
+        },
+        {
+          "function": "playerview_playmissanim",
+          "calls": 1,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": false
+        },
+        {
+          "function": "knockback_hesh",
+          "calls": 1,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": false
+        },
+        {
+          "function": "cut_the_rope",
+          "calls": 1,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": false
+        },
+        {
+          "function": "victory_choppers_land",
+          "calls": 1,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": false
+        }
+      ]
+    },
+    {
+      "mission": "cornered",
+      "source_file_count": 55,
+      "function_definitions": 1550,
+      "internal_references": 3116,
+      "root_candidate_count": 17,
+      "targets": [
+        {
+          "function": "courtyard_rorke",
+          "calls": 1,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": false
+        },
+        {
+          "function": "bar_enemies",
+          "calls": 1,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": false
+        },
+        {
+          "function": "enemy_threat_logic_dog",
+          "calls": 1,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": false
+        },
+        {
+          "function": "enemy_threat_logic_dog_wait",
+          "calls": 1,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": false
+        },
+        {
+          "function": "enemy_threat_logic_dog_wakeup_dist",
+          "calls": 0,
+          "pointers": 1,
+          "callback_reachable": true,
+          "direct_reachable": false
+        },
+        {
+          "function": "enemy_corpse_alert_level",
+          "calls": 1,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": false
+        },
+        {
+          "function": "gun_down_trigger_internal",
+          "calls": 1,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": false
+        },
+        {
+          "function": "fall_player",
+          "calls": 1,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": false
+        },
+        {
+          "function": "upload_virus_enter",
+          "calls": 2,
+          "pointers": 0,
+          "callback_reachable": true,
+          "direct_reachable": false
+        }
+      ]
+    }
+  ],
+  "interpretation": "Static call-site and callback-reference evidence only; no second native Campaign local client, controller routing, independent camera or HUD is proven."
+}
