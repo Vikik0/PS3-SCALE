@@ -2,31 +2,31 @@
 
 **PS3 Title ID:** `CBON00001` (four letters followed by five digits; consistent across the SFO, NPDRM Content ID and installed app path).
 
-The current installable package is **RetroArch for PSL1GHT with PCSX-ReARMed statically linked as the PS1 core**. It runs the user's own Crash Bash disc dump and uses RetroArch Netplay for match synchronization.
+The installable release is **one unified PS3 application**. Its single XMB entry opens the native Tiny3D lobby; RetroArch and PCSX-ReARMed are embedded under the same title ID and launched by the lobby for local or online play. RetroArch Netplay handles gameplay synchronization.
 
 This is an emulator-based homebrew package, not a native reimplementation of Crash Bash's original engine.
 
 ## What the PKG contains
 
-- A direct NPDRM `EBOOT.BIN` that starts the RetroArch frontend; the PCSX-ReARMed core is statically linked into the same executable, so there is no Salamander second-stage launch.
-- A matching core-info identity SELF at `USRDIR/cores/pcsx_rearmed_libretro_psl1ght.SELF`; it lets RetroArch match the core metadata and is not the XMB launch target.
-- PCSX-ReARMed linked into RetroArch as the PS1 core.
+- A root NPDRM `EBOOT.BIN` that starts the native Tiny3D lobby from the XMB.
+- An embedded RetroArch executable at `USRDIR/retroarch/EBOOT.BIN`, signed for the same installed title ID and launched by the lobby.
+- PCSX-ReARMed statically linked into the embedded RetroArch runtime, with its core metadata at `USRDIR/retroarch/cores/pcsx_rearmed_libretro_psl1ght.SELF`.
 - RetroArch Netplay with public host announcements, NAT traversal and the Madrid relay endpoint enabled by default.
 - Multitap on PS1 Port 1.
 - Lockstep synchronization enabled for the large PS1 serialization state.
 - An app-specific RetroArch profile so this package does not reuse another RetroArch installation's settings.
 - No PSN initialization or PSN login.
 
-The package does **not** include the Crash Bash disc image or a PlayStation BIOS. Each player must provide their own legally obtained BIN/CUE dump. A BIOS dumped from the player's own console is recommended; PCSX-ReARMed falls back to HLE when no recognized BIOS is present, which can reduce compatibility. See the [official PCSX-ReARMed documentation](https://docs.libretro.com/library/pcsx_rearmed/) for supported BIOS names and formats.
+The single package does **not** include the copyrighted Crash Bash disc image or a PlayStation BIOS. Each player must provide their own legally obtained BIN/CUE dump. A BIOS dumped from the player's own console is recommended; PCSX-ReARMed falls back to HLE when no recognized BIOS is present, which can reduce compatibility. See the [official PCSX-ReARMed documentation](https://docs.libretro.com/library/pcsx_rearmed/) for supported BIOS names and formats.
 
 ## Install and start the game
 
-1. Install `Crash-Bash-Online-PS3.pkg` on a compatible jailbroken PS3.
+1. Install the single `Crash-Bash-Online-Unified-PS3.pkg` on a compatible jailbroken PS3.
 2. Create a BIN/CUE dump from your own Crash Bash disc.
 3. Copy the CUE file and every referenced BIN track to `/dev_hdd0/PSXISO/` or a `/PSXISO/` folder on USB. Keep the CUE file and referenced filenames intact.
-4. If using a BIOS, place the same BIOS file on each console in `/dev_hdd0/game/CBON00001/USRDIR/system/`.
-5. Launch **Crash Bash Online** from the XMB, choose **Load Content**, and open the CUE file.
-6. Optionally install the separate **Crash Bash Enhanced Lobby** PKG (`CBEN00001`) to coordinate room codes and Ready status before a match.
+4. If using a BIOS, place the same BIOS file on each console in `/dev_hdd0/game/CBON00001/USRDIR/retroarch/system/`.
+5. Launch the single **Crash Bash Online** icon from the XMB. The built-in lobby opens; choose **OPEN CRASH BASH ONLINE** for local play or **ONLINE ROOMS** for room-code matchmaking.
+6. No second PKG or second XMB application is required.
 
 The included core defaults to `Multitap Mode: Port 1`. PCSX-ReARMed supports Multitap and Netplay; its official documentation describes Port 1 Multitap as supporting up to five controller inputs. Crash Bash's own game limit still applies.
 
@@ -44,19 +44,19 @@ The BIOS/system folder remains under the installed app directory shown above.
 4. The host opens RetroArch's Netplay menu and selects **Start Netplay Host**.
 5. Other players refresh the **Netplay Host List** and join the host.
 
-### Automatic room-assisted launch (native lobby companion)
+### Automatic room-assisted launch (built into the same application)
 
-The separate **Crash Bash Enhanced Lobby** PKG (`CBEN00001`) provides an optional room-code flow and automatic RetroArch host discovery:
+The native Tiny3D lobby is the XMB entry point and is packaged together with RetroArch under the same title ID. Install the one unified PKG on every participating PS3. The room-code flow and automatic RetroArch host discovery are built in:
 
-1. Install both `CBON00001` and `CBEN00001` on every participating PS3.
-2. Open **ONLINE ROOMS** in the native companion. One player creates a room; the others join with its six-character invite code.
+1. Install the same unified `CBON00001` package on every participating PS3.
+2. Open **ONLINE ROOMS** in the built-in lobby. One player creates a room; the others join with its six-character invite code.
 3. Every active player marks **READY**. Press **START** to open the CUE picker.
 4. The host selects the same Crash Bash CUE used by everyone else and presses **CROSS**. The room is locked against late joins before RetroArch starts hosting.
 5. Each player selects their CUE file and presses **CROSS** to confirm it. The companion fingerprints the CUE track layout and referenced track-file contents; the host waits until every active player has confirmed an identical disc before starting.
    - Changing the selected CUE, rescanning the disc list or backing out of the picker clears that player's previous confirmation. Toggling READY off also clears it; everyone must confirm again before the host can start.
    - While a room is waiting, READY expires after 90 seconds without a heartbeat. Heartbeats only refresh the seat and never restore READY. A returning player must explicitly press READY again and confirm the disc again before launch.
 6. Each client then discovers the host's public RetroArch lobby entry and starts RetroArch with the authenticated relay endpoint and session ID.
-7. If the client returns to the room after the match starts, the room displays **MATCH STARTED**; press **START** and select the same CUE to retry joining.
+When using the integrated flow, players do not need to open **Netplay Host List** manually. The lobby API coordinates rooms and discovers the relay; RetroArch Netplay carries and synchronizes the game session. **OPEN CRASH BASH ONLINE** opens the embedded RetroArch menu for local play or manual Netplay.
 
 When using this assisted flow, players do not need to open **Netplay Host List** manually. The lobby API coordinates rooms and discovers the relay; RetroArch Netplay still carries and synchronizes the game session. The **OPEN CRASH BASH ONLINE** home-menu item opens the standalone RetroArch menu for local play or the manual Netplay flow above.
 
@@ -82,29 +82,20 @@ The single XMB entry now launches the native Tiny3D lobby. Its launcher starts t
 
 The workflow is `.github/workflows/crash-bash-build.yml`. It uses pinned revisions of PCSX-ReARMed, RetroArch, RetroArch assets and core metadata.
 
-The build script is `scripts/build_online_pkg_clean.sh`. It:
+The workflow first builds a pinned RetroArch + PCSX-ReARMed runtime, exports it under `USRDIR/retroarch/`, then builds the native Tiny3D lobby as the root XMB executable and packages both under one `CBON00001` title ID.
 
-- Patches the PCSX-ReARMed Multitap default to Port 1.
-- Enables RetroArch Netplay lockstep, NAT traversal and the Madrid relay.
-- Isolates the PS3 user profile under `retroarch/CBON00001`.
-- Builds the PS1 core, links it into RetroArch, and creates a direct NPDRM `EBOOT.BIN` from that executable.
-- Validates the direct EBOOT SELF header, static libretro entry points and SFO app identity.
-- Finalizes the PKG with `package_finalize` and requires header revision `0x8000` before upload.
-- Produces a SHA-256 checksum and build manifest.
+The unified build:
 
-Artifacts from workflow runs before the PKG-finalization fix contain revision `0x0000` (debug/non-finalized). Use only an artifact from a run after the finalization fix; the CI workflow now rejects a non-finalized package.
+- Builds the static PCSX-ReARMed core and links it into RetroArch.
+- Configures Netplay lockstep, NAT traversal, and the Madrid relay.
+- Uses `/dev_hdd0/home/<user-id>/retroarch/CBON00001/` for RetroArch settings, saves, and logs.
+- Places the native lobby at the root `USRDIR/EBOOT.BIN` and the emulator at `USRDIR/retroarch/EBOOT.BIN`.
+- Signs both executables for the same NPDRM Content ID so the lobby can launch the embedded runtime.
+- Finalizes and verifies one `Crash-Bash-Online-Unified-PS3.pkg` with header revision `0x8000`, then generates its SHA-256 checksum and build manifest.
 
-The XMB icon uses custom Crash Bash Online cover art.\n\nThe CI artifact contains:
+The XMB icon uses custom Crash Bash Online cover art. The final downloadable artifact contains one installable PKG plus its checksum and manifest.
 
-- `Crash-Bash-Online-PS3.pkg`
-- `Crash-Bash-Online-PS3.pkg.sha256`
-- `BUILD-MANIFEST.txt`
-
-Verify the downloaded package with:
-
-`sha256sum -c Crash-Bash-Online-PS3.pkg.sha256`
-
-Documentation-only changes no longer trigger a full PS3 cross-build. Host protocol tests and web-lobby security tests remain separate CI checks.
+Documentation-only changes do not trigger a full PS3 cross-build. Host protocol tests and web-lobby security tests remain separate CI checks.
 
 ## Separate prototype components
 
@@ -112,7 +103,7 @@ The repository also contains an earlier native Tiny3D menu, a four-seat guest-ro
 
 The web lobby supports up to four guest seats, public/private rooms, invite-code joins, and an ANY BATTLE action. A room becomes ready when at least two active players are all ready. Heartbeats keep active seats alive; browser refresh restores the same player identity; READY remains active only while its 90-second lease is refreshed, and inactive seats are pruned; and a membership change resets the remaining players' Ready flags. Rooms expire after 30 minutes without activity, expired Blob records are conditionally deleted, and public matchmaking follows Blob pagination beyond the first 100 rooms. The Vercel room API handles matchmaking and room membership only; it does not stream game state. The installed PS3 package hands gameplay synchronization to RetroArch Netplay. The repository's separate UDP input prototype is not used for match synchronization.
 
-The native Tiny3D lobby companion has its own installable PKG target (`CBEN00001`) and CI build artifact. It uses the production room API at `https://crash-bash-enhanced.vercel.app` and is installed separately from the RetroArch game package (`CBON00001`). A ready room assigns one authoritative host; if that player leaves or expires, the first active player is promoted. Press **START** to open the CUE picker, which scans the PS3 HDD and common USB `PSXISO` folders. The host launches the selected content with RetroArch Netplay hosting enabled. The room stores a separate random Netplay identity so the six-character private invite code is not exposed in RetroArch's public lobby. Immediately before the host starts RetroArch, the API locks the room against late joins and extends active player seats for a 30-minute match window; if RetroArch fails to start, the launcher rolls that lock back. Other players select the same CUE and press **CROSS**; the companion polls the RetroArch public lobby for the exact host nickname, retrieves the relay address and session ID through an authenticated room request, then starts RetroArch with `--connect` and `--mitm-session`. Direct connection is used only when the host is connectable and has no relay session. The client no longer needs to search Netplay Host List manually. The home menu also has **OPEN CRASH BASH ONLINE** for local offline launching. The Vercel API does not carry game frames; match synchronization is provided by RetroArch Netplay. All players must use the same disc image, region, BIOS/HLE choice, core version and core options. The final synchronized match still requires validation on two physical PS3 consoles.
+The native Tiny3D lobby is the primary executable in the unified `CBON00001` application. The embedded RetroArch runtime lives under `USRDIR/retroarch/` and is launched by the lobby; both are installed and updated by the same PKG. A ready room assigns one authoritative host; if that player leaves or expires, the first active player is promoted. Press **START** to open the CUE picker, which scans the PS3 HDD and common USB `PSXISO` folders. The host launches the selected content with RetroArch Netplay hosting enabled. The room stores a separate random Netplay identity so the six-character private invite code is not exposed in RetroArch's public lobby. Immediately before the host starts RetroArch, the API locks the room against late joins and extends active player seats for a 30-minute match window; if RetroArch fails to start, the launcher rolls that lock back. Other players select the same CUE and press **CROSS**; the companion polls the RetroArch public lobby for the exact host nickname, retrieves the relay address and session ID through an authenticated room request, then starts RetroArch with `--connect` and `--mitm-session`. Direct connection is used only when the host is connectable and has no relay session. The client no longer needs to search Netplay Host List manually. The Vercel API does not carry game frames; match synchronization is provided by RetroArch Netplay. All players must use the same disc image, region, BIOS/HLE choice, core version and core options. The final synchronized match still requires validation on two physical PS3 consoles.
 
 ## Cross-play with crashbash.app
 

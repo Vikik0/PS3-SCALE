@@ -125,7 +125,7 @@ if text.count(old) != 1:
 text = text.replace(old, f'#define EMULATOR_CONTENT_DIR "{app_id}"', 1)
 if text.count("   if (*argc >= 1)\n   {\n      char path[PATH_MAX_LENGTH] = {0};\n      strlcpy(path, argv[0], sizeof(path));\n      if (path_is_valid(path))\n         path_set(RARCH_PATH_CORE, path);\n   }") != 1:
     raise SystemExit("Could not uniquely identify the PS3 static-core boot path")
-text = text.replace("   if (*argc >= 1)\n   {\n      char path[PATH_MAX_LENGTH] = {0};\n      strlcpy(path, argv[0], sizeof(path));\n      if (path_is_valid(path))\n         path_set(RARCH_PATH_CORE, path);\n   }", "   (void)argc;\n   (void)argv;\n   {\n      char path[PATH_MAX_LENGTH] = {0};\n      strlcpy(path, \"/dev_hdd0/game/CBON00001/USRDIR/cores/pcsx_rearmed_libretro_psl1ght.SELF\",\n            sizeof(path));\n      if (path_is_valid(path))\n      {\n         RARCH_LOG(\"[PS3] Static core metadata identity selected: %s\\n\", path);\n         path_set(RARCH_PATH_CORE, path);\n      }\n      else\n         RARCH_ERR(\"[PS3] Static core metadata identity is missing: %s\\n\", path);\n   }", 1)
+text = text.replace("   if (*argc >= 1)\n   {\n      char path[PATH_MAX_LENGTH] = {0};\n      strlcpy(path, argv[0], sizeof(path));\n      if (path_is_valid(path))\n         path_set(RARCH_PATH_CORE, path);\n   }", "   (void)argc;\n   (void)argv;\n   {\n      char path[PATH_MAX_LENGTH] = {0};\n      strlcpy(path, \"/dev_hdd0/game/CBON00001/USRDIR/retroarch/cores/pcsx_rearmed_libretro_psl1ght.SELF\",\n            sizeof(path));\n      if (path_is_valid(path))\n      {\n         RARCH_LOG(\"[PS3] Static core metadata identity selected: %s\\n\", path);\n         path_set(RARCH_PATH_CORE, path);\n      }\n      else\n         RARCH_ERR(\"[PS3] Static core metadata identity is missing: %s\\n\", path);\n   }", 1)
 platform.write_text(text)
 
 paths = root / "frontend/drivers/platform_ps3_paths.c"
@@ -297,7 +297,7 @@ PY
 cat > "$USRDIR/retroarch.cfg" <<EOF
 # Crash Bash Online - PS3
 menu_driver = "rgui"
-system_directory = "/dev_hdd0/game/$APP_ID/USRDIR/system"
+system_directory = "/dev_hdd0/game/$APP_ID/USRDIR/retroarch/system"
 netplay_nickname = "CrashBashPlayer"
 netplay_public_announce = "true"
 netplay_use_mitm_server = "true"
@@ -366,7 +366,16 @@ This is an unofficial homebrew project and is not affiliated with Sony,
 Activision or the original Crash Bash developers.
 EOF
 
-echo "== Package Crash Bash Online"
+echo "== Export embedded RetroArch runtime for the unified package"
+RETROARCH_STAGE="$ROOT/build-artifacts/retroarch-stage/USRDIR/retroarch"
+rm -rf "$ROOT/build-artifacts/retroarch-stage"
+mkdir -p "$RETROARCH_STAGE"
+cp -a "$USRDIR/." "$RETROARCH_STAGE/"
+test -s "$RETROARCH_STAGE/EBOOT.BIN"
+test -s "$RETROARCH_STAGE/cores/pcsx_rearmed_libretro_psl1ght.SELF"
+test -s "$RETROARCH_STAGE/system/README-BIOS.txt"
+
+echo "== Package intermediate RetroArch build"
 OUT="$ROOT/build-artifacts/Crash-Bash-Online-PS3.pkg"
 pkg --contentid "$CONTENT_ID" "$PKGDIR/" "$OUT"
 test -s "$OUT"
