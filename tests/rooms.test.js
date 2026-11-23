@@ -154,6 +154,10 @@ test("four-seat retro lobby UI renders and its inline script parses", () => {
   assert.match(html, /room\.players\.length>=2&&room\.players\.every\(p=>p\.ready\)/);
   assert.match(html, /room\.players\.length>1\?"Players joined/);
   assert.doesNotMatch(html, /\bboth\?/);
+  assert.match(html, /async function updateRoomPresence\(action,ready\)/);
+  assert.match(html, /return updateRoomPresence\("heartbeat"\)/);
+  assert.match(html, /return updateRoomPresence\("set_ready",!state\.ready\)/);
+  assert.doesNotMatch(html, /action:"heartbeat",ready:/);
 });
 
 test("four-player signaling routes offers to the requested room member only", async () => {
