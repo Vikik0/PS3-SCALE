@@ -54,7 +54,7 @@ public class ExportGhostsPpuFunctionInventory extends GhidraScript {
         int exported = 0;
         int skipped = 0;
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(args[0]))) {
-            writer.write("program,name,entry,body_address_count,instruction_count,fingerprint,call_targets,call_target_symbols\n");
+            writer.write("program,name,entry,body_address_count,instruction_count,fingerprint,call_targets,call_target_symbols,call_target_entries\n");
 
             FunctionIterator functions = currentProgram.getFunctionManager().getFunctions(true);
             while (functions.hasNext()) {
@@ -68,6 +68,7 @@ public class ExportGhostsPpuFunctionInventory extends GhidraScript {
                 StringBuilder signature = new StringBuilder();
                 TreeSet<String> callTargets = new TreeSet<>();
                 TreeSet<String> callTargetSymbols = new TreeSet<>();
+                TreeSet<String> callTargetEntries = new TreeSet<>();
                 int instructionCount = 0;
                 InstructionIterator instructions =
                     currentProgram.getListing().getInstructions(function.getBody(), true);
@@ -94,11 +95,20 @@ public class ExportGhostsPpuFunctionInventory extends GhidraScript {
                             if (target != null) {
                                 callTargets.add(target.toString());
                                 Function targetFunction =
-                                    currentProgram.getFunctionManager().getFunctionAt(target);
+                                    currentProgram.getFunctionManager().getFunctionContaining(target);
+                                if (targetFunction == null) {
+                                    targetFunction =
+                                        currentProgram.getFunctionManager().getFunctionAt(target);
+                                }
                                 String targetName = targetFunction == null
                                     ? "UNRESOLVED"
                                     : targetFunction.getName();
                                 callTargetSymbols.add(target.toString() + ":" + targetName);
+                                if (targetFunction != null && !targetFunction.isExternal()) {
+                                    callTargetEntries.add(
+                                        targetFunction.getEntryPoint().toString()
+                                    );
+                                }
                             }
                         }
                     }
@@ -124,6 +134,8 @@ public class ExportGhostsPpuFunctionInventory extends GhidraScript {
                 writer.write(csv(String.join(";", callTargets)));
                 writer.write(",");
                 writer.write(csv(String.join(";", callTargetSymbols)));
+                writer.write(",");
+                writer.write(csv(String.join(";", callTargetEntries)));
                 writer.write("\n");
                 exported++;
             }
