@@ -56,9 +56,9 @@ The native Tiny3D lobby is the XMB entry point and is packaged together with Ret
    - Changing the selected CUE, rescanning the disc list or backing out of the picker clears that player's previous confirmation. Toggling READY off also clears it; everyone must confirm again before the host can start.
    - While a room is waiting, READY expires after 90 seconds without a heartbeat. Heartbeats only refresh the seat and never restore READY. A returning player must explicitly press READY again and confirm the disc again before launch.
 6. Each client then discovers the host's public RetroArch lobby entry and starts RetroArch with the authenticated relay endpoint and session ID.
-When using the integrated flow, players do not need to open **Netplay Host List** manually. The lobby API coordinates rooms and discovers the relay; RetroArch Netplay carries and synchronizes the game session. **OPEN CRASH BASH ONLINE** opens the embedded RetroArch menu for local play or manual Netplay.
+7. If the client returns to the room after the match starts, the room displays **MATCH STARTED**; press **START** and select the same CUE to retry joining.
 
-When using this assisted flow, players do not need to open **Netplay Host List** manually. The lobby API coordinates rooms and discovers the relay; RetroArch Netplay still carries and synchronizes the game session. The **OPEN CRASH BASH ONLINE** home-menu item opens the standalone RetroArch menu for local play or the manual Netplay flow above.
+When using the integrated flow, players do not need to open **Netplay Host List** manually. The lobby API coordinates rooms and discovers the relay; RetroArch Netplay carries and synchronizes the game session. **OPEN CRASH BASH ONLINE** opens the embedded RetroArch menu for local play or manual Netplay.
 
 The package is configured to allow up to three remote clients (four participants including the host). This is a configured maximum, **not a claim that four-player performance has already passed hardware testing**. Start with a two-player LAN test; four-player and internet tests are still release gates.
 
