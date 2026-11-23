@@ -10,10 +10,10 @@ Phase 28 adds one host-side runner that performs the two Ghidra headless imports
 
 - Runs Campaign and Multiplayer in separate temporary Ghidra projects.
 - Selects the explicit processor language PowerPC:BE:64:default.
-- Runs the OPD function seeding script only when the operator supplies both an OPD virtual address and size for that build.
+- Runs the OPD function seeding script only when the operator supplies both an OPD virtual address and size for that build. The seeder must also write a structured summary JSON; the runner rejects missing, malformed, mismatched, empty or unreconciled results before promoting any inventory.
 - Runs the PPU inventory exporter after optional OPD seeding.
 - Validates each CSV with the same parser used by the comparison tool, including unique function entry addresses and SHA-256 fingerprints.
-- Writes a manifest with each reconstructed ELF's SHA-256, each CSV's SHA-256, function counts, declared profile, OPD settings and the executed command arguments.
+- Writes a manifest with each reconstructed ELF's SHA-256, each CSV's SHA-256, function counts, declared profile, OPD settings, OPD seeding counts and the OPD summary SHA-256.
 - Stages both inventories and the manifest before promotion. If either Ghidra run or CSV validation fails, no partial final output is promoted.
 - Refuses to overwrite existing outputs unless --overwrite is explicit.
 

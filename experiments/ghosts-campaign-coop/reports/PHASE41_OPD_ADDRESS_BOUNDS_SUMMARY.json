@@ -21,5 +21,6 @@
     "jobs_passed": 5,
     "python_tests_passed": 315
   },
-  "followup_phase42": "Adds 8-byte OPD base alignment and 4-byte PPU instruction pointer alignment checks."
+  "followup_phase42": "Adds 8-byte OPD base alignment and 4-byte PPU instruction pointer alignment checks.",
+  "followup_phase43": "The Ghidra OPD seeder now writes a structured result; the Python runner verifies status, range, reconciled counts and summary SHA-256 before promoting outputs."
 }

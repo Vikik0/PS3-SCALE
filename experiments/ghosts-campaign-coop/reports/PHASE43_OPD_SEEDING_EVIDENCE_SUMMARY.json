@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "phase": 43,
+  "status": "OPD_SEEDING_FAILS_CLOSED_WITH_STRUCTURED_EVIDENCE",
+  "changes": [
+    "OPD seeder requires a JSON summary output path",
+    "invalid or unmapped ranges throw instead of returning success",
+    "empty/no-function seed results throw",
+    "runner validates summary schema, requested range, counts and at least one seeded function",
+    "validated summary and SHA-256 are embedded in the PPU manifest",
+    "missing or invalid summary prevents promotion of all final outputs"
+  ],
+  "validation_boundary": "Synthetic host tests with mocked Ghidra only. Actual OPD seeding requires the user's matching decrypted TU 1.16 PPU ELF pair."
+}
