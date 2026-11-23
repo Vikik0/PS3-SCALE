@@ -37,3 +37,7 @@ The previous Clockwork-only MapEnts scan found the maps/clockwork.d3dbsp path st
 ## Validation boundary
 
 CI uses synthetic FastFiles to test recursive discovery, profile parsing, map-path extraction, asset-pool reporting, and fail-soft handling of unsupported files. It does not claim that the user's complete USRDIR has been scanned in this environment. The tool is offline and does not require the PS3, PSN, or a live game session.
+
+## CI result
+
+GitHub Actions run 45200690532 passed all five jobs. The Python suite passed 280 tests, including four new recursive-USRDIR scanner tests. The PS3 PRX bootstrap build also passed. These are code/toolchain checks with synthetic FastFiles; they are not a scan of the user's local directory.
