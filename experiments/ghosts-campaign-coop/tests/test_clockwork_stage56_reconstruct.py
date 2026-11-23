@@ -12,6 +12,17 @@ SOURCE_HASH = hashlib.sha256(SOURCE.encode("utf-8")).hexdigest()
 
 
 class ClockworkStage56ReconstructionTests(unittest.TestCase):
+    def test_stage2_patch_input_and_stage56_toolchain_fixture_are_separate(self):
+        toolchain_fixture = FIXTURE.with_name("clockwork_stage56_toolchain.gsc")
+        toolchain_source = toolchain_fixture.read_text(encoding="utf-8")
+
+        self.assertNotIn("clockwork_get_secondary_player", SOURCE)
+        self.assertIn("Synthetic Stage 5/6 GSC Tool fixture", toolchain_source)
+        self.assertIn("clockwork_get_secondary_player", toolchain_source)
+        self.assertIn("clockwork_apply_vault_blast", toolchain_source)
+        self.assertIn("level.ghc_vault_player_two_grenades", toolchain_source)
+        self.assertIn("secondary_player allowsprint", toolchain_source)
+
     def test_reconstructs_stage5_and_stage6_documented_behavior(self):
         stage5, stage6 = patch_source(SOURCE, SOURCE_HASH)
         self.assertIn("clockwork_apply_vault_blast( level.player, var_3.origin )", stage5)
