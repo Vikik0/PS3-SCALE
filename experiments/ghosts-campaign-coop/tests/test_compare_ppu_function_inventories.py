@@ -99,6 +99,18 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
             self.assertIn("spawn", lead_result["call_target_keyword_hits"])
             self.assertIn("client", lead_result["call_target_keyword_hits"])
 
+    def test_ghidra_exporter_emits_resolved_call_target_symbols(self):
+        exporter = (
+            Path(__file__).resolve().parents[1]
+            / "tools"
+            / "ghidra"
+            / "ExportGhostsPpuFunctionInventory.java"
+        )
+        source = exporter.read_text(encoding="utf-8")
+        self.assertIn("call_target_symbols", source)
+        self.assertIn("getFunctionAt(target)", source)
+        self.assertIn('"UNRESOLVED"', source)
+
     def test_legacy_inventory_without_call_target_symbols_remains_supported(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "legacy.csv"
