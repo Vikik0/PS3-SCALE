@@ -25,5 +25,12 @@
     "atomic_output_set": true,
     "malformed_xref_fails_closed": true
   },
-  "interpretation": "Headless automation and host-side validation only. No native Campaign Player 2 initializer or runtime hook has been proven."
+  "interpretation": "Headless automation and host-side validation only. No native Campaign Player 2 initializer or runtime hook has been proven.",
+  "ci_validation": {
+    "workflow_run_id": 45255419594,
+    "status": "success",
+    "jobs_passed": 5,
+    "python_tests_passed": 306,
+    "ps3_prx_bootstrap": "success"
+  }
 }

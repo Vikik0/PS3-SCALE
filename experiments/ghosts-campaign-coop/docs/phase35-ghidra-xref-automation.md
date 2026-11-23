@@ -39,4 +39,4 @@ Then run the Phase 34 comparer using the two XREF CSVs and two function inventor
 
 The runner tests now verify that both post-scripts are included for both builds, xref rows are matched against the same-build inventory, XREF hashes/counts enter the manifest, and malformed XREF output prevents partial promotion.
 
-The CI run for this change passed the Python suite and all other workflow jobs. The runner uses a mocked Ghidra process in host tests; CI does not execute Ghidra itself. No real decrypted PPU pair was available, so no real split-screen caller or native Player 2 initializer has been identified.
+GitHub Actions run 45255419594 passed all five workflow jobs, including 306 Python tests and the PS3 PRX bootstrap. The runner uses a mocked Ghidra process in host tests; CI does not execute Ghidra itself. No real decrypted PPU pair was available, so no real split-screen caller or native Player 2 initializer has been identified.
