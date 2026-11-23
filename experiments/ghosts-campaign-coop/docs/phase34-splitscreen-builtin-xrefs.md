@@ -41,9 +41,8 @@ It reports:
 
 1. Use the exact Campaign and Multiplayer reconstructed TU 1.16 ELF pair verified by tools/ps3mapi/verify_tu116_dump.py.
 2. Generate both function inventories using docs/phase28-ghidra-headless-runner.md and preserve ppu_inventory_manifest.json.
-3. In Ghidra, open the Campaign program after auto-analysis. Run FindGhostsSplitScreenBuiltins.java from Script Manager and provide an output path such as D:\Ghosts\analysis\ppu-inventory\campaign_builtin_xrefs.csv.
-4. Repeat on the Multiplayer program and save multiplayer_builtin_xrefs.csv.
-5. Run from experiments/ghosts-campaign-coop:
+3. The updated tools/run_ghidra_ppu_inventory.py runs FindGhostsSplitScreenBuiltins.java automatically after each function inventory export. It produces campaign_builtin_xrefs.csv and multiplayer_builtin_xrefs.csv in the same output directory, and records their hashes/counts in ppu_inventory_manifest.json. Manual Script Manager execution remains available if you already have an open Ghidra project.
+4. Run from experiments/ghosts-campaign-coop:
 
 ~~~powershell
 python tools/compare_splitscreen_builtin_xrefs.py --campaign-xrefs "D:\Ghosts\analysis\ppu-inventory\campaign_builtin_xrefs.csv" --multiplayer-xrefs "D:\Ghosts\analysis\ppu-inventory\multiplayer_builtin_xrefs.csv" --campaign-inventory "D:\Ghosts\analysis\ppu-inventory\campaign_ppu_inventory.csv" --multiplayer-inventory "D:\Ghosts\analysis\ppu-inventory\multiplayer_ppu_inventory.csv" --output "D:\Ghosts\analysis\ppu-inventory\splitscreen_builtin_xrefs.json"

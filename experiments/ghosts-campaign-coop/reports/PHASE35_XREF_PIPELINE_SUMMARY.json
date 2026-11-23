@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "phase": 35,
+  "status": "GHIDRA_BUILTIN_XREF_PIPELINE_AUTOMATED",
+  "runner": "tools/run_ghidra_ppu_inventory.py",
+  "post_scripts": [
+    "ExportGhostsPpuFunctionInventory.java",
+    "FindGhostsSplitScreenBuiltins.java"
+  ],
+  "output_files": [
+    "campaign_ppu_inventory.csv",
+    "multiplayer_ppu_inventory.csv",
+    "campaign_builtin_xrefs.csv",
+    "multiplayer_builtin_xrefs.csv",
+    "ppu_inventory_manifest.json"
+  ],
+  "manifest_fields": [
+    "builtin_xref_file",
+    "builtin_xref_sha256",
+    "builtin_xref_rows"
+  ],
+  "validation": {
+    "real_ghidra_executed": false,
+    "real_ppu_pair_available": false,
+    "atomic_output_set": true,
+    "malformed_xref_fails_closed": true
+  },
+  "interpretation": "Headless automation and host-side validation only. No native Campaign Player 2 initializer or runtime hook has been proven."
+}
