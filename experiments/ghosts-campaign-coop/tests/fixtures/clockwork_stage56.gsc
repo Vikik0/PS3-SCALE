@@ -13,6 +13,8 @@ new_trench_setup()
     }
 
     level.player playrumbleonentity( "artillery_rumble" );
+    cinematicingameloopresident( "clockwork_vault_scan" );
+    cinematicingame( "clockwork_vault_drill" );
 }
 
 setup_interior_cqb()
