@@ -125,7 +125,9 @@ jobs:
           sha256sum "$ENCRYPTED" > "$ENCRYPTED.sha256"
           cp "Crash-Bash-Enhanced/build-artifacts/PERSONAL-BUILD-MANIFEST.txt" \
             /tmp/PERSONAL-BUILD-MANIFEST.txt
-          rm -f "$PKG" /tmp/crash-bash-disc.zip
+          rm -f "$PKG" "$PKG.sha256" /tmp/crash-bash-disc.zip Crash-Bash-Enhanced/crashbash.pkg
+          rm -rf Crash-Bash-Enhanced/pkgfiles/USRDIR/PSXISO \
+            Crash-Bash-Enhanced/build/pkg Crash-Bash-Enhanced/game
 
       - name: Upload encrypted package only
         uses: actions/upload-artifact@v4
