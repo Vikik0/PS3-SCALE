@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import re
 import sys
@@ -104,6 +105,102 @@ def read_inventory(path: Path) -> list[dict[str, Any]]:
     if not rows:
         raise InventoryError(f"{path}: inventory contains no function rows")
     return rows
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def validate_inventory_manifest(
+    manifest_path: Path,
+    campaign_path: Path,
+    multiplayer_path: Path,
+    campaign_rows: list[dict[str, Any]],
+    multiplayer_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    manifest_path = Path(manifest_path)
+    campaign_path = Path(campaign_path)
+    multiplayer_path = Path(multiplayer_path)
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise InventoryError(f"{manifest_path}: invalid JSON manifest") from exc
+
+    if not isinstance(manifest, dict) or manifest.get("schema_version") != 1:
+        raise InventoryError(f"{manifest_path}: unsupported inventory manifest schema")
+    profile = manifest.get("operator_declared_profile")
+    expected_profile = {
+        "title_id": "BLUS31270",
+        "title_update": "1.16",
+        "analysis_language": "PowerPC:BE:64:default",
+    }
+    if not isinstance(profile, dict):
+        raise InventoryError(f"{manifest_path}: operator-declared profile is missing")
+    for key, expected in expected_profile.items():
+        if profile.get(key) != expected:
+            raise InventoryError(
+                f"{manifest_path}: profile {key} must be {expected}, got {profile.get(key)!r}"
+            )
+
+    verified_modes = {}
+    for mode, inventory_path, rows in (
+        ("campaign", campaign_path, campaign_rows),
+        ("multiplayer", multiplayer_path, multiplayer_rows),
+    ):
+        details = manifest.get(mode)
+        if not isinstance(details, dict):
+            raise InventoryError(f"{manifest_path}: {mode} manifest section is missing")
+        if details.get("inventory_file") != inventory_path.name:
+            raise InventoryError(
+                f"{manifest_path}: {mode} inventory filename does not match {inventory_path.name}"
+            )
+        expected_inventory_hash = str(details.get("inventory_sha256") or "").lower()
+        if not FINGERPRINT_RE.fullmatch(expected_inventory_hash):
+            raise InventoryError(
+                f"{manifest_path}: {mode} inventory SHA-256 is missing or malformed"
+            )
+        actual_inventory_hash = _sha256_file(inventory_path)
+        if actual_inventory_hash != expected_inventory_hash:
+            raise InventoryError(
+                f"{manifest_path}: {mode} inventory SHA-256 does not match the manifest"
+            )
+        expected_elf_hash = str(details.get("elf_sha256") or "").lower()
+        if not FINGERPRINT_RE.fullmatch(expected_elf_hash):
+            raise InventoryError(
+                f"{manifest_path}: {mode} source ELF SHA-256 is missing or malformed"
+            )
+        try:
+            declared_count = int(details.get("function_records"))
+        except (TypeError, ValueError) as exc:
+            raise InventoryError(
+                f"{manifest_path}: {mode} function record count is invalid"
+            ) from exc
+        if declared_count != len(rows):
+            raise InventoryError(
+                f"{manifest_path}: {mode} function record count does not match the CSV"
+            )
+        verified_modes[mode] = {
+            "elf_sha256": expected_elf_hash,
+            "inventory_sha256": actual_inventory_hash,
+            "function_records": declared_count,
+        }
+
+    return {
+        "status": "VALIDATED_HASHES_AND_OPERATOR_DECLARED_PROFILE",
+        "manifest_path": str(manifest_path.resolve()),
+        "manifest_sha256": _sha256_file(manifest_path),
+        "profile": expected_profile,
+        "campaign": verified_modes["campaign"],
+        "multiplayer": verified_modes["multiplayer"],
+        "warning": (
+            "The profile is operator-declared. SHA-256 verifies the exact input and CSV "
+            "files against this manifest; it does not independently prove the game update's authenticity."
+        ),
+    }
 
 
 def _group(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
@@ -406,6 +503,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--campaign", required=True, type=Path)
     parser.add_argument("--multiplayer", required=True, type=Path)
+    parser.add_argument(
+        "--manifest",
+        type=Path,
+        help="optional SHA-256 manifest emitted by run_ghidra_ppu_inventory.py",
+    )
     parser.add_argument("--output", type=Path, default=Path("ghosts_ppu_function_comparison.json"))
     parser.add_argument(
         "--keywords",
@@ -421,7 +523,23 @@ def main(argv: list[str] | None = None) -> int:
             multiplayer,
             tuple(value.strip() for value in args.keywords.split(",") if value.strip()),
         )
-    except (OSError, InventoryError) as exc:
+        if args.manifest:
+            result["inventory_manifest"] = validate_inventory_manifest(
+                args.manifest,
+                args.campaign,
+                args.multiplayer,
+                campaign,
+                multiplayer,
+            )
+        else:
+            result["inventory_manifest"] = {
+                "status": "NOT_PROVIDED",
+                "warning": (
+                    "No PPU inventory manifest was supplied; CSV contents were validated, "
+                    "but their source ELF hashes and declared target profile were not cross-checked."
+                ),
+            }
+    except (OSError, InventoryError, json.JSONDecodeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
