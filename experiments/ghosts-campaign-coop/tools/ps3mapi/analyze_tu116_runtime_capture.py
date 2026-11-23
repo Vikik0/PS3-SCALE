@@ -293,6 +293,12 @@ def analyze(
             "pad_probe": {
                 "status": pad_comparison.get("status"),
                 "both_ports_visible_simultaneously_in_both_modes": pad_gate_passed,
+                "capture_complete_in_both_modes": pad_comparison.get(
+                    "capture_complete_in_both_modes", False
+                ),
+                "capture_provenance_valid_in_both_modes": pad_comparison.get(
+                    "capture_provenance_valid_in_both_modes", False
+                ),
                 "mode_labels_are_operator_selected": pad_comparison.get(
                     "mode_labels_are_operator_selected"
                 ),
