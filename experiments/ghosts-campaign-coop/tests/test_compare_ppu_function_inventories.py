@@ -1,4 +1,6 @@
 import csv
+import hashlib
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -7,6 +9,7 @@ from tools.compare_ppu_function_inventories import (
     InventoryError,
     compare,
     read_inventory,
+    validate_inventory_manifest,
 )
 
 
@@ -267,6 +270,97 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
             }])
             with self.assertRaises(InventoryError):
                 read_inventory(path)
+
+    def _write_manifest_pair(self, root: Path):
+        campaign_path = root / "campaign_ppu_inventory.csv"
+        multiplayer_path = root / "multiplayer_ppu_inventory.csv"
+        write_inventory(campaign_path, [row("FUN_campaign", "0x1000", "a" * 64)])
+        write_inventory(multiplayer_path, [row("FUN_multiplayer", "0x9000", "b" * 64)])
+        campaign_rows = read_inventory(campaign_path)
+        multiplayer_rows = read_inventory(multiplayer_path)
+
+        def digest(path):
+            return hashlib.sha256(path.read_bytes()).hexdigest()
+
+        manifest = {
+            "schema_version": 1,
+            "operator_declared_profile": {
+                "title_id": "BLUS31270",
+                "title_update": "1.16",
+                "analysis_language": "PowerPC:BE:64:default",
+            },
+            "campaign": {
+                "inventory_file": campaign_path.name,
+                "inventory_sha256": digest(campaign_path),
+                "elf_sha256": "c" * 64,
+                "function_records": 1,
+            },
+            "multiplayer": {
+                "inventory_file": multiplayer_path.name,
+                "inventory_sha256": digest(multiplayer_path),
+                "elf_sha256": "d" * 64,
+                "function_records": 1,
+            },
+        }
+        manifest_path = root / "ppu_inventory_manifest.json"
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        return manifest_path, campaign_path, multiplayer_path, campaign_rows, multiplayer_rows, manifest
+
+    def test_validates_inventory_manifest_hashes_and_profile(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            manifest_path, campaign_path, multiplayer_path, campaign_rows, multiplayer_rows, _ = (
+                self._write_manifest_pair(root)
+            )
+            result = validate_inventory_manifest(
+                manifest_path,
+                campaign_path,
+                multiplayer_path,
+                campaign_rows,
+                multiplayer_rows,
+            )
+            self.assertEqual(
+                result["status"],
+                "VALIDATED_HASHES_AND_OPERATOR_DECLARED_PROFILE",
+            )
+            self.assertEqual(result["campaign"]["function_records"], 1)
+            self.assertEqual(result["multiplayer"]["function_records"], 1)
+
+    def test_rejects_manifest_when_inventory_csv_hash_changes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            manifest_path, campaign_path, multiplayer_path, campaign_rows, multiplayer_rows, _ = (
+                self._write_manifest_pair(root)
+            )
+            campaign_path.write_text(
+                campaign_path.read_text(encoding="utf-8") + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(InventoryError, "SHA-256 does not match"):
+                validate_inventory_manifest(
+                    manifest_path,
+                    campaign_path,
+                    multiplayer_path,
+                    campaign_rows,
+                    multiplayer_rows,
+                )
+
+    def test_rejects_manifest_for_wrong_operator_declared_profile(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            manifest_path, campaign_path, multiplayer_path, campaign_rows, multiplayer_rows, manifest = (
+                self._write_manifest_pair(root)
+            )
+            manifest["operator_declared_profile"]["title_update"] = "1.15"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            with self.assertRaisesRegex(InventoryError, "title_update must be 1.16"):
+                validate_inventory_manifest(
+                    manifest_path,
+                    campaign_path,
+                    multiplayer_path,
+                    campaign_rows,
+                    multiplayer_rows,
+                )
 
     def test_rejects_duplicate_function_entries_as_ambiguous_call_graph_nodes(self):
         with tempfile.TemporaryDirectory() as temp:
