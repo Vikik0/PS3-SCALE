@@ -14,6 +14,6 @@
 
 ## Validation
 
-The Phase 38 CI run passed all five jobs and 311 Python tests. This phase adds one additional source-contract test; the latest commit is being validated by CI.
+The Phase 39 CI run passed all five jobs and 312 Python tests, including the no-reference boolean defaults and UTF-8 exporter checks.
 
 No Ghidra binary is bundled or executed in GitHub Actions. The real exporter still requires the user's installed Ghidra and exact decrypted TU 1.16 PPU pair.

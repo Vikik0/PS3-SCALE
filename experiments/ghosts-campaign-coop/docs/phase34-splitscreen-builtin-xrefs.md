@@ -30,10 +30,10 @@ tools/compare_splitscreen_builtin_xrefs.py joins the two xref CSVs to the matchi
 
 It reports:
 - builtins found in each executable;
-- explicit call references, data references, other references, and strings with no recorded xref as separate counts;
+- direct call references, computed call references, data references, other references, and strings with no recorded xref as separate counts;
 - caller functions matched to the same-build PPU inventory;
 - unmatched caller entries, without guessing a function;
-- caller fingerprints shared across Campaign and Multiplayer, using call references only;
+- caller fingerprints shared across Campaign and Multiplayer, using call references only, with direct and computed calls reported separately;
 - Multiplayer-only call references and Multiplayer-only caller fingerprints;
 - SHA-256 values for all four input files.
 
@@ -56,6 +56,6 @@ A Multiplayer-only PlayerCMD_Spawn or split-screen builtin reference is a lead f
 
 ## Validation boundary
 
-Twelve synthetic Python tests cover address normalization, cross-build call-fingerprint matching, Multiplayer-only call leads, data-only false-positive suppression, missing function matches, duplicate rows/entries, malformed CSV/flags, source-contract checks and input hashing.
+Twelve synthetic Python tests cover address normalization, cross-build call-fingerprint matching, Multiplayer-only call leads, data-only false-positive suppression, missing function matches, duplicate rows/entries, malformed CSV/flags, source-contract checks and input hashing. Phase 40 adds direct-versus-computed call classification and priority tests.
 
 No decrypted PPU runtime images or real Ghidra xref exports were present for this phase. Therefore this phase adds the evidence pipeline only; it does not identify a native Player 2 initializer, approve a hook, or prove Campaign co-op at runtime.

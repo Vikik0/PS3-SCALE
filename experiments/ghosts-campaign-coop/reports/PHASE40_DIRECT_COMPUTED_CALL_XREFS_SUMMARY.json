@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "phase": 40,
+  "status": "DIRECT_AND_COMPUTED_CALL_XREFS_DISTINGUISHED",
+  "changes": [
+    "Ghidra exports RefType.isComputed",
+    "comparer schema v3 distinguishes direct calls, computed calls, data and other references",
+    "direct Multiplayer-only call leads rank before computed-call leads",
+    "PPU manifest and combined capture summary include direct/computed counts"
+  ],
+  "validation_boundary": "Synthetic host tests only. Real call-reference results require Ghidra on the exact matching TU 1.16 Campaign and Multiplayer PPU ELFs."
+}
