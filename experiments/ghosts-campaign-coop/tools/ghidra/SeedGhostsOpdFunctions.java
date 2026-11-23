@@ -35,6 +35,10 @@ public class SeedGhostsOpdFunctions extends GhidraScript {
             printerr("OPD virtual address must fit the unsigned 32-bit PPU address space.");
             return;
         }
+        if ((opdVa & 7L) != 0L) {
+            printerr("OPD virtual address must be 8-byte aligned.");
+            return;
+        }
         if (opdSize < 8 || (opdSize & 7L) != 0L) {
             printerr("OPD size must be at least 8 and divisible by 8 bytes.");
             return;
@@ -77,6 +81,10 @@ public class SeedGhostsOpdFunctions extends GhidraScript {
             }
             descriptors++;
             long codeUnsigned = Integer.toUnsignedLong(code);
+            if ((codeUnsigned & 3L) != 0L) {
+                invalid++;
+                continue;
+            }
             Address codeAddress;
             try {
                 codeAddress = toAddr(codeUnsigned);

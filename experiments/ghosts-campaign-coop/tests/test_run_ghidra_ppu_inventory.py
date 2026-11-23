@@ -281,7 +281,15 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         self.assertIn("MAX_PPU_ADDRESS", source)
         self.assertIn("PPU_ADDRESS_SPACE - opdVa", source)
         self.assertIn("opdSize > PPU_ADDRESS_SPACE - opdVa", source)
+        self.assertIn("(opdVa & 7L) != 0L", source)
+        self.assertIn("(codeUnsigned & 3L) != 0L", source)
         self.assertIn("getMemory().contains(opdStart)", source)
+
+    def test_opd_table_base_must_be_eight_byte_aligned(self):
+        with self.assertRaisesRegex(ValueError, "8-byte aligned"):
+            _validate_opd_pair("0x1004", "0x10", "Campaign")
+        with self.assertRaisesRegex(ValueError, "8-byte aligned"):
+            _validate_opd_tuple((0x1004, 0x10), "Campaign")
 
 if __name__ == "__main__":
     unittest.main()

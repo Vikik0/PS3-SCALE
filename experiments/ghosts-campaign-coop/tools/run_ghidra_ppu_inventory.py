@@ -24,6 +24,8 @@ from tools.compare_splitscreen_builtin_xrefs import compare_paths as compare_bui
 PROCESSOR = "PowerPC:BE:64:default"
 PPU_ADDRESS_MAX = 0xFFFFFFFF
 PPU_ADDRESS_SPACE = 0x100000000
+PPU_OPD_ALIGNMENT = 8
+PPU_INSTRUCTION_ALIGNMENT = 4
 EXPORT_SCRIPT = "ExportGhostsPpuFunctionInventory.java"
 XREF_SCRIPT = "FindGhostsSplitScreenBuiltins.java"
 SEED_SCRIPT = "SeedGhostsOpdFunctions.java"
@@ -69,6 +71,8 @@ def _validate_opd_pair(
         raise ValueError(f"{label}: OPD virtual address cannot be negative")
     if parsed_address > PPU_ADDRESS_MAX:
         raise ValueError(f"{label}: OPD virtual address must fit the unsigned 32-bit PPU address space")
+    if parsed_address % PPU_OPD_ALIGNMENT:
+        raise ValueError(f"{label}: OPD virtual address must be {PPU_OPD_ALIGNMENT}-byte aligned")
     if parsed_size < 8 or parsed_size % 8:
         raise ValueError(f"{label}: OPD size must be at least 8 and divisible by 8")
     if parsed_size > PPU_ADDRESS_SPACE - parsed_address:
@@ -88,6 +92,8 @@ def _validate_opd_tuple(opd: tuple[int, int] | None, label: str) -> None:
         raise ValueError(f"{label}: OPD virtual address cannot be negative")
     if address > PPU_ADDRESS_MAX:
         raise ValueError(f"{label}: OPD virtual address must fit the unsigned 32-bit PPU address space")
+    if address % PPU_OPD_ALIGNMENT:
+        raise ValueError(f"{label}: OPD virtual address must be {PPU_OPD_ALIGNMENT}-byte aligned")
     if size < 8 or size % 8:
         raise ValueError(f"{label}: OPD size must be at least 8 and divisible by 8")
     if size > PPU_ADDRESS_SPACE - address:
