@@ -374,7 +374,7 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
             "OPD_SEEDING_COMPLETED",
             "OPD_SEEDING_EMPTY",
             "Files.write(Paths.get(args[2])",
-            "\"schema_version\\": 2",
+            '"schema_version": 2',
             "descriptorSlotsScanned++",
             "emptyDescriptors++",
             "unreadableDescriptors++",
