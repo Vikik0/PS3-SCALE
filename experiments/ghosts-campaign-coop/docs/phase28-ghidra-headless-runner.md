@@ -37,10 +37,12 @@ Do not guess OPD values. Campaign and Multiplayer can have different OPD ranges.
 Then compare the generated inventories:
 
 ~~~powershell
-python tools/compare_ppu_function_inventories.py --campaign "D:\Ghosts\analysis\ppu-inventory\campaign_ppu_inventory.csv" --multiplayer "D:\Ghosts\analysis\ppu-inventory\multiplayer_ppu_inventory.csv" --output "D:\Ghosts\analysis\ppu-inventory\ppu_function_comparison.json"
+python tools/compare_ppu_function_inventories.py --campaign "D:\Ghosts\analysis\ppu-inventory\campaign_ppu_inventory.csv" --multiplayer "D:\Ghosts\analysis\ppu-inventory\multiplayer_ppu_inventory.csv" --manifest "D:\Ghosts\analysis\ppu-inventory\ppu_inventory_manifest.json" --output "D:\Ghosts\analysis\ppu-inventory\ppu_function_comparison.json"
 ~~~
 
-Review ppu_inventory_manifest.json first and retain it with the comparison JSON. Its profile label is operator-declared; the recorded SHA-256 values identify the exact input files but do not independently prove the game update's authenticity.
+Review ppu_inventory_manifest.json first and retain it with the comparison JSON.
+When the manifest is supplied, the comparer verifies both CSV SHA-256 values, filenames, function counts, source ELF SHA-256 fields and the operator-declared BLUS31270/TU 1.16/PowerPC profile. It rejects a mismatch before writing the comparison report. This cross-check confirms the files against the manifest; it does not independently authenticate the game update.
+ Its profile label is operator-declared; the recorded SHA-256 values identify the exact input files but do not independently prove the game update's authenticity.
 
 ## Validation boundary
 
