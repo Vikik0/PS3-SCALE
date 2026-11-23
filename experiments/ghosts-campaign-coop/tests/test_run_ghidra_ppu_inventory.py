@@ -152,6 +152,19 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         run.assert_not_called()
         self.assertEqual(existing.read_text(encoding="utf-8"), "keep this file")
 
+    def test_direct_api_rejects_invalid_opd_tuple_before_running_ghidra(self):
+        with patch("tools.run_ghidra_ppu_inventory.subprocess.run") as run:
+            with self.assertRaisesRegex(ValueError, "divisible by 8"):
+                generate_inventories(
+                    self.headless,
+                    self.campaign_elf,
+                    self.multiplayer_elf,
+                    self.output_dir,
+                    script_dir=self.script_dir,
+                    campaign_opd=(0x1000, 0x11),
+                )
+        run.assert_not_called()
+
     def test_opd_arguments_must_be_paired_and_size_must_be_aligned(self):
         with self.assertRaisesRegex(ValueError, "provide both"):
             _validate_opd_pair("0x1000", None, "Campaign")
