@@ -512,7 +512,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--keywords",
         default=",".join(DEFAULT_KEYWORDS),
-        help="comma-separated function-name keywords used to rank Multiplayer-only leads",
+        help="comma-separated function, call-target and incoming-caller keywords used to rank Multiplayer-only leads",
     )
     args = parser.parse_args(argv)
     try:
