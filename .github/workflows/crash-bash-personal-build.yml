@@ -1,0 +1,140 @@
+name: Crash Bash Personal Game-Inclusive PS3 Build
+
+run-name: Personal game-inclusive Crash Bash PKG
+
+on:
+  workflow_dispatch:
+    inputs:
+      disc_archive_url:
+        description: "Single-use private HTTPS download URL for the supplied BIN/CUE ZIP"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crash-bash-personal-pkg
+  cancel-in-progress: false
+
+jobs:
+  personal-pkg:
+    name: Build and encrypt one game-inclusive PS3 PKG
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    container:
+      image: ghcr.io/02900/ps3-toolchain-tiny3d:latest
+    steps:
+      - name: Checkout the enhanced project source
+        uses: actions/checkout@v4
+        with:
+          ref: crash-bash-enhanced
+
+      - name: Validate and mask the private download URL
+        shell: bash
+        env:
+          DISC_ARCHIVE_URL: \${{ inputs.disc_archive_url }}
+        run: |
+          set -euo pipefail
+          test -n "$DISC_ARCHIVE_URL"
+          case "$DISC_ARCHIVE_URL" in
+            https://*) ;;
+            *) echo "A private HTTPS download URL is required." >&2; exit 1 ;;
+          esac
+          echo "::add-mask::$DISC_ARCHIVE_URL"
+
+      - name: Verify PS3 build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$PSL1GHT"
+          test -n "$PS3DEV"
+          for tool in ppu-gcc ppu-g++ make_self_npdrm pkg package_finalize sfo curl openssl sha256sum; do
+            command -v "$tool"
+          done
+          test -s "$PS3DEV/bin/sfo.xml"
+
+      - name: Download the private BIN/CUE archive
+        shell: bash
+        env:
+          DISC_ARCHIVE_URL: \${{ inputs.disc_archive_url }}
+        run: |
+          set -euo pipefail
+          echo "::add-mask::$DISC_ARCHIVE_URL"
+          curl --fail --silent --show-error --location --retry 2 \
+            --connect-timeout 30 --max-time 900 \
+            "$DISC_ARCHIVE_URL" \
+            --output /tmp/crash-bash-disc.zip
+          test -s /tmp/crash-bash-disc.zip
+          python3 - <<'PY'
+          import sys, zipfile
+          path = "/tmp/crash-bash-disc.zip"
+          with zipfile.ZipFile(path) as archive:
+              bad = archive.testzip()
+              if bad:
+                  raise SystemExit(f"Corrupt ZIP member: {bad}")
+              files = [item.filename for item in archive.infolist() if not item.is_dir()]
+              if not files:
+                  raise SystemExit("The disc ZIP is empty.")
+              print(f"Validated ZIP container with {len(files)} file entries.")
+          PY
+
+      - name: Build the pinned RetroArch and PCSX-ReARMed runtime
+        shell: bash
+        run: bash Crash-Bash-Enhanced/scripts/build_online_pkg_clean.sh
+
+      - name: Stage the runtime inside the unified application
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUNTIME="Crash-Bash-Enhanced/build-artifacts/retroarch-stage/USRDIR/retroarch"
+          DEST="Crash-Bash-Enhanced/pkgfiles/USRDIR/retroarch"
+          test -s "$RUNTIME/EBOOT.BIN"
+          test -s "$RUNTIME/cores/pcsx_rearmed_libretro_psl1ght.SELF"
+          mkdir -p "$DEST"
+          cp -a "$RUNTIME/." "$DEST/"
+
+      - name: Build and verify the personal game-inclusive PKG
+        shell: bash
+        env:
+          CRASH_BASH_DISC_ARCHIVE: /tmp/crash-bash-disc.zip
+        run: |
+          set -euo pipefail
+          bash Crash-Bash-Enhanced/scripts/build_personal_pkg.sh
+          test -s Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-Personal-PS3.pkg
+          test -s Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-Personal-PS3.pkg.sha256
+          test -s Crash-Bash-Enhanced/build-artifacts/PERSONAL-BUILD-MANIFEST.txt
+          cd Crash-Bash-Enhanced/build-artifacts
+          sha256sum -c Crash-Bash-Online-Personal-PS3.pkg.sha256
+
+      - name: Encrypt the personal PKG for private transfer
+        shell: bash
+        run: |
+          set -euo pipefail
+          PKG="Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-Personal-PS3.pkg"
+          CERT="Crash-Bash-Enhanced/keys/personal-build-public.pem"
+          ENCRYPTED="/tmp/Crash-Bash-Online-Personal-PS3.pkg.cms"
+          test -s "$PKG"
+          test -s "$CERT"
+          openssl cms -encrypt -binary -stream -aes-256-cbc \
+            -in "$PKG" \
+            -out "$ENCRYPTED" \
+            -outform DER "$CERT"
+          test -s "$ENCRYPTED"
+          openssl cms -cmsout -print -inform DER -in "$ENCRYPTED" >/dev/null
+          sha256sum "$ENCRYPTED" > "$ENCRYPTED.sha256"
+          cp "Crash-Bash-Enhanced/build-artifacts/PERSONAL-BUILD-MANIFEST.txt" \
+            /tmp/PERSONAL-BUILD-MANIFEST.txt
+          rm -f "$PKG" /tmp/crash-bash-disc.zip
+
+      - name: Upload encrypted package only
+        uses: actions/upload-artifact@v4
+        with:
+          name: Crash-Bash-Online-Personal-PS3-Encrypted
+          path: |
+            /tmp/Crash-Bash-Online-Personal-PS3.pkg.cms
+            /tmp/Crash-Bash-Online-Personal-PS3.pkg.cms.sha256
+            /tmp/PERSONAL-BUILD-MANIFEST.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
