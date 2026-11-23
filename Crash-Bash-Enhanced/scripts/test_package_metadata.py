@@ -53,7 +53,8 @@ assert '"$NM" -g "$RA/retroarch_psl1ght.elf"' in build_script
 assert '"/dev_hdd0/game/CBON00001/USRDIR/PSXISO"' in disc_browser
 assert "stage_game_disc.py" in personal_builder
 assert "--required" in personal_builder
-assert "USRDIR/PSXISO" in stage_script
+assert "PSXISO" in stage_script
+assert 'DISC_DEST="$ROOT/pkgfiles/USRDIR/PSXISO"' in personal_builder
 assert "Crash-Bash-Online-Personal-PS3.pkg" in personal_builder
 
 # Public CI embeds the runtime and publishes one installable PKG without game data.

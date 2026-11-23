@@ -11,8 +11,8 @@ RetroArch's current Netplay FAQ cautions that PSX netplay is generally unsuitabl
 ## Required setup
 
 - Two jailbroken PS3 consoles on the same compatible firmware family.
-- The exact same `Crash-Bash-Online-Unified-PS3.pkg` installed on both consoles.
-- The same game-inclusive personal PKG installed on both consoles, with the user-supplied BIN/CUE embedded under `USRDIR/PSXISO/`. If testing the public CI package instead, use a legal BIN/CUE dump of the same Crash Bash disc revision on both consoles.
+- The exact same game-inclusive `Crash-Bash-Online-Personal-PS3.pkg` installed on both consoles, with the user-supplied BIN/CUE embedded under `USRDIR/PSXISO/`.
+- If testing the public CI package instead, use a legal BIN/CUE dump of the same Crash Bash disc revision on both consoles.
 - The exact same CUE file and byte-identical contents for every referenced BIN track.
 - The same BIOS file on both consoles, or both consoles using the same HLE mode. A BIOS dumped from the user's own PS1 is recommended.
 - A stable wired network for the first test; internet access for the relay test.
@@ -22,7 +22,7 @@ Do not change the core version, CUE/BIN content, region, BIOS file (or HLE choic
 
 ## Test 0 — Native lobby handoff
 
-1. Install the single unified `Crash-Bash-Online-Unified-PS3.pkg` on both compatible PS3 consoles.
+1. Install the same game-inclusive `Crash-Bash-Online-Personal-PS3.pkg` on both compatible PS3 consoles.
 2. Launch **Crash Bash Online** from the XMB on the first console and create a public or private room from its built-in lobby.
 3. Join the room from the second console using the six-character invite code.
 4. Mark both players Ready. Confirm the room becomes launch-ready with two players; a four-seat room is not required.
