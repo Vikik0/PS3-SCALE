@@ -15,15 +15,16 @@ The runner validates both CSV outputs against their schemas before promoting any
 
 ## Output set
 
-The output directory now contains five files:
+The output directory now contains six files:
 
 - campaign_ppu_inventory.csv
 - multiplayer_ppu_inventory.csv
 - campaign_builtin_xrefs.csv
 - multiplayer_builtin_xrefs.csv
+- splitscreen_builtin_xrefs.json
 - ppu_inventory_manifest.json
 
-The manifest keeps the original ELF and function-inventory provenance and adds the XREF filename, SHA-256 and row count for each build. The five-file output set is promoted atomically, with rollback behavior retained if promotion fails.
+The runner now invokes the Phase 34 comparer after both XREF exports validate. It writes splitscreen_builtin_xrefs.json, which compares caller fingerprints and lists Multiplayer-only leads. The manifest records the comparison filename, SHA-256 and lead count. The complete six-file output set is promoted atomically, with rollback behavior retained if promotion fails.
 
 ## Run
 

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "phase": 36,
+  "status": "ONE_SHOT_PPU_EVIDENCE_BUNDLE",
+  "runner": "tools/run_ghidra_ppu_inventory.py",
+  "pipeline": [
+    "campaign_ppu_inventory",
+    "multiplayer_ppu_inventory",
+    "campaign_builtin_xrefs",
+    "multiplayer_builtin_xrefs",
+    "splitscreen_builtin_xrefs_comparison",
+    "manifest"
+  ],
+  "output_files": [
+    "campaign_ppu_inventory.csv",
+    "multiplayer_ppu_inventory.csv",
+    "campaign_builtin_xrefs.csv",
+    "multiplayer_builtin_xrefs.csv",
+    "splitscreen_builtin_xrefs.json",
+    "ppu_inventory_manifest.json"
+  ],
+  "manifest_additions": [
+    "builtin_xref_comparison_file",
+    "builtin_xref_comparison_sha256",
+    "multiplayer_only_builtin_lead_count"
+  ],
+  "validation": {
+    "host_synthetic_fixtures": true,
+    "ghidra_executed_in_ci": false,
+    "real_ppu_inputs_available": false,
+    "atomic_six_file_promotion": true
+  },
+  "interpretation": "Single-run evidence pipeline only. No native Campaign Player 2 initializer or runtime hook has been proven."
+}
