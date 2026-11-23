@@ -111,6 +111,31 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
         self.assertIn("getFunctionAt(target)", source)
         self.assertIn('"UNRESOLVED"', source)
 
+    def test_combined_call_target_evidence_affects_candidate_ranking(self):
+        common = "a" * 64
+        target_lead = "b" * 64
+        named_lead = "c" * 64
+        campaign = [row("FUN_shared", "0x1000", common)]
+        multiplayer = [
+            row("FUN_shared_mp", "0x9000", common),
+            row(
+                "FUN_opaque_target_lead",
+                "0x9100",
+                target_lead,
+                symbols=(
+                    "0x1234:PlayerCMD_Spawn;"
+                    "0x5678:SV_InitLocalClient;"
+                    "0x9abc:CL_SetSplitScreen"
+                ),
+            ),
+            row("SV_InitLocalClient", "0x9200", named_lead),
+        ]
+        result = compare(campaign, multiplayer)
+        self.assertEqual(
+            result["priority_multiplayer_only"][0]["function"]["name"],
+            "FUN_opaque_target_lead",
+        )
+
     def test_legacy_inventory_without_call_target_symbols_remains_supported(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "legacy.csv"
