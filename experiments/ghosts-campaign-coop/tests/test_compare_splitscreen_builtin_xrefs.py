@@ -238,6 +238,8 @@ class BuiltinXrefTests(unittest.TestCase):
             "getReferenceType().isCall()",
             "getReferenceType().isData()",
             "is_call,is_data",
+            "Files.newBufferedWriter",
+            "StandardCharsets.UTF_8",
             "PlayerCMD_Spawn",
             "CL_InitLocalClients",
         ):

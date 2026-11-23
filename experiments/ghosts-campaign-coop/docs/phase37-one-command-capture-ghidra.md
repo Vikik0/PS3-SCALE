@@ -25,7 +25,7 @@ With Ghidra enabled, it adds six outputs:
 - ppu_splitscreen_builtin_xrefs.json
 - ppu_inventory_manifest.json
 
-capture_summary.json records whether PPU analysis ran, function counts, XREF counts, Multiplayer-only lead count, and the hashes of the comparison and manifest. The PPU manifest's ELF paths are rewritten to the final capture-output paths, while retaining the exact ELF SHA-256 values and command provenance.
+capture_summary.json records whether PPU analysis ran, function counts, total XREF counts, explicit call-XREF counts, Multiplayer-only call lead count, and the hashes of the comparison and manifest. The PPU manifest's ELF paths are rewritten to the final capture-output paths, while retaining the exact ELF SHA-256 values and command provenance.
 
 ## Atomicity and failure handling
 
@@ -47,11 +47,7 @@ Add OPD arguments only when verified:
 
 ## CI result
 
-GitHub Actions run 45256740635 passed all five jobs and 309 Python tests. The Ghidra integration is tested with a mocked runner; no actual Ghidra process or retail PPU ELF is executed by CI.
-
-## CI result
-
-GitHub Actions run 45257107588 passed all five jobs and 309 Python tests. Ghidra is mocked in host tests and is not executed by CI.
+GitHub Actions run 45257107588 passed all five jobs and 309 Python tests. The Ghidra integration is tested with a mocked runner; no actual Ghidra process or retail PPU ELF is executed by CI.
 
 ## Validation boundary
 

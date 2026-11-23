@@ -35,5 +35,6 @@
     "jobs_passed": 5,
     "python_tests_passed": 309,
     "ps3_prx_bootstrap": "success"
-  }
+  },
+  "pipeline_note": "Phase 38 refines XREF classification: explicit CALL references alone form call-path leads; DATA references are counted separately."
 }

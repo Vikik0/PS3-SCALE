@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "phase": 38,
+  "status": "CALL_XREF_CLASSIFICATION_HARDENED",
+  "changes": [
+    "Ghidra exports RefType.isCall and RefType.isData",
+    "CSV output is explicitly UTF-8",
+    "caller fingerprints and Multiplayer-only leads use explicit call references only",
+    "data-only references remain visible but cannot create call-path leads",
+    "manifest and capture summary include total/call/data XREF counts"
+  ],
+  "tests": {
+    "comparer_tests": 12,
+    "ci_python_suite": 311
+  },
+  "validation_boundary": "Synthetic host tests only; no real Ghidra run or retail TU 1.16 PPU input is available. No native Campaign Player 2 path is claimed."
+}

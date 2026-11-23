@@ -22,7 +22,7 @@ tools/ghidra/FindGhostsSplitScreenBuiltins.java now writes a CSV. It scans initi
 - CL_InitLocalClients
 - CL_SetSplitScreen
 
-For each string hit, the exporter records Ghidra references to the string address, reference type/source, containing function name and entry, function body range, and instruction at the reference. Strings without recorded references are retained with blank reference fields.
+For each string hit, the exporter records Ghidra references to the string address, reference type, explicit is_call and is_data flags, source, containing function name and entry, function body range, and instruction at the reference. Strings without recorded references are retained with blank reference fields. The CSV is written as UTF-8.
 
 ## New comparison tool
 
@@ -30,11 +30,11 @@ tools/compare_splitscreen_builtin_xrefs.py joins the two xref CSVs to the matchi
 
 It reports:
 - builtins found in each executable;
-- function xrefs versus data/unmapped references versus strings with no recorded xref;
+- explicit call references, data references, other references, and strings with no recorded xref as separate counts;
 - caller functions matched to the same-build PPU inventory;
 - unmatched caller entries, without guessing a function;
-- caller fingerprints shared across Campaign and Multiplayer;
-- Multiplayer-only builtin references and Multiplayer-only caller fingerprints;
+- caller fingerprints shared across Campaign and Multiplayer, using call references only;
+- Multiplayer-only call references and Multiplayer-only caller fingerprints;
 - SHA-256 values for all four input files.
 
 ## Run instructions
@@ -50,12 +50,12 @@ python tools/compare_splitscreen_builtin_xrefs.py --campaign-xrefs "D:\Ghosts\an
 
 ## Interpretation
 
-A string xref may point to a command-registration table, a data structure, or an instruction. The report distinguishes function callers from data/unmapped references. A matching function fingerprint is a navigation aid, not proof of identical semantics or runtime execution.
+A string xref may point to a command-registration table, a data structure, or an instruction. Merely having a containing function does not make the reference a call. The exporter now uses Ghidra RefType.isCall() and RefType.isData(); the comparer builds call-path fingerprints and Multiplayer-only leads from explicit call references only. Data-only references remain visible in the report but cannot become call-path leads. A matching function fingerprint is a navigation aid, not proof of identical semantics or runtime execution.
 
 A Multiplayer-only PlayerCMD_Spawn or split-screen builtin reference is a lead for manual Ghidra inspection. It is not approval to call the command handler directly: script-command handlers may require a valid script VM context. Do not treat PlayerCMD_ClonePlayer as a real local-client creation path.
 
 ## Validation boundary
 
-Ten synthetic Python tests cover address normalization, cross-build fingerprint matching, Multiplayer-only leads, data/unmapped references, missing function matches, duplicate rows/entries, malformed CSV, source-contract checks and input hashing.
+Twelve synthetic Python tests cover address normalization, cross-build call-fingerprint matching, Multiplayer-only call leads, data-only false-positive suppression, missing function matches, duplicate rows/entries, malformed CSV/flags, source-contract checks and input hashing.
 
 No decrypted PPU runtime images or real Ghidra xref exports were present for this phase. Therefore this phase adds the evidence pipeline only; it does not identify a native Player 2 initializer, approve a hook, or prove Campaign co-op at runtime.
