@@ -140,6 +140,7 @@ class PpuElfTests(unittest.TestCase):
         self.assertEqual(info["entry_descriptor"]["toc"], "0x3000")
         self.assertEqual(info["module_toc"], "0x3000")
         self.assertFalse(info["module_toc_mapped"])
+        self.assertEqual(elf.sections[1]["alignment"], 8)
         self.assertEqual(info["descriptor_slots_total"], 2)
         self.assertEqual(info["descriptor_slots_scanned"], 2)
         self.assertEqual(info["empty_descriptors"], 0)

@@ -192,7 +192,8 @@ class PpuElf:
             result.append({
                 "index": index, "name": name, "type": section_type,
                 "flags": flags, "address": addr, "file_offset": file_off,
-                "size": size, "link": link, "entry_size": entry_size_value,
+                "size": size, "link": link, "alignment": alignment,
+                "entry_size": entry_size_value,
             })
         return result
 
