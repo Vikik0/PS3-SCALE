@@ -4,11 +4,6 @@ run-name: Personal game-inclusive Crash Bash PKG
 
 on:
   workflow_dispatch:
-    inputs:
-      disc_archive_url:
-        description: "Single-use private HTTPS download URL for the supplied BIN/CUE ZIP"
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -33,7 +28,7 @@ jobs:
       - name: Validate and mask the private download URL
         shell: bash
         env:
-          DISC_ARCHIVE_URL: ${{ inputs.disc_archive_url }}
+          DISC_ARCHIVE_URL: ${{ secrets.CRASH_BASH_DISC_ARCHIVE_URL }}
         run: |
           set -euo pipefail
           test -n "$DISC_ARCHIVE_URL"
@@ -57,11 +52,11 @@ jobs:
       - name: Download the private BIN/CUE archive
         shell: bash
         env:
-          DISC_ARCHIVE_URL: ${{ inputs.disc_archive_url }}
+          DISC_ARCHIVE_URL: ${{ secrets.CRASH_BASH_DISC_ARCHIVE_URL }}
         run: |
           set -euo pipefail
           echo "::add-mask::$DISC_ARCHIVE_URL"
-          curl --fail --silent --show-error --location --retry 2 \
+          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --retry 2 \
             --connect-timeout 30 --max-time 900 \
             "$DISC_ARCHIVE_URL" \
             --output /tmp/crash-bash-disc.zip
