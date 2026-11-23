@@ -1,4 +1,4 @@
-# Device test matrix — Alpha 0.29
+# Device test matrix — Alpha 0.30
 
 Primary device (user-reported):
 - Family: PS3 Slim
@@ -54,9 +54,11 @@ No real screenshot pairs are currently bundled in the repository; this part requ
 6. Exit PS3 SCALE while a companion launch request is waiting; confirm shutdown completes cleanly after the bounded request finishes.
 7. Test one harmless, reversible, single-write profile with a known expected byte at the exact address.
 8. Confirm profile identity scans run on a background worker and D-pad / Circle input remains responsive while the HDD or mounted-disc check runs.
-9. Change or unmount the selected game after arming; confirm the pending PS3 SCALE script is removed and the game is not launched with a stale profile.
-10. Confirm a stale or edited PS3 SCALE script is blocked, while a foreign webMAN script is never overwritten or deleted.
-11. Confirm that closing the game clears the process-memory change.
+9. Change or unmount the selected game after arming; confirm no stale profile is applied and the original game is started unmodified when webMAN is available.
+10. Disable PS3MAPI while keeping webMAN active; confirm CROSS/START starts the game unmodified and removes only the PS3 SCALE-owned script.
+11. Disable webMAN; confirm the app shows a connection error and does not falsely report a successful launch.
+12. Confirm a stale or edited PS3 SCALE script is blocked, while a foreign webMAN script is never overwritten or deleted.
+13. Confirm that closing the game clears the process-memory change.
 
 ## Other hardware targets after the Slim test
 
