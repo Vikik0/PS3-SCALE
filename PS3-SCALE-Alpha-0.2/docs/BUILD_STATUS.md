@@ -15,7 +15,14 @@
 - A missing/unresponsive webMAN endpoint still blocks launch with a clear error. Existing user-owned webMAN scripts are never overwritten or removed.
 - Before either fallback path starts the game, the app removes only its own leftover script and blocks launch if the script is foreign or cannot be verified. The launch worker repeats the check before handling PS3MAPI loss or a game-version mismatch.
 - The one-shot fallback flag is consumed by exactly one launch attempt; the selected game is never accidentally launched with an old profile.
-- Alpha 0.30 GitHub Actions validation: pending for the final cleanup changes. Physical console testing remains required.
+- GitHub Actions run #595: **PASS** — host regression suite, PS3 ELF, CEX SELF, standard PKG, GNPDRM PKG and package integrity checks all passed.
+- Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/45087625056
+- Artifact: `PS3-SCALE-Alpha-0.30-build-with-embedded-theme` (24,693,452 bytes), SHA-256 `e9ef7af6e9f81c45a893e2aed5f6dc653d771280789dd89fac3175ce47363ff5`.
+- ELF: 3,504,366 bytes — SHA-256 `2bee0f9396d1a9f7dcf1929eca04d17e441702d9e64c0af689e22065e33d5954`.
+- SELF: 779,760 bytes — SHA-256 `92989bf3ca5f2a3ffe2966d2869774cdd46b575b521681d2ffc6f8485561ce47`.
+- Standard PKG: 11,402,800 bytes — SHA-256 `a088ed2c827eb645c1d1e4a0127ae29a95413798e2cd96507bb90ecc1e5ed8ce`.
+- GNPDRM PKG: 11,402,800 bytes — SHA-256 `097f702b70e51179f812fa57eabfda1dd558de4d10004e5143c217dd3b7830a3`.
+- Physical PS3 Slim / CFW 4.93 / Cobra 8.5 launch, controller and game-transition checks remain required; CI cannot validate console runtime behavior.
 
 ## Alpha 0.29 — launch freeze and stack-safety hardening
 
