@@ -13,6 +13,7 @@ Phase 26 preserves those resolved call-target names in the inventory and uses th
 - The Python inventory reader accepts the new column but continues to load legacy CSV files without it.
 - Multiplayer-only functions can now be ranked by split-screen, local-client, controller, player, camera, viewport, HUD, connect, spawn and input terms found in their resolved call-target symbols.
 - The report keeps function-name matches and call-target-symbol matches as separate counts, so the source of each lead is visible.
+- A host-side source-contract test checks that the Ghidra exporter emits the new column and the explicit unresolved marker; it does not compile or execute Ghidra itself.
 
 ## Use
 
