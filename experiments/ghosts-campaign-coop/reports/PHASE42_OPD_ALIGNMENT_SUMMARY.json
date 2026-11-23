@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "phase": 42,
+  "status": "OPD_ALIGNMENT_VALIDATION_ADDED",
+  "alignment": {
+    "opd_descriptor_bytes": 8,
+    "ppu_instruction_bytes": 4
+  },
+  "checks": [
+    "OPD base address must be 8-byte aligned",
+    "PPU code pointer must be 4-byte aligned before disassembly",
+    "Python CLI and direct API enforce OPD base alignment",
+    "Ghidra Java seeder repeats the alignment checks"
+  ],
+  "validation_boundary": "Host tests and Java source-contract checks only; aligned descriptors still require exact ELF mapping and real Ghidra analysis."
+}
