@@ -60,7 +60,7 @@ class CampaignMultiMissionAuditTests(unittest.TestCase):
             })
             self.assertEqual(report["mission_count"], 2)
             self.assertEqual(report["all_scripts"]["file_count"], 2)
-            self.assertEqual(report["map_scripts"]["totals"]["level_player"], 2)
+            self.assertEqual(report["map_scripts"]["level_player_refs"], 2)
 
 
 if __name__ == "__main__":
