@@ -30,11 +30,13 @@ Do not change the core version, CUE/BIN content, region, BIOS file (or HLE choic
 6. On the host console, select the Crash Bash CUE and press CROSS. Confirm the API locks the ready room before RetroArch starts hosting and publishes its private relay session.
 7. On each console, select the intended CUE and press CROSS to confirm. Confirm the host waits for all active players and the same disc fingerprint is reported before it starts RetroArch.
 8. Deliberately select a different CUE on one client. Confirm the room reports a disc mismatch and does not launch either console. Correct the selection and confirm the host proceeds only after the fingerprints match.
-9. On the client console, select the same CUE and confirm the companion finds the host through the RetroArch public lobby and starts RetroArch with `--connect` and `--mitm-session`, without manual Host List selection.
-10. From the companion's home menu, also test **OPEN CRASH BASH ONLINE**.
-11. Temporarily test without the RetroArch package installed and confirm the launcher reports the missing app rather than crashing.
-12. After the host starts, return the client to the room screen and confirm it shows **MATCH STARTED**, not the pre-match READY prompt. Press START, choose the same CUE and retry the automatic join flow.
-13. Press CIRCLE during relay discovery to return to the room; verify the client can reopen the CUE picker without changing the already-started room lock.
+9. After confirming a CUE, change the selected file with UP/DOWN, rescan with SQUARE, or back out with CIRCLE. Confirm the previous fingerprint is cleared and the host keeps waiting until that player confirms again.
+10. Toggle READY off and on after confirming a CUE. Confirm the disc confirmation is cleared and must be repeated.
+11. On the client console, select the same CUE and confirm the companion finds the host through the RetroArch public lobby and starts RetroArch with `--connect` and `--mitm-session`, without manual Host List selection.
+12. From the companion's home menu, also test **OPEN CRASH BASH ONLINE**.
+13. Temporarily test without the RetroArch package installed and confirm the launcher reports the missing app rather than crashing.
+14. After the host starts, return the client to the room screen and confirm it shows **MATCH STARTED**, not the pre-match READY prompt. Press START, choose the same CUE and retry the automatic join flow.
+15. Press CIRCLE during relay discovery to return to the room; verify the client can reopen the CUE picker without changing the already-started room lock.
 
 Pass criteria: both players see the same room membership and Ready state; only the host can lock the room for launch; late joins are rejected; the client resolves the exact host entry, receives the relay endpoint only through its authenticated room token, and automatically joins. Started seats remain reserved for the match window. The missing-package path is handled cleanly. The Vercel companion does not carry game frames; actual synchronization is provided by RetroArch Netplay.
 
@@ -88,10 +90,11 @@ Pass criteria: all four players can control their own Crash Bash character witho
 1. Set a Netplay Server Password on the host.
 2. Confirm that an uninvited client cannot join without the password.
 3. Confirm that an invited client can join with the password.
-4. Disconnect one client intentionally, then attempt to rejoin.
-5. Close RetroArch normally and relaunch it to confirm settings persist.
+4. Disconnect one waiting player or stop its heartbeat for more than 90 seconds but less than 10 minutes. Confirm the seat remains visible, but READY and the disc confirmation expire; after reconnecting, the player must mark READY and confirm the disc again.
+5. Remove one player from a three-player room. Confirm the remaining players lose READY and their previous disc confirmations before another launch.
+6. Close RetroArch normally and relaunch it to confirm settings persist.
 
-Pass criteria: password protection behaves as expected, reconnection does not corrupt the session, and the saved nickname/network settings remain available.
+Pass criteria: password protection behaves as expected, stale players cannot remain READY, membership changes invalidate old disc confirmations, reconnection does not corrupt the session, and the saved nickname/network settings remain available.
 
 ## Logs and evidence
 
