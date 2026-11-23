@@ -13,6 +13,7 @@ from tools.run_ghidra_ppu_inventory import (
     PROCESSOR,
     SEED_SCRIPT,
     _validate_opd_pair,
+    _validate_opd_tuple,
     generate_inventories,
 )
 
@@ -261,6 +262,26 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
             "splitscreen_builtin_xrefs.json", "ppu_inventory_manifest.json",
         ):
             self.assertFalse((self.output_dir / name).exists())
+
+    def test_opd_ranges_must_fit_unsigned_32_bit_ppu_address_space(self):
+        with self.assertRaisesRegex(ValueError, "unsigned 32-bit PPU address space"):
+            _validate_opd_pair("0x100000000", "8", "Campaign")
+        with self.assertRaisesRegex(ValueError, "range exceeds"):
+            _validate_opd_pair("0xFFFFFFF8", "0x10", "Campaign")
+        with self.assertRaisesRegex(ValueError, "unsigned 32-bit PPU address space"):
+            _validate_opd_tuple((0x100000000, 8), "Campaign")
+        with self.assertRaisesRegex(ValueError, "range exceeds"):
+            _validate_opd_tuple((0xFFFFFFF8, 0x10), "Campaign")
+
+    def test_opd_seed_script_checks_ppu_address_bounds_before_mapping(self):
+        source = (
+            Path(__file__).resolve().parents[1] / "tools" / "ghidra"
+            / "SeedGhostsOpdFunctions.java"
+        ).read_text()
+        self.assertIn("MAX_PPU_ADDRESS", source)
+        self.assertIn("PPU_ADDRESS_SPACE - opdVa", source)
+        self.assertIn("opdSize > PPU_ADDRESS_SPACE - opdVa", source)
+        self.assertIn("getMemory().contains(opdStart)", source)
 
 if __name__ == "__main__":
     unittest.main()

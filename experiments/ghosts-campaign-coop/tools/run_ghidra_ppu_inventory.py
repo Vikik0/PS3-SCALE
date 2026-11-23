@@ -22,6 +22,8 @@ from tools.compare_ppu_function_inventories import InventoryError, read_inventor
 from tools.compare_splitscreen_builtin_xrefs import compare_paths as compare_builtin_xrefs, read_inventory as read_builtin_inventory, read_xrefs
 
 PROCESSOR = "PowerPC:BE:64:default"
+PPU_ADDRESS_MAX = 0xFFFFFFFF
+PPU_ADDRESS_SPACE = 0x100000000
 EXPORT_SCRIPT = "ExportGhostsPpuFunctionInventory.java"
 XREF_SCRIPT = "FindGhostsSplitScreenBuiltins.java"
 SEED_SCRIPT = "SeedGhostsOpdFunctions.java"
@@ -65,8 +67,12 @@ def _validate_opd_pair(
     parsed_size = parse_integer(size, f"{label} OPD size")
     if parsed_address < 0:
         raise ValueError(f"{label}: OPD virtual address cannot be negative")
+    if parsed_address > PPU_ADDRESS_MAX:
+        raise ValueError(f"{label}: OPD virtual address must fit the unsigned 32-bit PPU address space")
     if parsed_size < 8 or parsed_size % 8:
         raise ValueError(f"{label}: OPD size must be at least 8 and divisible by 8")
+    if parsed_size > PPU_ADDRESS_SPACE - parsed_address:
+        raise ValueError(f"{label}: OPD range exceeds the unsigned 32-bit PPU address space")
     return parsed_address, parsed_size
 
 
@@ -80,8 +86,12 @@ def _validate_opd_tuple(opd: tuple[int, int] | None, label: str) -> None:
         raise ValueError(f"{label}: OPD address and size must be integers")
     if address < 0:
         raise ValueError(f"{label}: OPD virtual address cannot be negative")
+    if address > PPU_ADDRESS_MAX:
+        raise ValueError(f"{label}: OPD virtual address must fit the unsigned 32-bit PPU address space")
     if size < 8 or size % 8:
         raise ValueError(f"{label}: OPD size must be at least 8 and divisible by 8")
+    if size > PPU_ADDRESS_SPACE - address:
+        raise ValueError(f"{label}: OPD range exceeds the unsigned 32-bit PPU address space")
 
 
 def _run_headless(

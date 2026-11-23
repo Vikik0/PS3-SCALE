@@ -9,6 +9,9 @@ import ghidra.program.model.listing.Function;
 import ghidra.program.model.mem.MemoryBlock;
 
 public class SeedGhostsOpdFunctions extends GhidraScript {
+    private static final long MAX_PPU_ADDRESS = 0xFFFFFFFFL;
+    private static final long PPU_ADDRESS_SPACE = 0x100000000L;
+
     private long parseAddress(String value) {
         String trimmed = value.trim();
         if (trimmed.startsWith("0x") || trimmed.startsWith("0X")) {
@@ -28,8 +31,16 @@ public class SeedGhostsOpdFunctions extends GhidraScript {
 
         long opdVa = parseAddress(args[0]);
         long opdSize = parseAddress(args[1]);
+        if (opdVa < 0 || opdVa > MAX_PPU_ADDRESS) {
+            printerr("OPD virtual address must fit the unsigned 32-bit PPU address space.");
+            return;
+        }
         if (opdSize < 8 || (opdSize & 7L) != 0L) {
             printerr("OPD size must be at least 8 and divisible by 8 bytes.");
+            return;
+        }
+        if (opdSize > PPU_ADDRESS_SPACE - opdVa) {
+            printerr("OPD range exceeds the unsigned 32-bit PPU address space.");
             return;
         }
 
