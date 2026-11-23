@@ -2,14 +2,14 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-GAME_DIR="\${CRASH_BASH_GAME_DIR:-$ROOT/game}"
+GAME_DIR="${CRASH_BASH_GAME_DIR:-$ROOT/game}"
 RETROARCH_DIR="$ROOT/pkgfiles/USRDIR/retroarch"
 DISC_DEST="$ROOT/pkgfiles/USRDIR/PSXISO"
 OUT_DIR="$ROOT/build-artifacts"
 OUT="$OUT_DIR/Crash-Bash-Online-Personal-PS3.pkg"
 
-test -n "\${PS3DEV:-}" || { echo "PS3DEV is not set." >&2; exit 1; }
-test -n "\${PSL1GHT:-}" || { echo "PSL1GHT is not set." >&2; exit 1; }
+test -n "${PS3DEV:-}" || { echo "PS3DEV is not set." >&2; exit 1; }
+test -n "${PSL1GHT:-}" || { echo "PSL1GHT is not set." >&2; exit 1; }
 command -v ppu-gcc >/dev/null
 command -v make_self_npdrm >/dev/null
 command -v pkg >/dev/null
