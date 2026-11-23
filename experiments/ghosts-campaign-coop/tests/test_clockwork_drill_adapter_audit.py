@@ -220,6 +220,7 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
             '    cinematicingame( "clockwork_vault_drill" );',
         )
         report = audit(self.write_source(source))
+        self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
         self.assertFalse(report["checks"]["vault_scan_cinematic_single_invocation"])
         self.assertFalse(report["checks"]["vault_drill_cinematic_single_invocation"])
         self.assertEqual(report["cinematic_media"]["clockwork_vault_scan"]["total_calls"], 2)
@@ -231,7 +232,17 @@ class ClockworkDrillAdapterAuditTests(unittest.TestCase):
             '',
         )
         report = audit(self.write_source(source))
+        self.assertEqual(report["status"], "BLOCKED_INCOMPLETE_PLAYER_SCOPING")
         self.assertTrue(report["checks"]["vault_scan_cinematic_single_invocation"])
+        self.assertFalse(report["checks"]["vault_drill_cinematic_single_invocation"])
+        self.assertEqual(report["cinematic_media"]["clockwork_vault_drill"]["total_calls"], 0)
+
+    def test_cinematic_call_inside_comment_does_not_count(self):
+        source = passing_source().replace(
+            'cinematicingame( "clockwork_vault_drill" );',
+            '// cinematicingame( "clockwork_vault_drill" );',
+        )
+        report = audit(self.write_source(source))
         self.assertFalse(report["checks"]["vault_drill_cinematic_single_invocation"])
         self.assertEqual(report["cinematic_media"]["clockwork_vault_drill"]["total_calls"], 0)
 
