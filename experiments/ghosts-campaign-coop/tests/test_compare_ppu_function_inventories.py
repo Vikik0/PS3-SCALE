@@ -23,7 +23,7 @@ def write_inventory(path: Path, rows, fields=FIELDS):
         writer.writerows(rows)
 
 
-def row(name, entry, fingerprint, calls="", symbols=None):
+def row(name, entry, fingerprint, calls="", symbols=None, entries=None):
     result = {
         "program": "Ghosts",
         "name": name,
@@ -35,6 +35,8 @@ def row(name, entry, fingerprint, calls="", symbols=None):
     }
     if symbols is not None:
         result["call_target_symbols"] = symbols
+    if entries is not None:
+        result["call_target_entries"] = entries
     return result
 
 
@@ -108,7 +110,9 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
         )
         source = exporter.read_text(encoding="utf-8")
         self.assertIn("call_target_symbols", source)
-        self.assertIn("getFunctionAt(target)", source)
+        self.assertIn("call_target_entries", source)
+        self.assertIn("getFunctionContaining(target)", source)
+        self.assertIn("getEntryPoint().toString()", source)
         self.assertIn('"UNRESOLVED"', source)
 
     def test_combined_call_target_evidence_affects_candidate_ranking(self):
@@ -136,12 +140,85 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
             "FUN_opaque_target_lead",
         )
 
+    def test_call_graph_ranks_opaque_candidate_from_incoming_caller(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            campaign_path = root / "campaign.csv"
+            multiplayer_path = root / "multiplayer.csv"
+            fields = FIELDS + ["call_target_entries"]
+            shared = "a" * 64
+            campaign_target = "b" * 64
+            multiplayer_target = "c" * 64
+            candidate = "d" * 64
+            caller = "e" * 64
+            write_inventory(campaign_path, [
+                row("FUN_shared", "0x1000", shared, entries="0x2000"),
+                row("FUN_campaign_target", "0x2000", campaign_target, entries=""),
+            ], fields=fields)
+            write_inventory(multiplayer_path, [
+                row("FUN_shared_mp", "0x9000", shared, entries="0x9100"),
+                row("FUN_mp_target", "0x9100", multiplayer_target, entries=""),
+                row("FUN_opaque_player_path", "0x9200", candidate, entries="0x9100"),
+                row("SV_InitLocalClient", "0x9300", caller, entries="0x9200"),
+            ], fields=fields)
+
+            result = compare(
+                read_inventory(campaign_path),
+                read_inventory(multiplayer_path),
+            )
+            lead = next(
+                item for item in result["priority_multiplayer_only"]
+                if item["function"]["name"] == "FUN_opaque_player_path"
+            )
+            self.assertIn("local", lead["incoming_caller_keyword_hits"])
+            self.assertIn("client", lead["incoming_caller_keyword_hits"])
+            self.assertEqual(lead["incoming_callers"][0]["name"], "SV_InitLocalClient")
+            self.assertEqual(lead["outgoing_target_fingerprints"], [multiplayer_target])
+            self.assertEqual(
+                lead["outgoing_multiplayer_only_target_fingerprints"],
+                [multiplayer_target],
+            )
+            self.assertEqual(
+                result["summary"]["priority_multiplayer_only_incoming_caller_matches"],
+                1,
+            )
+            self.assertEqual(
+                result["summary"]["multiplayer_resolved_internal_call_edges"],
+                3,
+            )
+
+    def test_matching_fingerprint_reports_changed_callee_fingerprints(self):
+        shared = "a" * 64
+        campaign_callee = "b" * 64
+        multiplayer_callee = "c" * 64
+        campaign = [
+            row("FUN_common_campaign", "0x1000", shared, entries="0x2000"),
+            row("FUN_campaign_target", "0x2000", campaign_callee, entries=""),
+        ]
+        multiplayer = [
+            row("FUN_common_mp", "0x9000", shared, entries="0x9100"),
+            row("FUN_mp_target", "0x9100", multiplayer_callee, entries=""),
+        ]
+        result = compare(campaign, multiplayer)
+        self.assertEqual(
+            result["summary"]["matching_fingerprint_groups_with_call_graph_delta"],
+            1,
+        )
+        delta = result["call_graph_deltas"][0]
+        self.assertEqual(delta["caller_fingerprint"], shared)
+        self.assertEqual(delta["campaign_only_callee_fingerprints"], [campaign_callee])
+        self.assertEqual(
+            delta["multiplayer_only_callee_fingerprints"],
+            [multiplayer_callee],
+        )
+
     def test_legacy_inventory_without_call_target_symbols_remains_supported(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "legacy.csv"
             write_inventory(path, [row("FUN_legacy", "0x1000", "a" * 64)])
             rows = read_inventory(path)
             self.assertEqual(rows[0]["call_target_symbols"], [])
+            self.assertEqual(rows[0]["call_target_entries"], [])
 
     def test_preserves_duplicate_fingerprint_multiplicity(self):
         duplicate = "d" * 64
