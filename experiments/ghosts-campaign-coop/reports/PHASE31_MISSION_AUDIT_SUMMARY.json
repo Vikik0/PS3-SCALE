@@ -73,7 +73,7 @@
       "map_functions_with_level_player": 195,
       "map_level_player_refs": 596,
       "all_file_level_player_refs": 656,
-      "notable": "monitorscavengerpickup() loops playerpiggyback and assigns per-player HUD/FOV; ss_util.get_different_favoriteenemy() switches AI targeting between players."
+      "notable": "Carrier has player-array/FOV/HUD helper code and a dog-animation path using hideonclient with level.playengineeffects; no external call site was found for monitorscavengerpickup or dog_monitor_goal_ent in the extracted GSC set, so those helper paths remain unconfirmed."
     },
     {
       "name": "cornered",
@@ -83,7 +83,7 @@
       "map_functions_with_level_player": 240,
       "map_level_player_refs": 1090,
       "all_file_level_player_refs": 1099,
-      "notable": "Stealth/AI scripts iterate playerpiggyback for threat selection, visibility and player-array operations."
+      "notable": "Cornered mission-called functions courtyard_rorke and bar_enemies iterate level.playerpiggyback for stealth/visibility behavior; additional AI support scripts pass the player array to threat and array_thread helpers."
     }
   ],
   "map_data": {
@@ -95,5 +95,11 @@
     "mapents_pool_records": 3,
     "validated_inline_entity_text_candidates": 0
   },
-  "boundary": "GSC assets were validated, decompiled and recompiled. FastFile trailing regions remain unclassified; no native Campaign second-client runtime proof or playable mod is claimed."
+  "boundary": "GSC assets were validated, decompiled and recompiled. FastFile trailing regions remain unclassified; no native Campaign second-client runtime proof or playable mod is claimed.",
+  "ci_validation": {
+    "workflow_run_id": 45206287037,
+    "status": "success",
+    "jobs_passed": 5,
+    "python_tests_passed": 284
+  }
 }

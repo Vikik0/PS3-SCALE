@@ -30,13 +30,12 @@ The audit strips comments and string literals before counting. It is a static in
 1062.gsc::player_saw_kill() checks issplitscreen(). In split-screen it starts player_scuba() only when self == level.player; the breath-sound thread is started separately. This is a narrow primary-player gate, not general Player 2 support. No level.playerpiggyback or level.playengineeffects references were found in the extracted Black Ice scripts.
 
 ### Carrier
-- 1031.gsc::monitorscavengerpickup() iterates level.playerpiggyback, creates HUD state per player, and selects cg_playerFovScale0 / cg_playerFovScale1 when there are two players.
-- maps/ss_util.gsc::get_different_favoriteenemy() selects the other player from level.playerpiggyback using level.playengineeffects.
-- Dog AI uses this helper to switch its target between players in the appropriate controlling-UAV/split-screen context.
-- dog_combat.gsc uses hideonclient() with the two player entities in a player-drone path.
+- 1031.gsc::monitorscavengerpickup() iterates level.playerpiggyback, creates HUD state per player, and selects cg_playerFovScale0 / cg_playerFovScale1 when there are two players. No direct call site for this function was found in the extracted Carrier GSC set, so it is an existing helper candidate rather than a confirmed active mission path.
+- maps/ss_util.gsc::get_different_favoriteenemy() selects the other player from level.playerpiggyback using level.playengineeffects. Its dog-monitor parent function was not found at an external call site in the extracted set, so this target-switching path also remains unconfirmed.
+- dog_combat.gsc::playerview_playmissanim() has an in-file caller and uses hideonclient() with level.playengineeffects and the primary player in a dog-animation path. This is a confirmed player-aware code path, not proof of full cooperative gameplay.
 
 ### Cornered
-The stealth and AI support scripts use the player array to choose threat targets, run dog-threat logic, combine allies with players, and apply stealth/visibility behavior to both player entities. This is useful existing multi-player-aware logic, but many mission event functions still hard-code level.player.
+Mission-called functions courtyard_rorke() and bar_enemies() iterate level.playerpiggyback to apply stealth/visibility behavior to both player entities. Additional AI support scripts select threat targets from the player array or pass the array to array_thread(). This is stronger evidence of existing multi-player-aware mission logic, but many mission event functions still hard-code level.player.
 
 ## Highest-priority mission functions
 
@@ -59,8 +58,12 @@ The current outer FastFile parser did not account for every byte in the three co
 
 The successful GSC extraction and compilation applies to the validated ScriptFile assets found before those unresolved regions. It does not mean the entire FastFiles were fully decoded or rebuilt.
 
+## CI validation
+
+GitHub Actions run 45206287037 passed all five jobs. The Python suite passed 284 tests; the pinned GSC Tool compile/decompile job, protocol checks, worker bundle and PS3 PRX bootstrap build also passed.
+
 ## Engineering conclusion
 
-Carrier and Cornered contain reusable player-array-aware logic. Black Ice contains only a narrow split-screen check in the extracted mission/support scripts. All three still have substantial direct primary-player coupling.
+Carrier and Cornered contain reusable player-array-aware logic, with some Carrier helper call paths still unconfirmed. Black Ice contains only a narrow split-screen check in the extracted mission/support scripts. All three still have substantial direct primary-player coupling.
 
 The next safe work is to resolve the map-data files and trace each high-impact function's call sites and shared-state effects. A native second Campaign local-client slot, controller routing, player state, camera and HUD must be proven separately; GSC edits alone cannot create that engine-side client.
