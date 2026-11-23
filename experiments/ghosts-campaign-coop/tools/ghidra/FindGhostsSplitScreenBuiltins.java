@@ -10,8 +10,9 @@ import ghidra.program.model.mem.MemoryBlock;
 import ghidra.program.model.symbol.Reference;
 import ghidra.program.model.symbol.ReferenceIterator;
 import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class FindGhostsSplitScreenBuiltins extends GhidraScript {
     private static final String[] TERMS = {
@@ -63,7 +64,7 @@ public class FindGhostsSplitScreenBuiltins extends GhidraScript {
         }
         int stringHits = 0, referenceHits = 0, functionsResolved = 0;
         MemoryBlock[] blocks = currentProgram.getMemory().getBlocks();
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(args[0]))) {
+        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(args[0]), StandardCharsets.UTF_8)) {
             writer.write("program,builtin,string_address,reference_address,reference_type,is_call,is_data,source_type,caller_name,caller_entry,caller_body_start,caller_body_end,instruction\n");
             for (MemoryBlock block : blocks) {
                 monitor.checkCancelled();
