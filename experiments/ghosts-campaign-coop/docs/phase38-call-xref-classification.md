@@ -7,7 +7,7 @@ The previous comparison treated any string reference with a containing function 
 ## Changes
 
 - The Ghidra exporter now writes is_call and is_data using RefType.isCall() and RefType.isData().
-- The exporter writes CSV as UTF-8, avoiding dependence on the Windows/Ghidra host default encoding.
+- The XREF exporter writes CSV as UTF-8, avoiding dependence on the Windows/Ghidra host default encoding. Phase 39 applies the same encoding to the function-inventory exporter and writes false/false flags for strings with no references.
 - The Python reader strictly validates the two boolean columns and rejects conflicting call+data flags.
 - Caller fingerprints are built from explicit call references only.
 - Multiplayer-only call-path leads are created only when Multiplayer has a call reference and Campaign does not have the same call/caller fingerprint. Data-only references remain visible but never become call-path leads.

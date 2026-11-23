@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "phase": 39,
+  "status": "GHIDRA_CSV_OUTPUT_HARDENED",
+  "changes": [
+    "no-reference XREF rows explicitly export is_call=false and is_data=false",
+    "both PPU inventory and builtin XREF exporters write UTF-8",
+    "strict Python CSV parser accepts empty-reference rows without weakening boolean validation",
+    "source-contract tests pin encoding and no-reference defaults"
+  ],
+  "validation_boundary": "Static source-contract and host tests only. No real Ghidra run or actual TU 1.16 PPU pair is available."
+}

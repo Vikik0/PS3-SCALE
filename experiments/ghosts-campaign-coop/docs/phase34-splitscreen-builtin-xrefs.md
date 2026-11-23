@@ -22,7 +22,7 @@ tools/ghidra/FindGhostsSplitScreenBuiltins.java now writes a CSV. It scans initi
 - CL_InitLocalClients
 - CL_SetSplitScreen
 
-For each string hit, the exporter records Ghidra references to the string address, reference type, explicit is_call and is_data flags, source, containing function name and entry, function body range, and instruction at the reference. Strings without recorded references are retained with blank reference fields. The CSV is written as UTF-8.
+For each string hit, the exporter records Ghidra references to the string address, reference type, explicit is_call and is_data flags, source, containing function name and entry, function body range, and instruction at the reference. Strings without recorded references are retained with blank reference fields and explicit false values for both is_call and is_data, so strict CSV validation accepts them. Both PPU inventory and XREF CSV exporters write UTF-8.
 
 ## New comparison tool
 
