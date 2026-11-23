@@ -99,9 +99,56 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
         self.assertTrue(result["pad_probe"]["capture_complete_in_both_modes"])
         self.assertTrue(result["pad_probe"]["capture_provenance_valid_in_both_modes"])
         self.assertEqual(result["player_two_gate"]["status"], "NOT_PROVEN")
+        self.assertEqual(result["ppu_analysis"]["status"], "NOT_RUN")
         self.assertTrue((self.output_dir / "campaign_tu116_runtime.elf").is_file())
         self.assertTrue((self.output_dir / "multiplayer_tu116_runtime.elf").is_file())
         self.assertTrue((self.output_dir / "capture_summary.json").is_file())
+
+    def test_optional_ghidra_analysis_adds_six_outputs_and_summary_evidence(self):
+        fake_manifest = {
+            "campaign": {"function_records": 100, "builtin_xref_rows": 4},
+            "multiplayer": {"function_records": 120, "builtin_xref_rows": 8},
+        }
+        fake_comparison = {"multiplayer_only_leads": [{"builtin": "isSplitScreen"}]}
+
+        def fake_generate(headless, campaign_elf, multiplayer_elf, output_dir, **kwargs):
+            output_dir.mkdir(parents=True, exist_ok=True)
+            for name in analyzer.GHIDRA_OUTPUT_MAP:
+                path = output_dir / name
+                if name == "ppu_inventory_manifest.json":
+                    path.write_text(__import__("json").dumps(fake_manifest), encoding="utf-8")
+                elif name == "splitscreen_builtin_xrefs.json":
+                    path.write_text(__import__("json").dumps(fake_comparison), encoding="utf-8")
+                else:
+                    path.write_text("synthetic csv", encoding="utf-8")
+            return fake_manifest
+
+        headless = self.root / "analyzeHeadless"
+        headless.write_text("fake", encoding="utf-8")
+        with patch.object(analyzer, "generate_inventories", side_effect=fake_generate) as generate:
+            result = self.run_analyzer(analyze_headless=headless)
+
+        self.assertEqual(result["ppu_analysis"]["status"], "GHIDRA_PPU_ANALYSIS_COMPLETED")
+        self.assertEqual(result["ppu_analysis"]["multiplayer_only_builtin_lead_count"], 1)
+        self.assertEqual(result["ppu_analysis"]["campaign_function_records"], 100)
+        self.assertEqual(result["player_two_gate"]["status"], "NOT_PROVEN")
+        for name in analyzer.GHIDRA_OUTPUT_NAMES:
+            self.assertTrue((self.output_dir / name).is_file(), name)
+        generate.assert_called_once()
+        self.assertIn("ppu_splitscreen_builtin_xrefs.json", result["outputs"])
+
+    def test_ghidra_failure_does_not_promote_any_capture_outputs(self):
+        headless = self.root / "analyzeHeadless"
+        headless.write_text("fake", encoding="utf-8")
+        with patch.object(analyzer, "generate_inventories", side_effect=RuntimeError("Ghidra failed")):
+            with self.assertRaisesRegex(RuntimeError, "Ghidra failed"):
+                self.run_analyzer(analyze_headless=headless)
+        self.assertFalse(any((self.output_dir / name).exists() for name in analyzer.OUTPUT_NAMES))
+        self.assertEqual(list(self.output_dir.glob(".ghosts-capture-stage-*")), [])
+
+    def test_ghidra_options_require_analyze_headless(self):
+        with self.assertRaisesRegex(ValueError, "require --analyze-headless"):
+            self.run_analyzer(ghidra_script_dir=self.root)
 
     def test_truncated_pad_capture_cannot_pass_engine_review_gate(self):
         campaign_log = self.write_log("campaign.log", "CAMPAIGN")
