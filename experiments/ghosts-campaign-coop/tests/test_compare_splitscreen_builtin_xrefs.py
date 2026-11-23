@@ -151,7 +151,7 @@ class BuiltinXrefTests(unittest.TestCase):
         lead = compare([], [call_row], campaign_inventory, multiplayer_inventory)[
             "multiplayer_only_leads"
         ][0]
-        self.assertEqual(lead["priority"], "MP_ONLY_CALL_REFERENCE")
+        self.assertEqual(lead["priority"], "MP_ONLY_DIRECT_CALL_REFERENCE")
         self.assertEqual(lead["multiplayer_only_caller_count"], 0)
 
     def test_xref_kinds_distinguish_direct_computed_data_and_unreferenced_strings(self):
