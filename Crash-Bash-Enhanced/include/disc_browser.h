@@ -12,7 +12,7 @@ typedef struct {
     char name[CB_DISC_NAME_MAX];
 } CBGameDisc;
 
-/* Scan the standard PS3 HDD/USB PSXISO folders for regular .cue files. */
+/* Scan the embedded game folder first, then standard PS3 HDD/USB PSXISO folders. */
 int cb_disc_scan(CBGameDisc *items, size_t capacity, size_t *count);
 
 /* Root-injected variant used by host regression tests. */

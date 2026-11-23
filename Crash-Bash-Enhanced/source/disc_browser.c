@@ -81,6 +81,7 @@ int cb_disc_scan_roots(CBGameDisc *items, size_t capacity, size_t *count,
 int cb_disc_scan(CBGameDisc *items, size_t capacity, size_t *count)
 {
     static const char *const roots[] = {
+        "/dev_hdd0/game/CBON00001/USRDIR/PSXISO",
         "/dev_hdd0/PSXISO",
         "/dev_hdd0/PSXGAMES",
         "/dev_usb000/PSXISO",
