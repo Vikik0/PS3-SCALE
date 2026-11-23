@@ -61,6 +61,7 @@ def read_inventory(path: Path) -> list[dict[str, Any]]:
             )
 
         rows: list[dict[str, Any]] = []
+        seen_entries: set[str] = set()
         for line_number, row in enumerate(reader, 2):
             fingerprint = (row.get("fingerprint") or "").strip().lower()
             if not FINGERPRINT_RE.fullmatch(fingerprint):
@@ -84,6 +85,11 @@ def read_inventory(path: Path) -> list[dict[str, Any]]:
                 raise InventoryError(
                     f"{path}:{line_number}: function name and entry are required"
                 )
+            if entry in seen_entries:
+                raise InventoryError(
+                    f"{path}:{line_number}: duplicate function entry {entry}"
+                )
+            seen_entries.add(entry)
             rows.append({
                 "program": (row.get("program") or "").strip(),
                 "name": name,
