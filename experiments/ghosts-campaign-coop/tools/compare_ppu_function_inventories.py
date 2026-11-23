@@ -549,13 +549,13 @@ def compare(
             "multiplayer_resolved_internal_call_edges": multiplayer_edges,
             "matching_fingerprint_groups_with_call_graph_delta": len(call_graph_deltas),
             "campaign_functions_with_opd_descriptors": sum(
-                1 for row in campaign_rows if row["opd_descriptor_count"] > 0
+                1 for row in campaign_rows if row.get("opd_descriptor_count", 0) > 0
             ),
             "multiplayer_functions_with_opd_descriptors": sum(
-                1 for row in multiplayer_rows if row["opd_descriptor_count"] > 0
+                1 for row in multiplayer_rows if row.get("opd_descriptor_count", 0) > 0
             ),
             "priority_multiplayer_only_candidates_with_opd_descriptors": sum(
-                1 for item in priority if item["function"]["opd_descriptor_count"] > 0
+                1 for item in priority if item["function"].get("opd_descriptor_count", 0) > 0
             ),
             "priority_multiplayer_only_candidates_with_unmapped_toc": sum(
                 1 for item in priority
@@ -569,10 +569,10 @@ def compare(
         "priority_multiplayer_only": priority,
         "opd_evidence_analysis": {
             "campaign_functions_with_opd_descriptors": sum(
-                1 for row in campaign_rows if row["opd_descriptor_count"] > 0
+                1 for row in campaign_rows if row.get("opd_descriptor_count", 0) > 0
             ),
             "multiplayer_functions_with_opd_descriptors": sum(
-                1 for row in multiplayer_rows if row["opd_descriptor_count"] > 0
+                1 for row in multiplayer_rows if row.get("opd_descriptor_count", 0) > 0
             ),
             "interpretation": (
                 "OPD metadata links address-taken function entries to their descriptor TOC values. "
