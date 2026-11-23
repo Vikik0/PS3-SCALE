@@ -3,6 +3,12 @@
  * This is not extracted retail source and is not a FastFile replacement.
  */
 
+clockwork_play_vault_cinematics()
+{
+    cinematicingameloopresident( "clockwork_vault_scan" );
+    cinematicingame( "clockwork_vault_drill" );
+}
+
 clockwork_get_secondary_player()
 {
     if ( !issplitscreen() || !isdefined( level.playengineeffects ) )
