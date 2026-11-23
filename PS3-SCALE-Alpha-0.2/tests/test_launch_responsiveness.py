@@ -66,7 +66,7 @@ assert "if (cleanup_result == -2)" in launch_worker
 assert "PS3SCALE_GAME_LAUNCH_ERROR_SCRIPT" in launch_worker
 assert launch_worker.index("identity_valid") < launch_worker.index("ps3scale_webman_start_game")
 
-service_launch = section("static void service_game_launch(void)\\n{", "static void start_selected_game(void)\\n{")
+service_launch = section("static void service_game_launch(void)\n{", "static void start_selected_game(void)\n{")
 assert "selected_game_matches_game_launch_target()" in service_launch
 assert "g_force_unmodified_launch = 1;" in service_launch
 assert "PS3SCALE_GAME_LAUNCH_ERROR_SCRIPT" in service_launch
