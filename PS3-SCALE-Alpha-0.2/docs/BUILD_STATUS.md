@@ -1,12 +1,20 @@
-# Build status — PS3 SCALE Alpha 0.29
+# Build status — PS3 SCALE Alpha 0.30
 
 ## Current development head
 
 - Branch: `design/splash-transitions-ui-v6`
 - Pull request: Draft PR #16, targeting `design/settings-support-ui-v5`
-- Application version shown in the UI: `ALPHA 0.29`
-- Package metadata: `APP_VER=00.29`, `VERSION=00.29`
+- Application version shown in the UI: `ALPHA 0.30`
+- Package metadata: `APP_VER=00.30`, `VERSION=00.30`
 - Package title ID: `PS3SCALE1`
+
+## Alpha 0.30 — reliable unmodified launch fallback
+
+- When CROSS/START explicitly requests a game launch and safe profile arming fails for recoverable reasons (game identity/version mismatch, PS3MAPI unavailable, or profile validation/write failure), the app now attempts a normal unmodified launch through webMAN.
+- The fallback is allowed only while the current Game Details selection still matches the captured Title ID, APP_VER and path. If the selection changed, no game is launched.
+- A missing/unresponsive webMAN endpoint still blocks launch with a clear error. Existing user-owned webMAN scripts are never overwritten or removed.
+- The one-shot fallback flag is consumed by exactly one launch attempt; the selected game is never accidentally launched with an old profile.
+- Alpha 0.30 GitHub Actions validation: pending. Physical console testing remains required.
 
 ## Alpha 0.29 — launch freeze and stack-safety hardening
 
