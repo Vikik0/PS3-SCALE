@@ -6,7 +6,10 @@ on:
     paths:
       - "Crash-Bash-Enhanced/Makefile"
       - "Crash-Bash-Enhanced/source/**"
+      - "Crash-Bash-Enhanced/source/online.c"
+      - "Crash-Bash-Enhanced/source/online_menu.c"
       - "Crash-Bash-Enhanced/include/**"
+      - "Crash-Bash-Enhanced/include/online.h"
       - "Crash-Bash-Enhanced/tests/**"
       - "Crash-Bash-Enhanced/scripts/**"
       - "Crash-Bash-Enhanced/pkgfiles/**"
@@ -18,7 +21,10 @@ on:
     paths:
       - "Crash-Bash-Enhanced/Makefile"
       - "Crash-Bash-Enhanced/source/**"
+      - "Crash-Bash-Enhanced/source/online.c"
+      - "Crash-Bash-Enhanced/source/online_menu.c"
       - "Crash-Bash-Enhanced/include/**"
+      - "Crash-Bash-Enhanced/include/online.h"
       - "Crash-Bash-Enhanced/tests/**"
       - "Crash-Bash-Enhanced/scripts/**"
       - "Crash-Bash-Enhanced/pkgfiles/**"
