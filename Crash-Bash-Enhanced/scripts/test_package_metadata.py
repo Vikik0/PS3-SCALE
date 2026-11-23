@@ -56,6 +56,9 @@ assert "--required" in personal_builder
 assert "PSXISO" in stage_script
 assert 'DISC_DEST="$ROOT/pkgfiles/USRDIR/PSXISO"' in personal_builder
 assert "Crash-Bash-Online-Personal-PS3.pkg" in personal_builder
+assert 'if [[ -n "${CRASH_BASH_DISC_ARCHIVE:-}" ]]' in personal_builder
+assert '--archive "$CRASH_BASH_DISC_ARCHIVE"' in personal_builder
+assert 'cmp -s "$source_file" "$packaged_file"' in personal_builder
 
 # Public CI embeds the runtime and publishes one installable PKG without game data.
 assert "needs: online-package-build" in workflow

@@ -114,13 +114,14 @@ Consequently, the current PS3 RetroArch Netplay package and this repository's Ve
 
 ## Personal game-inclusive build
 
-The game files are never committed to this public repository or uploaded as public CI artifacts. To build one personal PKG containing the supplied disc dump:
+The user's BIN/CUE dump is kept out of Git history and out of public CI artifacts. The personal build workflow accepts a **single-use private download URL** for a ZIP containing exactly one CUE file and every BIN track it references.
 
-1. Place exactly one legally obtained `.cue` file and all BIN tracks it references in `Crash-Bash-Enhanced/game/` (preserve the filenames referenced by the CUE).
-2. Download the `Crash-Bash-RetroArch-Stage` artifact from a successful PS3 build workflow run and extract its contents directly into `Crash-Bash-Enhanced/pkgfiles/USRDIR/retroarch/`. Confirm that `EBOOT.BIN` and `cores/pcsx_rearmed_libretro_psl1ght.SELF` exist there.
-3. Run `scripts/build_personal_pkg.sh` from a PS3DEV/PSL1GHT environment. The script validates the CUE references and sector alignment, stages the game under `USRDIR/PSXISO/`, builds one finalized PKG, and writes a checksum and manifest locally.
+1. The workflow downloads the private ZIP into its temporary runner workspace and validates the CUE references, filenames and 2352-byte sector alignment.
+2. It builds the pinned RetroArch + PCSX-ReARMed runtime, stages the disc under `USRDIR/PSXISO/`, then creates one finalized `CBON00001` PKG.
+3. Before uploading the build artifact, the workflow encrypts the personal PKG to a public certificate. Only the matching private key held outside GitHub can decrypt it. The encrypted artifact expires after one day; the raw BIN/CUE and unencrypted PKG are never uploaded as artifacts.
+4. The build script compares every staged BIN/CUE byte-for-byte with the files inside the package staging tree, then writes a SHA-256 checksum and personal build manifest.
 
-The public CI workflow remains game-free. The personal output is `build-artifacts/Crash-Bash-Online-Personal-PS3.pkg` and is not uploaded automatically.
+The public CI workflow remains game-free. The private workflow is `.github/workflows/crash-bash-personal-build.yml` on the default branch and checks out the `crash-bash-enhanced` source branch for the build.
 
 ## Licensing and project scope
 

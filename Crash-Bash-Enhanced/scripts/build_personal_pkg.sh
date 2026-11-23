@@ -25,10 +25,19 @@ test -s "$RETROARCH_DIR/cores/pcsx_rearmed_libretro_psl1ght.SELF" || {
     exit 1
 }
 
-python3 "$ROOT/scripts/stage_game_disc.py" \
-    --source "$GAME_DIR" \
-    --destination "$DISC_DEST" \
-    --required
+if [[ -n "${CRASH_BASH_DISC_ARCHIVE:-}" ]]; then
+    test -s "$CRASH_BASH_DISC_ARCHIVE"
+    python3 "$ROOT/scripts/stage_game_disc.py" \
+        --source "$GAME_DIR" \
+        --destination "$DISC_DEST" \
+        --archive "$CRASH_BASH_DISC_ARCHIVE" \
+        --required
+else
+    python3 "$ROOT/scripts/stage_game_disc.py" \
+        --source "$GAME_DIR" \
+        --destination "$DISC_DEST" \
+        --required
+fi
 
 make -C "$ROOT" clean
 make -C "$ROOT" pkg
@@ -39,6 +48,14 @@ test -s "$ROOT/build/pkg/USRDIR/retroarch/cores/pcsx_rearmed_libretro_psl1ght.SE
 test -s "$ROOT/build/pkg/USRDIR/PSXISO/DISC-MANIFEST.txt"
 test -n "$(find "$ROOT/build/pkg/USRDIR/PSXISO" -maxdepth 1 -type f -iname '*.cue' -print -quit)"
 test -n "$(find "$ROOT/build/pkg/USRDIR/PSXISO" -maxdepth 1 -type f -iname '*.bin' -print -quit)"
+while IFS= read -r -d '' source_file; do
+    packaged_file="$ROOT/build/pkg/USRDIR/PSXISO/${source_file##*/}"
+    test -s "$packaged_file"
+    cmp -s "$source_file" "$packaged_file" || {
+        echo "Packaged disc file differs from staged source: ${source_file##*/}" >&2
+        exit 1
+    }
+done < <(find "$DISC_DEST" -maxdepth 1 -type f \( -iname '*.cue' -o -iname '*.bin' \) -print0)
 
 MAGIC="$(od -An -tx1 -N4 "$ROOT/crashbash.pkg" | tr -d ' \n')"
 REVISION="$(od -An -tx1 -j4 -N2 "$ROOT/crashbash.pkg" | tr -d ' \n')"
