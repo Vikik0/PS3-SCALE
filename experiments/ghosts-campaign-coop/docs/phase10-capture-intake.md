@@ -40,8 +40,20 @@ python tools/ps3mapi/analyze_tu116_runtime_capture.py --campaign-self "D:\Ghosts
 4. تعيد بناء ELF64 Big-Endian PowerPC64 تحليلي لكل وضع.
 5. تفحص النصوص المرتبطة بالـLocal Client وSplit-screen وController وCamera وHUD.
 6. تقارن النصوص ومقاطع PT_LOAD المتداخلة بين الوضعين.
-7. تقارن سجلات Pad Probe وتتحقق من ظهور port 0 وport 1 معاً في العينة نفسها.
+7. تقارن سجلات Pad Probe، وتتحقق أولاً من اكتمالها ومصدرها، ثم تتحقق من ظهور port 0 وport 1 معاً في العينة نفسها.
 8. تكتب تقريراً موحداً وبصمات SHA-256 للمدخلات الأساسية.
+
+## شروط قبول سجلات Pad Probe — Phase 25
+
+لا يكفي وجود عينة واحدة تحمل `port_mask=0x03`. يجب أن يحتوي كل سجل على:
+
+- ترويسة Pad Probe v4 وعلامة `READ_ONLY=1`.
+- وضع صحيح محدد يدوياً من ملف الوضع، مع `MODE_SOURCE=manual_mode_file` و`MODE_LABEL_IS_OPERATOR_SELECTED=1`.
+- عينات ناجحة عند المؤشرات 0 و5 و10 و15 و20 و25.
+- علامة النهاية `Pad probe finished.`.
+- عدم وجود أرقام عينات مكررة أو خارج المجال 0–29.
+
+إذا فشل أي شرط، يبقى التقرير في حالة `ELF_ANALYSIS_READY_PAD_GATE_NOT_PASSED` ولا ينتقل إلى مراجعة المحرك. يعرض `capture_summary.json` اكتمال السجل وصحة مصدره كحقلين منفصلين.
 
 ## الملفات الناتجة
 
@@ -56,7 +68,7 @@ python tools/ps3mapi/analyze_tu116_runtime_capture.py --campaign-self "D:\Ghosts
 
 ## تفسير الحالات
 
-- CAPTURE_READY_FOR_ENGINE_REVIEW: ملفات الوضعين اجتازت التحقق البنيوي، وسجلات Pad Probe أظهرت المنفذين 0 و1 معاً في الوضعين. هذا يسمح بمراجعة مسار المحرك، ولا يثبت إنشاء اللاعب الثاني.
+- CAPTURE_READY_FOR_ENGINE_REVIEW: ملفات الوضعين اجتازت التحقق البنيوي، وسجلات Pad Probe أظهرت المنفذين 0 و1 معاً في الوضعين. هذا يسمح بمراجعة مسار المحرك، ولا يثبت إنشاء اللاعب الثاني. يشترط هذا التصنيف أيضاً اجتياز سجلي v4 الكاملين وفحص مصدر وضع التشغيل كما هو موضح في Phase 25.
 - ELF_ANALYSIS_READY_PAD_EVIDENCE_MISSING: تمت إعادة بناء ELF، لكن سجلات Pad Probe لم تُقدّم.
 - ELF_ANALYSIS_READY_PAD_GATE_NOT_PASSED: تمت إعادة بناء ELF، لكن دليل ظهور المنفذين معاً لم يجتز الشرط.
 - CAPTURE_VERIFICATION_FAILED: فشل التحقق من ملف أو مقطع؛ لا تعتمد على النتائج.
