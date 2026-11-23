@@ -403,6 +403,7 @@ def generate_inventories(
                         "virtual_address": hex(campaign_opd[0]),
                         "size": hex(campaign_opd[1]),
                         "status": campaign_opd_summary["status"],
+                        "summary_sha256": sha256_file(campaign_opd_summary_path),
                         "summary": campaign_opd_summary,
                     }
                     if campaign_opd else {"enabled": False, "status": "NOT_REQUESTED"}
@@ -430,6 +431,7 @@ def generate_inventories(
                         "virtual_address": hex(multiplayer_opd[0]),
                         "size": hex(multiplayer_opd[1]),
                         "status": multiplayer_opd_summary["status"],
+                        "summary_sha256": sha256_file(multiplayer_opd_summary_path),
                         "summary": multiplayer_opd_summary,
                     }
                     if multiplayer_opd else {"enabled": False, "status": "NOT_REQUESTED"}

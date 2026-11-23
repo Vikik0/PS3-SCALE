@@ -149,6 +149,7 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         self.assertEqual(manifest["campaign"]["opd_seeding"]["status"], "OPD_SEEDING_COMPLETED")
         self.assertEqual(manifest["campaign"]["opd_seeding"]["summary"]["valid_code_pointers"], 3)
         self.assertEqual(manifest["campaign"]["opd_seeding"]["summary"]["functions_created"], 2)
+        self.assertRegex(manifest["campaign"]["opd_seeding"]["summary_sha256"], r"^[0-9a-f]{64}$")
         self.assertFalse(manifest["multiplayer"]["opd_seeding"]["enabled"])
 
         saved = json.loads(
