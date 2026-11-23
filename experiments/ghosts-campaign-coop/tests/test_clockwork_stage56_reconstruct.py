@@ -22,6 +22,8 @@ class ClockworkStage56ReconstructionTests(unittest.TestCase):
         self.assertIn("clockwork_apply_vault_blast", toolchain_source)
         self.assertIn("level.ghc_vault_player_two_grenades", toolchain_source)
         self.assertIn("secondary_player allowsprint", toolchain_source)
+        self.assertIn('cinematicingameloopresident( "clockwork_vault_scan" )', toolchain_source)
+        self.assertIn('cinematicingame( "clockwork_vault_drill" )', toolchain_source)
 
     def test_reconstructs_stage5_and_stage6_documented_behavior(self):
         stage5, stage6 = patch_source(SOURCE, SOURCE_HASH)
