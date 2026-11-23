@@ -543,7 +543,7 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
     curl_initialized = 1;
     room_list_poll_frames = 0;
 
-    while (!exit_requested || !*exit_requested) {    while (!exit_requested || !*exit_requested) {
+    while (!exit_requested || !*exit_requested) {
         padInfo info;
         padData data;
         u16 up = 0, down = 0, left = 0, right = 0;
