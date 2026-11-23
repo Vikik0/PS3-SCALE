@@ -65,6 +65,20 @@ def _validate_opd_pair(
     return parsed_address, parsed_size
 
 
+def _validate_opd_tuple(opd: tuple[int, int] | None, label: str) -> None:
+    if opd is None:
+        return
+    if not isinstance(opd, tuple) or len(opd) != 2:
+        raise ValueError(f"{label}: OPD range must be a (virtual_address, size) pair")
+    address, size = opd
+    if not isinstance(address, int) or not isinstance(size, int):
+        raise ValueError(f"{label}: OPD address and size must be integers")
+    if address < 0:
+        raise ValueError(f"{label}: OPD virtual address cannot be negative")
+    if size < 8 or size % 8:
+        raise ValueError(f"{label}: OPD size must be at least 8 and divisible by 8")
+
+
 def _run_headless(
     headless: Path,
     project_location: Path,
@@ -190,6 +204,8 @@ def generate_inventories(
         if script_dir is not None
         else Path(__file__).resolve().parent / "ghidra"
     )
+    _validate_opd_tuple(campaign_opd, "Campaign")
+    _validate_opd_tuple(multiplayer_opd, "Multiplayer")
 
     if not headless.is_file():
         raise FileNotFoundError(f"Ghidra analyzeHeadless executable was not found: {headless}")
