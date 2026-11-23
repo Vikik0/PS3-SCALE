@@ -193,6 +193,18 @@ def _has(body: str, pattern: str) -> bool:
     return re.search(pattern, body) is not None
 
 
+def _literal_call_sites(literal_bodies: dict[str, str], method: str, asset: str) -> list[dict]:
+    pattern = re.compile(
+        rf'\\b{re.escape(method)}\\s*\\(\\s*["\\']{re.escape(asset)}["\\']\\s*\\)'
+    )
+    sites = []
+    for function, source in literal_bodies.items():
+        count = len(pattern.findall(source))
+        if count:
+            sites.append({"function": function, "count": count})
+    return sites
+
+
 def audit(
     path: Path,
     *,
@@ -369,6 +381,14 @@ def audit(
         and "level.playengineeffects allowjump( 1 )" in body("handle_cqb_allies")
         and 'level.playengineeffects notify( "dog_attack_override" )' in literal_body("cqb_dog")
     )
+    vault_scan_cinematic_sites = _literal_call_sites(
+        literal_bodies, "cinematicingameloopresident", "clockwork_vault_scan"
+    )
+    vault_drill_cinematic_sites = _literal_call_sites(
+        literal_bodies, "cinematicingame", "clockwork_vault_drill"
+    )
+    vault_scan_cinematic_single = sum(site["count"] for site in vault_scan_cinematic_sites) == 1
+    vault_drill_cinematic_single = sum(site["count"] for site in vault_drill_cinematic_sites) == 1
 
     checks = {
         "all_required_functions_found": not missing,
@@ -397,6 +417,8 @@ def audit(
         "secondary_vault_hint_and_switch_wait": secondary_vault_hint_and_switch_wait,
         "secondary_vault_grenade_roundtrip": secondary_vault_grenade_roundtrip,
         "secondary_cqb_controls_and_dog_override": secondary_cqb_controls_and_dog_override,
+        "vault_scan_cinematic_single_invocation": vault_scan_cinematic_single,
+        "vault_drill_cinematic_single_invocation": vault_drill_cinematic_single,
     }
 
     if reference_source is not None:
@@ -454,6 +476,19 @@ def audit(
         "drill_call_graph_functions": closure_functions,
         "unscoped_level_player_functions": unscoped_functions,
         "checks": checks,
+        "cinematic_media": {
+            "clockwork_vault_scan": {
+                "method": "cinematicingameloopresident",
+                "call_sites": vault_scan_cinematic_sites,
+                "total_calls": sum(site["count"] for site in vault_scan_cinematic_sites),
+            },
+            "clockwork_vault_drill": {
+                "method": "cinematicingame",
+                "call_sites": vault_drill_cinematic_sites,
+                "total_calls": sum(site["count"] for site in vault_drill_cinematic_sites),
+            },
+            "policy": "Each mission-level Bink event must have exactly one source call site; do not duplicate it per local player.",
+        },
         "reference_baseline": reference_baseline,
         "reference_baseline_required_for_strict_mode": require_reference_baseline,
         "limitations": [
