@@ -155,6 +155,10 @@ def compare(
 
     priority.sort(
         key=lambda item: (
+            -(
+                len(item["keyword_hits"])
+                + len(item["call_target_keyword_hits"])
+            ),
             -len(item["keyword_hits"]),
             item["function"]["name"].lower(),
             item["function"]["entry"],
