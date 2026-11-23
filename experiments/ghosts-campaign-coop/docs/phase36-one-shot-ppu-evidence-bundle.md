@@ -30,6 +30,10 @@ The manifest records source ELF hashes, inventory hashes/counts, XREF hashes/cou
 
 The Phase 28 command is unchanged. Run tools/run_ghidra_ppu_inventory.py once with the exact Campaign and Multiplayer ELF pair. The output folder contains the comparison JSON automatically; no separate comparer command is needed for the normal path.
 
+## CI result
+
+GitHub Actions run 45255900920 passed all five jobs and 306 Python tests, including the one-shot comparison and six-file output validation.
+
 ## Validation boundary
 
 Host tests use synthetic ELF/CSV fixtures and a mocked Ghidra process. They verify both post-scripts, cross-build fingerprint matching, XREF validation, manifest hashes and atomic promotion. CI does not execute Ghidra itself. Real decrypted TU 1.16 PPU images and actual Ghidra results are still required before a native local-client initializer can be identified or a hook considered.
