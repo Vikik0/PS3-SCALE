@@ -127,6 +127,10 @@ jobs:
           test -s decompiled/iw6/clockwork_stage56_toolchain.gsc
           grep -q 'clockwork_get_secondary_player' decompiled/iw6/clockwork_stage56_toolchain.gsc
           grep -q 'clockwork_apply_vault_blast' decompiled/iw6/clockwork_stage56_toolchain.gsc
+          grep -q 'cinematicingameloopresident' decompiled/iw6/clockwork_stage56_toolchain.gsc
+          grep -q 'clockwork_vault_scan' decompiled/iw6/clockwork_stage56_toolchain.gsc
+          grep -q 'cinematicingame' decompiled/iw6/clockwork_stage56_toolchain.gsc
+          grep -q 'clockwork_vault_drill' decompiled/iw6/clockwork_stage56_toolchain.gsc
           grep -q 'issplitscreenplayerprimary' decompiled/iw6/clockwork_stage56_toolchain.gsc
           grep -q 'ghc_vault_player_two_grenades' decompiled/iw6/clockwork_stage56_toolchain.gsc
           grep -q 'ghc_vault_player_two_flashbangs' decompiled/iw6/clockwork_stage56_toolchain.gsc
