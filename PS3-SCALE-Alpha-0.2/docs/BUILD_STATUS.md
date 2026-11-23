@@ -13,8 +13,9 @@
 - When CROSS/START explicitly requests a game launch and safe profile arming fails for recoverable reasons (game identity/version mismatch, PS3MAPI unavailable, or profile validation/write failure), the app now attempts a normal unmodified launch through webMAN.
 - The fallback is allowed only while the current Game Details selection still matches the captured Title ID, APP_VER and path. If the selection changed, no game is launched.
 - A missing/unresponsive webMAN endpoint still blocks launch with a clear error. Existing user-owned webMAN scripts are never overwritten or removed.
+- Before either fallback path starts the game, the app removes only its own leftover script and blocks launch if the script is foreign or cannot be verified. The launch worker repeats the check before handling PS3MAPI loss or a game-version mismatch.
 - The one-shot fallback flag is consumed by exactly one launch attempt; the selected game is never accidentally launched with an old profile.
-- Alpha 0.30 GitHub Actions validation: pending. Physical console testing remains required.
+- Alpha 0.30 GitHub Actions validation: pending for the final cleanup changes. Physical console testing remains required.
 
 ## Alpha 0.29 — launch freeze and stack-safety hardening
 
