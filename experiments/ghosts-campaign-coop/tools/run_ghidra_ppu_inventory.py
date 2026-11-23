@@ -100,6 +100,56 @@ def _validate_opd_tuple(opd: tuple[int, int] | None, label: str) -> None:
         raise ValueError(f"{label}: OPD range exceeds the unsigned 32-bit PPU address space")
 
 
+
+
+def _read_opd_seed_summary(
+    path: Path,
+    opd: tuple[int, int],
+    label: str,
+) -> dict[str, Any]:
+    path = Path(path)
+    if not path.is_file():
+        raise FileNotFoundError(f"{label}: Ghidra OPD seeder did not write its summary: {path}")
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{label}: Ghidra OPD seeder summary is not valid JSON") from exc
+    if not isinstance(report, dict) or report.get("schema_version") != 1:
+        raise ValueError(f"{label}: unsupported Ghidra OPD seeder summary schema")
+    if report.get("status") != "OPD_SEEDING_COMPLETED":
+        raise ValueError(f"{label}: Ghidra OPD seeding did not complete successfully")
+    expected_address, expected_size = hex(opd[0]), hex(opd[1])
+    if str(report.get("opd_va", "")).lower() != expected_address.lower():
+        raise ValueError(f"{label}: OPD seeder summary address does not match the requested range")
+    if str(report.get("opd_size", "")).lower() != expected_size.lower():
+        raise ValueError(f"{label}: OPD seeder summary size does not match the requested range")
+    count_fields = (
+        "descriptors_visited",
+        "valid_code_pointers",
+        "functions_created",
+        "functions_already_present",
+        "functions_failed_to_create",
+        "invalid_entries",
+    )
+    counts = {}
+    for field in count_fields:
+        value = report.get(field)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"{label}: OPD seeder summary field {field} must be a non-negative integer")
+        counts[field] = value
+    if counts["valid_code_pointers"] == 0:
+        raise ValueError(f"{label}: OPD seeder found no code pointers in executable memory")
+    accounted = (
+        counts["functions_created"]
+        + counts["functions_already_present"]
+        + counts["functions_failed_to_create"]
+    )
+    if accounted != counts["valid_code_pointers"]:
+        raise ValueError(f"{label}: OPD seeder function counts do not reconcile")
+    if counts["descriptors_visited"] < counts["valid_code_pointers"]:
+        raise ValueError(f"{label}: OPD seeder descriptor counts do not reconcile")
+    return report
+
 def _run_headless(
     headless: Path,
     project_location: Path,
@@ -109,6 +159,7 @@ def _run_headless(
     output_xref_csv: Path,
     script_dir: Path,
     opd: tuple[int, int] | None,
+    opd_summary_path: Path,
 ) -> list[str]:
     args = [
         str(project_location),
@@ -127,6 +178,7 @@ def _run_headless(
             SEED_SCRIPT,
             hex(address),
             hex(size),
+            str(opd_summary_path),
         ])
     args.extend([
         "-postScript",
@@ -267,6 +319,8 @@ def generate_inventories(
         campaign_xref_csv = stage_dir / OUTPUT_NAMES[2]
         multiplayer_xref_csv = stage_dir / OUTPUT_NAMES[3]
         comparison_json = stage_dir / OUTPUT_NAMES[4]
+        campaign_opd_summary_path = stage_dir / "campaign_opd_seed_summary.json"
+        multiplayer_opd_summary_path = stage_dir / "multiplayer_opd_seed_summary.json"
 
         commands = {}
         commands["campaign"] = _run_headless(
@@ -278,6 +332,11 @@ def generate_inventories(
             campaign_xref_csv,
             script_dir,
             campaign_opd,
+            campaign_opd_summary_path,
+        )
+        campaign_opd_summary = (
+            _read_opd_seed_summary(campaign_opd_summary_path, campaign_opd, "Campaign")
+            if campaign_opd is not None else None
         )
         campaign_rows = read_inventory(campaign_csv)
         campaign_xref_rows = read_xrefs(
@@ -293,6 +352,11 @@ def generate_inventories(
             multiplayer_xref_csv,
             script_dir,
             multiplayer_opd,
+            multiplayer_opd_summary_path,
+        )
+        multiplayer_opd_summary = (
+            _read_opd_seed_summary(multiplayer_opd_summary_path, multiplayer_opd, "Multiplayer")
+            if multiplayer_opd is not None else None
         )
         multiplayer_rows = read_inventory(multiplayer_csv)
         multiplayer_xref_rows = read_xrefs(
@@ -336,8 +400,10 @@ def generate_inventories(
                         "enabled": True,
                         "virtual_address": hex(campaign_opd[0]),
                         "size": hex(campaign_opd[1]),
+                        "status": campaign_opd_summary["status"],
+                        "summary": campaign_opd_summary,
                     }
-                    if campaign_opd else {"enabled": False}
+                    if campaign_opd else {"enabled": False, "status": "NOT_REQUESTED"}
                 ),
             },
             "builtin_xref_comparison_file": OUTPUT_NAMES[4],
@@ -361,8 +427,10 @@ def generate_inventories(
                         "enabled": True,
                         "virtual_address": hex(multiplayer_opd[0]),
                         "size": hex(multiplayer_opd[1]),
+                        "status": multiplayer_opd_summary["status"],
+                        "summary": multiplayer_opd_summary,
                     }
-                    if multiplayer_opd else {"enabled": False}
+                    if multiplayer_opd else {"enabled": False, "status": "NOT_REQUESTED"}
                 ),
             },
             "commands": commands,

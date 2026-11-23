@@ -96,6 +96,21 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         else:
             self._write_inventory(output_csv, "Multiplayer", "b" * 64)
             self._write_xrefs(output_xref_csv, "Multiplayer")
+        if SEED_SCRIPT in command:
+            seed_index = command.index(SEED_SCRIPT)
+            summary_path = Path(command[seed_index + 3])
+            summary_path.write_text(json.dumps({
+                "schema_version": 1,
+                "status": "OPD_SEEDING_COMPLETED",
+                "opd_va": command[seed_index + 1],
+                "opd_size": command[seed_index + 2],
+                "descriptors_visited": 4,
+                "valid_code_pointers": 3,
+                "functions_created": 2,
+                "functions_already_present": 1,
+                "functions_failed_to_create": 0,
+                "invalid_entries": 1,
+            }), encoding="utf-8")
         return subprocess.CompletedProcess(command, 0)
 
     def test_runs_both_builds_and_writes_hash_manifest_atomically(self):
@@ -115,6 +130,9 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         self.assertIn("-processor", campaign_command)
         self.assertEqual(campaign_command[campaign_command.index("-processor") + 1], PROCESSOR)
         self.assertIn(SEED_SCRIPT, campaign_command)
+        self.assertEqual(campaign_command[campaign_command.index(SEED_SCRIPT) + 1], "0x1000")
+        self.assertEqual(campaign_command[campaign_command.index(SEED_SCRIPT) + 2], "0x40")
+        self.assertTrue(campaign_command[campaign_command.index(SEED_SCRIPT) + 3].endswith("campaign_opd_seed_summary.json"))
         self.assertNotIn(SEED_SCRIPT, multiplayer_command)
         self.assertIn(EXPORT_SCRIPT, campaign_command)
         self.assertIn(EXPORT_SCRIPT, multiplayer_command)
@@ -128,6 +146,9 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         self.assertEqual(manifest["campaign"]["elf_sha256"], campaign_hash)
         self.assertEqual(manifest["multiplayer"]["elf_sha256"], multiplayer_hash)
         self.assertTrue(manifest["campaign"]["opd_seeding"]["enabled"])
+        self.assertEqual(manifest["campaign"]["opd_seeding"]["status"], "OPD_SEEDING_COMPLETED")
+        self.assertEqual(manifest["campaign"]["opd_seeding"]["summary"]["valid_code_pointers"], 3)
+        self.assertEqual(manifest["campaign"]["opd_seeding"]["summary"]["functions_created"], 2)
         self.assertFalse(manifest["multiplayer"]["opd_seeding"]["enabled"])
 
         saved = json.loads(
@@ -290,6 +311,66 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
             _validate_opd_pair("0x1004", "0x10", "Campaign")
         with self.assertRaisesRegex(ValueError, "8-byte aligned"):
             _validate_opd_tuple((0x1004, 0x10), "Campaign")
+
+    def test_opd_seed_summary_is_required_before_inventory_promotion(self):
+        def fake_run(command, check):
+            self._fake_run(command, check)
+            if SEED_SCRIPT in command:
+                summary_path = Path(command[command.index(SEED_SCRIPT) + 3])
+                summary_path.unlink()
+            return subprocess.CompletedProcess(command, 0)
+
+        with patch("tools.run_ghidra_ppu_inventory.subprocess.run", side_effect=fake_run):
+            with self.assertRaisesRegex(FileNotFoundError, "did not write its summary"):
+                generate_inventories(
+                    self.headless,
+                    self.campaign_elf,
+                    self.multiplayer_elf,
+                    self.output_dir,
+                    script_dir=self.script_dir,
+                    campaign_opd=(0x1000, 0x40),
+                )
+        self.assertFalse((self.output_dir / "campaign_ppu_inventory.csv").exists())
+        self.assertFalse((self.output_dir / "ppu_inventory_manifest.json").exists())
+
+    def test_opd_seed_summary_must_match_requested_range_and_reconcile_counts(self):
+        def fake_run(command, check):
+            self._fake_run(command, check)
+            if SEED_SCRIPT in command:
+                summary_path = Path(command[command.index(SEED_SCRIPT) + 3])
+                report = json.loads(summary_path.read_text(encoding="utf-8"))
+                report["opd_va"] = "0x2000"
+                summary_path.write_text(json.dumps(report), encoding="utf-8")
+            return subprocess.CompletedProcess(command, 0)
+
+        with patch("tools.run_ghidra_ppu_inventory.subprocess.run", side_effect=fake_run):
+            with self.assertRaisesRegex(ValueError, "address does not match"):
+                generate_inventories(
+                    self.headless,
+                    self.campaign_elf,
+                    self.multiplayer_elf,
+                    self.output_dir,
+                    script_dir=self.script_dir,
+                    campaign_opd=(0x1000, 0x40),
+                )
+        self.assertFalse((self.output_dir / "campaign_ppu_inventory.csv").exists())
+
+    def test_opd_seed_script_requires_summary_and_fails_closed_on_empty_scan(self):
+        source = (
+            Path(__file__).resolve().parents[1] / "tools" / "ghidra"
+            / "SeedGhostsOpdFunctions.java"
+        ).read_text()
+        for token in (
+            "OPD_VA> <OPD_SIZE> <SUMMARY_JSON>",
+            "OPD_SEEDING_COMPLETED",
+            "OPD_SEEDING_EMPTY",
+            "Files.write(Paths.get(args[2])",
+            "validCodePointers == 0",
+            "throw new IllegalStateException",
+            "throw new IllegalArgumentException",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, source)
 
 if __name__ == "__main__":
     unittest.main()
