@@ -8,5 +8,11 @@
     "direct Multiplayer-only call leads rank before computed-call leads",
     "PPU manifest and combined capture summary include direct/computed counts"
   ],
-  "validation_boundary": "Synthetic host tests only. Real call-reference results require Ghidra on the exact matching TU 1.16 Campaign and Multiplayer PPU ELFs."
+  "validation_boundary": "Synthetic host tests only. Real call-reference results require Ghidra on the exact matching TU 1.16 Campaign and Multiplayer PPU ELFs.",
+  "ci_validation": {
+    "workflow_run_id": 45262667084,
+    "status": "success",
+    "jobs_passed": 5,
+    "python_tests_passed": 313
+  }
 }

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "phase": 41,
+  "status": "OPD_ADDRESS_RANGE_BOUNDED",
+  "limits": {
+    "address_max": "0xFFFFFFFF",
+    "address_space_end_exclusive": "0x100000000",
+    "minimum_size": 8,
+    "alignment_bytes": 8
+  },
+  "changes": [
+    "Python CLI and API validate OPD address and size against unsigned 32-bit PPU address space",
+    "rejects ranges whose end exceeds 0x100000000",
+    "Ghidra Java seeder repeats checks before address conversion or memory reads",
+    "retains alignment and mapped-range validation"
+  ],
+  "validation_boundary": "Boundary tests and host CI only. OPD values must still come from the exact ELF inspector output; no hook or runtime behavior is inferred."
+}

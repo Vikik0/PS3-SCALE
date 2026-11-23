@@ -9,7 +9,7 @@ Phase 38 separated call references from data references. Phase 40 adds one more 
 - The Ghidra XREF exporter now records RefType.isComputed() in an is_computed CSV field.
 - The comparer classifies direct_call_xref, computed_call_xref, data_xref, computed_non_call_xref, other_xref and strings without references.
 - Multiplayer-only direct call leads rank above computed call leads; caller-fingerprint differences rank after both.
-- The PPU manifest records direct and computed call counts for Campaign and Multiplayer.
+- The PPU manifest records direct and computed call counts for Campaign and Multiplayer. Optional OPD seeding is separately bounded to the 32-bit PPU address space by Phase 41.
 - The combined capture summary exposes the same direct/computed counts, preserving the evidence when the one-command capture flow is used.
 - The comparison JSON schema advances to version 3.
 

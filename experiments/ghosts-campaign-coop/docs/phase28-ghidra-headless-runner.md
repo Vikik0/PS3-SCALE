@@ -32,7 +32,7 @@ If and only if the ELF inspector reports the OPD range for a specific build, add
 --multiplayer-opd-va "0x..." --multiplayer-opd-size "0x..."
 ~~~
 
-Do not guess OPD values. Campaign and Multiplayer can have different OPD ranges.
+Do not guess OPD values. Campaign and Multiplayer can have different OPD ranges. The runner and Java seeder reject OPD addresses outside the unsigned 32-bit PPU address space and ranges that would cross its end before attempting Ghidra memory access.
 
 Then compare the generated inventories:
 
