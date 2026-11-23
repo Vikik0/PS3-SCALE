@@ -896,7 +896,9 @@ for token in ("PS3SCALE_WEBMAN_ERROR_NETWORK_INIT",
     assert token in webman_header
 assert "PS3MAPI NOT ACTIVE. GAME STARTED WITHOUT PROFILE." in src
 assert "WEBMAN MOD NOT RESPONDING ON LOCAL HTTP PORT 80." in src
-assert "ps3scale_profile_script_remove(g_game_launch_target.title_id)" in src
+assert "cleanup_result = ps3scale_profile_script_remove(" in src
+assert "g_game_launch_target.title_id);" in src
+assert "PS3SCALE_GAME_LAUNCH_ERROR_SCRIPT" in src
 
 # Download workers are joined: never create a detached thread and then join it.
 ps2_worker = section("static void ps2_config_download_worker(void *arg)",
