@@ -31,6 +31,9 @@ CSV_FIELDS = [
     "call_targets",
     "call_target_symbols",
     "call_target_entries",
+    "opd_descriptor_addresses",
+    "opd_toc_mappings",
+    "opd_descriptor_count",
 ]
 
 
@@ -54,7 +57,7 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def _write_inventory(self, path, name, fingerprint):
+    def _write_inventory(self, path, name, fingerprint, *, opd=False):
         with path.open("w", encoding="utf-8", newline="") as stream:
             writer = csv.DictWriter(stream, fieldnames=CSV_FIELDS)
             writer.writeheader()
@@ -68,6 +71,9 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
                 "call_targets": "",
                 "call_target_symbols": "",
                 "call_target_entries": "",
+                "opd_descriptor_addresses": "ram:00001000" if opd else "",
+                "opd_toc_mappings": "0x00003000:UNMAPPED" if opd else "",
+                "opd_descriptor_count": "1" if opd else "0",
             })
 
     def _write_xrefs(self, path, program):
@@ -128,11 +134,15 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         xref_index = command.index(XREF_SCRIPT)
         output_csv = Path(command[export_index + 1])
         output_xref_csv = Path(command[xref_index + 1])
+        export_opd = (
+            export_index + 3 < len(command)
+            and command[export_index + 2] != "-postScript"
+        )
         if "Campaign" in command[2]:
-            self._write_inventory(output_csv, "Campaign", "a" * 64)
+            self._write_inventory(output_csv, "Campaign", "a" * 64, opd=export_opd)
             self._write_xrefs(output_xref_csv, "Campaign")
         else:
-            self._write_inventory(output_csv, "Multiplayer", "b" * 64)
+            self._write_inventory(output_csv, "Multiplayer", "b" * 64, opd=export_opd)
             self._write_xrefs(output_xref_csv, "Multiplayer")
         if SEED_SCRIPT in command:
             seed_index = command.index(SEED_SCRIPT)
@@ -184,6 +194,9 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         self.assertEqual(campaign_command[campaign_command.index(SEED_SCRIPT) + 1], "0x1000")
         self.assertEqual(campaign_command[campaign_command.index(SEED_SCRIPT) + 2], "0x40")
         self.assertTrue(campaign_command[campaign_command.index(SEED_SCRIPT) + 3].endswith("campaign_opd_seed_summary.json"))
+        export_index = campaign_command.index(EXPORT_SCRIPT)
+        self.assertEqual(campaign_command[export_index + 2], "0x1000")
+        self.assertEqual(campaign_command[export_index + 3], "0x40")
         self.assertNotIn(SEED_SCRIPT, multiplayer_command)
         self.assertIn(EXPORT_SCRIPT, campaign_command)
         self.assertIn(EXPORT_SCRIPT, multiplayer_command)
@@ -568,6 +581,9 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         seed_index = command.index(SEED_SCRIPT)
         self.assertEqual(command[seed_index + 1], "0x2000")
         self.assertEqual(command[seed_index + 2], "0x10")
+        export_index = command.index(EXPORT_SCRIPT)
+        self.assertEqual(command[export_index + 2], "0x2000")
+        self.assertEqual(command[export_index + 3], "0x10")
         evidence = manifest["campaign"]["opd_seeding"]["range_evidence"]
         self.assertEqual(evidence["source"], "ELF_INSPECTOR_REPORT")
         self.assertEqual(evidence["report_sha256"], hashlib.sha256(report_path.read_bytes()).hexdigest())

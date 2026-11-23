@@ -19,6 +19,9 @@ FIELDS = [
 ]
 
 
+OPD_FIELDS = ["opd_descriptor_addresses", "opd_toc_mappings", "opd_descriptor_count"]
+
+
 def write_inventory(path: Path, rows, fields=FIELDS):
     with path.open("w", encoding="utf-8", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=fields)
@@ -26,7 +29,7 @@ def write_inventory(path: Path, rows, fields=FIELDS):
         writer.writerows(rows)
 
 
-def row(name, entry, fingerprint, calls="", symbols=None, entries=None):
+def row(name, entry, fingerprint, calls="", symbols=None, entries=None, opd_addresses=None, opd_mappings=None, opd_count=None):
     result = {
         "program": "Ghosts",
         "name": name,
@@ -40,6 +43,12 @@ def row(name, entry, fingerprint, calls="", symbols=None, entries=None):
         result["call_target_symbols"] = symbols
     if entries is not None:
         result["call_target_entries"] = entries
+    if opd_addresses is not None:
+        result["opd_descriptor_addresses"] = opd_addresses
+    if opd_mappings is not None:
+        result["opd_toc_mappings"] = opd_mappings
+    if opd_count is not None:
+        result["opd_descriptor_count"] = opd_count
     return result
 
 
@@ -114,6 +123,10 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
         source = exporter.read_text(encoding="utf-8")
         self.assertIn("call_target_symbols", source)
         self.assertIn("call_target_entries", source)
+        self.assertIn("opd_descriptor_addresses", source)
+        self.assertIn("opd_toc_mappings", source)
+        self.assertIn("opd_descriptor_count", source)
+        self.assertIn("collectOpdFunctionEvidence", source)
         self.assertIn("getFunctionContaining(target)", source)
         self.assertIn("getEntryPoint().toString()", source)
         self.assertIn('"UNRESOLVED"', source)
@@ -237,6 +250,8 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
             rows = read_inventory(path)
             self.assertEqual(rows[0]["call_target_symbols"], [])
             self.assertEqual(rows[0]["call_target_entries"], [])
+            self.assertEqual(rows[0]["opd_descriptor_count"], 0)
+            self.assertEqual(rows[0]["opd_toc_mappings"], [])
 
     def test_preserves_duplicate_fingerprint_multiplicity(self):
         duplicate = "d" * 64
@@ -387,6 +402,51 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
         ).read_text()
         self.assertIn("Files.newBufferedWriter", source)
         self.assertIn("StandardCharsets.UTF_8", source)
+
+    def test_reads_per_function_opd_descriptor_and_toc_mapping_evidence(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "opd.csv"
+            write_inventory(path, [
+                row(
+                    "SV_InitLocalClient", "0x9000", "a" * 64,
+                    opd_addresses="ram:00002000;ram:00002008",
+                    opd_mappings="0x00003000:MAPPED;0x00004000:UNMAPPED",
+                    opd_count="2",
+                )
+            ], fields=FIELDS + OPD_FIELDS)
+            parsed = read_inventory(path)
+            self.assertEqual(parsed[0]["opd_descriptor_count"], 2)
+            self.assertEqual(parsed[0]["opd_toc_mappings"], [
+                "0x00003000:MAPPED", "0x00004000:UNMAPPED"
+            ])
+            result = compare([], parsed)
+            evidence = result["priority_multiplayer_only"][0]["opd_toc_evidence"]
+            self.assertEqual(evidence["status"], "UNMAPPED_TOC_PRESENT")
+            self.assertEqual(evidence["descriptor_count"], 2)
+            self.assertEqual(result["summary"]["priority_multiplayer_only_candidates_with_unmapped_toc"], 1)
+
+    def test_rejects_invalid_or_inconsistent_opd_toc_mappings(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "bad-opd.csv"
+            write_inventory(path, [
+                row(
+                    "FUN_bad", "0x1000", "a" * 64,
+                    opd_addresses="ram:00002000",
+                    opd_mappings="0x00000000:MAPPED",
+                    opd_count="1",
+                )
+            ], fields=FIELDS + OPD_FIELDS)
+            with self.assertRaisesRegex(InventoryError, "status contradicts"):
+                read_inventory(path)
+
+    def test_rejects_partial_optional_opd_columns(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "partial-opd.csv"
+            write_inventory(path, [row("FUN", "0x1000", "a" * 64)],
+                            fields=FIELDS + ["opd_descriptor_count"])
+            with self.assertRaisesRegex(InventoryError, "incomplete OPD evidence columns"):
+                read_inventory(path)
+
 
 if __name__ == "__main__":
     unittest.main()

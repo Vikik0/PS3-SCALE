@@ -50,6 +50,28 @@ def _keyword_hits(value: str, keywords: tuple[str, ...]) -> list[str]:
     return [keyword for keyword in keywords if keyword in lowered]
 
 
+OPD_OPTIONAL_COLUMNS = {
+    "opd_descriptor_addresses",
+    "opd_toc_mappings",
+    "opd_descriptor_count",
+}
+OPD_TOC_MAPPING_RE = re.compile(r"^0x[0-9a-fA-F]{8}:(?:MAPPED|UNMAPPED|ZERO)$")
+
+
+def _opd_toc_mappings(value: Any, path: Path, line_number: int) -> list[str]:
+    mappings = _values(value)
+    if len(set(mappings)) != len(mappings):
+        raise InventoryError(f"{path}:{line_number}: duplicate OPD TOC mapping")
+    for mapping in mappings:
+        if not OPD_TOC_MAPPING_RE.fullmatch(mapping):
+            raise InventoryError(f"{path}:{line_number}: malformed OPD TOC mapping {mapping!r}")
+        address, status = mapping.split(":", 1)
+        is_zero = int(address, 16) == 0
+        if (status == "ZERO") != is_zero:
+            raise InventoryError(f"{path}:{line_number}: OPD TOC mapping status contradicts its address")
+    return mappings
+
+
 def read_inventory(path: Path) -> list[dict[str, Any]]:
     path = Path(path)
     with path.open("r", encoding="utf-8-sig", newline="") as stream:
@@ -61,6 +83,12 @@ def read_inventory(path: Path) -> list[dict[str, Any]]:
                 f"{path}: missing required columns: {', '.join(sorted(missing))}"
             )
 
+        present_opd_columns = OPD_OPTIONAL_COLUMNS & columns
+        if present_opd_columns and present_opd_columns != OPD_OPTIONAL_COLUMNS:
+            missing_opd = OPD_OPTIONAL_COLUMNS - present_opd_columns
+            raise InventoryError(
+                f"{path}: incomplete OPD evidence columns: {', '.join(sorted(missing_opd))}"
+            )
         rows: list[dict[str, Any]] = []
         seen_entries: set[str] = set()
         for line_number, row in enumerate(reader, 2):
@@ -91,6 +119,31 @@ def read_inventory(path: Path) -> list[dict[str, Any]]:
                     f"{path}:{line_number}: duplicate function entry {entry}"
                 )
             seen_entries.add(entry)
+            opd_descriptor_addresses = _values(row.get("opd_descriptor_addresses"))
+            opd_toc_mappings = _opd_toc_mappings(row.get("opd_toc_mappings"), path, line_number)
+            try:
+                opd_descriptor_count = (
+                    int(row.get("opd_descriptor_count") or "0")
+                    if present_opd_columns else 0
+                )
+            except (TypeError, ValueError) as exc:
+                raise InventoryError(
+                    f"{path}:{line_number}: OPD descriptor count must be a non-negative integer"
+                ) from exc
+            if opd_descriptor_count < 0:
+                raise InventoryError(
+                    f"{path}:{line_number}: OPD descriptor count must be a non-negative integer"
+                )
+            if len(set(opd_descriptor_addresses)) != len(opd_descriptor_addresses):
+                raise InventoryError(f"{path}:{line_number}: duplicate OPD descriptor address")
+            if opd_descriptor_count != len(opd_descriptor_addresses):
+                raise InventoryError(
+                    f"{path}:{line_number}: OPD descriptor count does not match descriptor addresses"
+                )
+            if (opd_descriptor_count == 0) != (not opd_toc_mappings):
+                raise InventoryError(
+                    f"{path}:{line_number}: OPD descriptor count and TOC mappings do not reconcile"
+                )
             rows.append({
                 "program": (row.get("program") or "").strip(),
                 "name": name,
@@ -101,6 +154,9 @@ def read_inventory(path: Path) -> list[dict[str, Any]]:
                 "call_targets": _values(row.get("call_targets")),
                 "call_target_symbols": _values(row.get("call_target_symbols")),
                 "call_target_entries": _values(row.get("call_target_entries")),
+                "opd_descriptor_addresses": opd_descriptor_addresses,
+                "opd_toc_mappings": opd_toc_mappings,
+                "opd_descriptor_count": opd_descriptor_count,
             })
     if not rows:
         raise InventoryError(f"{path}: inventory contains no function rows")
@@ -238,6 +294,30 @@ def _target_fingerprints(
     return {
         target["fingerprint"]
         for target in _target_functions(row, functions_by_entry)
+    }
+
+
+def _opd_toc_evidence(row: dict[str, Any]) -> dict[str, Any]:
+    mappings = _values(row.get("opd_toc_mappings"))
+    statuses = {mapping.rsplit(":", 1)[-1] for mapping in mappings}
+    count = int(row.get("opd_descriptor_count", 0))
+    if count == 0:
+        status = "NO_OPD_DESCRIPTOR_MAPPING"
+    elif "UNMAPPED" in statuses:
+        status = "UNMAPPED_TOC_PRESENT"
+    elif "ZERO" in statuses:
+        status = "ZERO_TOC_PRESENT"
+    else:
+        status = "MAPPED_TOC_STATIC_ONLY"
+    return {
+        "status": status,
+        "descriptor_count": count,
+        "descriptor_addresses": _values(row.get("opd_descriptor_addresses")),
+        "toc_mappings": mappings,
+        "interpretation": (
+            "MAPPED means the TOC address is present in Ghidra memory only; it does not prove "
+            "that the TOC is correct for a native call or safe to reuse in Campaign."
+        ),
     }
 
 
@@ -411,6 +491,7 @@ def compare(
                     "incoming_caller_keyword_hits": incoming_name_hit_list,
                     "incoming_caller_context_target_keyword_hits": incoming_target_hit_list,
                     "incoming_callers": incoming_callers,
+                    "opd_toc_evidence": _opd_toc_evidence(function),
                     "outgoing_target_fingerprints": sorted(outgoing_targets),
                     "outgoing_target_functions": [
                         {
@@ -467,12 +548,37 @@ def compare(
             "campaign_resolved_internal_call_edges": campaign_edges,
             "multiplayer_resolved_internal_call_edges": multiplayer_edges,
             "matching_fingerprint_groups_with_call_graph_delta": len(call_graph_deltas),
+            "campaign_functions_with_opd_descriptors": sum(
+                1 for row in campaign_rows if row["opd_descriptor_count"] > 0
+            ),
+            "multiplayer_functions_with_opd_descriptors": sum(
+                1 for row in multiplayer_rows if row["opd_descriptor_count"] > 0
+            ),
+            "priority_multiplayer_only_candidates_with_opd_descriptors": sum(
+                1 for item in priority if item["function"]["opd_descriptor_count"] > 0
+            ),
+            "priority_multiplayer_only_candidates_with_unmapped_toc": sum(
+                1 for item in priority
+                if item["opd_toc_evidence"]["status"] == "UNMAPPED_TOC_PRESENT"
+            ),
         },
         "matched_fingerprints": matched,
         "call_graph_deltas": call_graph_deltas,
         "multiplayer_only": multiplayer_only,
         "campaign_only": campaign_only,
         "priority_multiplayer_only": priority,
+        "opd_evidence_analysis": {
+            "campaign_functions_with_opd_descriptors": sum(
+                1 for row in campaign_rows if row["opd_descriptor_count"] > 0
+            ),
+            "multiplayer_functions_with_opd_descriptors": sum(
+                1 for row in multiplayer_rows if row["opd_descriptor_count"] > 0
+            ),
+            "interpretation": (
+                "OPD metadata links address-taken function entries to their descriptor TOC values. "
+                "A mapped TOC is memory-mapping evidence only, not proof of correct calling context."
+            ),
+        },
         "call_graph_analysis": {
             "campaign_function_entries": len(campaign_by_entry),
             "multiplayer_function_entries": len(multiplayer_by_entry),
@@ -484,6 +590,7 @@ def compare(
                 "Indirect calls, tail calls, unresolved references and missed function boundaries may be absent.",
                 "A call-graph edge is static evidence, not proof that a function executes in a particular game mode.",
                 "Fingerprint-level call-graph differences are navigation leads and do not establish semantic equivalence.",
+                "A mapped OPD TOC is only an address-mapping observation; it is not proof that a native function can be called safely from Campaign.",
             ],
         },
         "keywords": list(keyword_values),

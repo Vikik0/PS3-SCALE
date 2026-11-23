@@ -383,10 +383,10 @@ def _run_headless(
             hex(size),
             str(opd_summary_path),
         ])
+    args.extend(["-postScript", EXPORT_SCRIPT, str(output_csv)])
+    if opd is not None:
+        args.extend([hex(opd[0]), hex(opd[1])])
     args.extend([
-        "-postScript",
-        EXPORT_SCRIPT,
-        str(output_csv),
         "-postScript",
         XREF_SCRIPT,
         str(output_xref_csv),

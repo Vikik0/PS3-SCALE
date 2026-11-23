@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "phase": 48,
+  "status": "PER_FUNCTION_OPD_TOC_EVIDENCE_EXPORTED",
+  "changes": [
+    "Ghidra exporter receives validated OPD range and maps descriptors to functions",
+    "function CSV rows carry descriptor addresses, TOC mappings and descriptor counts",
+    "inventory parser validates optional OPD columns and preserves legacy CSV compatibility",
+    "Multiplayer-only candidates expose per-function TOC evidence and warnings"
+  ],
+  "validation_boundary": "Synthetic CSV fixtures and mocked Ghidra only. TOC mapping is not proof of safe native calls or Campaign Player 2 support."
+}
