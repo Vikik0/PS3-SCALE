@@ -28,9 +28,6 @@ heartbeat = re.search(
 assert heartbeat, "Periodic room heartbeat block is missing"
 assert heartbeat.group(1).count("cb_online_heartbeat(") == 1
 assert "cb_online_set_ready(" not in heartbeat.group(1)
-assert "cb_online_heartbeat" in online_source
-assert '"set_ready"' in online_source
-assert "cb_online_set_ready(&session, next_ready" in source
 assert "cb_online_get_room(" not in heartbeat.group(1), (
     "Heartbeat must return the player list itself; do not issue a duplicate room GET."
 )
@@ -39,6 +36,9 @@ print("Native lobby polling and expired-session recovery checks passed.")
 
 main_source = (root / "source/main.c").read_text(encoding="utf-8")
 online_source = (root / "source/online.c").read_text(encoding="utf-8")
+assert "cb_online_heartbeat" in online_source
+assert '"set_ready"' in online_source
+assert "cb_online_set_ready(&session, next_ready" in source
 launcher = (root / "source/game_launcher.c").read_text(encoding="utf-8")
 assert "BTN_START" in source
 assert "cb_launch_game(" in source
