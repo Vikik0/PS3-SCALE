@@ -2945,6 +2945,7 @@ static void start_selected_game(void)
     const ps3scale_profile_t *profile = NULL;
     int script_state = 0;
     int rc;
+    int cleanup_result;
     int force_unmodified = g_force_unmodified_launch;
     int is_ps2_iso = game && game->kind == PS3SCALE_GAME_PS2_ISO;
 
@@ -2957,6 +2958,15 @@ static void start_selected_game(void)
     if (!is_ps2_iso && !game->title_id[0]) {
         set_details_message("TITLE ID NOT AVAILABLE. RESCAN THE GAME.");
         return;
+    }
+    if (force_unmodified && !is_ps2_iso) {
+        /* Final guard against a stale owned script or a newly-created user script. */
+        cleanup_result = ps3scale_profile_script_remove(game->title_id);
+        if (cleanup_result == -2) {
+            set_details_message(
+                "USER WEBMAN SCRIPT EXISTS OR CANNOT BE VERIFIED. LAUNCH CANCELLED.");
+            return;
+        }
     }
     if (g_network_task_running ||
         g_game_launch_running || g_game_launch_done ||
