@@ -161,7 +161,7 @@ static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 #define PS3SCALE_SUPPORT_OUTBOX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox.txt"
 /* Replace with the URL of the separate PS3 SCALE Supabase project after deployment. */
 #define PS3SCALE_SUPPORT_URL "https://YOUR_PROJECT.supabase.co/functions/v1/ps3scale-support"
-#define PS3SCALE_APP_VERSION "ALPHA 0.29"
+#define PS3SCALE_APP_VERSION "ALPHA 0.30"
 #define PS3SCALE_PS2_CONFIG_INDEX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/ps2_config_index.tsv"
 #define PS3SCALE_PS2_CLASSICS_CONFIG_DIR "/dev_hdd0/game/PS2CONFIG/USRDIR/CONFIG/ENC"
 #define PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT (PS3SCALE_PS2_CONFIG_MAX_BYTES * 2u)
@@ -319,6 +319,7 @@ static sys_ppu_thread_t g_profile_arm_thread;
 static ps3scale_profile_t g_profile_arm_target;
 static ps3scale_game_t g_profile_arm_game_target;
 static int g_auto_launch_after_profile_arm = 0;
+static int g_force_unmodified_launch = 0;
 static ps3scale_game_t g_auto_launch_target;
 
 static void clamp_selection(void);
@@ -2634,6 +2635,15 @@ static void profile_arm_worker(void *arg)
     g_network_task_running = 0;
 }
 
+static int selected_game_matches_auto_launch_target(void)
+{
+    const ps3scale_game_t *current = selected_game();
+    return g_screen == SCREEN_DETAILS && current &&
+           strcmp(current->title_id, g_auto_launch_target.title_id) == 0 &&
+           strcmp(current->app_ver, g_auto_launch_target.app_ver) == 0 &&
+           strcmp(current->path, g_auto_launch_target.path) == 0;
+}
+
 static void service_profile_arm(void)
 {
     int result;
@@ -2657,11 +2667,7 @@ static void service_profile_arm(void)
 
     if (result == 0 || result == 1) {
         if (auto_launch) {
-            const ps3scale_game_t *current = selected_game();
-            if (g_screen == SCREEN_DETAILS && current &&
-                strcmp(current->title_id, g_auto_launch_target.title_id) == 0 &&
-                strcmp(current->app_ver, g_auto_launch_target.app_ver) == 0 &&
-                strcmp(current->path, g_auto_launch_target.path) == 0) {
+            if (selected_game_matches_auto_launch_target()) {
                 set_details_message("PROFILE ARMED. STARTING GAME...");
                 start_selected_game();
             } else {
@@ -2672,6 +2678,18 @@ static void service_profile_arm(void)
             }
         } else {
             set_details_message("ONE-LAUNCH PROFILE ARMED. START THIS GAME.");
+        }
+    } else if (auto_launch &&
+               (result == -1 || result == -4 || result == -5 ||
+                result == -101 || result == -102)) {
+        /* A failed/unsafe enhancement must not prevent a normal launch when
+           webMAN can still start the selected title. Keep selection identity. */
+        if (selected_game_matches_auto_launch_target()) {
+            g_force_unmodified_launch = 1;
+            set_details_message("PROFILE NOT APPLIED. STARTING GAME UNMODIFIED.");
+            start_selected_game();
+        } else {
+            set_details_message("GAME SELECTION CHANGED. NO GAME WAS STARTED.");
         }
     } else if (result == -100) {
         set_details_message("WEBMAN MOD NOT RESPONDING. PROFILE NOT ARMED.");
@@ -2887,10 +2905,12 @@ static void start_selected_game(void)
 {
     const ps3scale_game_t *game = selected_game();
     const ps3scale_profile_t *profile = NULL;
-    ps3scale_game_t mounted;
     int script_state = 0;
     int rc;
+    int force_unmodified = g_force_unmodified_launch;
     int is_ps2_iso = game && game->kind == PS3SCALE_GAME_PS2_ISO;
+
+    g_force_unmodified_launch = 0;
 
     if (!game || (!game_is_ps3(game) && !is_ps2_iso)) {
         set_details_message("PS2 CLASSICS MUST BE STARTED WITH THEIR COMPATIBLE LAUNCHER.");
@@ -2912,7 +2932,7 @@ static void start_selected_game(void)
         return;
     }
 
-    if (!is_ps2_iso) {
+    if (!is_ps2_iso && !force_unmodified) {
         profile = profile_for_game(game);
         script_state = profile_script_state_for_game(game, profile);
         if (script_state == -2) {
@@ -2958,6 +2978,8 @@ static void start_selected_game(void)
         set_details_message("MOUNTING PS2 ISO VIA WEBMAN. WAIT FOR THE RESPONSE.");
     else if (script_state == 1)
         set_details_message("STARTING GAME WITH ONE-LAUNCH PROFILE.");
+    else if (force_unmodified)
+        set_details_message("PROFILE NOT APPLIED. STARTING GAME UNMODIFIED.");
     else if (profile)
         set_details_message("PROFILE NOT ARMED. STARTING GAME UNMODIFIED.");
     else
