@@ -31,6 +31,10 @@ python tools/gsc_player_state_ownership_audit.py black_ice="D:\Ghosts\Phase31\mi
 
 The previous PS3 common-loader audit recorded that level.playerpiggyback is populated from existing player entities, level.player points to the first, and level.playengineeffects stores the second entity reference when one already exists. That loader enumerates entities; it does not create the second local client or bind Controller 2. The ownership audit therefore treats playengineeffects as a secondary-client reference, not a player array.
 
+## CI result
+
+GitHub Actions run 45252077314 passed all five jobs. The Python suite passed 295 tests, and the GSC compile, host protocol, worker and PS3 PRX bootstrap jobs succeeded. The PRX artifact was uploaded as a diagnostic build; it does not implement Campaign Player 2.
+
 ## Validation boundary
 
 The tool is read-only. Five synthetic tests cover method classification, player-array detection, secondary-client distinction, comment/string filtering and missing targets. No mission GSC is rewritten and no second Campaign local client is claimed.
