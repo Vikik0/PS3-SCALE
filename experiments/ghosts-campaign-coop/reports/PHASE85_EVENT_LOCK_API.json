@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "phase": 85,
+  "status": "REUSABLE_CAMPAIGN_EVENT_LOCK_BUILT_AND_PINNED",
+  "implementation": {
+    "file": "client/ps3/gsc/ghc_campaign_local_session.gsc",
+    "api": [
+      "ghc_campaign_event_lock_init",
+      "ghc_campaign_event_lock_player_slot",
+      "ghc_campaign_event_lock_acquire",
+      "ghc_campaign_event_lock_release",
+      "ghc_campaign_event_lock_abort_slot",
+      "ghc_campaign_event_lock_abort_player",
+      "ghc_campaign_event_lock_clear_active",
+      "ghc_campaign_event_lock_owner",
+      "ghc_campaign_event_lock_active_for_player",
+      "ghc_campaign_event_lock_is_complete",
+      "ghc_campaign_event_lock_is_owner",
+      "ghc_campaign_event_lock_reset"
+    ],
+    "event_ids": 16,
+    "player_slots": 2,
+    "one_owner_per_event": true,
+    "one_active_event_per_player": true,
+    "different_event_ids_can_run_concurrently": true,
+    "completed_events_require_explicit_reset": true,
+    "abort_does_not_mark_complete": true,
+    "acquire_release_validate_native_pair": true,
+    "abort_active_locks_on_session_invalidation": true,
+    "preserve_completed_events_across_rebind": true,
+    "fail_closed_before_initialization": true,
+    "no_wait_or_yield_in_atomic_lock_operations": true,
+    "creates_players": false,
+    "polls_controller_input": false,
+    "writes_game_memory": false,
+    "wired_to_original_mission_events": false
+  },
+  "build": {
+    "compiler": "GSC Tool 1.6.2.364",
+    "compile": "PASS",
+    "decompile_round_trip": "PASS",
+    "compiled_gscbin_bytes": 3680,
+    "source_sha256": "7156ac56906d361de9348af9c558ea4a6bb04720596e156cca31d78d3b10e3a4",
+    "compiled_gscbin_sha256": "2ba80b1be5497a522c08b519a5bd7b8eecbd2b435963313c790075f060850967"
+  },
+  "ci": {
+    "run_number": 1494,
+    "run_id": 45508312714,
+    "run_url": "https://github.com/Vikik0/PS3-SCALE/actions/runs/45508312714",
+    "jobs": "6/6 SUCCESS",
+    "python_tests": "480 PASS"
+  },
+  "limitations": [
+    "The lock API is integrated with Local Session lifecycle but not yet called by the original Black Ice, Carrier or Cornered mission scripts.",
+    "No retail FastFile was modified or injected.",
+    "No physical PS3 runtime validation has been performed.",
+    "The API does not create a native Local Client or prove playable Campaign co-op."
+  ],
+  "next_gate": "After native Local Client 1 and physical input are verified, assign stable event IDs and wrap each shared mission interaction with acquire/release/abort while keeping the world event single-shot."
+}
