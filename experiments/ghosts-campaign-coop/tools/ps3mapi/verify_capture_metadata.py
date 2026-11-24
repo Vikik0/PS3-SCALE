@@ -179,6 +179,8 @@ def verify_capture_metadata(
         "ps3mapi_process_name_verbatim": process_name,
         "process_name_is_diagnostic_only": True,
         "pad_probe_log_filename": expected["pad_log"],
+        "pad_probe_log_verified": pad_log is not None,
+        "pad_probe_log_path": str(pad_log) if pad_log is not None else None,
         "segment_files": {
             "0": {
                 "filename": segment_paths["segment0"].name,
