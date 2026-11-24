@@ -1,5 +1,6 @@
 import hashlib
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -28,7 +29,19 @@ def write_package(root: Path):
         base = root / "Experimental_GSC_Not_Installed"
         source = base / f"{name}.gsc"
         binary = base / f"{name}.gscbin"
-        source.write_text(f"{name}() {{ return 1; }}\n", encoding="utf-8")
+        if name == "ghc_campaign_local_session":
+            source.write_text(
+                "\n".join((
+                    "ghc_campaign_event_lock_acquire",
+                    "ghc_campaign_event_lock_release",
+                    "ghc_campaign_event_lock_abort_player",
+                    "ghc_campaign_event_lock_owner",
+                    "ghc_campaign_event_lock_reset",
+                )) + "\n",
+                encoding="utf-8",
+            )
+        else:
+            source.write_text(f"{name}() {{ return 1; }}\n", encoding="utf-8")
         binary.write_bytes((name + "-compiled").encode("utf-8"))
         manifest = {
             "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
@@ -37,6 +50,18 @@ def write_package(root: Path):
             "status": "compiled but not injected or runtime-tested",
         }
         (base / f"{name}.manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    source_root = Path(__file__).resolve().parents[1]
+    (root / "Tools").mkdir(parents=True, exist_ok=True)
+    (root / "Reports").mkdir(parents=True, exist_ok=True)
+    shutil.copy2(
+        source_root / "tools" / "verify_mission_event_lock_map.py",
+        root / "Tools" / "verify_mission_event_lock_map.py",
+    )
+    shutil.copy2(
+        source_root / "reports" / "PHASE88_MISSION_EVENT_LOCK_MAP.json",
+        root / "Reports" / "PHASE88_MISSION_EVENT_LOCK_MAP.json",
+    )
 
     files = {}
     for path in sorted(p for p in root.rglob("*") if p.is_file() and p.name != "MANIFEST.json"):
@@ -62,6 +87,17 @@ class CaptureKitVerifierTests(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertEqual(summary["files_declared"], summary["files_verified"])
         self.assertEqual(summary["gsc_manifests_verified"], 2)
+
+    def test_invalid_mission_event_map_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write_package(root)
+            map_path = root / "Reports" / "PHASE88_MISSION_EVENT_LOCK_MAP.json"
+            event_map = json.loads(map_path.read_text(encoding="utf-8"))
+            event_map["events"][4]["event_lock_id"] = 0
+            map_path.write_text(json.dumps(event_map), encoding="utf-8")
+            errors, _ = validate_package(root)
+        self.assertTrue(any("mission event map: event_lock_id 0 reused" in error for error in errors))
 
     def test_modified_file_is_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
