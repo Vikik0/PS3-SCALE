@@ -105,8 +105,10 @@ def build_capture_kit(
         mode_files = list((artifact_dirs["pad-probe"]).rglob("ghosts_probe_mode_*.txt"))
         if len(mode_files) != 2:
             raise FileNotFoundError(f"expected Campaign and Multiplayer mode files, found {len(mode_files)}")
+        mode_destination = root / "PS3" / "mode_files"
+        mode_destination.mkdir(parents=True, exist_ok=True)
         for source in mode_files:
-            shutil.copy2(source, root / "PS3" / "mode_files" / source.name)
+            shutil.copy2(source, mode_destination / source.name)
 
         for filename in (
             "ghosts_pad_input_probe.prx",
