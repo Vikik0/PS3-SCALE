@@ -52,6 +52,14 @@ class Ps3MapiScriptTests(unittest.TestCase):
                 max(script.index(f"abort if not exist /dev_hdd0/{prefix}_seg{i}.bin") for i in (0, 1)),
             )
 
+    def test_capture_instructions_record_process_name_as_diagnostic_metadata(self):
+        docs = (ROOT / "README_AR.md").read_text(encoding="utf-8")
+        template = (ROOT / "CAPTURE_METADATA_TEMPLATE.txt").read_text(encoding="utf-8")
+        self.assertIn("PROCESS+GETNAME+PID_HERE", docs)
+        self.assertIn("لا نفترض أن الاسم يميز الوضعين تلقائياً", docs)
+        self.assertIn("ps3mapi_process_name_verbatim=", template)
+        self.assertIn("operator_selected_mode=CAMPAIGN_OR_MULTIPLAYER", template)
+
     def test_scripts_do_not_write_to_game_memory(self):
         for name in ("dump_campaign_tu116.bat", "dump_multiplayer_tu116.bat"):
             script = (ROOT / name).read_text(encoding="utf-8").lower()
