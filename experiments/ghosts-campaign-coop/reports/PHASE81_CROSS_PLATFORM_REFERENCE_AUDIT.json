@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "phase": 81,
+  "status": "CROSS_PLATFORM_TESTCLIENT_PATH_REJECTED",
+  "reference": {
+    "repository": "lizardpeter/ghosts-decomp",
+    "commit": "513f0b6bdf0de32d16df3af914b26df01ee04ec9",
+    "builds": [
+      "iw6_ds_ps4",
+      "iw6_ds_xb3"
+    ],
+    "architectures": [
+      "x86_64"
+    ],
+    "not_target_build": true
+  },
+  "functions": {
+    "ps4": {
+      "CL_DoesControllerIndexHaveALocalClientNum": "0x1400AE7A0",
+      "CL_ControllerIndexFromClientNum": "0x1400AE790",
+      "PlayerCmd_IsSplitscreenPlayer": "0x1401232B0",
+      "PlayerCmd_IsSplitscreenPlayerPrimary": "0x1401232F0",
+      "SV_AddTestClient": "0x1401F1AF0",
+      "SV_SpawnTestClient": "0x1401F5120"
+    },
+    "xb3": {
+      "CL_DoesControllerIndexHaveALocalClientNum": "0x1400AECE0",
+      "CL_ControllerIndexFromClientNum": "0x1400AECD0",
+      "PlayerCmd_IsSplitscreenPlayer": "0x140123570",
+      "PlayerCmd_IsSplitscreenPlayerPrimary": "0x1401235B0",
+      "SV_AddTestClient": "0x1401F0390",
+      "SV_SpawnTestClient": "0x1401F3890"
+    }
+  },
+  "observations": [
+    "Both PS4 and Xbox One local-client mapping functions assign LOCAL_CLIENT_0 and return true without using the controller-index argument.",
+    "Both PS4 and Xbox One multiplayer PlayerCmd_IsSplitscreenPlayer implementations return false after validating the player entity.",
+    "SV_AddTestClient creates a NA_BOT connection using svs.botport, SV_DirectConnect, and the testClient field.",
+    "GScr_AddTestClient forwards to SV_AddTestClient; GScr_SpawnTestClient forwards to SV_SpawnTestClient.",
+    "SV_SpawnTestClient sends the game state and enters the test client using a zero-initialized usercmd_s.",
+    "SV_ClientThink is downstream of a client slot's usercmd and is not by itself proof of a physical local controller mapping."
+  ],
+  "decisions": {
+    "SV_AddTestClient": "REJECT_AS_LOCAL_CONTROLLER",
+    "SV_SpawnTestClient": "REJECT_AS_LOCAL_CONTROLLER",
+    "campaign_gsc_bridge": "REUSE_ENGINE_CREATED_NATIVE_PAIR_ONLY",
+    "import_ps4_or_xb3_offsets_into_ps3_prx": false
+  },
+  "validation": {
+    "new_gsc_bridge_guard_test": "ADDED",
+    "test_guard_rejects": [
+      "spawnTestClient",
+      "addTestClient",
+      "addBot",
+      "SV_AddTestClient",
+      "SV_SpawnTestClient"
+    ]
+  },
+  "limitations": [
+    "All function addresses listed are x64 reference addresses and must not be used on PS3 PPU.",
+    "PS4/Xbox One observations do not prove PS3 behavior.",
+    "No Campaign/Multiplayer PS3 runtime ELF or Pad Probe logs have been supplied.",
+    "No native PS3 Campaign Local Client 1 or playable Player 2 is claimed."
+  ]
+}
