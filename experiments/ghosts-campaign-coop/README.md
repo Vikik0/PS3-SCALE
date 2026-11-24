@@ -135,3 +135,12 @@ Phases 72–75 harden the native local-player readiness gate. Phase 72 added exp
 - **Phase 77:** hardened both manual read-only PS3MAPI dump scripts. Each SEG file is now checked after rename, and the DUMP_DONE marker is reached only after both final segment files exist. Added regression checks for the required command order; the five local PS3MAPI script tests pass.
 - The latest available Library inventory still has no Campaign/Multiplayer SEG0/SEG1 runtime dumps or Pad Probe v4 logs. Therefore no runtime ELF, Ghidra PPU inventory, native Campaign Local Client initializer, or playable Player 2 has been demonstrated.
 - Reports: reports/PHASE76_REPORT_AR.md, reports/PHASE77_REPORT_AR.md; machine-readable summaries: reports/PHASE76_INPUT_VERIFICATION.json, reports/PHASE77_CAPTURE_SCRIPT_SUMMARY.json.
+
+
+### Phase 78 — packaged TU 1.16 capture handoff
+
+- Assembled a seven-file capture kit containing the two current manual PS3MAPI dump scripts, the verified Pad Probe v4 fake-signed PRX, separate Campaign/Multiplayer mode files, and Arabic instructions.
+- Verified the Pad Probe artifact ZIP SHA-256 against GitHub Actions run 45482944832. Its source files are unchanged at the current branch head. Verified both dump-script Git blob hashes against the current branch.
+- ZIP integrity and all seven internal SHA-256 entries pass. Phase 76 and Phase 77 targeted suites each pass 5/5 locally.
+- The ZIP is a local handoff artifact, not committed to the repository and not a playable mod. No runtime capture has been received.
+- Report: reports/PHASE78_REPORT_AR.md; summary: reports/PHASE78_CAPTURE_KIT_SUMMARY.json.
