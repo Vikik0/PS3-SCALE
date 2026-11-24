@@ -169,9 +169,9 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 
 ### Phase 81 — reject the bot/test-client path as local Player 2
 
-- Compared the public IW6 PS4 and Xbox One decompilations at lizardpeter/ghosts-decomp commit 513f0b6bdf0de32d16df3af914b26df01ee04ec9.
-- In both x64 references, CL_DoesControllerIndexHaveALocalClientNum maps the controller to LOCAL_CLIENT_0; the multiplayer PlayerCmd_IsSplitscreenPlayer implementation returns false.
-- SV_AddTestClient creates an NA_BOT connection through svs.botport and SV_DirectConnect, then marks the slot as a test client. GScr_AddTestClient and GScr_SpawnTestClient are wrappers for that bot/test-client path; they are not physical local-controller registration.
+- Compared the public IW6 Windows x64 dedicated-server references labelled iw6_ds_ps4 and iw6_ds_xb3 at lizardpeter/ghosts-decomp commit 513f0b6bdf0de32d16df3af914b26df01ee04ec9. The repository README explicitly identifies these as dedicated-server builds, not retail console clients.
+- In those server binaries, SV_AddTestClient creates an NA_BOT connection through svs.botport and SV_DirectConnect, then marks the slot as a test client. GScr_AddTestClient and GScr_SpawnTestClient are wrappers for that bot/test-client path; they are not physical local-controller registration.
+- CL_DoesControllerIndexHaveALocalClientNum and PlayerCmd_IsSplitscreenPlayer observations from these server binaries are not transferable to retail PS3/PS4/Xbox client split-screen behavior.
 - Rejected SV_AddTestClient/SV_SpawnTestClient as a local Player 2 implementation. Added a regression test that prevents the Campaign local-session bridge from calling spawnTestClient/addTestClient/addBot or their native names.
 - All listed addresses are x64 PS4/Xbox reference addresses, not PS3 PPU addresses. No PS4/Xbox offsets are copied into the PS3 PRX.
 - Report: reports/PHASE81_REPORT_AR.md; machine-readable summary: reports/PHASE81_CROSS_PLATFORM_REFERENCE_AUDIT.json.
