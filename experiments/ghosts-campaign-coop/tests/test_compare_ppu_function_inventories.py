@@ -76,6 +76,11 @@ def row(
                     "block_name": ".got" if status == "MAPPED" else "",
                     "permissions": "rw-" if status == "MAPPED" else "",
                     "block_offset": "0x00000000" if status == "MAPPED" else "",
+                    "loaded": True if status == "MAPPED" else None,
+                    "initialized": True if status == "MAPPED" else None,
+                    "artificial": False if status == "MAPPED" else None,
+                    "external": False if status == "MAPPED" else None,
+                    "volatile": False if status == "MAPPED" else None,
                 })
         result["opd_toc_region_evidence"] = json.dumps(opd_regions)
     return result
@@ -558,6 +563,11 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
                         "block_name": ".got",
                         "permissions": "rw-",
                         "block_offset": "0x00000020",
+                        "loaded": True,
+                        "initialized": True,
+                        "artificial": False,
+                        "external": False,
+                        "volatile": False,
                     }],
                 )
             ], fields=FIELDS + OPD_FIELDS)
@@ -587,6 +597,11 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
                         "block_name": "",
                         "permissions": "",
                         "block_offset": "",
+                        "loaded": None,
+                        "initialized": None,
+                        "artificial": None,
+                        "external": None,
+                        "volatile": None,
                     }],
                 )
             ], fields=FIELDS + OPD_FIELDS)
@@ -608,11 +623,91 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
                         "block_name": ".got",
                         "permissions": "read-write",
                         "block_offset": "0x00000000",
+                        "loaded": True,
+                        "initialized": True,
+                        "artificial": False,
+                        "external": False,
+                        "volatile": False,
                     }],
                 )
             ], fields=FIELDS + OPD_FIELDS)
             with self.assertRaisesRegex(InventoryError, "lacks block permissions"):
                 read_inventory(path)
+
+
+    def test_rejects_mapped_toc_region_without_boolean_origin_metadata(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "missing-toc-origin.csv"
+            write_inventory(path, [
+                row(
+                    "FUN_bad", "0x1000", "a" * 64,
+                    opd_addresses="ram:00002000",
+                    opd_mappings="0x00003000:MAPPED",
+                    opd_count=1,
+                    opd_regions=[{
+                        "toc": "0x00003000",
+                        "status": "MAPPED",
+                        "block_name": ".got",
+                        "permissions": "rw-",
+                        "block_offset": "0x00000000",
+                        "loaded": None,
+                        "initialized": None,
+                        "artificial": None,
+                        "external": None,
+                        "volatile": None,
+                    }],
+                )
+            ], fields=FIELDS + OPD_FIELDS)
+            with self.assertRaisesRegex(InventoryError, "provenance flags"):
+                read_inventory(path)
+
+    def test_exposes_artificial_and_uninitialized_toc_block_flags(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "artificial-toc.csv"
+            write_inventory(path, [
+                row(
+                    "SV_InitLocalClient", "0x9000", "a" * 64,
+                    opd_addresses="ram:00002000",
+                    opd_mappings="0x00003000:MAPPED",
+                    opd_count=1,
+                    opd_regions=[{
+                        "toc": "0x00003000",
+                        "status": "MAPPED",
+                        "block_name": "ANALYSIS_FAKE",
+                        "permissions": "rw-",
+                        "block_offset": "0x00000000",
+                        "loaded": False,
+                        "initialized": False,
+                        "artificial": True,
+                        "external": False,
+                        "volatile": False,
+                    }],
+                )
+            ], fields=FIELDS + OPD_FIELDS)
+            parsed = read_inventory(path)
+            result = compare([], parsed)
+            region = result["priority_multiplayer_only"][0]["opd_toc_evidence"]["toc_region_evidence"][0]
+            self.assertTrue(region["artificial"])
+            self.assertFalse(region["initialized"])
+            self.assertEqual(
+                result["summary"]["priority_multiplayer_only_candidates_with_artificial_toc_block"],
+                1,
+            )
+
+    def test_ghidra_exporter_records_memory_block_origin_flags(self):
+        source = (
+            Path(__file__).resolve().parents[1] / "tools" / "ghidra"
+            / "ExportGhostsPpuFunctionInventory.java"
+        ).read_text()
+        for token in (
+            "isLoaded()",
+            "isInitialized()",
+            "isArtificial()",
+            "isExternalBlock()",
+            "isVolatile()",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, source)
 
 if __name__ == "__main__":
     unittest.main()

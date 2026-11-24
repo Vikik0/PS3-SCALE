@@ -85,6 +85,11 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
                     "block_name": "",
                     "permissions": "",
                     "block_offset": "",
+                    "loaded": None,
+                    "initialized": None,
+                    "artificial": None,
+                    "external": None,
+                    "volatile": None,
                 }] if opd else []),
             })
 
