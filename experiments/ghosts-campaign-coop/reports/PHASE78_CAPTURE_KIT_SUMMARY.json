@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "phase": 78,
+  "status": "TU116_CAPTURE_KIT_PACKAGED_AND_HASH_VERIFIED",
+  "package": {
+    "filename": "Ghosts_TU116_Capture_Kit_Phase77.zip",
+    "size_bytes": 42601,
+    "sha256": "2f00fe595241cd2099a138a3ee5b8353e5eb8cac7e37149822c6a01742a9be62",
+    "file_count": 7,
+    "zip_integrity": "PASS",
+    "internal_manifest": "PASS"
+  },
+  "pad_probe_provenance": {
+    "workflow_run_id": 45482944832,
+    "source_commit": "c27b740985791c818154ce50954b5457716d26a3",
+    "artifact_id": 14963316034,
+    "artifact_zip_sha256": "9a6d54e14cdc83aa7736d504d88cf902775962cbfa0b27ab46e63666998bd17d",
+    "fake_sprx_sha256": "4de0ea6f49629818e4fd69d4f3e44e9357fff4f7481ad87ba07888e9542b574a",
+    "source_unchanged_at_current_branch_head": true
+  },
+  "ps3mapi_script_provenance": {
+    "branch_head": "30584156f4f8233baec6f90b78f5b89260c43c56",
+    "campaign_git_blob_sha": "ddfe4e943c78babd8ab75a164b4e536668878c28",
+    "multiplayer_git_blob_sha": "5524653d6a3ebf7027c4d342dfd88e99bae5e46e"
+  },
+  "tests": {
+    "phase76_static_input_tests": "5/5 PASS",
+    "phase77_ps3mapi_script_tests": "5/5 PASS",
+    "package_manifest": "PASS",
+    "zip_integrity": "PASS"
+  },
+  "runtime_evidence": {
+    "campaign_dumps": "NOT_PROVIDED",
+    "multiplayer_dumps": "NOT_PROVIDED",
+    "campaign_pad_probe_log": "NOT_PROVIDED",
+    "multiplayer_pad_probe_log": "NOT_PROVIDED",
+    "campaign_player_two": "NOT_PROVEN"
+  },
+  "limitations": [
+    "Capture kit only; no original game files are included.",
+    "Pad Probe remains diagnostic and does not create a Local Client.",
+    "No physical PS3 capture or Campaign Player 2 runtime behavior is claimed."
+  ]
+}
