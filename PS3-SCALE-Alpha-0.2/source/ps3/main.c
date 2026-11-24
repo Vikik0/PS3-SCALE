@@ -138,6 +138,7 @@ static char g_community_download_path[PS3SCALE_PATH_MAX];
 static char g_community_download_temp_path[PS3SCALE_PATH_MAX];
 static int g_community_download_persistent = 0;
 static volatile unsigned long g_community_download_expected_size = 0;
+static char g_community_download_expected_sha1[41];
 static char g_search[64] = "";
 static u32 *g_font_texture = NULL;
 static ya2d_Texture *g_cover_texture = NULL;
@@ -3539,6 +3540,11 @@ static void community_download_worker(void *arg)
                 }
                 if (!text_file || ferror(fp)) {
                     result = -4;
+                } else if (ps3scale_community_verify_git_blob_sha1(
+                               g_community_download_temp_path,
+                               g_community_download_expected_size,
+                               g_community_download_expected_sha1) != 1) {
+                    result = -7;
                 } else if (stat(g_community_download_path, &st) == 0) {
                     result = -2;
                 } else if (rename(g_community_download_temp_path,
@@ -3580,6 +3586,11 @@ static void start_community_file_download(
     if (!entry) {
         snprintf(g_online_message, sizeof(g_online_message),
                  "SELECT A COMMUNITY FILE FIRST.");
+        return;
+    }
+    if (!entry->git_blob_sha1[0]) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "SOURCE HASH MISSING. REFRESH THE COMMUNITY INDEX.");
         return;
     }
     if (!game || !game_is_ps3(game) ||
@@ -3746,6 +3757,9 @@ static void start_community_file_download(
 
     g_community_download_persistent = g_enhancement_persistent;
     g_community_download_expected_size = entry->file_size;
+    snprintf(g_community_download_expected_sha1,
+             sizeof(g_community_download_expected_sha1), "%s",
+             entry->git_blob_sha1);
     g_community_download_result = -1;
     g_community_downloaded = 0;
     g_community_download_total = 0;
@@ -3760,6 +3774,7 @@ static void start_community_file_download(
         g_community_downloaded = 0;
         g_community_download_total = 0;
         g_community_download_expected_size = 0;
+        g_community_download_expected_sha1[0] = '\0';
         g_network_task_running = 0;
         snprintf(g_online_message, sizeof(g_online_message),
                  "COULD NOT START COMMUNITY DOWNLOAD WORKER.");
@@ -3803,11 +3818,15 @@ static void service_community_download(void)
     } else if (g_community_download_result == -6) {
         snprintf(g_online_message, sizeof(g_online_message),
                  "SOURCE SIZE MISMATCH. REFRESH ONLINE DB AND RETRY.");
+    } else if (g_community_download_result == -7) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "GITHUB BLOB HASH MISMATCH. PATCH FILE REMOVED.");
     } else {
         snprintf(g_online_message, sizeof(g_online_message),
                  "COMMUNITY NCL DOWNLOAD FAILED. CHECK NETWORK AND SOURCE.");
     }
     g_community_download_expected_size = 0;
+    g_community_download_expected_sha1[0] = '\0';
     g_community_download_done = 0;
     g_community_downloaded = 0;
     g_community_download_total = 0;

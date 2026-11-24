@@ -24,7 +24,7 @@ int main(void)
         "# PS3 SCALE community index test\n"
         "BLUS30464\t01.05\tSkate 3\tHARDWARE_TESTED_FPS\t"
         "Nascar1243/PS3-FPS-Patches\tmain\t"
-        "Skate 3 BLUS30464 v01.05.ncl\t31\tGRAPHICS_FPS\tUnlock FPS\n"
+        "Skate 3 BLUS30464 v01.05.ncl\t31\tGRAPHICS_FPS\tUnlock FPS\t0000000000000000000000000000000000000000\n"
         "\t\tKirby Nightmare in Dream Land\tCOMMUNITY_CONFIRMED\t"
         "DoSpamu/RPCS3toArtemisPatches\tmaster\t"
         "PSXPlace Confirmed/Kirby Nightmare in Dream Land.ncl\t200\n"
@@ -41,7 +41,7 @@ int main(void)
         "BLES00517\t01.02\tJust Cause 2\tHARDWARE_TESTED_FPS\t"
         "Nascar1243/PS3-FPS-Patches\tmain\t"
         "Just Cause 2 BLES00517 BLUS30400 01.02.ncl\t440\t"
-        "GRAPHICS_FPS\tUnlock FPS\n";
+        "GRAPHICS_FPS\tUnlock FPS\t1111111111111111111111111111111111111111\n";
     static const char invalid[] =
         "BLUS30464\t01.05\tSkate 3\tUNKNOWN_SOURCE\t"
         "Nascar1243/PS3-FPS-Patches\tmain\t"
@@ -52,16 +52,30 @@ int main(void)
         "../outside/Skate 3.ncl\t31\n";
 
     const char *path = "/tmp/ps3scale_community_test.tsv";
+    const char *hash_path = "/tmp/ps3scale_git_blob_test.ncl";
     ps3scale_community_index_t index;
     ps3scale_game_t game;
 
     memset(&index, 0, sizeof(index));
+    if (write_index(hash_path, "hello\n") != 0)
+        return 29;
+    if (ps3scale_community_verify_git_blob_sha1(
+            hash_path, 6, "ce013625030ba8dba906f756967f9e9ca394464a") != 1)
+        return 30;
+    if (write_index(hash_path, "hallo\n") != 0)
+        return 31;
+    if (ps3scale_community_verify_git_blob_sha1(
+            hash_path, 6, "ce013625030ba8dba906f756967f9e9ca394464a") != 0)
+        return 32;
+    unlink(hash_path);
     if (write_index(path, valid) != 0)
         return 1;
     if (ps3scale_community_index_load(path, &index) != 6)
         return 2;
     if (index.count != 6)
         return 3;
+    if (strlen(index.items[0].git_blob_sha1) != 40)
+        return 28;
 
     memset(&game, 0, sizeof(game));
     game.kind = PS3SCALE_GAME_PS3_FOLDER;

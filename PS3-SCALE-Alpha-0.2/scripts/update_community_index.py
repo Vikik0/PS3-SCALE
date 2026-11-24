@@ -25,6 +25,7 @@ SOURCES = (
 )
 
 TITLE_ID_RE = re.compile(r"(?<![A-Z0-9])(?:[A-Z]{4}\d{5}|[A-Z]{5}\d{4})(?![A-Z0-9])", re.I)
+GIT_BLOB_SHA1_RE = re.compile(r"^[0-9a-f]{40}$")
 VERSION_RE = re.compile(
     r"(?<![A-Z0-9])(?P<prefix>av|tv|v)?(?P<version>\d{2}\.\d{2})(?!\d)",
     re.I,
@@ -197,6 +198,9 @@ def build_records() -> list[tuple[str, ...]]:
         for entry in tree.get("tree", []):
             path = entry.get("path", "")
             size = int(entry.get("size") or 0)
+            blob_sha1 = str(entry.get("sha") or "").lower()
+            if not GIT_BLOB_SHA1_RE.fullmatch(blob_sha1):
+                continue
             if entry.get("type") != "blob" or \
                     not path.lower().endswith(".ncl") or \
                     size <= 0 or size > MAX_FILE_BYTES:
@@ -231,6 +235,7 @@ def build_records() -> list[tuple[str, ...]]:
                 str(size),
                 category,
                 clean_description,
+                blob_sha1,
             ))
 
     priority = {
@@ -256,7 +261,7 @@ def write_index(records: list[tuple[str, ...]]) -> None:
     with OUTPUT.open("w", encoding="utf-8", newline="") as handle:
         handle.write("# PS3 SCALE community game-file index v2\n")
         handle.write("# Public GitHub NCL metadata; community files are never auto-applied.\n")
-        handle.write("# Fields: TITLE_ID APP_VER TITLE SOURCE_KIND REPOSITORY BRANCH PATH SIZE CATEGORY DESCRIPTION\n")
+        handle.write("# Fields: TITLE_ID APP_VER TITLE SOURCE_KIND REPOSITORY BRANCH PATH SIZE CATEGORY DESCRIPTION GIT_BLOB_SHA1\n")
         writer = csv.writer(
             handle,
             delimiter="\t",

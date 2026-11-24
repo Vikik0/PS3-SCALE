@@ -1,6 +1,9 @@
 #include "ps3scale/community.h"
 
 #include <ctype.h>
+#include <stdint.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,6 +33,223 @@ static int valid_title_id(const char *value)
     for (i = 0; i < 9; i++) {
         if (!((value[i] >= 'A' && value[i] <= 'Z') ||
               (value[i] >= '0' && value[i] <= '9')))
+            return 0;
+    }
+    return 1;
+}
+
+static int valid_git_blob_sha1(const char *value)
+{
+    size_t i;
+    if (!value || strlen(value) != 40)
+        return 0;
+    for (i = 0; i < 40; i++) {
+        if (!isxdigit((unsigned char)value[i]))
+            return 0;
+    }
+    return 1;
+}
+
+typedef struct community_sha1_context {
+    uint32_t state[5];
+    uint64_t bit_count;
+    unsigned char buffer[64];
+    size_t buffer_length;
+} community_sha1_context_t;
+
+static uint32_t sha1_rotate_left(uint32_t value, unsigned int bits)
+{
+    return (value << bits) | (value >> (32u - bits));
+}
+
+static void sha1_transform(community_sha1_context_t *context,
+                           const unsigned char block[64])
+{
+    uint32_t words[80];
+    uint32_t a, b, c, d, e;
+    unsigned int i;
+
+    for (i = 0; i < 16; i++) {
+        words[i] = ((uint32_t)block[i * 4] << 24) |
+                   ((uint32_t)block[i * 4 + 1] << 16) |
+                   ((uint32_t)block[i * 4 + 2] << 8) |
+                   (uint32_t)block[i * 4 + 3];
+    }
+    for (i = 16; i < 80; i++) {
+        words[i] = sha1_rotate_left(
+            words[i - 3] ^ words[i - 8] ^ words[i - 14] ^ words[i - 16], 1);
+    }
+
+    a = context->state[0];
+    b = context->state[1];
+    c = context->state[2];
+    d = context->state[3];
+    e = context->state[4];
+
+    for (i = 0; i < 80; i++) {
+        uint32_t function;
+        uint32_t constant;
+        uint32_t temporary;
+
+        if (i < 20) {
+            function = (b & c) | ((~b) & d);
+            constant = 0x5a827999u;
+        } else if (i < 40) {
+            function = b ^ c ^ d;
+            constant = 0x6ed9eba1u;
+        } else if (i < 60) {
+            function = (b & c) | (b & d) | (c & d);
+            constant = 0x8f1bbcdcu;
+        } else {
+            function = b ^ c ^ d;
+            constant = 0xca62c1d6u;
+        }
+
+        temporary = sha1_rotate_left(a, 5) + function + e +
+                    constant + words[i];
+        e = d;
+        d = c;
+        c = sha1_rotate_left(b, 30);
+        b = a;
+        a = temporary;
+    }
+
+    context->state[0] += a;
+    context->state[1] += b;
+    context->state[2] += c;
+    context->state[3] += d;
+    context->state[4] += e;
+}
+
+static void sha1_init(community_sha1_context_t *context)
+{
+    context->state[0] = 0x67452301u;
+    context->state[1] = 0xefcdab89u;
+    context->state[2] = 0x98badcfeu;
+    context->state[3] = 0x10325476u;
+    context->state[4] = 0xc3d2e1f0u;
+    context->bit_count = 0;
+    context->buffer_length = 0;
+}
+
+static void sha1_update(community_sha1_context_t *context,
+                        const unsigned char *data, size_t length)
+{
+    context->bit_count += (uint64_t)length * 8u;
+    while (length) {
+        size_t available = sizeof(context->buffer) - context->buffer_length;
+        size_t take = length < available ? length : available;
+
+        memcpy(context->buffer + context->buffer_length, data, take);
+        context->buffer_length += take;
+        data += take;
+        length -= take;
+
+        if (context->buffer_length == sizeof(context->buffer)) {
+            sha1_transform(context, context->buffer);
+            context->buffer_length = 0;
+        }
+    }
+}
+
+static void sha1_final(community_sha1_context_t *context,
+                       unsigned char digest[20])
+{
+    uint64_t bit_count = context->bit_count;
+    unsigned int i;
+
+    context->buffer[context->buffer_length++] = 0x80u;
+    if (context->buffer_length > 56u) {
+        while (context->buffer_length < 64u)
+            context->buffer[context->buffer_length++] = 0;
+        sha1_transform(context, context->buffer);
+        context->buffer_length = 0;
+    }
+    while (context->buffer_length < 56u)
+        context->buffer[context->buffer_length++] = 0;
+    for (i = 0; i < 8; i++) {
+        context->buffer[56u + i] =
+            (unsigned char)(bit_count >> (56u - (i * 8u)));
+    }
+    sha1_transform(context, context->buffer);
+
+    for (i = 0; i < 5; i++) {
+        digest[i * 4] = (unsigned char)(context->state[i] >> 24);
+        digest[i * 4 + 1] = (unsigned char)(context->state[i] >> 16);
+        digest[i * 4 + 2] = (unsigned char)(context->state[i] >> 8);
+        digest[i * 4 + 3] = (unsigned char)context->state[i];
+    }
+}
+
+int ps3scale_community_verify_git_blob_sha1(const char *path,
+                                             unsigned long expected_size,
+                                             const char *expected_sha1)
+{
+    static const char hex[] = "0123456789abcdef";
+    community_sha1_context_t context;
+    struct stat st;
+    unsigned char buffer[4096];
+    unsigned char digest[20];
+    unsigned char zero = 0;
+    char header[32];
+    char actual[41];
+    FILE *file;
+    size_t total = 0;
+    int header_length;
+    unsigned int i;
+
+    if (!path || !path[0] || expected_size == 0 ||
+        expected_size > COMMUNITY_FILE_MAX_BYTES ||
+        !valid_git_blob_sha1(expected_sha1))
+        return -1;
+    if (stat(path, &st) != 0 || !S_ISREG(st.st_mode) ||
+        st.st_size <= 0 || (unsigned long long)st.st_size != expected_size)
+        return -1;
+
+    file = fopen(path, "rb");
+    if (!file)
+        return -1;
+
+    header_length = snprintf(header, sizeof(header), "blob %lu", expected_size);
+    if (header_length <= 0 || (size_t)header_length >= sizeof(header)) {
+        (void)fclose(file);
+        return -1;
+    }
+
+    sha1_init(&context);
+    sha1_update(&context, (const unsigned char *)header,
+                (size_t)header_length);
+    sha1_update(&context, &zero, 1);
+
+    for (;;) {
+        size_t count = fread(buffer, 1, sizeof(buffer), file);
+        if (count) {
+            sha1_update(&context, buffer, count);
+            total += count;
+            if (total > expected_size) {
+                (void)fclose(file);
+                return 0;
+            }
+        }
+        if (count < sizeof(buffer)) {
+            if (ferror(file)) {
+                (void)fclose(file);
+                return -1;
+            }
+            break;
+        }
+    }
+    if (fclose(file) != 0 || total != expected_size)
+        return -1;
+
+    sha1_final(&context, digest);
+    for (i = 0; i < 20; i++) {
+        actual[i * 2] = hex[digest[i] >> 4];
+        actual[i * 2 + 1] = hex[digest[i] & 0x0fu];
+    }
+    actual[40] = '\0';
+    for (i = 0; i < 40; i++) {
+        if (actual[i] != (char)tolower((unsigned char)expected_sha1[i]))
             return 0;
     }
     return 1;
@@ -172,7 +392,7 @@ static void set_legacy_metadata(ps3scale_community_file_t *record)
 static int parse_community_line(char *line,
                                 ps3scale_community_file_t *record)
 {
-    char *fields[10];
+    char *fields[11];
     char *cursor;
     size_t field_count = 1;
 
@@ -182,13 +402,13 @@ static int parse_community_line(char *line,
     cursor = line;
     while (strchr(cursor, '\t')) {
         char *tab = strchr(cursor, '\t');
-        if (field_count >= 10)
+        if (field_count >= 11)
             return -1;
         *tab = '\0';
         cursor = tab + 1;
         fields[field_count++] = cursor;
     }
-    if (field_count != 8 && field_count != 10)
+    if (field_count != 8 && field_count != 10 && field_count != 11)
         return -1;
 
     memset(record, 0, sizeof(*record));
@@ -202,13 +422,19 @@ static int parse_community_line(char *line,
         parse_file_size(fields[7], &record->file_size) != 0)
         return -1;
 
-    if (field_count == 10) {
+    if (field_count >= 10) {
         if (copy_field(record->category, sizeof(record->category), fields[8], 0) ||
             copy_field(record->description, sizeof(record->description), fields[9], 0))
             return -1;
     } else {
         /* Continue accepting the previous eight-column cache until it refreshes. */
         set_legacy_metadata(record);
+    }
+    if (field_count == 11) {
+        if (!valid_git_blob_sha1(fields[10]) ||
+            copy_field(record->git_blob_sha1, sizeof(record->git_blob_sha1),
+                       fields[10], 0))
+            return -1;
     }
 
     if ((record->title_id[0] && !valid_title_id(record->title_id)) ||
@@ -504,6 +730,7 @@ int ps3scale_community_file_matches_exact_game(
 {
     if (!file || !game || !game->title_id[0] ||
         !game->app_ver[0] || !file->app_ver[0] ||
+        !valid_git_blob_sha1(file->git_blob_sha1) ||
         strcmp(file->app_ver, game->app_ver) != 0)
         return 0;
 
