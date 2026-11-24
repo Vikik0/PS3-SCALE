@@ -827,5 +827,108 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
             "NOT_RECORDED",
         )
 
+
+    def test_toc_region_comparison_preserves_signature_multiplicity(self):
+        fingerprint = "d" * 64
+        signature = {
+            "status": "MAPPED",
+            "block_name": ".got",
+            "permissions": "rw-",
+            "block_offset": "0x00000020",
+            "loaded": True,
+            "initialized": True,
+            "artificial": False,
+            "external": False,
+            "volatile": False,
+        }
+
+        def make_row(name, entry, descriptor, toc):
+            region = {"toc": toc, **signature}
+            return row(
+                name, entry, fingerprint,
+                opd_addresses=descriptor,
+                opd_mappings=f"{toc}:MAPPED",
+                opd_count=1,
+                opd_regions=[region],
+            )
+
+        campaign_rows = [
+            make_row("Campaign_A", "0x1000", "ram:00002000", "0x00003020"),
+            make_row("Campaign_B", "0x1100", "ram:00002008", "0x00003028"),
+        ]
+        multiplayer_rows = [
+            make_row("Multiplayer_A", "0x9000", "ram:00004000", "0x00005020"),
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            campaign_path = root / "campaign.csv"
+            multiplayer_path = root / "multiplayer.csv"
+            write_inventory(campaign_path, campaign_rows, fields=FIELDS + OPD_FIELDS)
+            write_inventory(multiplayer_path, multiplayer_rows, fields=FIELDS + OPD_FIELDS)
+            result = compare(
+                read_inventory(campaign_path),
+                read_inventory(multiplayer_path),
+            )
+
+        comparison = result["matched_fingerprints"][0]["toc_region_comparison"]
+        self.assertEqual(comparison["status"], "PARTIAL_REGION_OVERLAP")
+        self.assertEqual(comparison["campaign_region_signature_count"], 2)
+        self.assertEqual(comparison["multiplayer_region_signature_count"], 1)
+        self.assertEqual(comparison["shared_region_signature_count"], 1)
+        self.assertEqual(len(comparison["campaign_region_signatures"]), 2)
+        self.assertEqual(len(comparison["shared_region_signatures"]), 1)
+        self.assertEqual(comparison["signature_multiplicity"][0]["campaign_count"], 2)
+        self.assertEqual(comparison["signature_multiplicity"][0]["multiplayer_count"], 1)
+        self.assertEqual(comparison["signature_multiplicity"][0]["campaign_only_count"], 1)
+
+    def test_toc_region_comparison_matches_equal_duplicate_signature_counts(self):
+        fingerprint = "e" * 64
+        signature = {
+            "status": "MAPPED",
+            "block_name": ".got",
+            "permissions": "rw-",
+            "block_offset": "0x00000040",
+            "loaded": True,
+            "initialized": True,
+            "artificial": False,
+            "external": False,
+            "volatile": False,
+        }
+
+        def make_row(name, entry, descriptor, toc):
+            return row(
+                name, entry, fingerprint,
+                opd_addresses=descriptor,
+                opd_mappings=f"{toc}:MAPPED",
+                opd_count=1,
+                opd_regions=[{"toc": toc, **signature}],
+            )
+
+        campaign_rows = [
+            make_row("Campaign_A", "0x1000", "ram:00002000", "0x00003040"),
+            make_row("Campaign_B", "0x1100", "ram:00002008", "0x00003048"),
+        ]
+        multiplayer_rows = [
+            make_row("Multiplayer_A", "0x9000", "ram:00004000", "0x00005040"),
+            make_row("Multiplayer_B", "0x9100", "ram:00004008", "0x00005048"),
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            campaign_path = root / "campaign.csv"
+            multiplayer_path = root / "multiplayer.csv"
+            write_inventory(campaign_path, campaign_rows, fields=FIELDS + OPD_FIELDS)
+            write_inventory(multiplayer_path, multiplayer_rows, fields=FIELDS + OPD_FIELDS)
+            result = compare(
+                read_inventory(campaign_path),
+                read_inventory(multiplayer_path),
+            )
+
+        comparison = result["matched_fingerprints"][0]["toc_region_comparison"]
+        self.assertEqual(comparison["status"], "MATCHED_REGION_SIGNATURES")
+        self.assertEqual(comparison["campaign_region_signature_count"], 2)
+        self.assertEqual(comparison["multiplayer_region_signature_count"], 2)
+        self.assertEqual(comparison["shared_region_signature_count"], 2)
+        self.assertEqual(len(comparison["shared_region_signatures"]), 2)
+
 if __name__ == "__main__":
     unittest.main()

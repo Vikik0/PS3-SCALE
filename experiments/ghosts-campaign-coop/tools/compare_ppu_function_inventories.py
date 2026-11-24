@@ -13,7 +13,7 @@ import hashlib
 import json
 import re
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -418,7 +418,7 @@ def _target_fingerprints(
 
 
 def _normalized_toc_region_signatures(rows: list[dict[str, Any]]) -> list[dict[str, Any]] | None:
-    signatures: set[str] = set()
+    signatures: list[str] = []
     for row in rows:
         regions = row.get("opd_toc_region_evidence")
         if regions is None:
@@ -431,7 +431,11 @@ def _normalized_toc_region_signatures(rows: list[dict[str, Any]]) -> list[dict[s
                     "loaded", "initialized", "artificial", "external", "volatile",
                 )
             }
-            signatures.add(json.dumps(normalized, sort_keys=True, separators=(",", ":")))
+            signatures.append(
+                json.dumps(normalized, sort_keys=True, separators=(",", ":"))
+            )
+    # Keep repeated signatures: multiple functions/descriptors can legitimately
+    # use the same normalized region, and collapsing them hides cross-build deltas.
     return [json.loads(value) for value in sorted(signatures)]
 
 
@@ -446,29 +450,54 @@ def _compare_toc_region_signatures(
         shared = []
         campaign_only = campaign_signatures
         multiplayer_only = multiplayer_signatures
+        multiplicity = []
+        campaign_count = None
+        multiplayer_count = None
+        shared_count = None
     else:
-        campaign_set = {
-            json.dumps(value, sort_keys=True, separators=(",", ":"))
-            for value in campaign_signatures
-        }
-        multiplayer_set = {
-            json.dumps(value, sort_keys=True, separators=(",", ":"))
-            for value in multiplayer_signatures
-        }
-        shared_set = campaign_set & multiplayer_set
-        campaign_only_set = campaign_set - multiplayer_set
-        multiplayer_only_set = multiplayer_set - campaign_set
-        shared = [json.loads(value) for value in sorted(shared_set)]
-        campaign_only = [json.loads(value) for value in sorted(campaign_only_set)]
-        multiplayer_only = [json.loads(value) for value in sorted(multiplayer_only_set)]
-        if not campaign_set and not multiplayer_set:
+        encode = lambda value: json.dumps(
+            value, sort_keys=True, separators=(",", ":")
+        )
+        campaign_counts = Counter(encode(value) for value in campaign_signatures)
+        multiplayer_counts = Counter(encode(value) for value in multiplayer_signatures)
+        shared_counts = campaign_counts & multiplayer_counts
+        campaign_only_counts = campaign_counts - multiplayer_counts
+        multiplayer_only_counts = multiplayer_counts - campaign_counts
+
+        def expand(counts: Counter[str]) -> list[dict[str, Any]]:
+            return [
+                json.loads(signature)
+                for signature, count in sorted(counts.items())
+                for _ in range(count)
+            ]
+
+        shared = expand(shared_counts)
+        campaign_only = expand(campaign_only_counts)
+        multiplayer_only = expand(multiplayer_only_counts)
+        campaign_count = sum(campaign_counts.values())
+        multiplayer_count = sum(multiplayer_counts.values())
+        shared_count = sum(shared_counts.values())
+        multiplicity = [
+            {
+                "signature": json.loads(signature),
+                "campaign_count": campaign_counts[signature],
+                "multiplayer_count": multiplayer_counts[signature],
+                "shared_count": shared_counts[signature],
+                "campaign_only_count": campaign_only_counts[signature],
+                "multiplayer_only_count": multiplayer_only_counts[signature],
+            }
+            for signature in sorted(campaign_counts.keys() | multiplayer_counts.keys())
+        ]
+
+        if not campaign_counts and not multiplayer_counts:
             status = "NO_TOC_REGION_EVIDENCE"
-        elif campaign_set == multiplayer_set:
+        elif campaign_counts == multiplayer_counts:
             status = "MATCHED_REGION_SIGNATURES"
-        elif shared_set:
+        elif shared_counts:
             status = "PARTIAL_REGION_OVERLAP"
         else:
             status = "DIFFERENT_REGION_SIGNATURES"
+
     return {
         "status": status,
         "campaign_region_signatures": campaign_signatures,
@@ -476,9 +505,14 @@ def _compare_toc_region_signatures(
         "shared_region_signatures": shared,
         "campaign_only_region_signatures": campaign_only,
         "multiplayer_only_region_signatures": multiplayer_only,
+        "signature_multiplicity": multiplicity,
+        "campaign_region_signature_count": campaign_count,
+        "multiplayer_region_signature_count": multiplayer_count,
+        "shared_region_signature_count": shared_count,
         "normalization": (
             "Absolute TOC addresses are omitted. Signatures compare block name, permissions, "
-            "offset within the block and Ghidra block provenance flags across the two imported ELFs."
+            "offset within the block and Ghidra block provenance flags across the two imported ELFs. "
+            "Repeated signatures are preserved as multiplicities instead of being deduplicated."
         ),
         "interpretation": (
             "A matching signature is static layout evidence only. It does not prove identical "

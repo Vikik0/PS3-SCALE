@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "phase": 53,
+  "status": "TOC_SIGNATURE_MULTIPLICITY_PRESERVED",
+  "changes": [
+    "normalized TOC region signatures retain duplicate occurrences",
+    "cross-build comparison uses multisets instead of sets",
+    "reports per-signature Campaign, Multiplayer, shared and side-only counts",
+    "reports total signature multiplicity for both builds",
+    "retains existing comparison statuses and legacy inventory support"
+  ],
+  "tests_added": 2,
+  "validation_boundary": "Synthetic cross-build inventory fixtures only. Signature multiplicity is static evidence and does not prove TOC contents, relocation, ABI compatibility or runtime call safety."
+}
