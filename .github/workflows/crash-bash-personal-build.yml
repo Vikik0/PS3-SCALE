@@ -4,6 +4,11 @@ run-name: Personal game-inclusive Crash Bash PKG
 
 on:
   workflow_dispatch:
+    inputs:
+      disc_archive_url:
+        description: "One-use HTTPS download URL for the private BIN/CUE ZIP"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -28,7 +33,7 @@ jobs:
       - name: Validate and mask the private download URL
         shell: bash
         env:
-          DISC_ARCHIVE_URL: ${{ secrets.CRASH_BASH_DISC_ARCHIVE_URL }}
+          DISC_ARCHIVE_URL: ${{ inputs.disc_archive_url }}
         run: |
           set -euo pipefail
           test -n "$DISC_ARCHIVE_URL"
@@ -38,7 +43,7 @@ jobs:
           esac
           echo "::add-mask::$DISC_ARCHIVE_URL"
 
-      - name: Verify PS3 build tools
+      - name: Verify PS3 build tools and recipient certificate
         shell: bash
         run: |
           set -euo pipefail
@@ -48,30 +53,44 @@ jobs:
             command -v "$tool"
           done
           test -s "$PS3DEV/bin/sfo.xml"
+          CERT="Crash-Bash-Enhanced/keys/personal-build-public.pem"
+          test -s "$CERT"
+          openssl x509 -in "$CERT" -noout -checkend 0
+          printf 'Crash Bash personal package preflight\n' > /tmp/cb-preflight.txt
+          openssl cms -encrypt -binary -stream -aes-256-cbc \
+            -in /tmp/cb-preflight.txt -out /tmp/cb-preflight.cms \
+            -outform DER "$CERT"
+          openssl cms -cmsout -print -inform DER -in /tmp/cb-preflight.cms >/dev/null
 
-      - name: Download the private BIN/CUE archive
+      - name: Download and validate the private BIN/CUE archive
         shell: bash
         env:
-          DISC_ARCHIVE_URL: ${{ secrets.CRASH_BASH_DISC_ARCHIVE_URL }}
+          DISC_ARCHIVE_URL: ${{ inputs.disc_archive_url }}
         run: |
           set -euo pipefail
           echo "::add-mask::$DISC_ARCHIVE_URL"
           curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
             --connect-timeout 30 --max-time 900 --max-filesize 536870912 \
-            "$DISC_ARCHIVE_URL" \
-            --output /tmp/crash-bash-disc.zip
+            "$DISC_ARCHIVE_URL" --output /tmp/crash-bash-disc.zip
           test -s /tmp/crash-bash-disc.zip
           python3 - <<'PY'
-          import sys, zipfile
+          import zipfile
           path = "/tmp/crash-bash-disc.zip"
           with zipfile.ZipFile(path) as archive:
               bad = archive.testzip()
               if bad:
                   raise SystemExit(f"Corrupt ZIP member: {bad}")
-              files = [item.filename for item in archive.infolist() if not item.is_dir()]
-              if not files:
-                  raise SystemExit("The disc ZIP is empty.")
-              print(f"Validated ZIP container with {len(files)} file entries.")
+              files = [item for item in archive.infolist() if not item.is_dir()]
+              names = {item.filename for item in files}
+              expected = {"Crash Bash (USA).bin", "Crash Bash (USA).cue"}
+              if names != expected:
+                  raise SystemExit(f"Expected exactly {sorted(expected)}, received {sorted(names)}")
+              sizes = {item.filename: item.file_size for item in files}
+              if sizes["Crash Bash (USA).bin"] != 178220448:
+                  raise SystemExit("The Crash Bash BIN size does not match the verified original dump.")
+              if sizes["Crash Bash (USA).bin"] % 2352:
+                  raise SystemExit("The BIN is not aligned to 2352-byte sectors.")
+              print(f"Validated original BIN/CUE ZIP: {sizes['Crash Bash (USA).bin']:,} BIN bytes.")
           PY
 
       - name: Build the pinned RetroArch and PCSX-ReARMed runtime
@@ -96,11 +115,15 @@ jobs:
         run: |
           set -euo pipefail
           bash Crash-Bash-Enhanced/scripts/build_personal_pkg.sh
-          test -s Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-Personal-PS3.pkg
-          test -s Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-Personal-PS3.pkg.sha256
-          test -s Crash-Bash-Enhanced/build-artifacts/PERSONAL-BUILD-MANIFEST.txt
+          PKG="Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-Personal-PS3.pkg"
+          test -s "$PKG"
+          test "$(stat -c %s "$PKG")" -gt 178220448
           cd Crash-Bash-Enhanced/build-artifacts
           sha256sum -c Crash-Bash-Online-Personal-PS3.pkg.sha256
+          test -s PERSONAL-BUILD-MANIFEST.txt
+          grep -q "Installable packages: one PKG only" PERSONAL-BUILD-MANIFEST.txt
+          grep -q "CUE: Crash Bash (USA).cue" PERSONAL-BUILD-MANIFEST.txt
+          grep -q "TRACK: Crash Bash (USA).bin" PERSONAL-BUILD-MANIFEST.txt
 
       - name: Encrypt the personal PKG for private transfer
         shell: bash
@@ -112,9 +135,7 @@ jobs:
           test -s "$PKG"
           test -s "$CERT"
           openssl cms -encrypt -binary -stream -aes-256-cbc \
-            -in "$PKG" \
-            -out "$ENCRYPTED" \
-            -outform DER "$CERT"
+            -in "$PKG" -out "$ENCRYPTED" -outform DER "$CERT"
           test -s "$ENCRYPTED"
           openssl cms -cmsout -print -inform DER -in "$ENCRYPTED" >/dev/null
           sha256sum "$ENCRYPTED" > "$ENCRYPTED.sha256"
