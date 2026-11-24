@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "phase": 61,
+  "status": "USER_MISSION_FASTFILES_HASH_VERIFIED",
+  "files": [
+    {
+      "role": "black_ice",
+      "file_name": "black_ice.ff",
+      "size_bytes": 91355961,
+      "sha256": "950726399e16f55fd565438936ec59231649940c89763a87c805409536837532",
+      "magic": "IWff0100",
+      "matched": true
+    },
+    {
+      "role": "carrier",
+      "file_name": "carrier.ff",
+      "size_bytes": 87088544,
+      "sha256": "e3a616545f18a7dcae006b4e32264c56b01d627650ea574f3fe710e02543caee",
+      "magic": "IWff0100",
+      "matched": true
+    },
+    {
+      "role": "cornered",
+      "file_name": "cornered.ff",
+      "size_bytes": 93933243,
+      "sha256": "1bcb1da55d7e5a893de2a513e6df9b5cd3786e4d642dc76e090ea551cdf39395",
+      "magic": "IWff0100",
+      "matched": true
+    }
+  ],
+  "changes": [
+    "add read-only streaming FastFile identity verifier",
+    "pin expected size, SHA-256 and IWff0100 magic for all three mission inputs",
+    "test matching, hash mismatch and missing-input cases"
+  ],
+  "validation_boundary": "Input provenance only; matching hashes do not prove a playable co-op build."
+}
