@@ -37,7 +37,7 @@ def make_project(root: Path):
     )
 
 
-def make_artifacts(root: Path):
+def make_artifacts(root: Path, project: Path):
     dirs = {name: root / name for name in ("pad-probe", "input-probe", "bootstrap", "session", "registry")}
     for path in dirs.values():
         path.mkdir(parents=True)
@@ -69,7 +69,7 @@ def make_artifacts(root: Path):
     registry = dirs["registry"]
     (registry / "ghc_campaign_player_registry.gscbin").write_bytes(b"registry-compiled")
     # The source lives in the checked-out project; pin its exact bytes here.
-    source = root / "client" / "ps3" / "gsc" / "ghc_campaign_player_registry.gsc"
+    source = project / "client" / "ps3" / "gsc" / "ghc_campaign_player_registry.gsc"
     manifest = {
         "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
         "compiled_gscbin_sha256": hashlib.sha256((registry / "ghc_campaign_player_registry.gscbin").read_bytes()).hexdigest(),
@@ -89,7 +89,7 @@ class CaptureKitBuilderTests(unittest.TestCase):
             project.mkdir()
             artifacts.mkdir()
             make_project(project)
-            make_artifacts(artifacts)
+            make_artifacts(artifacts, project)
             output = root / "out" / "capture-kit.zip"
 
             result = build_capture_kit(project, artifacts, output, {"run_id": "test-run"})
@@ -112,7 +112,7 @@ class CaptureKitBuilderTests(unittest.TestCase):
             project.mkdir()
             artifacts.mkdir()
             make_project(project)
-            make_artifacts(artifacts)
+            make_artifacts(artifacts, project)
             (artifacts / "input-probe" / "build" / "ghosts_pad_input_probe.fake.sprx").unlink()
 
             with self.assertRaises(FileNotFoundError):
