@@ -128,7 +128,6 @@ static int g_ps2_config_download_replace = 0;
 static char g_ps2_config_backup_path[PS3SCALE_PS2_CONFIG_STORE_PATH_MAX];
 static char g_ps2_config_rollback_path[PS3SCALE_PS2_CONFIG_STORE_PATH_MAX];
 static char g_ps2_config_download_backup_path[PS3SCALE_PS2_CONFIG_STORE_PATH_MAX];
-static char g_ps2_config_download_rollback_path[PS3SCALE_PS2_CONFIG_STORE_PATH_MAX];
 static int g_ps2_config_manager_target_exists = 0;
 static int g_ps2_config_manager_backup_exists = 0;
 static int g_ps2_config_manager_backup_matches = 0;
@@ -3342,6 +3341,13 @@ static void backup_selected_ps2_config(void)
                  "WAIT FOR THE CURRENT CONFIG DOWNLOAD TO FINISH.");
         return;
     }
+    if (g_ps2_config_download_running || g_ps2_config_download_done ||
+        g_ps2_config_download_thread_started) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "WAIT FOR THE CURRENT CONFIG DOWNLOAD TO FINISH.");
+        return;
+    }
     if (ps2_config_store_paths(
             game, entry, target, sizeof(target),
             g_ps2_config_backup_path, sizeof(g_ps2_config_backup_path),
@@ -3392,6 +3398,13 @@ static void restore_selected_ps2_config(void)
     char target[PS3SCALE_PATH_MAX];
     int result;
 
+    if (g_ps2_config_download_running || g_ps2_config_download_done ||
+        g_ps2_config_download_thread_started) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "WAIT FOR THE CURRENT CONFIG DOWNLOAD TO FINISH.");
+        return;
+    }
     if (g_ps2_config_download_running || g_ps2_config_download_done ||
         g_ps2_config_download_thread_started) {
         snprintf(g_ps2_config_manager_message,
@@ -3486,7 +3499,6 @@ static void ps2_config_download_worker(void *arg)
                         g_ps2_config_download_temp_path,
                         g_ps2_config_download_path,
                         g_ps2_config_download_backup_path,
-                        g_ps2_config_download_rollback_path,
                         ps2_config_type_limit(g_ps2_config_download_type),
                         g_ps2_config_download_replace);
                     if (store_result == PS3SCALE_PS2_STORE_OK)
@@ -3618,8 +3630,6 @@ static void start_ps2_config_download(int allow_replace)
              "%s", entry->type);
     snprintf(g_ps2_config_download_backup_path,
              sizeof(g_ps2_config_download_backup_path), "%s", backup_path);
-    snprintf(g_ps2_config_download_rollback_path,
-             sizeof(g_ps2_config_download_rollback_path), "%s", rollback_path);
     g_ps2_config_download_replace = allow_replace;
     g_ps2_config_download_result = -1;
     g_ps2_config_downloaded = 0;
