@@ -72,7 +72,7 @@ No real screenshot pairs are currently bundled in the repository; this part requ
 8. For a game with an exact database match and no existing CONFIG, download and confirm the file is created beside the ISO.
 9. Repeat backup/restore for an installed PS2 Classics ENC only when the webMAN PS2CONFIG directory exists.
 10. Confirm oversized files, invalid paths, leftover temporary files and rollback conflicts are rejected without modifying the ISO, EBOOT or installed title.
-11. Create a symlink at a CONFIG source and at a temporary backup path; confirm both are rejected and the linked target file remains unchanged.
+11. In host CI, create a symlink at a CONFIG source and at a temporary backup path; confirm both are rejected. On PS3, verify O_EXCL prevents an existing temporary path from being opened for writing and rename does not write through a linked target.
 12. Pre-create a valid rollback snapshot, then install a byte-matching replacement; confirm the target is replaced atomically and the existing rollback and original backup remain unchanged.
 13. Launch the same PS2 game with and without the CONFIG and record actual behavior; do not infer compatibility from a successful file install alone.
 
