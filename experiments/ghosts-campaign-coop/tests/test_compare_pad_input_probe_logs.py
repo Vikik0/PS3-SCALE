@@ -5,7 +5,7 @@ from pathlib import Path
 from tools.compare_pad_input_probe_logs import compare, parse_log
 
 
-def write_log(root: Path, filename: str, mode: str, *, distinct=True, active=True, connected=True, finished=True):
+def write_log(root: Path, filename: str, mode: str, *, distinct=True, active=True, connected=True, finished=True, axes=False):
     path = root / filename
     lines = [
         "Ghosts DualShock Input Probe v1",
@@ -18,6 +18,7 @@ def write_log(root: Path, filename: str, mode: str, *, distinct=True, active=Tru
         "NO_GAME_MEMORY_WRITES=1",
         "NO_HOOKS=1",
     ]
+    previous = {"0": 0, "1": 0}
     for sample in range(30):
         mask = 0x03 if connected else 0x01
         lines.append(
@@ -29,17 +30,35 @@ def write_log(root: Path, filename: str, mode: str, *, distinct=True, active=Tru
         if sample < 4:
             p0_buttons = 0
             p1_buttons = 0
+        if not connected:
+            p1_buttons = 0
+        p0_digital2 = 0x40 if p0_buttons & 0x00000200 else 0
+        p1_digital2 = (
+            0x20 if p1_buttons & 0x00000400
+            else 0x40 if p1_buttons & 0x00000200
+            else 0
+        )
+        p0_pressed = p0_buttons & ~previous["0"]
+        p0_released = previous["0"] & ~p0_buttons
+        p1_pressed = p1_buttons & ~previous["1"]
+        p1_released = previous["1"] & ~p1_buttons
+        previous["0"] = p0_buttons
+        previous["1"] = p1_buttons
+        p0_axis = (50, 0, 0, 0) if axes and sample >= 4 else (0, 0, 0, 0)
+        p1_axis = (0, -50, 0, 0) if axes and sample >= 4 else (0, 0, 0, 0)
         lines.append(
-            f"  sample={sample} port=0 connected={1 if connected else 1} read_error=0 "
-            f"digital1=0x00000000 digital2=0x00000040 buttons=0x{p0_buttons:08x} "
-            f"pressed=0x{p0_buttons:08x} released=0x00000000 left_x=128 left_y=128 right_x=128 right_y=128 "
-            "norm_left_x=0 norm_left_y=0 norm_right_x=0 norm_right_y=0 l2_pressure=0 r2_pressure=0"
+            f"  sample={sample} port=0 connected=1 read_error=0 "
+            f"digital1=0x00000000 digital2=0x{p0_digital2:04x} buttons=0x{p0_buttons:08x} "
+            f"pressed=0x{p0_pressed:08x} released=0x{p0_released:08x} left_x=128 left_y=128 right_x=128 right_y=128 "
+            f"norm_left_x={p0_axis[0]} norm_left_y={p0_axis[1]} norm_right_x={p0_axis[2]} norm_right_y={p0_axis[3]} "
+            "l2_pressure=0 r2_pressure=0"
         )
         lines.append(
             f"  sample={sample} port=1 connected={1 if connected else 0} read_error=0 "
-            f"digital1=0x00000000 digital2=0x00000020 buttons=0x{p1_buttons:08x} "
-            f"pressed=0x{p1_buttons:08x} released=0x00000000 left_x=128 left_y=128 right_x=128 right_y=128 "
-            "norm_left_x=0 norm_left_y=0 norm_right_x=0 norm_right_y=0 l2_pressure=0 r2_pressure=0"
+            f"digital1=0x00000000 digital2=0x{p1_digital2:04x} buttons=0x{p1_buttons:08x} "
+            f"pressed=0x{p1_pressed:08x} released=0x{p1_released:08x} left_x=128 left_y=128 right_x=128 right_y=128 "
+            f"norm_left_x={p1_axis[0]} norm_left_y={p1_axis[1]} norm_right_x={p1_axis[2]} norm_right_y={p1_axis[3]} "
+            "l2_pressure=0 r2_pressure=0"
         )
     if finished:
         lines.append("Pad input probe finished.")
@@ -58,6 +77,43 @@ class PadInputProbeComparatorTests(unittest.TestCase):
             self.assertTrue(campaign["both_ports_simultaneously_connected"])
             self.assertTrue(campaign["independent_input_observed"])
             self.assertEqual(campaign["independent_button_samples"], list(range(4, 30)))
+
+    def test_raw_digital_buttons_must_match_the_mapped_button_mask(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            campaign_path = write_log(root, "campaign.log", "CAMPAIGN")
+            text = campaign_path.read_text(encoding="utf-8").replace(
+                "digital2=0x0040 buttons=0x00000200",
+                "digital2=0x0040 buttons=0x00000400",
+                1,
+            )
+            campaign_path.write_text(text, encoding="utf-8")
+            campaign = parse_log(campaign_path)
+            self.assertFalse(campaign["capture_complete"])
+            self.assertTrue(any("mapped buttons mask" in item["error"] for item in campaign["port_line_errors"]))
+
+    def test_pressed_and_released_edges_must_match_successful_samples(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            campaign_path = write_log(root, "campaign.log", "CAMPAIGN")
+            text = campaign_path.read_text(encoding="utf-8").replace(
+                "sample=4 port=0 connected=1 read_error=0 digital1=0x00000000 digital2=0x0040 buttons=0x00000200 pressed=0x00000200",
+                "sample=4 port=0 connected=1 read_error=0 digital1=0x00000000 digital2=0x0040 buttons=0x00000200 pressed=0x00000000",
+                1,
+            )
+            campaign_path.write_text(text, encoding="utf-8")
+            campaign = parse_log(campaign_path)
+            self.assertFalse(campaign["capture_complete"])
+            self.assertTrue(any("pressed mask" in item["error"] for item in campaign["consistency_errors"]))
+
+    def test_axis_independence_is_reported_separately_from_button_proof(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            campaign = parse_log(write_log(root, "campaign.log", "CAMPAIGN", active=False, axes=True))
+            multiplayer = parse_log(write_log(root, "multiplayer.log", "MULTIPLAYER", active=False, axes=True))
+            self.assertEqual(campaign["independent_axis_samples"], list(range(4, 30)))
+            self.assertFalse(campaign["independent_input_observed"])
+            self.assertEqual(compare(campaign, multiplayer)["status"], "CAMPAIGN_BUTTON_ACTIVITY_MISSING_ON_ONE_OR_BOTH_PORTS")
 
     def test_same_button_state_on_both_ports_is_not_independence_evidence(self):
         with tempfile.TemporaryDirectory() as temp:
