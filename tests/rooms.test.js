@@ -642,6 +642,7 @@ test("Netplay relay lookup is private to room members and resolves the matching 
           {
             fields: {
               username: "CB-" + netplayId + "-HOST",
+              is_retroarch: true,
               connectable: true,
               host_method: 3,
               mitm_ip: "madrid.relay.retroarch.com",
@@ -722,7 +723,9 @@ test("Netplay endpoint uses a connectable direct host when no relay session exis
       return [{
         fields: {
           username: "CB-" + room.body.room.netplayId + "-HOST",
+          is_retroarch: true,
           connectable: true,
+          host_method: 0,
           ip: "203.0.113.25",
           port: 55435,
           mitm_ip: "",
@@ -758,7 +761,9 @@ test("Netplay endpoint ignores a stale public-lobby host entry", async () => {
       return [{
         fields: {
           username: "CB-" + room.body.room.netplayId + "-HOST",
+          is_retroarch: true,
           connectable: true,
+          host_method: 0,
           ip: "203.0.113.25",
           port: 55435,
           updated: new Date(Date.now() - 3 * 60 * 1000).toISOString()
@@ -1067,7 +1072,9 @@ test("a started Netplay match keeps its host identity when the host leaves the l
       return [{
         fields: {
           username: "CB-" + netplayId + "-HOST",
+          is_retroarch: true,
           connectable: true,
+          host_method: 3,
           mitm_ip: "madrid.relay.retroarch.com",
           mitm_port: 55435,
           mitm_session: "AbCdEf0123456789",
@@ -1134,7 +1141,9 @@ test("a started Netplay match keeps its relay identity when the host seat expire
       return [{
         fields: {
           username: "CB-" + netplayId + "-HOST",
+          is_retroarch: true,
           connectable: true,
+          host_method: 3,
           mitm_ip: "madrid.relay.retroarch.com",
           mitm_port: 55435,
           mitm_session: "AbCdEf0123456789",
@@ -1224,7 +1233,9 @@ test("a malformed relay session cannot silently fall back to the host direct IP"
       return [{
         fields: {
           username: "CB-" + room.body.room.netplayId + "-HOST",
+          is_retroarch: true,
           connectable: true,
+          host_method: 3,
           ip: "203.0.113.25",
           port: 55435,
           mitm_ip: "",
@@ -1258,7 +1269,9 @@ test("password-protected RetroArch hosts are not returned as automatic join endp
       return [{
         fields: {
           username: "CB-" + room.body.room.netplayId + "-HOST",
+          is_retroarch: true,
           connectable: true,
+          host_method: 3,
           has_password: true,
           mitm_ip: "madrid.relay.retroarch.com",
           mitm_port: 55435,
