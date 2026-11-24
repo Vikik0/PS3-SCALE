@@ -25,7 +25,8 @@ typedef enum {
     FAULT_ALIAS_PLAYER_STATE,
     FAULT_SHARED_COMMAND_STREAM,
     FAULT_STALE_INPUT_FRAME,
-    FAULT_MISMATCHED_OBSERVATION_FRAME
+    FAULT_MISMATCHED_OBSERVATION_FRAME,
+    FAULT_MISSING_OBSERVATION_FRAME
 } SimFault;
 
 typedef struct {
@@ -105,6 +106,7 @@ static void sim_init(SimRuntime *rt, SimFault fault)
         o->controller_port = (uint8_t)i;
         o->input_connected = 1u;
         o->input_frame_valid = 1u;
+        o->observation_frame_valid = 1u;
         o->client_id_valid = 1u;
         o->entity_id_valid = 1u;
         o->local_client_num_valid = 1u;
@@ -140,6 +142,9 @@ static void sim_init(SimRuntime *rt, SimFault fault)
     }
     if (fault == FAULT_MISMATCHED_OBSERVATION_FRAME) {
         rt->observations[1].observation_frame++;
+    }
+    if (fault == FAULT_MISSING_OBSERVATION_FRAME) {
+        rt->observations[1].observation_frame_valid = 0u;
     }
 }
 
@@ -353,6 +358,8 @@ static void test_gate_and_controller_routing(void)
     CHECK("stale or missing input frame fails closed", !sim_gate_ready(&rt));
     sim_init(&rt, FAULT_MISMATCHED_OBSERVATION_FRAME);
     CHECK("player observations from different engine frames fail closed", !sim_gate_ready(&rt));
+    sim_init(&rt, FAULT_MISSING_OBSERVATION_FRAME);
+    CHECK("missing engine observation frame id fails closed", !sim_gate_ready(&rt));
 }
 
 static void test_camera_and_hud_isolation(void)
