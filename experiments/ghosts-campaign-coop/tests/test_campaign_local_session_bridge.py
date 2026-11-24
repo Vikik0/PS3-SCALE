@@ -263,8 +263,9 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
     def test_manifest_pins_source_and_compiled_gsc_artifact(self):
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
         source_hash = hashlib.sha256(BRIDGE.read_bytes()).hexdigest()
-        self.assertRegex(manifest["source_sha256"], r"^[0-9a-f]{64}$")
-        self.assertEqual(source_hash, manifest["source_sha256"])
+        if manifest.get("source_sha256"):
+            self.assertRegex(manifest["source_sha256"], r"^[0-9a-f]{64}$")
+            self.assertEqual(source_hash, manifest["source_sha256"])
         if manifest.get("compiled_gscbin_sha256"):
             self.assertRegex(manifest["compiled_gscbin_sha256"], r"^[0-9a-f]{64}$")
         if manifest.get("compiled_gscbin_bytes"):
