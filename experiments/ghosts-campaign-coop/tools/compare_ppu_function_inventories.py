@@ -416,6 +416,77 @@ def _target_fingerprints(
     }
 
 
+
+def _normalized_toc_region_signatures(rows: list[dict[str, Any]]) -> list[dict[str, Any]] | None:
+    signatures: set[str] = set()
+    for row in rows:
+        regions = row.get("opd_toc_region_evidence")
+        if regions is None:
+            return None
+        for region in regions:
+            normalized = {
+                key: region[key]
+                for key in (
+                    "status", "block_name", "permissions", "block_offset",
+                    "loaded", "initialized", "artificial", "external", "volatile",
+                )
+            }
+            signatures.add(json.dumps(normalized, sort_keys=True, separators=(",", ":")))
+    return [json.loads(value) for value in sorted(signatures)]
+
+
+def _compare_toc_region_signatures(
+    campaign_rows: list[dict[str, Any]],
+    multiplayer_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    campaign_signatures = _normalized_toc_region_signatures(campaign_rows)
+    multiplayer_signatures = _normalized_toc_region_signatures(multiplayer_rows)
+    if campaign_signatures is None or multiplayer_signatures is None:
+        status = "NOT_RECORDED"
+        shared = []
+        campaign_only = campaign_signatures
+        multiplayer_only = multiplayer_signatures
+    else:
+        campaign_set = {
+            json.dumps(value, sort_keys=True, separators=(",", ":"))
+            for value in campaign_signatures
+        }
+        multiplayer_set = {
+            json.dumps(value, sort_keys=True, separators=(",", ":"))
+            for value in multiplayer_signatures
+        }
+        shared_set = campaign_set & multiplayer_set
+        campaign_only_set = campaign_set - multiplayer_set
+        multiplayer_only_set = multiplayer_set - campaign_set
+        shared = [json.loads(value) for value in sorted(shared_set)]
+        campaign_only = [json.loads(value) for value in sorted(campaign_only_set)]
+        multiplayer_only = [json.loads(value) for value in sorted(multiplayer_only_set)]
+        if not campaign_set and not multiplayer_set:
+            status = "NO_TOC_REGION_EVIDENCE"
+        elif campaign_set == multiplayer_set:
+            status = "MATCHED_REGION_SIGNATURES"
+        elif shared_set:
+            status = "PARTIAL_REGION_OVERLAP"
+        else:
+            status = "DIFFERENT_REGION_SIGNATURES"
+    return {
+        "status": status,
+        "campaign_region_signatures": campaign_signatures,
+        "multiplayer_region_signatures": multiplayer_signatures,
+        "shared_region_signatures": shared,
+        "campaign_only_region_signatures": campaign_only,
+        "multiplayer_only_region_signatures": multiplayer_only,
+        "normalization": (
+            "Absolute TOC addresses are omitted. Signatures compare block name, permissions, "
+            "offset within the block and Ghidra block provenance flags across the two imported ELFs."
+        ),
+        "interpretation": (
+            "A matching signature is static layout evidence only. It does not prove identical "
+            "TOC contents, ABI compatibility, relocation equivalence or safe cross-build calls."
+        ),
+    }
+
+
 def _opd_toc_evidence(row: dict[str, Any]) -> dict[str, Any]:
     mappings = _values(row.get("opd_toc_mappings"))
     statuses = {mapping.rsplit(":", 1)[-1] for mapping in mappings}
@@ -504,6 +575,7 @@ def compare(
                 "campaign_functions": c_rows,
                 "multiplayer_functions": m_rows,
                 "multiplicity_delta": len(m_rows) - len(c_rows),
+                "toc_region_comparison": _compare_toc_region_signatures(c_rows, m_rows),
             })
             campaign_targets = set().union(*(
                 _target_fingerprints(row, campaign_by_entry) for row in c_rows
@@ -690,6 +762,24 @@ def compare(
             "campaign_resolved_internal_call_edges": campaign_edges,
             "multiplayer_resolved_internal_call_edges": multiplayer_edges,
             "matching_fingerprint_groups_with_call_graph_delta": len(call_graph_deltas),
+            "matching_fingerprint_groups_with_same_toc_region_signature": sum(
+                1 for item in matched
+                if item["toc_region_comparison"]["status"] == "MATCHED_REGION_SIGNATURES"
+            ),
+            "matching_fingerprint_groups_with_partial_toc_region_overlap": sum(
+                1 for item in matched
+                if item["toc_region_comparison"]["status"] == "PARTIAL_REGION_OVERLAP"
+            ),
+            "matching_fingerprint_groups_with_different_toc_region_signatures": sum(
+                1 for item in matched
+                if item["toc_region_comparison"]["status"] == "DIFFERENT_REGION_SIGNATURES"
+            ),
+            "matching_fingerprint_groups_without_toc_region_evidence": sum(
+                1 for item in matched
+                if item["toc_region_comparison"]["status"] in {
+                    "NOT_RECORDED", "NO_TOC_REGION_EVIDENCE"
+                }
+            ),
             "campaign_functions_with_opd_descriptors": sum(
                 1 for row in campaign_rows if row.get("opd_descriptor_count", 0) > 0
             ),

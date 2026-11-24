@@ -709,5 +709,118 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertIn(token, source)
 
+
+    def test_compares_normalized_toc_region_signatures_across_builds(self):
+        fingerprint = "a" * 64
+        campaign = [
+            row(
+                "FUN_campaign", "0x1000", fingerprint,
+                opd_addresses="ram:00002000",
+                opd_mappings="0x00003020:MAPPED",
+                opd_count=1,
+                opd_regions=[{
+                    "toc": "0x00003020",
+                    "status": "MAPPED",
+                    "block_name": ".got",
+                    "permissions": "rw-",
+                    "block_offset": "0x00000020",
+                    "loaded": True,
+                    "initialized": True,
+                    "artificial": False,
+                    "external": False,
+                    "volatile": False,
+                }],
+            )
+        ]
+        multiplayer = [
+            row(
+                "FUN_multiplayer", "0x9000", fingerprint,
+                opd_addresses="ram:00004000",
+                opd_mappings="0x00005020:MAPPED",
+                opd_count=1,
+                opd_regions=[{
+                    "toc": "0x00005020",
+                    "status": "MAPPED",
+                    "block_name": ".got",
+                    "permissions": "rw-",
+                    "block_offset": "0x00000020",
+                    "loaded": True,
+                    "initialized": True,
+                    "artificial": False,
+                    "external": False,
+                    "volatile": False,
+                }],
+            )
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            campaign_path = Path(temp) / "campaign.csv"
+            multiplayer_path = Path(temp) / "multiplayer.csv"
+            write_inventory(campaign_path, campaign, fields=FIELDS + OPD_FIELDS)
+            write_inventory(multiplayer_path, multiplayer, fields=FIELDS + OPD_FIELDS)
+            result = compare(read_inventory(campaign_path), read_inventory(multiplayer_path))
+        comparison = result["matching_fingerprint_groups"][0]["toc_region_comparison"]
+        self.assertEqual(comparison["status"], "MATCHED_REGION_SIGNATURES")
+        self.assertEqual(
+            result["summary"]["matching_fingerprint_groups_with_same_toc_region_signature"],
+            1,
+        )
+
+    def test_reports_different_toc_region_offsets_for_shared_code(self):
+        fingerprint = "b" * 64
+        campaign = row(
+            "FUN_campaign", "0x1000", fingerprint,
+            opd_addresses="ram:00002000",
+            opd_mappings="0x00003020:MAPPED",
+            opd_count=1,
+            opd_regions=[{
+                "toc": "0x00003020",
+                "status": "MAPPED",
+                "block_name": ".got",
+                "permissions": "rw-",
+                "block_offset": "0x00000020",
+                "loaded": True,
+                "initialized": True,
+                "artificial": False,
+                "external": False,
+                "volatile": False,
+            }],
+        )
+        multiplayer = row(
+            "FUN_multiplayer", "0x9000", fingerprint,
+            opd_addresses="ram:00004000",
+            opd_mappings="0x00005040:MAPPED",
+            opd_count=1,
+            opd_regions=[{
+                "toc": "0x00005040",
+                "status": "MAPPED",
+                "block_name": ".got",
+                "permissions": "rw-",
+                "block_offset": "0x00000040",
+                "loaded": True,
+                "initialized": True,
+                "artificial": False,
+                "external": False,
+                "volatile": False,
+            }],
+        )
+        result = compare([campaign], [multiplayer])
+        self.assertEqual(
+            result["matching_fingerprint_groups"][0]["toc_region_comparison"]["status"],
+            "DIFFERENT_REGION_SIGNATURES",
+        )
+
+    def test_marks_legacy_shared_functions_without_toc_regions_as_not_recorded(self):
+        fingerprint = "c" * 64
+        with tempfile.TemporaryDirectory() as temp:
+            campaign_path = Path(temp) / "campaign-legacy.csv"
+            multiplayer_path = Path(temp) / "multiplayer-legacy.csv"
+            write_inventory(campaign_path, [row("C", "0x1000", fingerprint)])
+            write_inventory(multiplayer_path, [row("M", "0x9000", fingerprint)])
+            result = compare(read_inventory(campaign_path), read_inventory(multiplayer_path))
+        self.assertEqual(
+            result["matching_fingerprint_groups"][0]["toc_region_comparison"]["status"],
+            "NOT_RECORDED",
+        )
+
 if __name__ == "__main__":
     unittest.main()
