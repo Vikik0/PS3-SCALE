@@ -23,7 +23,7 @@ jobs:
       - name: Verify private HTTPS source secret without exposing it
         shell: bash
         env:
-          DISC_ARCHIVE_URL: \${{ secrets.CRASH_BASH_DISC_ARCHIVE_URL }}
+          DISC_ARCHIVE_URL: ${{ secrets.CRASH_BASH_DISC_ARCHIVE_URL }}
         run: |
           set -euo pipefail
           if [[ -z "$DISC_ARCHIVE_URL" ]]; then
@@ -64,7 +64,7 @@ jobs:
       - name: Download the private BIN/CUE archive
         shell: bash
         env:
-          DISC_ARCHIVE_URL: \${{ secrets.CRASH_BASH_DISC_ARCHIVE_URL }}
+          DISC_ARCHIVE_URL: ${{ secrets.CRASH_BASH_DISC_ARCHIVE_URL }}
         run: |
           set -euo pipefail
           echo "::add-mask::$DISC_ARCHIVE_URL"
