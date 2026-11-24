@@ -18,12 +18,14 @@ EXPECTED_FILES = {
     "campaign": {
         "mode": "CAMPAIGN",
         "pad_log": "ghosts_campaign_pad_probe.log",
+        "pad_input_log": "ghosts_campaign_pad_input_probe.log",
         "segment0": "GHOSTS_TU116_CAMPAIGN_SEG0.bin",
         "segment1": "GHOSTS_TU116_CAMPAIGN_SEG1.bin",
     },
     "multiplayer": {
         "mode": "MULTIPLAYER",
         "pad_log": "ghosts_multiplayer_pad_probe.log",
+        "pad_input_log": "ghosts_multiplayer_pad_input_probe.log",
         "segment0": "GHOSTS_TU116_MULTIPLAYER_SEG0.bin",
         "segment1": "GHOSTS_TU116_MULTIPLAYER_SEG1.bin",
     },
@@ -39,7 +41,7 @@ REQUIRED_KEYS = (
     "segment0_filename",
     "segment1_filename",
 )
-ALLOWED_KEYS = set(REQUIRED_KEYS) | {"notes"}
+ALLOWED_KEYS = set(REQUIRED_KEYS) | {"notes", "pad_input_probe_log_filename"}
 KEY_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
 
@@ -89,6 +91,7 @@ def verify_capture_metadata(
     dump_dir: Path,
     *,
     pad_log: Path | None = None,
+    pad_input_log: Path | None = None,
 ) -> dict:
     """Validate one metadata file against the actual dump and optional probe log."""
     mode = mode.lower()
@@ -166,6 +169,34 @@ def verify_capture_metadata(
                 f"{mode} metadata Pad Probe filename does not match supplied log {pad_log.name!r}"
             )
 
+    input_log_verified = False
+    input_log_path = None
+    input_log_filename = values.get("pad_input_probe_log_filename")
+    if input_log_filename is not None:
+        if input_log_filename.casefold() != expected["pad_input_log"].casefold():
+            raise ValueError(
+                f"{mode} metadata pad_input_probe_log_filename mismatch: "
+                f"expected {expected['pad_input_log']!r}"
+            )
+    if pad_input_log is not None:
+        pad_input_log = Path(pad_input_log)
+        if not input_log_filename:
+            raise ValueError(
+                f"{mode} input probe log supplied but metadata has no pad_input_probe_log_filename"
+            )
+        if not pad_input_log.is_file():
+            raise FileNotFoundError(f"{mode} DualShock Input Probe log was not found: {pad_input_log}")
+        if pad_input_log.name.casefold() != expected["pad_input_log"].casefold():
+            raise ValueError(
+                f"{mode} DualShock Input Probe filename mismatch: expected {expected['pad_input_log']!r}"
+            )
+        if input_log_filename.casefold() != pad_input_log.name.casefold():
+            raise ValueError(
+                f"{mode} metadata DualShock Input Probe filename does not match supplied log {pad_input_log.name!r}"
+            )
+        input_log_verified = True
+        input_log_path = str(pad_input_log)
+
     return {
         "status": "PASS_CAPTURE_METADATA",
         "mode": mode,
@@ -181,6 +212,9 @@ def verify_capture_metadata(
         "pad_probe_log_filename": expected["pad_log"],
         "pad_probe_log_verified": pad_log is not None,
         "pad_probe_log_path": str(pad_log) if pad_log is not None else None,
+        "pad_input_probe_log_filename": input_log_filename,
+        "pad_input_probe_log_verified": input_log_verified,
+        "pad_input_probe_log_path": input_log_path,
         "segment_files": {
             "0": {
                 "filename": segment_paths["segment0"].name,
