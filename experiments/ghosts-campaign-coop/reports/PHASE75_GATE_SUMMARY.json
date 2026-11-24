@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "phase": 75,
+  "status": "LOCAL_PLAYER_GATE_INPUT_FRESHNESS_ENFORCED",
+  "changes": [
+    "record the source frame number for each player's input sample",
+    "require each input frame number to match that player's valid engine observation frame",
+    "add GHC_LOCAL_GATE_INPUT_FRAME_STALE status code 24",
+    "add P1 and P2 stale-input-frame tests",
+    "extend the host runtime simulator with a stale input frame-number mutant"
+  ],
+  "validation": {
+    "local_player_gate_c_test": "PASS",
+    "test_functions": 18,
+    "sanitizers": ["address", "undefined"],
+    "compiler_flags": "-std=c11 -O2 -Wall -Wextra -Werror -pedantic"
+  },
+  "validation_boundary": "Host validation only. The native TU 1.16 adapter and its source frame counter are not yet verified; no playable Campaign co-op is claimed."
+}
