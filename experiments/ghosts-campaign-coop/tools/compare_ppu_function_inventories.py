@@ -98,6 +98,10 @@ def _opd_toc_regions(
         fields = ("toc", "status", "block_name", "permissions", "block_offset")
         if any(not isinstance(region.get(field), str) for field in fields):
             raise InventoryError(f"{path}:{line_number}: OPD TOC region fields must be strings")
+        provenance = {
+            key: region.get(key)
+            for key in ("loaded", "initialized", "artificial", "external", "volatile")
+        }
         address = region["toc"]
         status = region["status"]
         block_name = region["block_name"]
@@ -115,9 +119,12 @@ def _opd_toc_regions(
                 not block_name
                 or not re.fullmatch(r"[r-][w-][x-]", permissions)
                 or not re.fullmatch(r"0x[0-9a-fA-F]{8}", block_offset)
+                or any(not isinstance(flag, bool) for flag in provenance.values())
             ):
-                raise InventoryError(f"{path}:{line_number}: mapped OPD TOC region lacks block permissions or offset")
-        elif block_name or permissions or block_offset:
+                raise InventoryError(f"{path}:{line_number}: mapped OPD TOC region lacks block permissions, offset or provenance flags")
+        elif block_name or permissions or block_offset or any(
+            flag is not None for flag in provenance.values()
+        ):
             raise InventoryError(f"{path}:{line_number}: unmapped/zero OPD TOC region cannot claim a memory block")
         key = f"{address}:{status}"
         if key in actual:
@@ -714,6 +721,34 @@ def compare(
                 1 for item in priority
                 if any(
                     region["status"] == "MAPPED" and "w" in region["permissions"]
+                    for region in (item["opd_toc_evidence"].get("toc_region_evidence") or [])
+                )
+            ),
+            "priority_multiplayer_only_candidates_with_loaded_toc_block": sum(
+                1 for item in priority
+                if any(
+                    region["status"] == "MAPPED" and region["loaded"] is True
+                    for region in (item["opd_toc_evidence"].get("toc_region_evidence") or [])
+                )
+            ),
+            "priority_multiplayer_only_candidates_with_initialized_toc_block": sum(
+                1 for item in priority
+                if any(
+                    region["status"] == "MAPPED" and region["initialized"] is True
+                    for region in (item["opd_toc_evidence"].get("toc_region_evidence") or [])
+                )
+            ),
+            "priority_multiplayer_only_candidates_with_artificial_toc_block": sum(
+                1 for item in priority
+                if any(
+                    region["status"] == "MAPPED" and region["artificial"] is True
+                    for region in (item["opd_toc_evidence"].get("toc_region_evidence") or [])
+                )
+            ),
+            "priority_multiplayer_only_candidates_with_external_toc_block": sum(
+                1 for item in priority
+                if any(
+                    region["status"] == "MAPPED" and region["external"] is True
                     for region in (item["opd_toc_evidence"].get("toc_region_evidence") or [])
                 )
             ),
