@@ -5249,10 +5249,10 @@ static void draw_details(void)
 
     draw_soft_card(186.0f, 92.0f, 326.0f, 292.0f, 0);
     /* Status pill tells the user what is actually available. */
-    draw_rounded_rect(203.0f, 246.0f, 290.0f, 21.0f, 7.0f,
+    draw_rounded_rect(203.0f, 270.0f, 290.0f, 21.0f, 7.0f,
                       (profile || ps2_config) ? 0xe5f5eaff : 0xfff3e5ff);
     set_ui_font_size(7, 11);
-    draw_text(212.0f, 251.0f,
+    draw_text(212.0f, 275.0f,
               (profile || ps2_config) ? 0x26794bff : 0xb27b35ff,
               profile ? ((strcmp(profile->trust, "B_COMMUNITY") == 0 &&
                            profile->patch_count == 1) ?
@@ -5271,44 +5271,47 @@ static void draw_details(void)
              game->title_id[0] ? game->title_id :
              (game->disc_id[0] ? game->disc_id : "Not read"));
     draw_text(204.0f, 176.0f, 0x514b69ff, line);
+    snprintf(line, sizeof(line), "Region: %.18s",
+             game->region[0] ? game->region : "UNKNOWN");
+    draw_text(204.0f, 202.0f, 0x514b69ff, line);
     snprintf(line, sizeof(line), "Version: %.16s",
              game_is_ps3(game) ?
              (game->app_ver[0] ? game->app_ver : "Unknown - rescan") :
              "PS2 configuration");
-    draw_text(204.0f, 202.0f, 0x514b69ff, line);
+    draw_text(204.0f, 224.0f, 0x514b69ff, line);
     snprintf(line, sizeof(line), "Location: %.25s", game->path);
-    draw_text(204.0f, 228.0f, 0x77718fff, line);
-    draw_text(204.0f, 277.0f, 0x29243fff, "Enhancement Status");
+    draw_text(204.0f, 246.0f, 0x77718fff, line);
+    draw_text(204.0f, 300.0f, 0x29243fff, "Enhancement Status");
     if (game_is_ps3(game)) {
         if (profile) {
             snprintf(line, sizeof(line), "Profile: %.30s", profile->effect);
-            draw_text(204.0f, 296.0f, 0x2c9f8eff, line);
+            draw_text(204.0f, 320.0f, 0x2c9f8eff, line);
             if (script_state == -2)
-                draw_text(204.0f, 322.0f, 0xffcc66ff, "Profile script is stale.");
+                draw_text(204.0f, 346.0f, 0xffcc66ff, "Profile script is stale.");
             else if (script_state == -1)
-                draw_text(204.0f, 322.0f, 0xffcc66ff, "User script is protected.");
+                draw_text(204.0f, 346.0f, 0xffcc66ff, "User script is protected.");
             else if (profile->patch_count != 1)
-                draw_text(204.0f, 322.0f, 0xffcc66ff, "Manual-only profile.");
+                draw_text(204.0f, 346.0f, 0xffcc66ff, "Manual-only profile.");
             else
-                draw_text(204.0f, 322.0f, 0x2c9f8eff, "Exact profile available.");
+                draw_text(204.0f, 346.0f, 0x2c9f8eff, "Exact profile available.");
         } else {
             /* NO PROFILE FOR THIS TITLE. GAME WILL START UNMODIFIED. */
-            draw_text(204.0f, 296.0f, 0xffcc66ff,
+            draw_text(204.0f, 320.0f, 0xffcc66ff,
                       "NO PROFILE FOR THIS TITLE.");
-            draw_text(204.0f, 322.0f, 0x77718fff,
+            draw_text(204.0f, 346.0f, 0x77718fff,
                       "GAME WILL START UNMODIFIED.");
         }
     } else if (ps2_config) {
         snprintf(line, sizeof(line), "Community config: %.10s", ps2_config->type);
-        draw_text(204.0f, 296.0f, 0x2c9f8eff, line);
-        draw_text(204.0f, 322.0f,
+        draw_text(204.0f, 320.0f, 0x2c9f8eff, line);
+        draw_text(204.0f, 346.0f,
                   ps2_config_exists ? 0xffcc66ff : 0x2c9f8eff,
                   ps2_config_exists ? "Config already installed." :
                                       "Verified config available.");
     } else {
-        draw_text(204.0f, 296.0f, 0xffcc66ff,
+        draw_text(204.0f, 320.0f, 0xffcc66ff,
                   "No verified PS2 config matches this ID.");
-        draw_text(204.0f, 322.0f, 0x77718fff,
+        draw_text(204.0f, 346.0f, 0x77718fff,
                   "Original game image will not be modified.");
     }
 

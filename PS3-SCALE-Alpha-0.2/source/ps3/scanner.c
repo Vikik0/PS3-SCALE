@@ -143,6 +143,7 @@ static int add_sfo_game(const char *sfo_path, const char *game_path,
     strncpy(game.title, info.title[0] ? info.title : info.title_id,
             sizeof(game.title) - 1);
     strncpy(game.title_id, info.title_id, sizeof(game.title_id) - 1);
+    strncpy(game.region, ps3scale_game_region_name(info.title_id), sizeof(game.region) - 1);
     strncpy(game.category, info.category, sizeof(game.category) - 1);
     strncpy(game.app_ver, info.app_ver, sizeof(game.app_ver) - 1);
     strncpy(game.path, game_path, sizeof(game.path) - 1);
@@ -218,6 +219,7 @@ static int scan_installed_titles(const char *base,
         strncpy(game.title, info.title[0] ? info.title : info.title_id,
                 sizeof(game.title) - 1);
         strncpy(game.title_id, info.title_id, sizeof(game.title_id) - 1);
+        strncpy(game.region, ps3scale_game_region_name(info.title_id), sizeof(game.region) - 1);
         strncpy(game.category, info.category, sizeof(game.category) - 1);
         strncpy(game.app_ver, info.app_ver, sizeof(game.app_ver) - 1);
         strncpy(game.path, folder, sizeof(game.path) - 1);
@@ -293,6 +295,9 @@ static int scan_iso_files(const char *base, ps3scale_game_kind_t kind,
             }
         }
 
+        strncpy(game.region,
+                ps3scale_game_region_name(game.title_id[0] ? game.title_id : game.disc_id),
+                sizeof(game.region) - 1);
         if (ps3scale_game_list_add(list, &game) > 0) found++;
     }
 
