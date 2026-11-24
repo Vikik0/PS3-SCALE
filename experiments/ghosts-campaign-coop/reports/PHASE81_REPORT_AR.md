@@ -23,7 +23,7 @@
 
 ### الدليل على أن Test Client ليس لاعباً محلياً
 
-في نسختي PS4 وXbox One، مسار `SV_AddTestClient`:
+في مرجعي Windows dedicated-server المرتبطين بمضيفي PS4 وXbox One، مسار `SV_AddTestClient`:
 
 1. يبحث عن slot متاح في `svs.clients`.
 2. يكوّن اسماً من نوع `tcBot%d` أو اسماً مولداً للـBot/Test Client.
@@ -46,14 +46,15 @@
 
 ## المراجع العامة
 
-- [PS4 splitscreen pseudocode](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/analysis/iw6_ds_ps4/pseudocode/client/splitscreen.cpp.c)
-- [Xbox One splitscreen pseudocode](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/analysis/iw6_ds_xb3/pseudocode/client/splitscreen.cpp.c)
-- [PS4 server client pseudocode](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/analysis/iw6_ds_ps4/pseudocode/server_mp/sv_client_mp.cpp.c)
-- [Xbox One server client pseudocode](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/analysis/iw6_ds_xb3/pseudocode/server_mp/sv_client_mp.cpp.c)
-- [PS4 multiplayer script commands](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/analysis/iw6_ds_ps4/pseudocode/game_mp/g_client_script_cmd_mp.cpp.c)
-- [Xbox One multiplayer script commands](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/analysis/iw6_ds_xb3/pseudocode/game_mp/g_client_script_cmd_mp.cpp.c)
-- [PS4 GSC server wrappers](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/analysis/iw6_ds_ps4/pseudocode/game_mp/g_scr_main_mp.cpp.c)
-- [Xbox One GSC server wrappers](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/analysis/iw6_ds_xb3/pseudocode/game_mp/g_scr_main_mp.cpp.c)
+- [README — build provenance and reference roles](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/README.md)
+- [PS4-hosted dedicated-server splitscreen pseudocode](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/analysis/iw6_ds_ps4/pseudocode/client/splitscreen.cpp.c)
+- [Xbox One-hosted dedicated-server splitscreen pseudocode](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/analysis/iw6_ds_xb3/pseudocode/client/splitscreen.cpp.c)
+- [PS4-hosted dedicated-server client pseudocode](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/analysis/iw6_ds_ps4/pseudocode/server_mp/sv_client_mp.cpp.c)
+- [Xbox One-hosted dedicated-server client pseudocode](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/analysis/iw6_ds_xb3/pseudocode/server_mp/sv_client_mp.cpp.c)
+- [PS4-hosted dedicated-server multiplayer script commands](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/analysis/iw6_ds_ps4/pseudocode/game_mp/g_client_script_cmd_mp.cpp.c)
+- [Xbox One-hosted dedicated-server multiplayer script commands](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/analysis/iw6_ds_xb3/pseudocode/game_mp/g_client_script_cmd_mp.cpp.c)
+- [PS4-hosted dedicated-server GSC wrappers](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/analysis/iw6_ds_ps4/pseudocode/game_mp/g_scr_main_mp.cpp.c)
+- [Xbox One-hosted dedicated-server GSC wrappers](https://github.com/lizardpeter/ghosts-decomp/blob/513f0b6bdf0de32d16df3af914b26df01ee04ec9/analysis/iw6_ds_xb3/pseudocode/game_mp/g_scr_main_mp.cpp.c)
 
 ## ما لا يزال مطلوباً على PS3
 
