@@ -28,7 +28,12 @@ def make_project(root: Path):
     ps3mapi.mkdir(parents=True)
     for filename in PS3MAPI_FILES:
         (ps3mapi / filename).write_text(f"tool {filename}\n", encoding="utf-8")
-    for filename in ("compare_pad_probe_logs.py", "compare_pad_input_probe_logs.py", "verify_capture_kit.py"):
+    for filename in (
+        "compare_pad_probe_logs.py",
+        "compare_pad_input_probe_logs.py",
+        "verify_capture_kit.py",
+        "verify_mission_event_lock_map.py",
+    ):
         (root / "tools" / filename).write_text(f"# {filename}\n", encoding="utf-8")
     gsc = root / "client" / "ps3" / "gsc"
     gsc.mkdir(parents=True)
