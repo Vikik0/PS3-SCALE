@@ -22,7 +22,7 @@ def write_log(root: Path, filename: str, mode: str, *, distinct=True, active=Tru
         mask = 0x03 if connected else 0x01
         lines.append(
             f"sample={sample} result=OK connected_mask=0x{mask:08x} connected_count={2 if connected else 1} "
-            "read_error_mask=0x00000000 valid_mask=0x00000003 frame_connected_mask=0x00000003"
+            f"read_error_mask=0x00000000 valid_mask=0x00000003 frame_connected_mask=0x{mask:08x}"
         )
         p0_buttons = 0x00000200 if active else 0
         p1_buttons = (0x00000400 if distinct else p0_buttons) if active else 0
