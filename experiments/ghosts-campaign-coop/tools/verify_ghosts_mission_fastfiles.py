@@ -65,7 +65,12 @@ def verify_fastfiles(paths: dict[str, Path | str | None]) -> dict[str, Any]:
         try:
             size_bytes = path.stat().st_size
             with path.open("rb") as stream:
-                magic = stream.read(8).decode("ascii", errors="replace")
+                header = stream.read(12)
+            magic = header[:8].decode("ascii", errors="replace")
+            version = (
+                f"0x{int.from_bytes(header[8:12], 'big'):08X}"
+                if len(header) >= 12 else None
+            )
             digest = _sha256(path)
         except OSError as exc:
             reports[role] = {"status": "UNREADABLE", "file_name": path.name}
@@ -76,6 +81,7 @@ def verify_fastfiles(paths: dict[str, Path | str | None]) -> dict[str, Any]:
             "size_bytes": size_bytes == expected["size_bytes"],
             "sha256": digest == expected["sha256"],
             "magic": magic == expected["magic"],
+            "version": version == expected["version"],
         }
         status = "MATCHED" if all(checks.values()) else "MISMATCH"
         reports[role] = {
@@ -84,6 +90,7 @@ def verify_fastfiles(paths: dict[str, Path | str | None]) -> dict[str, Any]:
             "size_bytes": size_bytes,
             "sha256": digest,
             "magic": magic,
+            "version": version,
             "expected": {
                 "file_name": expected["file_name"],
                 "size_bytes": expected["size_bytes"],

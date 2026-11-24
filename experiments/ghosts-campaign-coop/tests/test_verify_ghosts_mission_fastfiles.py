@@ -12,9 +12,9 @@ class VerifyGhostsMissionFastFilesTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         self.data = {
-            "black_ice": b"IWff0100" + b"black-ice-test",
-            "carrier": b"IWff0100" + b"carrier-test",
-            "cornered": b"IWff0100" + b"cornered-test",
+            "black_ice": b"IWff0100" + bytes.fromhex("0000022E") + b"black-ice-test",
+            "carrier": b"IWff0100" + bytes.fromhex("0000022E") + b"carrier-test",
+            "cornered": b"IWff0100" + bytes.fromhex("0000022E") + b"cornered-test",
         }
         self.paths = {}
         self.expectations = {}
@@ -72,6 +72,27 @@ class VerifyGhostsMissionFastFilesTests(unittest.TestCase):
         self.assertEqual(report["files"]["cornered"]["status"], "MISSING")
         self.assertEqual(report["status"], "MISMATCH_OR_INCOMPLETE")
 
+
+
+    def test_rejects_wrong_version_even_when_hash_and_size_match(self):
+        wrong_version = self.root / "wrong-version-carrier.ff"
+        data = b"IWff0100" + bytes.fromhex("0000022F") + b"carrier-test"
+        wrong_version.write_bytes(data)
+        expectations = dict(self.expectations)
+        expectations["carrier"] = {
+            **self.expectations["carrier"],
+            "size_bytes": len(data),
+            "sha256": hashlib.sha256(data).hexdigest(),
+        }
+        paths = {**self.paths, "carrier": wrong_version}
+        with patch.dict(verifier.EXPECTED_FASTFILES, expectations, clear=True):
+            report = verifier.verify_fastfiles(paths)
+        self.assertEqual(report["status"], "MISMATCH_OR_INCOMPLETE")
+        self.assertTrue(report["files"]["carrier"]["checks"]["size_bytes"])
+        self.assertTrue(report["files"]["carrier"]["checks"]["sha256"])
+        self.assertTrue(report["files"]["carrier"]["checks"]["magic"])
+        self.assertFalse(report["files"]["carrier"]["checks"]["version"])
+        self.assertEqual(report["files"]["carrier"]["version"], "0x0000022F")
 
 if __name__ == "__main__":
     unittest.main()

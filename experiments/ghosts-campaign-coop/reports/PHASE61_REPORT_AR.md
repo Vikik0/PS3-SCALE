@@ -12,7 +12,7 @@
 | carrier.ff | 87,088,544 | مطابق | IWff0100 |
 | cornered.ff | 93,933,243 | مطابق | IWff0100 |
 
-الملفات الثلاثة تطابق تماماً بصمات Phase 31 extraction bundle.
+الملفات الثلاثة تطابق تماماً الحجم وSHA-256 وMagic وإصدار FastFile 0x0000022E في Phase 31 extraction bundle.
 
 ## التعديلات
 

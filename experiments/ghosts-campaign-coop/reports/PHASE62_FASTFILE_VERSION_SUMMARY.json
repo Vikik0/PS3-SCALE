@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "phase": 62,
+  "status": "FASTFILE_VERSION_FIELD_VALIDATED",
+  "changes": [
+    "parse the 32-bit big-endian FastFile version at byte offset 8",
+    "validate version 0x0000022E independently from magic, size and SHA-256",
+    "include actual version and version check in the report",
+    "test rejection of wrong version when size, magic and pinned hash otherwise match"
+  ],
+  "tests_added": 1,
+  "validation_boundary": "Structural input identity only; no game content is modified or interpreted."
+}
