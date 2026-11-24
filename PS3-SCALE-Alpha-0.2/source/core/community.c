@@ -724,23 +724,28 @@ static int file_contains_title_id(
 }
 
 
-int ps3scale_community_file_matches_exact_game(
+int ps3scale_community_file_matches_id_version(
     const ps3scale_community_file_t *file,
     const ps3scale_game_t *game)
 {
     if (!file || !game || !game->title_id[0] ||
         !game->app_ver[0] || !file->app_ver[0] ||
-        !valid_git_blob_sha1(file->git_blob_sha1) ||
         strcmp(file->app_ver, game->app_ver) != 0)
         return 0;
 
     /*
-     * Exact installation must contain the actual region-specific Title ID.
-     * Some community files explicitly list multiple regional IDs in their
-     * path, so the primary catalog ID may differ; only the exact game ID
-     * found in the indexed identity/path can authorize this install.
+     * Exact matching requires the actual region-specific Title ID. Some
+     * community files list multiple regional IDs in their path.
      */
     return file_contains_title_id(file, game->title_id);
+}
+
+int ps3scale_community_file_matches_exact_game(
+    const ps3scale_community_file_t *file,
+    const ps3scale_game_t *game)
+{
+    return file && valid_git_blob_sha1(file->git_blob_sha1) &&
+           ps3scale_community_file_matches_id_version(file, game);
 }
 
 const char *ps3scale_community_category_label(const char *category)

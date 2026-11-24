@@ -45,6 +45,9 @@ const char *ps3scale_community_region_label(const char *title_id);
 int ps3scale_community_verify_git_blob_sha1(const char *path,
                                              unsigned long expected_size,
                                              const char *expected_sha1);
+int ps3scale_community_file_matches_id_version(
+    const ps3scale_community_file_t *file,
+    const ps3scale_game_t *game);
 int ps3scale_community_file_matches_exact_game(
     const ps3scale_community_file_t *file,
     const ps3scale_game_t *game);

@@ -100,8 +100,16 @@ int main(int argc, char **argv)
     strcpy(game.title, "Skate 3");
     strcpy(game.title_id, "BLUS30464");
     strcpy(game.app_ver, "01.05");
-    if (!ps3scale_community_file_matches_exact_game(&index.items[0], &game))
+    if (!ps3scale_community_file_matches_id_version(&index.items[0], &game) ||
+        !ps3scale_community_file_matches_exact_game(&index.items[0], &game))
         return 16;
+    {
+        ps3scale_community_file_t unverified = index.items[0];
+        unverified.git_blob_sha1[0] = '\0';
+        if (!ps3scale_community_file_matches_id_version(&unverified, &game) ||
+            ps3scale_community_file_matches_exact_game(&unverified, &game))
+            return 38;
+    }
     strcpy(game.app_ver, "01.06");
     if (ps3scale_community_file_matches_exact_game(&index.items[0], &game))
         return 17;
