@@ -42,7 +42,7 @@ cc -std=c99 -Wall -Wextra -Werror \
   -o "$OUT/test_ps2_config_db"
 "$OUT/test_ps2_config_db"
 
-cc -std=c99 -Wall -Wextra -Werror \
+cc -std=c99 -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror \
   -I"$ROOT/include" \
   "$ROOT/source/core/ps2_config_store.c" \
   "$ROOT/tests/test_ps2_config_store.c" \
