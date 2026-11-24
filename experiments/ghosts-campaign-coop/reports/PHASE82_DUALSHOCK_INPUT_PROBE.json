@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "phase": 82,
+  "status": "DUALSHOCK_INPUT_PROBE_BUILT",
+  "target": {
+    "title_id": "BLUS31270",
+    "app_ver": "01.16",
+    "platform": "PS3 CEX"
+  },
+  "artifacts": {
+    "probe_name": "ghosts_pad_input_probe",
+    "artifact_name": "ghosts-dualshock-input-probe",
+    "workflow_run_number": 1437,
+    "workflow_run_url": "https://github.com/Vikik0/PS3-SCALE/actions/runs/45500335547",
+    "source_commit": "c25a2ed070e5ff25d5a1c8ccdc34f0ee664758f5",
+    "capture_logs": {
+      "campaign": "ghosts_campaign_pad_input_probe.log",
+      "multiplayer": "ghosts_multiplayer_pad_input_probe.log"
+    }
+  },
+  "implementation": {
+    "adapter": "client/ps3/local_input_ps3.c",
+    "reads": [
+      "cellPadGetInfo2",
+      "cellPadGetData"
+    ],
+    "ports": [
+      0,
+      1
+    ],
+    "samples": 30,
+    "interval_ms": 1000,
+    "fields": [
+      "digital1",
+      "digital2",
+      "buttons",
+      "pressed",
+      "released",
+      "raw_sticks",
+      "normalized_sticks",
+      "L2_pressure",
+      "R2_pressure",
+      "connected_mask",
+      "read_error_mask"
+    ],
+    "writes_game_memory": false,
+    "hooks": false,
+    "cellPadInit_or_End": false,
+    "cellPadSet_calls": false,
+    "local_client_creation": false
+  },
+  "validation": {
+    "python_unittest_suite": "452 PASS",
+    "ps3_adapter_mock_tests": "PASS",
+    "prx_build": "PASS",
+    "prx_gen_check": "PASS",
+    "github_actions_jobs": "6/6 SUCCESS"
+  },
+  "comparator": {
+    "tool": "tools/compare_pad_input_probe_logs.py",
+    "requires_both_ports_simultaneous": true,
+    "requires_successful_reads": true,
+    "requires_activity_on_each_port": true,
+    "requires_distinct_button_states_in_same_sample": true,
+    "requires_campaign_and_multiplayer": true
+  },
+  "limitations": [
+    "No physical PS3 execution has been performed.",
+    "The probe reads cellPadGetData from a separate thread while the game is active; hardware stability and concurrent polling must be verified offline.",
+    "Port-level input independence does not prove native Local Client 1, Player Entity 2, split-screen camera, HUD, or Campaign co-op."
+  ]
+}
