@@ -22,6 +22,7 @@ static void make_ready_pair(GhcLocalPlayerObservation players[2]) {
     players[0].entity_id = 2u;
     players[0].role = GHC_LOCAL_ROLE_LOGAN;
     players[0].observation_frame = 77u;
+    players[0].input_frame_number = 77u;
     players[0].gclient_address = 0x100000u;
     players[0].gentity_address = 0x200000u;
     players[0].player_state_address = 0x100100u;
@@ -44,6 +45,7 @@ static void make_ready_pair(GhcLocalPlayerObservation players[2]) {
     players[1].entity_id = 3u;
     players[1].role = GHC_LOCAL_ROLE_GUEST_SOLDIER;
     players[1].observation_frame = 77u;
+    players[1].input_frame_number = 77u;
     players[1].gclient_address = 0x103700u;
     players[1].gentity_address = 0x200280u;
     players[1].player_state_address = 0x103800u;
@@ -120,6 +122,20 @@ static void test_both_observations_need_a_valid_engine_frame_id(void) {
     players[1].observation_frame_valid = 0u;
     assert(ghc_local_player_gate_validate(players, &result) == GHC_LOCAL_GATE_OBSERVATION_FRAME_MISSING);
     assert(result.failing_slot == 1u);
+}
+
+static void test_input_frames_must_match_their_observation_frame(void) {
+    GhcLocalPlayerObservation players[2];
+    GhcLocalPlayerGateResult result;
+    make_ready_pair(players);
+    players[1].input_frame_number = 76u;
+    assert(ghc_local_player_gate_validate(players, &result) == GHC_LOCAL_GATE_INPUT_FRAME_STALE);
+    assert(result.failing_slot == 1u);
+
+    make_ready_pair(players);
+    players[0].input_frame_number = 78u;
+    assert(ghc_local_player_gate_validate(players, &result) == GHC_LOCAL_GATE_INPUT_FRAME_STALE);
+    assert(result.failing_slot == 0u);
 }
 
 static void test_both_observations_must_belong_to_the_same_engine_frame(void) {
@@ -285,6 +301,7 @@ int main(void) {
     test_both_controller_inputs_must_be_connected();
     test_both_players_need_a_valid_fresh_input_frame();
     test_both_observations_need_a_valid_engine_frame_id();
+    test_input_frames_must_match_their_observation_frame();
     test_both_observations_must_belong_to_the_same_engine_frame();
     test_boolean_observation_flags_must_be_canonical();
     test_story_identity_must_be_preserved();
