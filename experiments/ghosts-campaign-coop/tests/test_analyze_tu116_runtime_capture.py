@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -91,6 +92,44 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
         path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         return path
 
+    def write_input_log(self, name, mode):
+        path = self.root / name
+        lines = [
+            "Ghosts DualShock Input Probe v1",
+            f"MODE={mode}",
+            "READ_ONLY=1",
+            "MODE_SOURCE=manual_mode_file",
+            "MODE_LABEL_IS_OPERATOR_SELECTED=1",
+            "CALLS=cellPadGetInfo2,cellPadGetData",
+            "NO_CELL_PAD_INIT_END=1",
+            "NO_GAME_MEMORY_WRITES=1",
+            "NO_HOOKS=1",
+        ]
+        for sample in range(30):
+            lines.append(
+                f"sample={sample} result=OK connected_mask=0x00000003 connected_count=2 "
+                "read_error_mask=0x00000000 valid_mask=0x00000003 frame_connected_mask=0x00000003"
+            )
+            buttons0 = 0x00000200 if sample >= 4 else 0
+            buttons1 = 0x00000400 if sample >= 4 else 0
+            pressed0 = buttons0 if sample == 4 else 0
+            pressed1 = buttons1 if sample == 4 else 0
+            for port, buttons, pressed, digital2 in (
+                (0, buttons0, pressed0, 0x40),
+                (1, buttons1, pressed1, 0x20),
+            ):
+                lines.append(
+                    f"  sample={sample} port={port} connected=1 read_error=0 "
+                    f"digital1=0x00000000 digital2=0x{digital2:08x} "
+                    f"buttons=0x{buttons:08x} pressed=0x{pressed:08x} released=0x00000000 "
+                    "left_x=128 left_y=128 right_x=128 right_y=128 "
+                    "norm_left_x=0 norm_left_y=0 norm_right_x=0 norm_right_y=0 "
+                    "l2_pressure=0 r2_pressure=0"
+                )
+        lines.append("Pad input probe finished.")
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return path
+
     def run_analyzer(self, **kwargs):
         defaults = {
             "campaign_self": self.campaign_self,
@@ -175,6 +214,105 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
                 self.run_analyzer(
                     campaign_metadata=campaign_meta,
                     multiplayer_metadata=multiplayer_meta,
+                )
+            verify.assert_not_called()
+
+    def test_input_probe_logs_are_compared_and_hashed_in_capture_summary(self):
+        campaign_input = self.write_input_log(
+            "ghosts_campaign_pad_input_probe.log", "CAMPAIGN"
+        )
+        multiplayer_input = self.write_input_log(
+            "ghosts_multiplayer_pad_input_probe.log", "MULTIPLAYER"
+        )
+        result = self.run_analyzer(
+            campaign_input_log=campaign_input,
+            multiplayer_input_log=multiplayer_input,
+        )
+
+        self.assertEqual(
+            result["input_probe"]["status"],
+            "INDEPENDENT_PORT_INPUT_OBSERVED_IN_BOTH_MODES",
+        )
+        self.assertTrue(result["input_probe"]["independent_input_observed_in_both_modes"])
+        self.assertEqual(
+            result["input_sha256"]["campaign_pad_input_probe_log"],
+            analyzer.sha256_file(campaign_input),
+        )
+        self.assertEqual(
+            result["input_sha256"]["multiplayer_pad_input_probe_log"],
+            analyzer.sha256_file(multiplayer_input),
+        )
+        saved = json.loads(
+            (self.output_dir / "capture_summary.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            saved["input_probe_comparison"]["status"],
+            "INDEPENDENT_PORT_INPUT_OBSERVED_IN_BOTH_MODES",
+        )
+
+    def test_only_one_input_probe_log_is_rejected_before_dump_analysis(self):
+        campaign_input = self.write_input_log(
+            "ghosts_campaign_pad_input_probe.log", "CAMPAIGN"
+        )
+        with patch.object(analyzer, "verify_dump") as verify:
+            with self.assertRaisesRegex(ValueError, "both DualShock Input Probe logs or neither"):
+                self.run_analyzer(campaign_input_log=campaign_input)
+            verify.assert_not_called()
+
+    def test_metadata_binds_both_input_probe_logs(self):
+        campaign_input = self.write_input_log(
+            "ghosts_campaign_pad_input_probe.log", "CAMPAIGN"
+        )
+        multiplayer_input = self.write_input_log(
+            "ghosts_multiplayer_pad_input_probe.log", "MULTIPLAYER"
+        )
+        campaign_meta = self.write_metadata("campaign_capture_metadata.txt", "CAMPAIGN")
+        multiplayer_meta = self.write_metadata("multiplayer_capture_metadata.txt", "MULTIPLAYER")
+        campaign_meta.write_text(
+            campaign_meta.read_text(encoding="utf-8")
+            + "pad_input_probe_log_filename=ghosts_campaign_pad_input_probe.log\n",
+            encoding="utf-8",
+        )
+        multiplayer_meta.write_text(
+            multiplayer_meta.read_text(encoding="utf-8")
+            + "pad_input_probe_log_filename=ghosts_multiplayer_pad_input_probe.log\n",
+            encoding="utf-8",
+        )
+        result = self.run_analyzer(
+            campaign_metadata=campaign_meta,
+            multiplayer_metadata=multiplayer_meta,
+            campaign_input_log=campaign_input,
+            multiplayer_input_log=multiplayer_input,
+        )
+        self.assertTrue(result["capture_metadata"]["campaign"]["pad_input_probe_log_verified"])
+        self.assertTrue(result["capture_metadata"]["multiplayer"]["pad_input_probe_log_verified"])
+
+    def test_metadata_input_probe_filename_mismatch_is_rejected_before_dump_analysis(self):
+        campaign_input = self.write_input_log(
+            "ghosts_campaign_pad_input_probe.log", "CAMPAIGN"
+        )
+        multiplayer_input = self.write_input_log(
+            "ghosts_multiplayer_pad_input_probe.log", "MULTIPLAYER"
+        )
+        campaign_meta = self.write_metadata("campaign_capture_metadata.txt", "CAMPAIGN")
+        multiplayer_meta = self.write_metadata("multiplayer_capture_metadata.txt", "MULTIPLAYER")
+        campaign_meta.write_text(
+            campaign_meta.read_text(encoding="utf-8")
+            + "pad_input_probe_log_filename=wrong.log\n",
+            encoding="utf-8",
+        )
+        multiplayer_meta.write_text(
+            multiplayer_meta.read_text(encoding="utf-8")
+            + "pad_input_probe_log_filename=ghosts_multiplayer_pad_input_probe.log\n",
+            encoding="utf-8",
+        )
+        with patch.object(analyzer, "verify_dump") as verify:
+            with self.assertRaisesRegex(ValueError, "pad_input_probe_log_filename mismatch"):
+                self.run_analyzer(
+                    campaign_metadata=campaign_meta,
+                    multiplayer_metadata=multiplayer_meta,
+                    campaign_input_log=campaign_input,
+                    multiplayer_input_log=multiplayer_input,
                 )
             verify.assert_not_called()
 
