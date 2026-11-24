@@ -115,41 +115,24 @@ async function joinRoom(){
 }
 function enterRoom(data){
   state.token=data.token;state.code=data.room.code;state.player=data.player;state.ready=false;state.cursor=0;
-  sessionStorage.setItem("cb_token",state.token);sessionStorage.setItem("cb_code",state.code);sessionStorage.setItem("cb_player",JSON.stringify(state.player));
-  $("roomView").classList.add("active");$("roomTitle").textContent=state.code;$("roomNotice").textContent="Room created. Waiting for players. The browser lobby does not run game frames.";
+  sessionStorage.setItem("cb_token",state.token);sessionStorage.setItem("cb_code",state.code);
+  $("roomView").classList.add("active");$("roomTitle").textContent=state.code;$("roomNotice").textContent="Room created. Waiting for up to three more players. Game-session transport is not connected.";
   refreshRoom();
   clearInterval(state.poll);
   state.poll=setInterval(refreshRoom,5000);
   clearInterval(state.heartbeat);
-  state.heartbeat=setInterval(heartbeat,20000);
+  state.heartbeat=setInterval(()=>api("/api/rooms","POST",{action:"heartbeat",ready:state.ready}).catch(()=>{}),20000);
   $("roomView").scrollIntoView({behavior:"smooth",block:"center"});
 }
 async function refreshRoom(){
   if(!state.token||!state.code)return;
   try{
     const data=await api("/api/rooms?code="+encodeURIComponent(state.code));
-    state.room=data.room;
-    const own=state.room.players.find(p=>state.player&&p.id===state.player.id);
-    if(own)state.ready=!!own.ready;
-    renderRoom();
-  }catch(e){$("roomNotice").textContent=e.message;}
-}
-async function heartbeat(){
-  if(!state.token)return;
-  try{
-    const data=await api("/api/rooms","POST",{action:"heartbeat"});
-    if(state.room&&Array.isArray(data.players)){
-      state.room.players=data.players;
-      state.room.status=data.status||state.room.status;
-      state.room.gameStarted=!!data.gameStarted;
-      renderRoom();
-    }
+    state.room=data.room;renderRoom();
   }catch(e){$("roomNotice").textContent=e.message;}
 }
 function renderRoom(){
   const room=state.room;if(!room)return;
-  const own=room.players.find(p=>state.player&&p.id===state.player.id);
-  if(own)state.ready=!!own.ready;
   $("slots").innerHTML="";
   for(let i=0;i<(room.maxPlayers||4);i++){
     const p=room.players[i];
@@ -159,37 +142,21 @@ function renderRoom(){
     node.querySelector("small").textContent=p?(p.ready?"READY":"NOT READY"):"Invite a friend to join";
     $("slots").appendChild(node);
   }
-  const allReady=room.players.length>=2&&room.players.every(p=>p.ready);
-  const started=!!room.gameStarted||room.status==="started";
-  $("roomNotice").textContent=started
-    ?"MATCH STARTED. RetroArch Netplay carries the PS3 game session; this browser page does not run game frames."
-    :allReady
-      ?"All active players are READY. READY expires after 90 seconds unless each player confirms again."
-      :room.players.length>1
-        ?"Players joined. Mark READY when prepared."
-        :"Waiting for more players.";
-  $("roomNotice").className="notice"+(allReady||started?"":" warnbox");
-  $("readyBtn").disabled=started;
-  $("readyBtn").textContent=started?"MATCH STARTED":state.ready?"CANCEL READY":"I'M READY";
+  const allReady=room.players.length===(room.maxPlayers||4)&&room.players.every(p=>p.ready);
+  $("roomNotice").textContent=allReady?"All seats are ready. This lobby still needs a compatible game-session transport.":room.players.length>1?"Players joined. Mark ready when prepared.":"Waiting for more players.";
+  $("roomNotice").className="notice"+(allReady?"":" warnbox");
+  $("readyBtn").textContent=state.ready?"CANCEL READY":"I'M READY";
 }
 async function toggleReady(){
-  const nextReady=!state.ready;
-  try{
-    const data=await api("/api/rooms","POST",{action:"set_ready",ready:nextReady});
-    state.ready=nextReady;
-    if(state.room){
-      state.room.players=data.players||state.room.players;
-      state.room.status=data.status||state.room.status;
-      state.room.gameStarted=!!data.gameStarted;
-    }
-    renderRoom();
-  }catch(e){alert(e.message);await refreshRoom();}
+  state.ready=!state.ready;
+  try{const data=await api("/api/rooms","POST",{action:"heartbeat",ready:state.ready});if(state.room)state.room.players=data.players;renderRoom();}
+  catch(e){state.ready=!state.ready;alert(e.message);}
 }
 async function leaveRoom(){
   try{await api("/api/rooms","POST",{action:"leave"});}catch{}
   clearInterval(state.poll);clearInterval(state.heartbeat);
   state.token="";state.code="";state.room=null;state.player=null;state.ready=false;
-  sessionStorage.removeItem("cb_token");sessionStorage.removeItem("cb_code");sessionStorage.removeItem("cb_player");
+  sessionStorage.removeItem("cb_token");sessionStorage.removeItem("cb_code");
   $("roomView").classList.remove("active");loadRooms();
 }
 async function copyCode(){try{await navigator.clipboard.writeText(state.code);$("roomNotice").textContent="Invite code copied: "+state.code;}catch{$("roomNotice").textContent="Room code: "+state.code;}}
@@ -199,7 +166,7 @@ async function loadRooms(){
     for(const r of data.rooms){const row=document.createElement("div");row.className="room";const info=document.createElement("div");const b=document.createElement("b");b.textContent=r.code;const small=document.createElement("small");small.textContent=r.host+" · "+r.players+"/"+r.maxPlayers+" players";info.append(b,small);const btn=document.createElement("button");btn.className="secondary";btn.textContent="JOIN";btn.onclick=()=>{$("joinCode").value=r.code;joinRoom();};row.append(info,btn);root.appendChild(row);}
   }catch(e){$("roomsList").innerHTML='<div class="empty">'+e.message+'</div>';}
 }
-(async()=>{await checkHealth();await loadRooms();const token=sessionStorage.getItem("cb_token");const code=sessionStorage.getItem("cb_code");if(token&&code){state.token=token;state.code=code;try{state.player=JSON.parse(sessionStorage.getItem("cb_player")||"null");}catch{state.player=null;} $("roomView").classList.add("active");$("roomTitle").textContent=code;refreshRoom();state.poll=setInterval(refreshRoom,5000);state.heartbeat=setInterval(heartbeat,20000);}})();
+(async()=>{await checkHealth();await loadRooms();const token=sessionStorage.getItem("cb_token");const code=sessionStorage.getItem("cb_code");if(token&&code){state.token=token;state.code=code;state.player={name:displayName()};$("roomView").classList.add("active");$("roomTitle").textContent=code;refreshRoom();state.poll=setInterval(refreshRoom,3000);state.heartbeat=setInterval(()=>api("/api/rooms","POST",{action:"heartbeat",ready:state.ready}).catch(()=>{}),20000);}})();
 </script>
 </body>
 </html>
