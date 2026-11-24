@@ -68,10 +68,10 @@ class CaptureMetadataVerificationTests(unittest.TestCase):
 
     def test_input_probe_log_is_bound_when_supplied(self):
         input_log = self.root / "ghosts_campaign_pad_input_probe.log"
-        input_log.write_text("input probe fixture\\n", encoding="utf-8")
+        input_log.write_text("input probe fixture\n", encoding="utf-8")
         text = self.campaign_meta.read_text(encoding="utf-8")
         self.campaign_meta.write_text(
-            text + "pad_input_probe_log_filename=ghosts_campaign_pad_input_probe.log\\n",
+            text + "pad_input_probe_log_filename=ghosts_campaign_pad_input_probe.log\n",
             encoding="utf-8",
         )
         result = verify_capture_metadata(
@@ -83,7 +83,7 @@ class CaptureMetadataVerificationTests(unittest.TestCase):
 
     def test_supplied_input_log_requires_metadata_filename(self):
         input_log = self.root / "ghosts_campaign_pad_input_probe.log"
-        input_log.write_text("input probe fixture\\n", encoding="utf-8")
+        input_log.write_text("input probe fixture\n", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "metadata has no pad_input_probe_log_filename"):
             verify_capture_metadata(
                 self.campaign_meta, "campaign", self.campaign_dir,
@@ -92,10 +92,10 @@ class CaptureMetadataVerificationTests(unittest.TestCase):
 
     def test_wrong_input_probe_log_name_is_rejected(self):
         input_log = self.root / "wrong_input.log"
-        input_log.write_text("input probe fixture\\n", encoding="utf-8")
+        input_log.write_text("input probe fixture\n", encoding="utf-8")
         text = self.campaign_meta.read_text(encoding="utf-8")
         self.campaign_meta.write_text(
-            text + "pad_input_probe_log_filename=ghosts_campaign_pad_input_probe.log\\n",
+            text + "pad_input_probe_log_filename=ghosts_campaign_pad_input_probe.log\n",
             encoding="utf-8",
         )
         with self.assertRaisesRegex(ValueError, "DualShock Input Probe filename mismatch"):
@@ -107,7 +107,7 @@ class CaptureMetadataVerificationTests(unittest.TestCase):
     def test_wrong_metadata_input_probe_filename_is_rejected(self):
         text = self.campaign_meta.read_text(encoding="utf-8")
         self.campaign_meta.write_text(
-            text + "pad_input_probe_log_filename=ghosts_multiplayer_pad_input_probe.log\\n",
+            text + "pad_input_probe_log_filename=ghosts_multiplayer_pad_input_probe.log\n",
             encoding="utf-8",
         )
         with self.assertRaisesRegex(ValueError, "pad_input_probe_log_filename mismatch"):
@@ -118,7 +118,7 @@ class CaptureMetadataVerificationTests(unittest.TestCase):
     def test_missing_input_probe_file_is_rejected(self):
         text = self.campaign_meta.read_text(encoding="utf-8")
         self.campaign_meta.write_text(
-            text + "pad_input_probe_log_filename=ghosts_campaign_pad_input_probe.log\\n",
+            text + "pad_input_probe_log_filename=ghosts_campaign_pad_input_probe.log\n",
             encoding="utf-8",
         )
         with self.assertRaisesRegex(FileNotFoundError, "DualShock Input Probe log was not found"):
