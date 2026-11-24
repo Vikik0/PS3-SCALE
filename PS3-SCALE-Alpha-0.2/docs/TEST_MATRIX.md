@@ -81,3 +81,13 @@ No real screenshot pairs are currently bundled in the repository; this part requ
 - Compatible CFW Super Slim (where available; most Super Slim models do not support traditional CFW)
 
 CI build and host tests are necessary but not sufficient. Actual RSX appearance, audio playback, webMAN behavior, Artemis USERLIST loading and game stability require physical-console validation.
+
+## Region metadata and PS2 CONFIG match safety
+
+1. Confirm BLUS / BCUS / NPUB / NPUD IDs display NORTH AMERICA.
+2. Confirm BLES / BCES / NPEB / NPED IDs display EUROPE.
+3. Confirm SLPM / SLPS / SCPS / NPJB / NPJD IDs display JAPAN.
+4. Confirm SLKA / SCKA / BLKS / BCKS / NPKB IDs display KOREA.
+5. Confirm BLAS / BCAS IDs display ASIA.
+6. Confirm an unknown or malformed ID displays UNKNOWN and is never assigned a guessed region.
+7. Confirm PS2 CONFIG lookup uses exact normalized Title ID or disc serial and never selects a different region's config.
