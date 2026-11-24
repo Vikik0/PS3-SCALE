@@ -8,7 +8,7 @@
 - Package metadata: `APP_VER=00.31`, `VERSION=00.31`
 - Package title ID: `PS3SCALE1`
 
-## Alpha 0.31 — reversible PS2 CONFIG Manager
+## Alpha 0.31 — PS2 CONFIG Manager, region matching and verified community downloads
 
 - Added the controller-operated PS2 CONFIG Manager, opened from PS2 Game Details with SQUARE.
 - Supports standard PS2 ISO `.CONFIG` sidecars and webMAN PS2 Classics `.ENC` files.
@@ -16,10 +16,15 @@
 - Restore uses a temporary copy and atomic rename; an existing current CONFIG is retained as a rollback copy.
 - Replacing an existing CONFIG requires the saved backup to match the current file byte-for-byte. Stale backups and existing rollback/temp files block replacement.
 - The original ISO, EBOOT and installed title files remain read-only. The Triangle generated-CONFIG preview remains memory-only.
-- GitHub Actions run #605: **PASS** — all host regression tests, PS3 ELF/SELF, standard PKG, GNPDRM PKG and package validation passed.
-- Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/45349236256
-- Artifact: `PS3-SCALE-Alpha-0.31-build-with-embedded-theme` (24,714,611 bytes).
-- Physical PS3 Slim / CFW 4.93 testing of manager navigation, backup, restore, matched download and actual game behavior remains pending.
+- Game metadata infers a conservative region from Title ID / disc serial and displays it in Game Details. FPS profiles require exact Title ID, region and APP_VER matching.
+- Community NCL installs require exact game ID and APP_VER, exact file size, and a verified GitHub Git-blob SHA-1 before the downloaded file is moved into Artemis. Legacy cache entries without hashes remain discovery-only.
+- The generated community index contains 7,516 records (about 1.86 MB); host tests load the full index and validate every record hash.
+- Catalog and community index URLs point to the current development branch. The community index builder refreshes automatically when its script or workflow changes.
+- GitHub Actions run #665: **PASS** — all host tests (including the full community index and multi-block Git-blob SHA-1 vectors), ELF/SELF, standard PKG, GNPDRM PKG and package validation passed.
+- Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/45353775045
+- Artifact: `PS3-SCALE-Alpha-0.31-build-with-embedded-theme` (25,343,184 bytes).
+- Cryptographic catalog signatures remain pending; Git-blob SHA-1 is integrity verification, not a signature.
+- Physical PS3 Slim / CFW 4.93 testing of manager navigation, backup, restore, verified NCL installation and actual game behavior remains pending.
 
 ## Alpha 0.30 — reliable unmodified launch fallback
 
