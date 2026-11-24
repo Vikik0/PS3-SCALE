@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 from pathlib import Path, PurePosixPath
 
@@ -70,6 +71,31 @@ def _validate_gsc_manifest(root: Path, name: str) -> list[str]:
     return errors
 
 
+def _validate_event_lock_map(root: Path) -> list[str]:
+    map_path = root / "Reports" / "PHASE88_MISSION_EVENT_LOCK_MAP.json"
+    tool_path = root / "Tools" / "verify_mission_event_lock_map.py"
+    if not map_path.exists() and not tool_path.exists():
+        return []
+    if not map_path.is_file() or not tool_path.is_file():
+        return ["mission event map and validator must both be present"]
+
+    source_path = root / "Experimental_GSC_Not_Installed" / "ghc_campaign_local_session.gsc"
+    if not source_path.is_file():
+        return ["mission event map requires the Local Session GSC source"]
+
+    try:
+        data = json.loads(map_path.read_text(encoding="utf-8"))
+        spec = importlib.util.spec_from_file_location("ghosts_event_map_validator", tool_path)
+        if spec is None or spec.loader is None:
+            return ["unable to load mission event map validator"]
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        errors = module.validate_map(data, source_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, AttributeError) as exc:
+        return [f"mission event map validation failed to run: {exc}"]
+    return [f"mission event map: {error}" for error in errors]
+
+
 def validate_package(root: Path) -> tuple[list[str], dict]:
     root = Path(root).resolve()
     manifest_path = root / "MANIFEST.json"
@@ -128,6 +154,7 @@ def validate_package(root: Path) -> tuple[list[str], dict]:
 
     for name in ("ghc_campaign_player_registry", "ghc_campaign_local_session"):
         errors.extend(_validate_gsc_manifest(root, name))
+    errors.extend(_validate_event_lock_map(root))
 
     summary = {
         "package": manifest.get("package"),
