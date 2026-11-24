@@ -5,9 +5,9 @@
   "platform": "PS3",
   "compiler": "GSC Tool 1.6.2.364",
   "compile_command": "gsc-tool --mode comp --game iw6 --system ps3 ghc_campaign_local_session.gsc",
-  "source_sha256": "81126c094e095adc1a462f8ff0e50a220a3ae866ca9c71d80b092e7a6be1fa61",
-  "status": "compiled and round-trip decompiled with GSC Tool 1.6.2.364; CI verifies source and bytecode hashes; lifecycle monitor is source/build validated but not injected or runtime-tested",
-  "behavior": "Reuses only engine-created native split-screen players; validates the exact live primary/secondary pair against the current player entity array before session reuse and Campaign actions; centralized invalidation sets status 8, releases the active sequential drill stage, preserves only a still-valid primary alias, and clears stale secondary/player handles; the Clockwork drill ownership helper allows one global active owner at a time and requires Stage 1 completion before Stage 2; owner may change between stages; exposes Player 2 loadout helper; never spawns or clones a player. Adds a single guarded lifecycle watcher after a successful bind; it revalidates the exact native pair and Campaign aliases every 250 ms, tolerates seven consecutive transient failures, and invalidates/releases drill ownership on the eighth failure (2 seconds). It does not create or rebind players; bridge main() must be called again after status 8.",
-  "compiled_gscbin_sha256": "b0dac7ddb682fdf2836e2e18343b04068e5f57944dbf3f367e736104dab9f15c",
-  "compiled_gscbin_bytes": 2606
+  "source_sha256": "649ef13136b5b9a801fb9e5f296bd34300000000c1d4da8d29800b5f6fc12d75",
+  "status": "source updated for reusable event-lock lifecycle integration; CI compile and bytecode hash pin pending",
+  "behavior": "Reuses only engine-created native split-screen players; validates the exact live primary/secondary pair against the current player entity array before session reuse and Campaign actions; centralized invalidation sets status 8, releases the active sequential drill stage, preserves only a still-valid primary alias, and clears stale secondary/player handles; the Clockwork drill ownership helper allows one global active owner at a time and requires Stage 1 completion before Stage 2; owner may change between stages; exposes Player 2 loadout helper; never spawns or clones a player. Adds a single guarded lifecycle watcher after a successful bind; it revalidates the exact native pair and Campaign aliases every 250 ms, tolerates seven consecutive transient failures, and invalidates/releases drill ownership on the eighth failure (2 seconds). It does not create or rebind players; bridge main() must be called again after status 8. Initializes the reusable 16-ID shared mission event lock after native-pair validation and aborts active event locks on rebind or stale-session invalidation while preserving completed mission events.",
+  "compiled_gscbin_sha256": "",
+  "compiled_gscbin_bytes": 0
 }
