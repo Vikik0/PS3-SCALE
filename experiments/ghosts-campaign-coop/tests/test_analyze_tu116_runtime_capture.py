@@ -115,8 +115,8 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
             pressed0 = buttons0 if sample == 4 else 0
             pressed1 = buttons1 if sample == 4 else 0
             for port, buttons, pressed, digital2 in (
-                (0, buttons0, pressed0, 0x40),
-                (1, buttons1, pressed1, 0x20),
+                (0, buttons0, pressed0, 0x40 if buttons0 else 0),
+                (1, buttons1, pressed1, 0x20 if buttons1 else 0),
             ):
                 lines.append(
                     f"  sample={sample} port={port} connected=1 read_error=0 "
@@ -164,6 +164,11 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
         self.assertTrue((self.output_dir / "campaign_tu116_runtime.elf").is_file())
         self.assertTrue((self.output_dir / "multiplayer_tu116_runtime.elf").is_file())
         self.assertTrue((self.output_dir / "capture_summary.json").is_file())
+        self.assertTrue((self.output_dir / "input_probe_comparison.json").is_file())
+        input_comparison = json.loads(
+            (self.output_dir / "input_probe_comparison.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(input_comparison["status"], "NOT_PROVIDED")
 
     def test_metadata_pair_is_bound_to_the_exact_mode_files_and_hashes(self):
         campaign_log = self.root / "ghosts_campaign_pad_probe.log"
@@ -248,6 +253,17 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
         self.assertEqual(
             saved["input_probe_comparison"]["status"],
             "INDEPENDENT_PORT_INPUT_OBSERVED_IN_BOTH_MODES",
+        )
+        separate = json.loads(
+            (self.output_dir / "input_probe_comparison.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            separate["status"],
+            "INDEPENDENT_PORT_INPUT_OBSERVED_IN_BOTH_MODES",
+        )
+        self.assertEqual(
+            result["input_probe"]["campaign_independent_button_samples"],
+            list(range(4, 30)),
         )
 
     def test_only_one_input_probe_log_is_rejected_before_dump_analysis(self):
