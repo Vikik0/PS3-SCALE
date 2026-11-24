@@ -34,6 +34,10 @@ main()
         return 1;
     }
 
+    if ( isdefined( level.ghc_campaign_event_lock_initialized )
+        && level.ghc_campaign_event_lock_initialized )
+        ghc_campaign_event_lock_clear_active();
+
     if ( isdefined( level.ghc_campaign_drill_state_initialized )
         && level.ghc_campaign_drill_state_initialized )
     {
@@ -217,6 +221,7 @@ ghc_campaign_bind_native_local_pair()
     level.ghc_campaign_player_0.unique_id = "player0";
     level.ghc_campaign_player_1.unique_id = "player1";
 
+    ghc_campaign_event_lock_init();
     ghc_campaign_drill_state_init();
 
     /*
@@ -248,6 +253,10 @@ ghc_campaign_clear_session_aliases()
 
 ghc_campaign_invalidate_local_session()
 {
+    if ( isdefined( level.ghc_campaign_event_lock_initialized )
+        && level.ghc_campaign_event_lock_initialized )
+        ghc_campaign_event_lock_clear_active();
+
     ghc_campaign_drill_abort_slot( 0 );
     ghc_campaign_drill_abort_slot( 1 );
     ghc_campaign_clear_session_aliases();
