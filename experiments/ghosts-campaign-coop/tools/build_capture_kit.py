@@ -163,11 +163,13 @@ def build_capture_kit(
 
         # Capture scripts, runtime analyzers, and integrity verifier.
         ps3mapi_root = project_root / "tools" / "ps3mapi"
+        ps3mapi_destination = root / "Tools" / "ps3mapi"
+        ps3mapi_destination.mkdir(parents=True, exist_ok=True)
         for filename in PS3MAPI_FILES:
             source = ps3mapi_root / filename
             if not source.is_file():
                 raise FileNotFoundError(f"missing PS3MAPI tool: {source}")
-            shutil.copy2(source, root / "Tools" / "ps3mapi" / filename)
+            shutil.copy2(source, ps3mapi_destination / filename)
         for filename in (
             "compare_pad_probe_logs.py",
             "compare_pad_input_probe_logs.py",
