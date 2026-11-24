@@ -1,0 +1,268 @@
+#!/usr/bin/env python3
+"""Assemble the reproducible Ghosts TU1.16 development and capture kit from CI artifacts."""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import shutil
+import tempfile
+import zipfile
+from pathlib import Path
+
+from verify_capture_kit import validate_package
+
+PS3MAPI_FILES = (
+    "CAPTURE_METADATA_TEMPLATE.txt",
+    "README_AR.md",
+    "SELF_MEMORY_MAP_TU116.json",
+    "TU116_EXECUTABLE_MANIFEST.json",
+    "analyze_tu116_runtime_capture.py",
+    "compare_runtime_strings.py",
+    "diff_runtime_elfs.py",
+    "dump_campaign_tu116.bat",
+    "dump_multiplayer_tu116.bat",
+    "reconstruct_elf_from_ps3mapi_dumps.py",
+    "scan_clockwork_script_asset.py",
+    "scan_runtime_strings.py",
+    "verify_capture_metadata.py",
+    "verify_tu116_dump.py",
+)
+
+
+def _find_one(root: Path, filename: str) -> Path:
+    matches = [path for path in root.rglob(filename) if path.is_file()]
+    if len(matches) != 1:
+        raise FileNotFoundError(
+            f"expected exactly one {filename!r} under {root}, found {len(matches)}"
+        )
+    return matches[0]
+
+
+def _copy_one(root: Path, filename: str, destination: Path) -> Path:
+    source = _find_one(root, filename)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, destination)
+    return destination
+
+
+def _copy_tree(source: Path, destination: Path) -> None:
+    if not source.is_dir():
+        raise FileNotFoundError(f"artifact directory missing: {source}")
+    for path in source.rglob("*"):
+        if path.is_file():
+            relative = path.relative_to(source)
+            target = destination / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, target)
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def build_capture_kit(
+    project_root: Path,
+    artifacts_root: Path,
+    output: Path,
+    run_metadata: dict | None = None,
+) -> dict:
+    project_root = Path(project_root).resolve()
+    artifacts_root = Path(artifacts_root).resolve()
+    output = Path(output).resolve()
+    run_metadata = run_metadata or {}
+
+    artifact_dirs = {
+        name: artifacts_root / name
+        for name in ("pad-probe", "input-probe", "bootstrap", "session", "registry")
+    }
+    for path in artifact_dirs.values():
+        if not path.is_dir():
+            raise FileNotFoundError(f"missing downloaded CI artifact directory: {path}")
+
+    with tempfile.TemporaryDirectory(prefix="ghosts-tu116-kit-") as temp:
+        root = Path(temp) / "Ghosts_TU116_Development_Capture_Kit"
+        root.mkdir(parents=True)
+
+        # Diagnostic probes and mode selectors.
+        for filename in (
+            "ghosts_campaign_pad_probe.prx",
+            "ghosts_campaign_pad_probe.fake.sprx",
+            "ghosts_campaign_pad_probe.elf",
+        ):
+            _copy_one(artifact_dirs["pad-probe"], filename, root / "PS3" / filename)
+        _copy_one(
+            artifact_dirs["pad-probe"], "README_AR.md",
+            root / "Docs" / "PAD_PROBE_README_AR.md",
+        )
+        mode_files = list((artifact_dirs["pad-probe"]).rglob("ghosts_probe_mode_*.txt"))
+        if len(mode_files) != 2:
+            raise FileNotFoundError(f"expected Campaign and Multiplayer mode files, found {len(mode_files)}")
+        for source in mode_files:
+            shutil.copy2(source, root / "PS3" / "mode_files" / source.name)
+
+        for filename in (
+            "ghosts_pad_input_probe.prx",
+            "ghosts_pad_input_probe.fake.sprx",
+            "ghosts_pad_input_probe.elf",
+        ):
+            _copy_one(artifact_dirs["input-probe"], filename, root / "PS3" / filename)
+        _copy_one(
+            artifact_dirs["input-probe"], "README_AR.md",
+            root / "Docs" / "PAD_INPUT_PROBE_README_AR.md",
+        )
+
+        # CEX bootstrap PRX build.
+        _copy_tree(artifact_dirs["bootstrap"], root / "PS3" / "ghosts_coop")
+
+        # Experimental GSC scripts are deliberately kept outside PS3 payloads.
+        _copy_tree(artifact_dirs["session"], root / "Experimental_GSC_Not_Installed")
+        _copy_tree(artifact_dirs["registry"], root / "Experimental_GSC_Not_Installed")
+        registry_source = (
+            project_root / "client" / "ps3" / "gsc" / "ghc_campaign_player_registry.gsc"
+        )
+        if not registry_source.is_file():
+            raise FileNotFoundError(f"missing registry source: {registry_source}")
+        shutil.copy2(
+            registry_source,
+            root / "Experimental_GSC_Not_Installed" / registry_source.name,
+        )
+
+        # Capture scripts, runtime analyzers, and integrity verifier.
+        ps3mapi_root = project_root / "tools" / "ps3mapi"
+        for filename in PS3MAPI_FILES:
+            source = ps3mapi_root / filename
+            if not source.is_file():
+                raise FileNotFoundError(f"missing PS3MAPI tool: {source}")
+            shutil.copy2(source, root / "Tools" / "ps3mapi" / filename)
+        for filename in (
+            "compare_pad_probe_logs.py",
+            "compare_pad_input_probe_logs.py",
+            "verify_capture_kit.py",
+        ):
+            source = project_root / "tools" / filename
+            if not source.is_file():
+                raise FileNotFoundError(f"missing analyzer tool: {source}")
+            shutil.copy2(source, root / "Tools" / filename)
+
+        # Keep the two dump scripts at the documented PS3 root paths too.
+        for filename in ("dump_campaign_tu116.bat", "dump_multiplayer_tu116.bat"):
+            shutil.copy2(root / "Tools" / "ps3mapi" / filename, root / "PS3" / filename)
+
+        # Include phase reports when present.
+        reports_dir = root / "Reports"
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        for filename in (
+            "PHASE84_REPORT_AR.md",
+            "PHASE85_REPORT_AR.md",
+            "PHASE86_REPORT_AR.md",
+            "PHASE84_MISSION_EVENT_OWNERSHIP.json",
+            "PHASE85_EVENT_LOCK_API.json",
+            "PHASE86_CAPTURE_KIT_VALIDATION.json",
+        ):
+            source = project_root / "reports" / filename
+            if source.is_file():
+                shutil.copy2(source, reports_dir / filename)
+
+        readme = """# Ghosts TU 1.16 Development & Capture Kit
+
+Target: Call of Duty: Ghosts PS3 CEX, BLUS31270, Title Update 01.16.
+
+## Verify the package first
+
+Run from the extracted package root:
+
+    python Tools/verify_capture_kit.py
+
+Do not copy files to the console unless the validator prints PASS.
+
+## Contents
+
+- PS3 CEX bootstrap PRX build and the two read-only controller probes.
+- Campaign and Multiplayer probe mode files.
+- PS3MAPI memory-dump scripts and TU1.16 runtime analyzers.
+- Experimental GSC source and GSCBIN under Experimental_GSC_Not_Installed only.
+- Phase 84–86 reports and MANIFEST.json with per-file SHA-256 checksums.
+
+## Recommended offline test
+
+Run DualShock Input Probe v1 alone in Campaign Offline, unload it, then repeat in Multiplayer Offline. Do not run it together with Pad Probe v4. The input probe reads cellPadGetData from a separate thread; actual-console stability still requires verification.
+
+Use the comparators in Tools to analyze both logs. A passing port-input comparison proves only that distinct data was returned for ports 0 and 1. It does not prove a second native Local Client or a playable second Campaign player.
+
+## Experimental GSC warning
+
+The Local Session bridge and player registry are compiled GSC scripts, not PRX files. They are not inserted into a retail FastFile and are not runtime-tested. Do not load GSCBIN through PS3MAPI. The event-lock API is lifecycle-integrated with the session bridge but is not yet wired into original mission handlers.
+
+## Not yet proven
+
+- Native PS3 Local Client 1.
+- Second Campaign player entity, independent camera, HUD or command stream.
+- Playable Campaign co-op or split-screen.
+- Runtime stability of the diagnostic probes on physical hardware.
+
+Do not send PSN credentials, IDPS, PSID or license files for analysis.
+"""
+        (root / "README_AR.md").write_text(readme, encoding="utf-8")
+
+        manifest = {
+            "package": "Ghosts TU 1.16 Development & Capture Kit",
+            "target": {"title_id": "BLUS31270", "app_ver": "01.16", "platform": "PS3 CEX"},
+            "scope": "Read-only capture probes and experimental GSC artifacts; not a playable co-op mod.",
+            "ci": run_metadata,
+            "files": {},
+        }
+        for path in sorted(p for p in root.rglob("*") if p.is_file() and p.name != "MANIFEST.json"):
+            manifest["files"][str(path.relative_to(root)).replace("\\", "/")] = {
+                "size_bytes": path.stat().st_size,
+                "sha256": _sha256(path),
+            }
+        (root / "MANIFEST.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        errors, summary = validate_package(root)
+        if errors:
+            raise RuntimeError("capture kit validation failed: " + "; ".join(errors))
+
+        output.parent.mkdir(parents=True, exist_ok=True)
+        if output.exists():
+            output.unlink()
+        with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+            for path in sorted(root.rglob("*")):
+                if path.is_file():
+                    archive.write(path, path.relative_to(root.parent))
+
+    return {
+        "output": str(output),
+        "size_bytes": output.stat().st_size,
+        "sha256": _sha256(output),
+        "files_verified": summary["files_verified"],
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--project-root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--artifacts-root", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args(argv)
+    run_metadata = {
+        "workflow_run_number": __import__("os").environ.get("GITHUB_RUN_NUMBER"),
+        "workflow_run_id": __import__("os").environ.get("GITHUB_RUN_ID"),
+        "source_commit": __import__("os").environ.get("GITHUB_SHA"),
+    }
+    result = build_capture_kit(args.project_root, args.artifacts_root, args.output, run_metadata)
+    print("PASS: reproducible Ghosts TU1.16 capture kit built and verified")
+    for key, value in result.items():
+        print(f"{key}: {value}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
