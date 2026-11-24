@@ -39,6 +39,7 @@ OUTPUT_NAMES = (
     "runtime_string_comparison.json",
     "runtime_binary_comparison.json",
     "pad_probe_comparison.json",
+    "input_probe_comparison.json",
     "capture_summary.json",
 )
 GHIDRA_OUTPUT_MAP = {
@@ -385,6 +386,7 @@ def analyze(
         write_json(outputs["runtime_string_comparison.json"], string_comparison)
         write_json(outputs["runtime_binary_comparison.json"], binary_comparison)
         write_json(outputs["pad_probe_comparison.json"], pad_comparison)
+        write_json(outputs["input_probe_comparison.json"], input_probe_comparison)
 
         input_hashes = {
             "campaign_default_self": sha256_file(campaign_self),
@@ -423,6 +425,16 @@ def analyze(
                 "capture_complete_in_both_modes": input_probe_comparison.get("capture_complete_in_both_modes", False),
                 "campaign_port_button_activity": input_probe_comparison.get("campaign", {}).get("port_button_activity"),
                 "multiplayer_port_button_activity": input_probe_comparison.get("multiplayer", {}).get("port_button_activity"),
+                "campaign_independent_button_samples": input_probe_comparison.get("campaign", {}).get("independent_button_samples", []),
+                "multiplayer_independent_button_samples": input_probe_comparison.get("multiplayer", {}).get("independent_button_samples", []),
+                "campaign_independent_axis_samples": input_probe_comparison.get("campaign", {}).get("independent_axis_samples", []),
+                "multiplayer_independent_axis_samples": input_probe_comparison.get("multiplayer", {}).get("independent_axis_samples", []),
+                "campaign_independent_trigger_samples": input_probe_comparison.get("campaign", {}).get("independent_trigger_samples", []),
+                "multiplayer_independent_trigger_samples": input_probe_comparison.get("multiplayer", {}).get("independent_trigger_samples", []),
+                "interpretation_limit": (
+                    "Button, stick and trigger independence are input-port evidence only; "
+                    "they do not prove a native Local Client 1 or Player Entity 2."
+                ),
             },
             "input_probe_comparison": input_probe_comparison,
             "pad_probe": {
