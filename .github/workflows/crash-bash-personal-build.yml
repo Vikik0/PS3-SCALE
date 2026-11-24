@@ -56,6 +56,9 @@ jobs:
           CERT="Crash-Bash-Enhanced/keys/personal-build-public.pem"
           test -s "$CERT"
           openssl x509 -in "$CERT" -noout -checkend 0
+          ACTUAL_CERT_SHA256="$(openssl x509 -in "$CERT" -noout -fingerprint -sha256 | sed 's/.*=//; s/://g' | tr '[:upper:]' '[:lower:]')"
+          EXPECTED_CERT_SHA256="7b191922fae044df08919f6562c0516c62985c01b6406213fc1431a4c7d24d78"
+          test "$ACTUAL_CERT_SHA256" = "$EXPECTED_CERT_SHA256"
           printf 'Crash Bash personal package preflight\n' > /tmp/cb-preflight.txt
           openssl cms -encrypt -binary -stream -aes-256-cbc \
             -in /tmp/cb-preflight.txt -out /tmp/cb-preflight.cms \
