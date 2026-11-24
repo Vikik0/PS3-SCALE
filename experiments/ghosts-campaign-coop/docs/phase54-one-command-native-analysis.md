@@ -18,7 +18,7 @@ The earlier tools required separate manual steps: verify retail SELF inputs, ins
 
     python tools/run_ghosts_tu116_native_analysis.py --disc-root "D:\Games\Ghosts\PS3_GAME" --update-root "D:\RPCS3\dev_hdd0\game\BLUS31270" --campaign-elf "D:\Ghosts\decrypted\default.elf" --multiplayer-elf "D:\Ghosts\decrypted\default_mp.elf" --analyze-headless "C:\ghidra\support\analyzeHeadless.bat"
 
-Add --overwrite only when replacing an existing output bundle. The tool performs local read-only inspection and does not upload or modify game binaries.
+Add --overwrite only when replacing an existing output bundle. Before writing any preflight report, the orchestrator checks all six final inventory artifact paths as well as its two status files; an existing artifact blocks the run unless --overwrite is explicit. The tool performs local read-only inspection and does not upload or modify game binaries.
 
 ## Validation boundary
 

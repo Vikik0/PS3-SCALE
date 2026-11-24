@@ -74,9 +74,17 @@ def run_pipeline(
     preflight_path = output_dir / "native_input_preflight.json"
     status_path = output_dir / "native_analysis_status.json"
     if not overwrite:
-        existing = [path for path in (preflight_path, status_path) if path.exists()]
+        protected_outputs = (
+            preflight_path,
+            status_path,
+            *(output_dir / name for name in OUTPUT_NAMES),
+        )
+        existing = [path for path in protected_outputs if path.exists()]
         if existing:
-            raise FileExistsError("refusing to overwrite existing native analysis reports: " + ", ".join(map(str, existing)))
+            raise FileExistsError(
+                "refusing to overwrite existing native analysis outputs: "
+                + ", ".join(map(str, existing))
+            )
 
     preflight = verify_inputs(disc_root, update_root, campaign_elf, multiplayer_elf)
     output_dir.mkdir(parents=True, exist_ok=True)

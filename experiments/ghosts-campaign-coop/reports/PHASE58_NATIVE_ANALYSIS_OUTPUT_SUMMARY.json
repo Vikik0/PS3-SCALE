@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "phase": 58,
+  "status": "NATIVE_ANALYSIS_OUTPUT_BUNDLE_PROTECTED",
+  "changes": [
+    "preflight checks both native status files and all six Ghidra inventory artifacts",
+    "any existing protected artifact blocks before verification unless overwrite is explicit",
+    "existing inventory files remain unchanged on refusal",
+    "no partial preflight/status files are written when output collision is detected"
+  ],
+  "tests_added": 1,
+  "validation_boundary": "Local output safety only; no change to ELF analysis or retail game binaries."
+}

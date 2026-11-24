@@ -180,5 +180,25 @@ class RunGhostsNativeAnalysisTests(unittest.TestCase):
                 pipeline.run_pipeline(self.disc, self.update, self.output)
 
 
+
+    def test_existing_inventory_output_blocks_before_preflight_or_verification(self):
+        self.output.mkdir(parents=True)
+        existing_inventory = self.output / pipeline.OUTPUT_NAMES[0]
+        existing_inventory.write_text("keep-existing-inventory", encoding="utf-8")
+
+        with patch.object(pipeline, "verify_inputs") as verify:
+            with self.assertRaisesRegex(
+                FileExistsError, "refusing to overwrite existing native analysis outputs"
+            ):
+                pipeline.run_pipeline(self.disc, self.update, self.output)
+
+        verify.assert_not_called()
+        self.assertEqual(
+            existing_inventory.read_text(encoding="utf-8"),
+            "keep-existing-inventory",
+        )
+        self.assertFalse((self.output / "native_input_preflight.json").exists())
+        self.assertFalse((self.output / "native_analysis_status.json").exists())
+
 if __name__ == "__main__":
     unittest.main()
