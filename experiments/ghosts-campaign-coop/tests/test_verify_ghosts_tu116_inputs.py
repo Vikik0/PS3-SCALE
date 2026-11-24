@@ -32,6 +32,30 @@ def make_sfo(entries):
     )
 
 
+
+
+def make_decrypted_ppu_elf(entry_point):
+    """Minimal ELF64 BE PowerPC64 image with eight PT_LOAD headers."""
+    ident = b"\x7fELF" + bytes([2, 2, 1, 0]) + bytes(8)
+    header = struct.pack(
+        ">16sHHIQQQIHHHHHH", ident, 2, 21, 1,
+        entry_point, 64, 0, 0, 64, 56, 8, 64, 0, 0,
+    )
+    data = bytearray(0x500)
+    data[:64] = header
+    for index in range(8):
+        file_offset = 0x300 + index * 0x40
+        virtual_address = entry_point + index * 0x1000
+        program_header = struct.pack(
+            ">IIQQQQQQ", 1, 5, file_offset, virtual_address,
+            virtual_address, 0x40, 0x40, 0x1000,
+        )
+        start = 64 + index * 56
+        data[start:start + 56] = program_header
+        data[file_offset:file_offset + 0x40] = bytes([index + 1]) * 0x40
+    return bytes(data)
+
+
 def make_self(entry_point):
     data = bytearray(0x1300)
     SCE_HEADER.pack_into(data, 0, b"SCE\0", 2, 28, 1, 0x4A0, 0xA80, 0x20000)
@@ -163,6 +187,53 @@ class VerifyGhostsTu116InputsTests(unittest.TestCase):
         self.assertEqual(report["inputs"]["optional_base_fastfiles"]["common.ff"]["status"], "MISMATCH")
         self.assertTrue(any("common.ff" in error for error in report["errors"]))
 
+
+
+    def test_verifies_both_decrypted_ppu_elfs_and_sets_native_ready(self):
+        campaign_elf = self.root / "default.elf"
+        multiplayer_elf = self.root / "default_mp.elf"
+        campaign_elf.write_bytes(make_decrypted_ppu_elf(0x7E9508))
+        multiplayer_elf.write_bytes(make_decrypted_ppu_elf(0xA75E38))
+
+        patches = self.patched_expectations()
+        with patches[0], patches[1], patches[2]:
+            report = verifier.verify_inputs(
+                self.disc, self.update, campaign_elf, multiplayer_elf
+            )
+
+        self.assertEqual(report["status"], "MATCHED_RETAIL_INPUTS")
+        self.assertTrue(report["readiness"]["native_ppu_comparison_ready"])
+        self.assertEqual(
+            report["inputs"]["optional_decrypted_ppu_elfs"]["campaign"]["program_header_count"],
+            8,
+        )
+        self.assertEqual(
+            report["inputs"]["optional_decrypted_ppu_elfs"]["multiplayer"]["entry_point"],
+            "0xA75E38",
+        )
+        self.assertEqual(
+            report["inputs"]["optional_decrypted_ppu_elfs"]["campaign"]["machine"],
+            "PowerPC64",
+        )
+
+    def test_rejects_decrypted_elf_with_wrong_installed_tu_entry_point(self):
+        campaign_elf = self.root / "wrong-campaign.elf"
+        multiplayer_elf = self.root / "default_mp.elf"
+        campaign_elf.write_bytes(make_decrypted_ppu_elf(0x123456))
+        multiplayer_elf.write_bytes(make_decrypted_ppu_elf(0xA75E38))
+
+        patches = self.patched_expectations()
+        with patches[0], patches[1], patches[2]:
+            report = verifier.verify_inputs(
+                self.disc, self.update, campaign_elf, multiplayer_elf
+            )
+
+        self.assertEqual(report["status"], "MISMATCH_OR_INCOMPLETE")
+        self.assertFalse(report["readiness"]["native_ppu_comparison_ready"])
+        self.assertTrue(any(
+            "Campaign decrypted ELF: entry_point" in error
+            for error in report["errors"]
+        ))
 
 if __name__ == "__main__":
     unittest.main()

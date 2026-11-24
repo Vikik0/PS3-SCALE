@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "phase": 56,
+  "status": "DECRYPTED_PPU_ELF_VERIFICATION_GATE_FIXED",
+  "bug": "Verifier referenced a missing PpuElf header key; parser exposes program_header_count.",
+  "changes": [
+    "read canonical PPU program_header_count",
+    "retain eight-program-header TU 1.16 identity gate",
+    "report PowerPC64 and big-endian architecture explicitly",
+    "exercise the real PpuElf parser with synthetic Campaign and Multiplayer ELF fixtures",
+    "test positive native readiness and rejection of a wrong Campaign entry point"
+  ],
+  "tests_added": 2,
+  "validation_boundary": "Synthetic ELF fixtures only; no retail PPU instructions are decrypted or inspected."
+}

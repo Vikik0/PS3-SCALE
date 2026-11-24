@@ -193,9 +193,10 @@ def _inspect_decrypted_elf(path: Path, expected_entry: str, label: str) -> tuple
     except (OSError, ElfFormatError) as exc:
         return {"status": "INVALID", "file": path.name, "error": str(exc)}, [f"{label}: {exc}"]
     entry = f"0x{elf.header['entry']:X}"
+    program_header_count = elf.header["program_header_count"]
     checks = {
         "entry_point": entry.lower() == expected_entry.lower(),
-        "program_header_count": elf.header["phnum"] == 8,
+        "program_header_count": program_header_count == 8,
         "load_segment_present": any(segment.kind == 1 for segment in elf.segments),
     }
     for field, passed in checks.items():
@@ -207,7 +208,9 @@ def _inspect_decrypted_elf(path: Path, expected_entry: str, label: str) -> tuple
         "size_bytes": len(data),
         "sha256": _sha256(data),
         "entry_point": entry,
-        "program_header_count": elf.header["phnum"],
+        "program_header_count": program_header_count,
+        "machine": "PowerPC64",
+        "endianness": "big",
         "load_segment_count": sum(segment.kind == 1 for segment in elf.segments),
         "checks": checks,
     }, errors
