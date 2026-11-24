@@ -59,6 +59,9 @@ assert "Crash-Bash-Online-Personal-PS3.pkg" in personal_builder
 assert 'if [[ -n "${CRASH_BASH_DISC_ARCHIVE:-}" ]]' in personal_builder
 assert '--archive "$CRASH_BASH_DISC_ARCHIVE"' in personal_builder
 assert 'cmp -s "$source_file" "$packaged_file"' in personal_builder
+assert 'PERSONAL_README="$RETROARCH_DIR/README-Crash-Bash-Online.txt"' in personal_builder
+assert "CRASH BASH ONLINE — PERSONAL GAME-INCLUSIVE PS3 PACKAGE" in personal_builder
+assert "No second PKG or external game copy is required for this included disc." in personal_builder
 
 # Public CI embeds the runtime and publishes one installable PKG without game data.
 assert "needs: online-package-build" in workflow
