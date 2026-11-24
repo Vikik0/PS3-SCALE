@@ -120,7 +120,7 @@ getmem.ps3mapi?proc=<id>&addr=<start>&len=<length>&dump=<size>.
 أنشئ نسختين من `CAPTURE_METADATA_TEMPLATE.txt`، واحدة باسم `campaign_capture_metadata.txt` والأخرى `multiplayer_capture_metadata.txt`. املأ كل الحقول، مع الالتزام بالتالي:
 
 - `operator_selected_mode`: اكتب `CAMPAIGN` أو `MULTIPLAYER` حسب الوضع الذي كنت داخله فعلياً.
-- `capture_date_local`: الصيغة `YYYY-MM-DD HH:MM:SS) بنظام 24 ساعة.
+- `capture_date_local`: الصيغة `YYYY-MM-DD HH:MM:SS` بنظام 24 ساعة.
 - `ps3mapi_current_pid`: رقم PID موجب كما ظهر من `PROCESS GETCURRENTPID`.
 - `ps3mapi_process_name_verbatim`: اسم العملية كما أعاده `PROCESS GETNAME` دون تخمين.
 - أسماء ملفات SEG وسجل Pad Probe يجب أن تطابق الأسماء القياسية الموجودة في الحزمة.
