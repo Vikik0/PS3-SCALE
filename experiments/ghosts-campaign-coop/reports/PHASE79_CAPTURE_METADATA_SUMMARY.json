@@ -12,7 +12,9 @@
   "validation": {
     "official_webman_ps3mapi_source_reviewed": true,
     "memory_write_commands_added": false,
-    "runtime_capture_received": false
+    "runtime_capture_received": false,
+    "ps3mapi_script_tests": "6/6 PASS",
+    "process_name_metadata_test": "PASS"
   },
   "limitations": [
     "Campaign and Multiplayer share Title ID BLUS31270.",
