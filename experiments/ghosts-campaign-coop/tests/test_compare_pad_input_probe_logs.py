@@ -145,7 +145,7 @@ class PadInputProbeComparatorTests(unittest.TestCase):
             multiplayer = parse_log(multiplayer_path)
             self.assertTrue(campaign["capture_complete"])
             self.assertFalse(campaign["independent_input_observed"])
-            self.assertEqual(compare(campaign, multiplayer)["status"], "INDEPENDENT_INPUT_NOT_PROVEN_SIMULTANEOUSLY")
+            self.assertEqual(compare(campaign, multiplayer)["status"], "CAMPAIGN_INDEPENDENT_INPUT_NOT_PROVEN")
 
     def test_axis_independence_is_reported_separately_from_button_proof(self):
         with tempfile.TemporaryDirectory() as temp:
