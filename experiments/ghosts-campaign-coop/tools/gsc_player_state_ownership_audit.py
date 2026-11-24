@@ -33,6 +33,15 @@ LEVEL_FIELD_RE = re.compile(r"\blevel\.([A-Za-z_][A-Za-z0-9_]*)")
 FLAG_API_RE = re.compile(r"\b(?:flag_init|flag_set|flag_clear|flag_wait|flag_wait_all|flag_wait_any|flag_waitopen)\s*\(", re.I)
 DVAR_API_RE = re.compile(r"\b(?:setdvar|setsaveddvar|getdvar|getdvarint)\s*\(", re.I)
 
+MISSION_FAILURE_RE = re.compile(r"\bmissionfailed\s*\(", re.I)
+AUTOSAVE_RE = re.compile(r"\bautosave(?:_[A-Za-z0-9_]+)?\s*\(", re.I)
+SLOWMO_RE = re.compile(r"\bslowmo_[A-Za-z0-9_]+\s*\(", re.I)
+WORLD_PHYSICS_RE = re.compile(r"\b(?:setphysicsgravitydir|physicsexplosionsphere|earthquake)\s*\(", re.I)
+LEVEL_EVENT_RE = re.compile(r"\blevel\s+(?:notify|waittill|endon)\s*\(", re.I)
+LEVEL_FIELD_WRITE_RE = re.compile(r"\blevel\.([A-Za-z_][A-Za-z0-9_]*)\s*(?:\+\+|--|[+*/-]?=)")
+PLAYER_FIELD_WRITE_RE = re.compile(r"\blevel\.player\.([A-Za-z_][A-Za-z0-9_]*)\s*(?:\+\+|--|[+*/-]?=)")
+ANIM_RIG_RE = re.compile(r"\bspawn_anim_ent\s*\(", re.I)
+
 METHOD_GROUPS = {
     "input": {
         "buttonpressed", "attackbuttonpressed", "adsbuttonpressed", "usebuttonpressed",
@@ -174,6 +183,43 @@ def _audit_function(relative: str, name: str, start: int, end: int, clean: list[
         categories[_method_category(method)] += count
     flag_calls = len(FLAG_API_RE.findall(body))
     dvar_calls = len(DVAR_API_RE.findall(body))
+    side_effects = {
+        "mission_failure_calls": len(MISSION_FAILURE_RE.findall(body)),
+        "autosave_calls": len(AUTOSAVE_RE.findall(body)),
+        "slow_motion_calls": len(SLOWMO_RE.findall(body)),
+        "world_physics_calls": len(WORLD_PHYSICS_RE.findall(body)),
+        "level_event_calls": len(LEVEL_EVENT_RE.findall(body)),
+        "animation_rig_spawns": len(ANIM_RIG_RE.findall(body)),
+    }
+    level_field_writes = Counter(LEVEL_FIELD_WRITE_RE.findall(body))
+    player_field_writes = Counter(PLAYER_FIELD_WRITE_RE.findall(body))
+    for reserved in ("player", "playerpiggyback", "playengineeffects", "players"):
+        level_field_writes.pop(reserved, None)
+
+    event_risk_flags = []
+    if side_effects["mission_failure_calls"]:
+        event_risk_flags.append("MISSION_FAILURE_SIDE_EFFECT")
+    if side_effects["autosave_calls"]:
+        event_risk_flags.append("AUTOSAVE_SIDE_EFFECT")
+    if side_effects["slow_motion_calls"]:
+        event_risk_flags.append("GLOBAL_SLOW_MOTION_SIDE_EFFECT")
+    if side_effects["world_physics_calls"]:
+        event_risk_flags.append("WORLD_PHYSICS_SIDE_EFFECT")
+    if side_effects["animation_rig_spawns"]:
+        event_risk_flags.append("SCRIPTED_ANIMATION_RIGS")
+    if flag_calls or side_effects["level_event_calls"]:
+        event_risk_flags.append("MISSION_LEVEL_EVENT_COORDINATION")
+    if dvar_calls:
+        event_risk_flags.append("DVAR_SIDE_EFFECT")
+
+    if side_effects["mission_failure_calls"] or side_effects["world_physics_calls"] or side_effects["slow_motion_calls"] or side_effects["autosave_calls"]:
+        event_ownership_pattern = "MISSION_WIDE_SINGLETON_SIDE_EFFECTS"
+    elif flag_calls or side_effects["level_event_calls"] or dvar_calls:
+        event_ownership_pattern = "SHARED_MISSION_EVENT_WITH_PLAYER_STATE"
+    elif player_refs:
+        event_ownership_pattern = "PLAYER_ENTITY_ACTIONS"
+    else:
+        event_ownership_pattern = "NO_CLASSIFIED_EVENT_OWNERSHIP_SIGNAL"
 
     per_player_actions = sum(categories.values()) + sum(fields.values())
     level_scope_refs = sum(level_fields.values()) + flag_calls + dvar_calls
@@ -208,6 +254,11 @@ def _audit_function(relative: str, name: str, start: int, end: int, clean: list[
         "level_scope_field_references": dict(level_fields.most_common()),
         "mission_flag_api_call_count": flag_calls,
         "dvar_api_call_count": dvar_calls,
+        "player_field_writes": dict(player_field_writes.most_common()),
+        "level_scope_field_writes": dict(level_field_writes.most_common()),
+        "shared_side_effect_counts": side_effects,
+        "event_risk_flags": event_risk_flags,
+        "event_ownership_pattern": event_ownership_pattern,
         "ownership_pattern": ownership_pattern,
         "warning": (
             "Static ownership hint only. Do not duplicate or replace shared flags, rigs, devices, checkpoints, "
