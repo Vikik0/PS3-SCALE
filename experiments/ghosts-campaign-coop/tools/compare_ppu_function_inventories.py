@@ -55,6 +55,10 @@ OPD_OPTIONAL_COLUMNS = {
     "opd_toc_mappings",
     "opd_descriptor_count",
 }
+OPD_RESOLUTION_COLUMNS = {
+    "opd_exact_entry_descriptor_count",
+    "opd_containing_function_descriptor_count",
+}
 OPD_TOC_MAPPING_RE = re.compile(r"^0x[0-9a-fA-F]{8}:(?:MAPPED|UNMAPPED|ZERO)$")
 
 
@@ -89,6 +93,14 @@ def read_inventory(path: Path) -> list[dict[str, Any]]:
             raise InventoryError(
                 f"{path}: incomplete OPD evidence columns: {', '.join(sorted(missing_opd))}"
             )
+        present_resolution_columns = OPD_RESOLUTION_COLUMNS & columns
+        if present_resolution_columns and present_resolution_columns != OPD_RESOLUTION_COLUMNS:
+            missing_resolution = OPD_RESOLUTION_COLUMNS - present_resolution_columns
+            raise InventoryError(
+                f"{path}: incomplete OPD resolution columns: {', '.join(sorted(missing_resolution))}"
+            )
+        if present_resolution_columns and present_opd_columns != OPD_OPTIONAL_COLUMNS:
+            raise InventoryError(f"{path}: OPD resolution columns require the complete OPD evidence columns")
         rows: list[dict[str, Any]] = []
         seen_entries: set[str] = set()
         for line_number, row in enumerate(reader, 2):
@@ -144,6 +156,35 @@ def read_inventory(path: Path) -> list[dict[str, Any]]:
                 raise InventoryError(
                     f"{path}:{line_number}: OPD descriptor count and TOC mappings do not reconcile"
                 )
+            opd_exact_entry_descriptor_count = None
+            opd_containing_function_descriptor_count = None
+            if present_resolution_columns:
+                try:
+                    opd_exact_entry_descriptor_count = int(
+                        row.get("opd_exact_entry_descriptor_count") or "0"
+                    )
+                    opd_containing_function_descriptor_count = int(
+                        row.get("opd_containing_function_descriptor_count") or "0"
+                    )
+                except (TypeError, ValueError) as exc:
+                    raise InventoryError(
+                        f"{path}:{line_number}: OPD resolution counts must be non-negative integers"
+                    ) from exc
+                if (
+                    opd_exact_entry_descriptor_count < 0
+                    or opd_containing_function_descriptor_count < 0
+                ):
+                    raise InventoryError(
+                        f"{path}:{line_number}: OPD resolution counts must be non-negative integers"
+                    )
+                if (
+                    opd_exact_entry_descriptor_count
+                    + opd_containing_function_descriptor_count
+                    != opd_descriptor_count
+                ):
+                    raise InventoryError(
+                        f"{path}:{line_number}: OPD exact/containing resolution counts do not match descriptor count"
+                    )
             rows.append({
                 "program": (row.get("program") or "").strip(),
                 "name": name,
@@ -157,6 +198,8 @@ def read_inventory(path: Path) -> list[dict[str, Any]]:
                 "opd_descriptor_addresses": opd_descriptor_addresses,
                 "opd_toc_mappings": opd_toc_mappings,
                 "opd_descriptor_count": opd_descriptor_count,
+                "opd_exact_entry_descriptor_count": opd_exact_entry_descriptor_count,
+                "opd_containing_function_descriptor_count": opd_containing_function_descriptor_count,
             })
     if not rows:
         raise InventoryError(f"{path}: inventory contains no function rows")
@@ -309,11 +352,33 @@ def _opd_toc_evidence(row: dict[str, Any]) -> dict[str, Any]:
         status = "ZERO_TOC_PRESENT"
     else:
         status = "MAPPED_TOC_STATIC_ONLY"
+    exact_count = row.get("opd_exact_entry_descriptor_count")
+    containing_count = row.get("opd_containing_function_descriptor_count")
+    if exact_count is None or containing_count is None:
+        resolution_status = "NOT_RECORDED"
+    elif exact_count > 0 and containing_count > 0:
+        resolution_status = "MIXED_EXACT_AND_CONTAINING"
+    elif exact_count > 0:
+        resolution_status = "EXACT_ENTRY_MATCH"
+    elif containing_count > 0:
+        resolution_status = "CONTAINING_FUNCTION_ONLY"
+    else:
+        resolution_status = "NO_FUNCTION_MATCH"
     return {
         "status": status,
         "descriptor_count": count,
         "descriptor_addresses": _values(row.get("opd_descriptor_addresses")),
         "toc_mappings": mappings,
+        "code_pointer_resolution": {
+            "status": resolution_status,
+            "exact_entry_descriptor_count": exact_count,
+            "containing_function_descriptor_count": containing_count,
+            "interpretation": (
+                "EXACT_ENTRY_MATCH means the OPD code pointer equals a Ghidra function entry. "
+                "CONTAINING_FUNCTION_ONLY means the pointer lies inside a function body but is not its entry. "
+                "Neither classification proves runtime safety."
+            ),
+        },
         "interpretation": (
             "MAPPED means the TOC address is present in Ghidra memory only; it does not prove "
             "that the TOC is correct for a native call or safe to reuse in Campaign."
@@ -560,6 +625,16 @@ def compare(
             "priority_multiplayer_only_candidates_with_unmapped_toc": sum(
                 1 for item in priority
                 if item["opd_toc_evidence"]["status"] == "UNMAPPED_TOC_PRESENT"
+            ),
+            "priority_multiplayer_only_candidates_with_exact_opd_entry": sum(
+                1 for item in priority
+                if item["opd_toc_evidence"]["code_pointer_resolution"]["status"]
+                in {"EXACT_ENTRY_MATCH", "MIXED_EXACT_AND_CONTAINING"}
+            ),
+            "priority_multiplayer_only_candidates_with_containing_only_opd_match": sum(
+                1 for item in priority
+                if item["opd_toc_evidence"]["code_pointer_resolution"]["status"]
+                == "CONTAINING_FUNCTION_ONLY"
             ),
         },
         "matched_fingerprints": matched,

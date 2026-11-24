@@ -185,6 +185,124 @@ def _read_opd_seed_summary(
         raise ValueError(f"{label}: OPD distinct TOC count exceeds non-zero TOC descriptors")
     return report
 
+
+def _read_opd_function_resolution_summary(
+    path: Path,
+    opd: tuple[int, int],
+    label: str,
+    inventory_rows: list[dict[str, Any]],
+    seed_summary: dict[str, Any],
+) -> dict[str, Any]:
+    path = Path(path)
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"{label}: Ghidra inventory exporter did not write its OPD resolution summary: {path}"
+        )
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"{label}: OPD function-resolution summary is not valid UTF-8 JSON") from exc
+    if not isinstance(report, dict) or report.get("schema_version") != 1:
+        raise ValueError(f"{label}: unsupported OPD function-resolution summary schema")
+    if report.get("status") != "OPD_FUNCTION_RESOLUTION_COMPLETED":
+        raise ValueError(f"{label}: OPD function-resolution analysis did not complete")
+    try:
+        reported_address = parse_integer(str(report.get("opd_va", "")), f"{label} resolution OPD address")
+        reported_size = parse_integer(str(report.get("opd_size", "")), f"{label} resolution OPD size")
+    except ValueError as exc:
+        raise ValueError(f"{label}: OPD function-resolution range is malformed") from exc
+    if (reported_address, reported_size) != opd:
+        raise ValueError(f"{label}: OPD function-resolution range does not match the requested range")
+
+    fields = (
+        "descriptor_slots_scanned",
+        "empty_descriptors",
+        "nonempty_descriptors",
+        "unreadable_descriptors",
+        "valid_executable_code_pointers",
+        "invalid_code_pointers",
+        "exact_entry_matches",
+        "containing_function_matches",
+        "unresolved_executable_pointers",
+        "functions_with_opd_descriptors",
+    )
+    counts: dict[str, int] = {}
+    for field in fields:
+        value = report.get(field)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(
+                f"{label}: OPD function-resolution field {field} must be a non-negative integer"
+            )
+        counts[field] = value
+
+    expected_slots = opd[1] // 8
+    if counts["descriptor_slots_scanned"] != expected_slots:
+        raise ValueError(f"{label}: OPD function-resolution slot count does not match requested size")
+    if (
+        counts["empty_descriptors"]
+        + counts["nonempty_descriptors"]
+        + counts["unreadable_descriptors"]
+        != counts["descriptor_slots_scanned"]
+    ):
+        raise ValueError(f"{label}: OPD function-resolution descriptor counts do not reconcile")
+    if (
+        counts["valid_executable_code_pointers"] + counts["invalid_code_pointers"]
+        != counts["nonempty_descriptors"]
+    ):
+        raise ValueError(f"{label}: OPD function-resolution code-pointer counts do not reconcile")
+    if (
+        counts["exact_entry_matches"]
+        + counts["containing_function_matches"]
+        + counts["unresolved_executable_pointers"]
+        != counts["valid_executable_code_pointers"]
+    ):
+        raise ValueError(f"{label}: OPD function-resolution matches do not reconcile")
+
+    seed_pairs = {
+        "descriptor_slots_scanned": "descriptor_slots_scanned",
+        "empty_descriptors": "empty_descriptors",
+        "nonempty_descriptors": "nonempty_descriptors",
+        "unreadable_descriptors": "unreadable_descriptors",
+        "valid_executable_code_pointers": "valid_code_pointers",
+        "invalid_code_pointers": "invalid_code_pointers",
+    }
+    for resolution_field, seed_field in seed_pairs.items():
+        if counts[resolution_field] != seed_summary[seed_field]:
+            raise ValueError(
+                f"{label}: OPD function-resolution {resolution_field} does not match seeder {seed_field}"
+            )
+
+    rows_with_descriptors = sum(
+        1 for row in inventory_rows if row.get("opd_descriptor_count", 0) > 0
+    )
+    csv_descriptor_count = sum(
+        int(row.get("opd_descriptor_count", 0)) for row in inventory_rows
+    )
+    if any(
+        row.get("opd_exact_entry_descriptor_count") is None
+        or row.get("opd_containing_function_descriptor_count") is None
+        for row in inventory_rows
+    ):
+        raise ValueError(f"{label}: OPD inventory CSV lacks exact/containing resolution columns")
+    csv_exact_count = sum(
+        int(row.get("opd_exact_entry_descriptor_count") or 0) for row in inventory_rows
+    )
+    csv_containing_count = sum(
+        int(row.get("opd_containing_function_descriptor_count") or 0)
+        for row in inventory_rows
+    )
+    if counts["functions_with_opd_descriptors"] != rows_with_descriptors:
+        raise ValueError(f"{label}: OPD function count does not match inventory CSV")
+    if counts["exact_entry_matches"] != csv_exact_count:
+        raise ValueError(f"{label}: exact-entry count does not match per-function inventory")
+    if counts["containing_function_matches"] != csv_containing_count:
+        raise ValueError(f"{label}: containing-function count does not match per-function inventory")
+    if counts["exact_entry_matches"] + counts["containing_function_matches"] != csv_descriptor_count:
+        raise ValueError(f"{label}: mapped descriptor count does not match per-function inventory")
+
+    return report
+
+
 def _read_elf_inspector_opd_report(
     report_path: Path,
     elf_path: Path,
@@ -363,6 +481,7 @@ def _run_headless(
     script_dir: Path,
     opd: tuple[int, int] | None,
     opd_summary_path: Path,
+    opd_resolution_summary_path: Path,
 ) -> list[str]:
     args = [
         str(project_location),
@@ -385,7 +504,7 @@ def _run_headless(
         ])
     args.extend(["-postScript", EXPORT_SCRIPT, str(output_csv)])
     if opd is not None:
-        args.extend([hex(opd[0]), hex(opd[1])])
+        args.extend([hex(opd[0]), hex(opd[1]), str(opd_resolution_summary_path)])
     args.extend([
         "-postScript",
         XREF_SCRIPT,
@@ -556,6 +675,8 @@ def generate_inventories(
         comparison_json = stage_dir / OUTPUT_NAMES[4]
         campaign_opd_summary_path = stage_dir / "campaign_opd_seed_summary.json"
         multiplayer_opd_summary_path = stage_dir / "multiplayer_opd_seed_summary.json"
+        campaign_opd_resolution_path = stage_dir / "campaign_opd_function_resolution.json"
+        multiplayer_opd_resolution_path = stage_dir / "multiplayer_opd_function_resolution.json"
 
         commands = {}
         commands["campaign"] = _run_headless(
@@ -568,12 +689,20 @@ def generate_inventories(
             script_dir,
             campaign_opd,
             campaign_opd_summary_path,
+            campaign_opd_resolution_path,
         )
         campaign_opd_summary = (
             _read_opd_seed_summary(campaign_opd_summary_path, campaign_opd, "Campaign")
             if campaign_opd is not None else None
         )
         campaign_rows = read_inventory(campaign_csv)
+        campaign_opd_resolution = (
+            _read_opd_function_resolution_summary(
+                campaign_opd_resolution_path, campaign_opd, "Campaign",
+                campaign_rows, campaign_opd_summary,
+            )
+            if campaign_opd is not None else None
+        )
         campaign_xref_rows = read_xrefs(
             campaign_xref_csv, read_builtin_inventory(campaign_csv)
         )
@@ -588,12 +717,20 @@ def generate_inventories(
             script_dir,
             multiplayer_opd,
             multiplayer_opd_summary_path,
+            multiplayer_opd_resolution_path,
         )
         multiplayer_opd_summary = (
             _read_opd_seed_summary(multiplayer_opd_summary_path, multiplayer_opd, "Multiplayer")
             if multiplayer_opd is not None else None
         )
         multiplayer_rows = read_inventory(multiplayer_csv)
+        multiplayer_opd_resolution = (
+            _read_opd_function_resolution_summary(
+                multiplayer_opd_resolution_path, multiplayer_opd, "Multiplayer",
+                multiplayer_rows, multiplayer_opd_summary,
+            )
+            if multiplayer_opd is not None else None
+        )
         multiplayer_xref_rows = read_xrefs(
             multiplayer_xref_csv, read_builtin_inventory(multiplayer_csv)
         )
@@ -646,6 +783,14 @@ def generate_inventories(
                     }
                     if campaign_opd else {"enabled": False, "status": "NOT_REQUESTED"}
                 ),
+                "opd_function_resolution": (
+                    {
+                        "enabled": True,
+                        "summary_sha256": sha256_file(campaign_opd_resolution_path),
+                        "summary": campaign_opd_resolution,
+                    }
+                    if campaign_opd else {"enabled": False, "status": "NOT_REQUESTED"}
+                ),
             },
             "builtin_xref_comparison_file": OUTPUT_NAMES[4],
             "builtin_xref_comparison_sha256": sha256_file(comparison_json),
@@ -672,6 +817,14 @@ def generate_inventories(
                         "range_evidence": multiplayer_opd_evidence,
                         "summary_sha256": sha256_file(multiplayer_opd_summary_path),
                         "summary": multiplayer_opd_summary,
+                    }
+                    if multiplayer_opd else {"enabled": False, "status": "NOT_REQUESTED"}
+                ),
+                "opd_function_resolution": (
+                    {
+                        "enabled": True,
+                        "summary_sha256": sha256_file(multiplayer_opd_resolution_path),
+                        "summary": multiplayer_opd_resolution,
                     }
                     if multiplayer_opd else {"enabled": False, "status": "NOT_REQUESTED"}
                 ),
