@@ -1,8 +1,8 @@
 {
   "name": "crash-bash-enhanced-web",
-  "version": "0.2.0",
+  "version": "0.7.0",
   "private": true,
-  "description": "Crash Bash Enhanced lobby and signaling service",
+  "description": "Crash Bash room coordination API and browser lobby",
   "engines": { "node": ">=22" },
   "scripts": {
     "test": "node --test"
