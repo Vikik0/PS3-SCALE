@@ -77,6 +77,13 @@ int main(void)
     strcpy(game.title_id, "BLUS30464");
     strcpy(game.app_ver, "01.05");
     strcpy(game.title, "Skate 3");
+    strcpy(game.region, "NORTH AMERICA");
+    if (!ps3scale_catalog_match_game(&catalog, &game))
+        return 25;
+    strcpy(game.region, "EUROPE");
+    if (ps3scale_catalog_match_game(&catalog, &game))
+        return 26;
+    strcpy(game.region, "NORTH AMERICA");
     if (ps3scale_game_list_add(&games, &game) != 1)
         return 7;
     game.kind = PS3SCALE_GAME_PS2_ISO;

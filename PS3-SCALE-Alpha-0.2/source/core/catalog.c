@@ -196,6 +196,8 @@ static int parse_profile_line(char *line, ps3scale_profile_t *profile)
         copy_field(profile->source_url, sizeof(profile->source_url), fields[7]))
         return -1;
 
+    strncpy(profile->region, ps3scale_game_region_name(profile->title_id),
+            sizeof(profile->region) - 1);
     if (!valid_title_id(profile->title_id) ||
         !valid_app_version(profile->app_ver) ||
         !valid_trust(profile->trust) ||
@@ -304,9 +306,14 @@ const ps3scale_profile_t *ps3scale_catalog_match_game(
     const ps3scale_catalog_t *catalog,
     const ps3scale_game_t *game)
 {
-    if (!game)
+    const ps3scale_profile_t *profile;
+
+    if (!game || !game->region[0])
         return NULL;
-    return ps3scale_catalog_match(catalog, game->title_id, game->app_ver);
+    profile = ps3scale_catalog_match(catalog, game->title_id, game->app_ver);
+    if (!profile || strcmp(profile->region, game->region) != 0)
+        return NULL;
+    return profile;
 }
 
 size_t ps3scale_catalog_count_matches(

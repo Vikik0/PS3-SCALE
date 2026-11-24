@@ -16,6 +16,7 @@
 typedef struct ps3scale_profile {
     char title_id[10];
     char app_ver[6];
+    char region[20];
     char title[PS3SCALE_PROFILE_TITLE_MAX];
     char effect[PS3SCALE_PROFILE_EFFECT_MAX];
     char trust[PS3SCALE_PROFILE_TRUST_MAX];
@@ -33,7 +34,7 @@ typedef struct ps3scale_catalog {
 /* Returns the loaded profile count (>0), or -1 when the entire file is invalid. */
 int ps3scale_catalog_load(const char *path, ps3scale_catalog_t *catalog);
 
-/* Exact Title ID + APP_VER match only. Missing versions never match. */
+/* Exact Title ID + region + APP_VER match only. Missing data never matches. */
 const ps3scale_profile_t *ps3scale_catalog_match(
     const ps3scale_catalog_t *catalog,
     const char *title_id,
