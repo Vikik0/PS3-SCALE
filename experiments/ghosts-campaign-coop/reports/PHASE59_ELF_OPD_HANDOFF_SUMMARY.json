@@ -6,7 +6,8 @@
     "synthetic ELF64 BE PowerPC64 Campaign and Multiplayer fixtures",
     "real PpuElf and inspect_file execution in the orchestrator test",
     "independent OPD range discovery for both builds",
-    "hash-bound OPD inspector report handoff to the Ghidra runner"
+    "hash-bound OPD inspector report handoff to the Ghidra runner",
+    "orchestrator summary now reads canonical program_header_count from the ELF parser"
   ],
   "tests_added": 1,
   "validation_boundary": "Synthetic ELF/OPD fixtures only; Ghidra is mocked and no retail PPU hook or runtime Player 2 behavior is proven."

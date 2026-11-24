@@ -46,7 +46,7 @@ def _elf_summary(report: dict[str, Any]) -> dict[str, Any]:
         "entry_point": elf["entry_hex"],
         "machine": elf["machine_name"],
         "endianness": elf["endianness"],
-        "program_header_count": elf["phnum"],
+        "program_header_count": elf["program_header_count"],
         "opd": {
             "section_name": opd["section_name"],
             "section_address": opd["section_address"],

@@ -27,7 +27,7 @@ def inspector_report(name, digest, entry, opd_range):
             "entry_hex": entry,
             "machine_name": "EM_PPC64",
             "endianness": "big",
-            "phnum": 8,
+            "program_header_count": 8,
             "opd": {
                 "section_name": ".opd",
                 "section_address": "0x1000",
@@ -52,7 +52,7 @@ def make_ppc64_elf_with_opd(entry_point, code_base):
     )
     code_segment = struct.pack(
         ">IIQQQQQQ", 1, 5, 0x100, code_base,
-        code_base, 0x80, 0x80, 0x1000,
+        code_base, 0x80, 0x80, 0x100,
     )
     data_segment = struct.pack(
         ">IIQQQQQQ", 1, 4, 0x200, entry_point,
