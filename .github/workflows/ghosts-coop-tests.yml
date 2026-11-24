@@ -385,3 +385,50 @@ jobs:
       - name: Run metadata-to-runtime-analyzer integration tests
         working-directory: experiments/ghosts-campaign-coop
         run: python -m unittest discover -s tests -p "test_analyze_tu116_runtime_capture.py" -v
+
+
+  package-capture-kit:
+    needs:
+      - server-tests
+      - protocol-header
+      - worker-check
+      - ps3-prx-bootstrap
+      - capture-metadata-intake
+      - gsc-script-compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v6
+        with:
+          name: ghosts-campaign-pad-probe
+          path: ${{ runner.temp }}/ghosts-kit-artifacts/pad-probe
+      - uses: actions/download-artifact@v6
+        with:
+          name: ghosts-dualshock-input-probe
+          path: ${{ runner.temp }}/ghosts-kit-artifacts/input-probe
+      - uses: actions/download-artifact@v6
+        with:
+          name: ghosts-coop-prx-bootstrap
+          path: ${{ runner.temp }}/ghosts-kit-artifacts/bootstrap
+      - uses: actions/download-artifact@v6
+        with:
+          name: ghosts-campaign-gsc-session-bridge
+          path: ${{ runner.temp }}/ghosts-kit-artifacts/session
+      - uses: actions/download-artifact@v6
+        with:
+          name: ghosts-campaign-gsc-registry
+          path: ${{ runner.temp }}/ghosts-kit-artifacts/registry
+      - name: Build and validate reproducible TU1.16 capture kit
+        run: |
+          python3 experiments/ghosts-campaign-coop/tools/build_capture_kit.py \
+            --artifacts-root "$RUNNER_TEMP/ghosts-kit-artifacts" \
+            --output "$RUNNER_TEMP/Ghosts_TU116_Development_Capture_Kit.zip"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ghosts-tu116-development-capture-kit
+          path: ${{ runner.temp }}/Ghosts_TU116_Development_Capture_Kit.zip
+          if-no-files-found: error
+          retention-days: 7
