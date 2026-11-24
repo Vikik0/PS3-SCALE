@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "phase": 79,
+  "status": "PS3MAPI_PROCESS_PROVENANCE_DOCUMENTED",
+  "changes": [
+    "document PROCESS GETNAME <pid> alongside PROCESS GETCURRENTPID",
+    "record process name verbatim for both manually selected modes",
+    "add CAPTURE_METADATA_TEMPLATE.txt",
+    "add tests for process-name provenance instructions"
+  ],
+  "interpretation": "Process name is diagnostic metadata only. It is not assumed to distinguish Campaign from Multiplayer automatically.",
+  "validation": {
+    "official_webman_ps3mapi_source_reviewed": true,
+    "memory_write_commands_added": false,
+    "runtime_capture_received": false
+  },
+  "limitations": [
+    "Campaign and Multiplayer share Title ID BLUS31270.",
+    "The operator still selects the active mode manually.",
+    "No native Campaign Local Client or playable Player 2 is proven."
+  ]
+}
