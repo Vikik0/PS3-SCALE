@@ -20,5 +20,12 @@
     "Campaign and Multiplayer share Title ID BLUS31270.",
     "The operator still selects the active mode manually.",
     "No native Campaign Local Client or playable Player 2 is proven."
-  ]
+  ],
+  "capture_kit": {
+    "filename": "Ghosts_TU116_Capture_Kit_Phase79.zip",
+    "size_bytes": 43441,
+    "sha256": "cb7fe7720e62cc7043201db0c935e22067ce32aa4c53401c7413f51570ae7184",
+    "file_count": 8,
+    "zip_integrity": "PASS"
+  }
 }
