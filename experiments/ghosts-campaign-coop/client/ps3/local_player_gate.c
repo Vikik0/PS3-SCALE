@@ -107,6 +107,12 @@ GhcLocalPlayerGateStatus ghc_local_player_gate_validate(
     if (p1->observation_frame != p2->observation_frame) {
         return gh_fail(result, 1u, GHC_LOCAL_GATE_OBSERVATION_FRAME_MISMATCH);
     }
+    if (p1->input_frame_number != p1->observation_frame) {
+        return gh_fail(result, 0u, GHC_LOCAL_GATE_INPUT_FRAME_STALE);
+    }
+    if (p2->input_frame_number != p2->observation_frame) {
+        return gh_fail(result, 1u, GHC_LOCAL_GATE_INPUT_FRAME_STALE);
+    }
     if (p1->local_client_num == p2->local_client_num) {
         return gh_fail(result, 1u, GHC_LOCAL_GATE_DUPLICATE_LOCAL_CLIENT_NUM);
     }
