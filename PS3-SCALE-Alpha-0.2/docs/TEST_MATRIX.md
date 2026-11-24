@@ -106,5 +106,6 @@ CI build and host tests are necessary but not sufficient. Actual RSX appearance,
 
 1. Confirm fuzzy title / same-region matches remain discovery suggestions only.
 2. Confirm exact installation requires the same Title ID and APP_VER.
-3. Provide an index record with a different regional Title ID while its path contains the game's Title ID; confirm installation is rejected.
+3. Provide an index record with a different regional Title ID and no occurrence of the game's exact Title ID in its path; confirm installation is rejected.
+4. Provide a multi-region NCL path that explicitly lists the game's exact Title ID alongside another regional ID; confirm that exact ID may match.
 4. Confirm US, EU, Japan, Asia and Korea region labels use the shared game-ID prefix map.
