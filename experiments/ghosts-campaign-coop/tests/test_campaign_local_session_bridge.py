@@ -31,6 +31,20 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
     def setUpClass(cls):
         cls.source = BRIDGE.read_text(encoding="utf-8")
 
+    def test_bridge_never_uses_bot_or_test_client_creation_for_local_player_two(self):
+        source = self.source.lower()
+        for forbidden in (
+            "spawntestclient(",
+            "addtestclient(",
+            "addbot(",
+            "sv_addtestclient",
+            "sv_spawntestclient",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, source)
+        self.assertIn("reuses the engine-created local split-screen players", source)
+        self.assertIn("it does not create clients", source)
+
     def test_bridge_reuses_engine_created_players_and_refreshes_campaign_array(self):
         self.assertIn('getentarray( "player", "classname" )', self.source)
         self.assertIn("level.playerpiggyback = var_1", self.source)
