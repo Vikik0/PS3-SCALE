@@ -663,6 +663,10 @@ ghc_campaign_event_lock_acquire( player, event_id )
 
 ghc_campaign_event_lock_release( player, event_id, completed )
 {
+    if ( !isdefined( level.ghc_campaign_event_lock_initialized )
+        || !level.ghc_campaign_event_lock_initialized )
+        return 0;
+
     if ( !isdefined( level.ghc_campaign_session_ready )
         || !level.ghc_campaign_session_ready )
         return 0;
@@ -756,6 +760,10 @@ ghc_campaign_event_lock_is_complete( event_id )
 
 ghc_campaign_event_lock_is_owner( player, event_id )
 {
+    if ( !isdefined( level.ghc_campaign_event_lock_initialized )
+        || !level.ghc_campaign_event_lock_initialized )
+        return 0;
+
     var_0 = ghc_campaign_event_lock_player_slot( player );
     if ( var_0 < 0 || event_id < 0 || event_id > 15 )
         return 0;
