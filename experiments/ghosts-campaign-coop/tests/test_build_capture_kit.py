@@ -1,5 +1,6 @@
 import hashlib
 import json
+import shutil
 import tempfile
 import unittest
 import zipfile
@@ -12,7 +13,19 @@ def write_gsc_manifest(directory: Path, name: str, *, include_source=True):
     source = directory / f"{name}.gsc"
     binary = directory / f"{name}.gscbin"
     if include_source:
-        source.write_text(f"{name}() {{ return 1; }}\n", encoding="utf-8")
+        if name == "ghc_campaign_local_session":
+            source.write_text(
+                "\n".join((
+                    "ghc_campaign_event_lock_acquire",
+                    "ghc_campaign_event_lock_release",
+                    "ghc_campaign_event_lock_abort_player",
+                    "ghc_campaign_event_lock_owner",
+                    "ghc_campaign_event_lock_reset",
+                )) + "\n",
+                encoding="utf-8",
+            )
+        else:
+            source.write_text(f"{name}() {{ return 1; }}\n", encoding="utf-8")
     binary.write_bytes((name + "-compiled").encode("utf-8"))
     manifest = {
         "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
@@ -32,9 +45,19 @@ def make_project(root: Path):
         "compare_pad_probe_logs.py",
         "compare_pad_input_probe_logs.py",
         "verify_capture_kit.py",
-        "verify_mission_event_lock_map.py",
     ):
         (root / "tools" / filename).write_text(f"# {filename}\n", encoding="utf-8")
+    source_root = Path(__file__).resolve().parents[1]
+    shutil.copy2(
+        source_root / "tools" / "verify_mission_event_lock_map.py",
+        root / "tools" / "verify_mission_event_lock_map.py",
+    )
+    reports = root / "reports"
+    reports.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(
+        source_root / "reports" / "PHASE88_MISSION_EVENT_LOCK_MAP.json",
+        reports / "PHASE88_MISSION_EVENT_LOCK_MAP.json",
+    )
     gsc = root / "client" / "ps3" / "gsc"
     gsc.mkdir(parents=True)
     (gsc / "ghc_campaign_player_registry.gsc").write_text(
