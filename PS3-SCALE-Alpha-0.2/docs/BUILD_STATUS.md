@@ -1,12 +1,25 @@
-# Build status — PS3 SCALE Alpha 0.30
+# Build status — PS3 SCALE Alpha 0.31
 
 ## Current development head
 
 - Branch: `design/splash-transitions-ui-v6`
 - Pull request: Draft PR #16, targeting `design/settings-support-ui-v5`
-- Application version shown in the UI: `ALPHA 0.30`
-- Package metadata: `APP_VER=00.30`, `VERSION=00.30`
+- Application version shown in the UI: `ALPHA 0.31`
+- Package metadata: `APP_VER=00.31`, `VERSION=00.31`
 - Package title ID: `PS3SCALE1`
+
+## Alpha 0.31 — reversible PS2 CONFIG Manager
+
+- Added the controller-operated PS2 CONFIG Manager, opened from PS2 Game Details with SQUARE.
+- Supports standard PS2 ISO `.CONFIG` sidecars and webMAN PS2 Classics `.ENC` files.
+- Backup is bounded, verified byte-for-byte and never overwrites an existing backup.
+- Restore uses a temporary copy and atomic rename; an existing current CONFIG is retained as a rollback copy.
+- Replacing an existing CONFIG requires the saved backup to match the current file byte-for-byte. Stale backups and existing rollback/temp files block replacement.
+- The original ISO, EBOOT and installed title files remain read-only. The Triangle generated-CONFIG preview remains memory-only.
+- GitHub Actions run #605: **PASS** — all host regression tests, PS3 ELF/SELF, standard PKG, GNPDRM PKG and package validation passed.
+- Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/45349236256
+- Artifact: `PS3-SCALE-Alpha-0.31-build-with-embedded-theme` (24,714,611 bytes).
+- Physical PS3 Slim / CFW 4.93 testing of manager navigation, backup, restore, matched download and actual game behavior remains pending.
 
 ## Alpha 0.30 — reliable unmodified launch fallback
 
