@@ -150,21 +150,26 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
             self._write_xrefs(output_xref_csv, "Multiplayer")
         if export_opd:
             resolution_path = Path(command[export_index + 4])
+            slots = int(command[export_index + 3], 0) // 8
+            nonempty = min(4, slots)
+            valid = min(3, nonempty)
+            exact = min(1, valid)
+            containing = 0
             resolution_path.write_text(json.dumps({
                 "schema_version": 1,
                 "status": "OPD_FUNCTION_RESOLUTION_COMPLETED",
                 "opd_va": command[export_index + 2],
                 "opd_size": command[export_index + 3],
-                "descriptor_slots_scanned": 8,
-                "empty_descriptors": 4,
-                "nonempty_descriptors": 4,
+                "descriptor_slots_scanned": slots,
+                "empty_descriptors": slots - nonempty,
+                "nonempty_descriptors": nonempty,
                 "unreadable_descriptors": 0,
-                "valid_executable_code_pointers": 3,
-                "invalid_code_pointers": 1,
-                "exact_entry_matches": 1,
-                "containing_function_matches": 0,
-                "unresolved_executable_pointers": 2,
-                "functions_with_opd_descriptors": 1,
+                "valid_executable_code_pointers": valid,
+                "invalid_code_pointers": nonempty - valid,
+                "exact_entry_matches": exact,
+                "containing_function_matches": containing,
+                "unresolved_executable_pointers": valid - exact - containing,
+                "functions_with_opd_descriptors": 1 if exact + containing else 0,
             }), encoding="utf-8")
         if SEED_SCRIPT in command:
             seed_index = command.index(SEED_SCRIPT)
