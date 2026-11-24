@@ -18,7 +18,7 @@ Campaign وMultiplayer يشتركان في Title ID وهو BLUS31270. لذلك �
 ## التحقق
 
 - تمت مراجعة أمر PROCESS GETNAME في مصدر webMAN MOD الرسمي.
-- اختبار تعليمات PS3MAPI metadata أضيف إلى suite الخاص بالسكربتات.
+- اختبارات PS3MAPI script suite: **6/6 PASS**، وتشمل توثيق PROCESS GETNAME والتمييز بين metadata التشخيصي واكتشاف الوضع.
 - لم تتغير عناوين الذاكرة أو أحجام المقاطع أو أوامر القراءة.
 
 ## الحدود
