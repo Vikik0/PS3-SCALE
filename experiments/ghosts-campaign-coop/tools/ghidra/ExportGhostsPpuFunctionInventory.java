@@ -61,16 +61,28 @@ public class ExportGhostsPpuFunctionInventory extends GhidraScript {
         final String blockName;
         final String permissions;
         final String blockOffset;
+        final Boolean loaded;
+        final Boolean initialized;
+        final Boolean artificial;
+        final Boolean external;
+        final Boolean volatileBlock;
 
         TocRegionEvidence(
             String address, String status, String blockName,
-            String permissions, String blockOffset
+            String permissions, String blockOffset,
+            Boolean loaded, Boolean initialized, Boolean artificial,
+            Boolean external, Boolean volatileBlock
         ) {
             this.address = address;
             this.status = status;
             this.blockName = blockName;
             this.permissions = permissions;
             this.blockOffset = blockOffset;
+            this.loaded = loaded;
+            this.initialized = initialized;
+            this.artificial = artificial;
+            this.external = external;
+            this.volatileBlock = volatileBlock;
         }
     }
 
@@ -192,8 +204,14 @@ public class ExportGhostsPpuFunctionInventory extends GhidraScript {
                 "0x" + String.format(
                     "%08X", tocAddress.getOffset() - tocBlock.getStart().getOffset()
                 );
+            Boolean tocLoaded = tocBlock == null ? null : Boolean.valueOf(tocBlock.isLoaded());
+            Boolean tocInitialized = tocBlock == null ? null : Boolean.valueOf(tocBlock.isInitialized());
+            Boolean tocArtificial = tocBlock == null ? null : Boolean.valueOf(tocBlock.isArtificial());
+            Boolean tocExternal = tocBlock == null ? null : Boolean.valueOf(tocBlock.isExternalBlock());
+            Boolean tocVolatile = tocBlock == null ? null : Boolean.valueOf(tocBlock.isVolatile());
             TocRegionEvidence tocRegion = new TocRegionEvidence(
-                tocAddressText, tocStatus, tocBlockName, tocPermissions, tocBlockOffset
+                tocAddressText, tocStatus, tocBlockName, tocPermissions, tocBlockOffset,
+                tocLoaded, tocInitialized, tocArtificial, tocExternal, tocVolatile
             );
             String functionEntry = target.getEntryPoint().toString();
             OpdFunctionEvidence evidence = result.functions.get(functionEntry);
@@ -248,7 +266,12 @@ public class ExportGhostsPpuFunctionInventory extends GhidraScript {
             json.append("\"status\":\"").append(jsonEscape(region.status)).append("\",");
             json.append("\"block_name\":\"").append(jsonEscape(region.blockName)).append("\",");
             json.append("\"permissions\":\"").append(jsonEscape(region.permissions)).append("\",");
-            json.append("\"block_offset\":\"").append(jsonEscape(region.blockOffset)).append("\"");
+            json.append("\"block_offset\":\"").append(jsonEscape(region.blockOffset)).append("\",");
+            json.append("\"loaded\":").append(region.loaded == null ? "null" : region.loaded.toString()).append(",");
+            json.append("\"initialized\":").append(region.initialized == null ? "null" : region.initialized.toString()).append(",");
+            json.append("\"artificial\":").append(region.artificial == null ? "null" : region.artificial.toString()).append(",");
+            json.append("\"external\":").append(region.external == null ? "null" : region.external.toString()).append(",");
+            json.append("\"volatile\":").append(region.volatileBlock == null ? "null" : region.volatileBlock.toString());
             json.append("}");
         }
         json.append("]");
