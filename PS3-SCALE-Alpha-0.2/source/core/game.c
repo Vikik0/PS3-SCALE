@@ -79,11 +79,11 @@ const char *ps3scale_game_region_name(const char *id)
     if (region_prefix_matches(prefix, "SLKA") ||
         region_prefix_matches(prefix, "SCKA") ||
         region_prefix_matches(prefix, "BLKS") ||
-        region_prefix_matches(prefix, "BCKS"))
+        region_prefix_matches(prefix, "BCKS") ||
+        region_prefix_matches(prefix, "NPKB"))
         return "KOREA";
     if (region_prefix_matches(prefix, "BLAS") ||
-        region_prefix_matches(prefix, "BCAS") ||
-        region_prefix_matches(prefix, "NPKB"))
+        region_prefix_matches(prefix, "BCAS"))
         return "ASIA";
     return "UNKNOWN";
 }
