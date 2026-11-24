@@ -130,7 +130,10 @@ def _opd_toc_regions(
         if key in actual:
             raise InventoryError(f"{path}:{line_number}: duplicate OPD TOC region")
         actual.add(key)
-        parsed.append({field: region[field] for field in fields})
+        parsed.append({
+            **{field: region[field] for field in fields},
+            **provenance,
+        })
     if actual != expected:
         raise InventoryError(f"{path}:{line_number}: OPD TOC regions do not match TOC mapping statuses")
     return sorted(parsed, key=lambda item: item["toc"])
