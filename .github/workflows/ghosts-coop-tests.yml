@@ -186,6 +186,11 @@ jobs:
         run: |
           cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/local_input.c tests/local_input_test.c -o /tmp/local-input-test
           /tmp/local-input-test
+      - name: Build and run PS3 cellPad adapter mock tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror -Itests/fixtures/ps3_sdk client/ps3/local_input.c client/ps3/local_input_ps3.c tests/local_input_ps3_adapter_test.c -o /tmp/local-input-ps3-adapter-test
+          /tmp/local-input-ps3-adapter-test
       - name: Build and run local player readiness gate tests
         working-directory: experiments/ghosts-campaign-coop
         run: |
@@ -305,6 +310,8 @@ jobs:
         run: make -C experiments/ghosts-campaign-coop/client/ps3/prx PS3DEV="$PS3DEV" PS3DK="$PS3DK"
       - name: Build and validate read-only Campaign/Multiplayer pad probe
         run: make -C experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe PS3DEV="$PS3DEV" PS3DK="$PS3DK"
+      - name: Build and validate read-only DualShock input probe
+        run: make -C experiments/ghosts-campaign-coop/client/ps3/probes/pad_input_probe PS3DEV="$PS3DEV" PS3DK="$PS3DK"
       - name: Link and validate a PRX importer against Ghosts exports
         shell: bash
         run: |
@@ -333,6 +340,14 @@ jobs:
             experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/build/ghosts_campaign_pad_probe.prx
             experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/build/ghosts_campaign_pad_probe.fake.sprx
             experiments/ghosts-campaign-coop/client/ps3/probes/pad_probe/build/ghosts_campaign_pad_probe.elf
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ghosts-dualshock-input-probe
+          path: |
+            experiments/ghosts-campaign-coop/client/ps3/probes/pad_input_probe/README_AR.md
+            experiments/ghosts-campaign-coop/client/ps3/probes/pad_input_probe/build/ghosts_pad_input_probe.prx
+            experiments/ghosts-campaign-coop/client/ps3/probes/pad_input_probe/build/ghosts_pad_input_probe.fake.sprx
+            experiments/ghosts-campaign-coop/client/ps3/probes/pad_input_probe/build/ghosts_pad_input_probe.elf
 
   worker-check:
     runs-on: ubuntu-latest
