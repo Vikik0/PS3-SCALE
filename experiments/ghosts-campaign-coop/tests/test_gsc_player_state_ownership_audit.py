@@ -34,19 +34,19 @@ class GscPlayerStateOwnershipAuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "mission.gsc").write_text(
-                'critical_event()\\n{\\n'
-                '    level.player sethealth(0);\\n'
-                '    level.player.saved_weapon = "rifle";\\n'
-                '    level.mission_flag = 1;\\n'
-                '    level notify("mission_event_done");\\n'
-                '    common_scripts\\\\utility::flag_set("mission_done");\\n'
-                '    setsaveddvar("ammoCounterHide", 1);\\n'
-                '    var_0 = maps\\\\_utility::spawn_anim_ent("player_rig");\\n'
-                '    maps\\\\_utility::slowmo_end();\\n'
-                '    setphysicsgravitydir((0, -0.7, -0.1));\\n'
-                '    thread maps\\\\_utility::autosave_now_silent();\\n'
-                '    maps\\\\_utility::missionfailed();\\n'
-                '}\\n',
+                'critical_event()\n{\n'
+                '    level.player sethealth(0);\n'
+                '    level.player.saved_weapon = "rifle";\n'
+                '    level.mission_flag = 1;\n'
+                '    level notify("mission_event_done");\n'
+                '    common_scripts\\\\utility::flag_set("mission_done");\n'
+                '    setsaveddvar("ammoCounterHide", 1);\n'
+                '    var_0 = maps\\\\_utility::spawn_anim_ent("player_rig");\n'
+                '    maps\\\\_utility::slowmo_end();\n'
+                '    setphysicsgravitydir((0, -0.7, -0.1));\n'
+                '    thread maps\\\\_utility::autosave_now_silent();\n'
+                '    maps\\\\_utility::missionfailed();\n'
+                '}\n',
                 encoding="utf-8",
             )
             report = audit_mission("test", root, ["critical_event"])
@@ -71,10 +71,10 @@ class GscPlayerStateOwnershipAuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "rope.gsc").write_text(
-                'cut_rope()\\n{\\n'
-                '    var_0 = spawn_anim_ent("player_rig");\\n'
-                '    level.player playerlinktoblend(var_0, "tag_player", 0.4);\\n'
-                '}\\n',
+                'cut_rope()\n{\n'
+                '    var_0 = spawn_anim_ent("player_rig");\n'
+                '    level.player playerlinktoblend(var_0, "tag_player", 0.4);\n'
+                '}\n',
                 encoding="utf-8",
             )
             report = audit_mission("test", root, ["cut_rope"])
