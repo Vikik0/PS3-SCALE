@@ -531,6 +531,7 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
             )
             legacy.pop("opd_exact_entry_descriptor_count")
             legacy.pop("opd_containing_function_descriptor_count")
+            legacy.pop("opd_toc_region_evidence")
             write_inventory(path, [legacy], fields=FIELDS + OPD_BASE_FIELDS)
             parsed = read_inventory(path)
             self.assertIsNone(parsed[0]["opd_exact_entry_descriptor_count"])
