@@ -11,7 +11,7 @@ Phase 64 connects exact Phase 60 file/function targets to the GSC call graph. Ph
 - Run the ownership audit and derive exact relative-file/function targets directly from its findings.
 - Run the file-aware call graph against those exact targets.
 - Re-hash all source files after both audits and reject the result if any file was added, removed or changed.
-- Write the combined JSON report atomically; refuse to overwrite an existing report unless --overwrite is explicit.
+- Write the combined JSON report atomically; refuse to overwrite an existing report unless --overwrite is explicit. The resolved report path is checked against every source file so --overwrite can never replace an input GSC file.
 - Reject symbolic-link GSC inputs so the source manifest cannot silently escape the selected mission directory.
 
 ## Windows usage

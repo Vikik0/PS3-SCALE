@@ -8,9 +8,8 @@
     "per-file SHA-256 and deterministic per-mission source-tree digest",
     "reject any source additions, removals or edits during analysis",
     "reject symbolic-link GSC inputs",
-    "atomic JSON output with explicit overwrite opt-in",
-    "test rejection of symbolic-link GSC source files"
+    "atomic JSON output with explicit overwrite opt-in"
   ],
   "tests_added": 7,
   "validation_boundary": "Static GSC analysis only; does not prove runtime callback execution or native Campaign Player 2."
-}\n
+}

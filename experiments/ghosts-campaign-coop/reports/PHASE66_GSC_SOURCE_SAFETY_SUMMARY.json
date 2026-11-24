@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "phase": 66,
+  "status": "GSC_SOURCE_OUTPUT_COLLISION_BLOCKED",
+  "changes": [
+    "reject report output resolving to any source GSC file, even with overwrite enabled",
+    "resolve aliases before comparing report destination to source inputs",
+    "validate mission mapping keys as non-empty strings"
+  ],
+  "tests_added": 1,
+  "validation_boundary": "Read-only source safety regression; no retail game files or GSC source files are modified."
+}

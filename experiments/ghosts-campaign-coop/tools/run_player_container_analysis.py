@@ -132,8 +132,8 @@ def run_analysis(
 ) -> dict[str, Any]:
     if not missions:
         raise PlayerContainerAnalysisError("provide at least one mission directory")
-    if len(missions) != len(set(missions)):
-        raise PlayerContainerAnalysisError("mission names must be unique")
+    if any(not isinstance(name, str) or not name for name in missions):
+        raise PlayerContainerAnalysisError("mission names must be non-empty strings")
     if output_json is not None and Path(output_json).exists() and not overwrite:
         raise FileExistsError(f"refusing to overwrite existing report: {output_json}")
 
@@ -141,6 +141,17 @@ def run_analysis(
         name: hash_gsc_tree(path)
         for name, path in sorted(missions.items())
     }
+    if output_json is not None:
+        output_key = os.path.normcase(str(Path(output_json).expanduser().resolve())).casefold()
+        for manifest in before.values():
+            for entry in manifest["files"]:
+                source_path = Path(manifest["root"]) / entry["path"]
+                source_key = os.path.normcase(str(source_path.resolve())).casefold()
+                if output_key == source_key:
+                    raise PlayerContainerAnalysisError(
+                        f"report output cannot overwrite a GSC source file: {source_path}"
+                    )
+
     ownership = audit_ownership(missions)
     target_definitions: dict[str, list[dict[str, str]]] = {}
     for mission in ownership["missions"]:

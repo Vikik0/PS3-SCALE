@@ -70,6 +70,13 @@ class PlayerContainerAnalysisTests(unittest.TestCase):
                 runner.run_analysis({"carrier": self.mission}, output)
         self.assertFalse(output.exists())
 
+    def test_never_overwrites_source_gsc_even_with_overwrite_flag(self):
+        source = self.mission / "maps" / "main.gsc"
+        original = source.read_bytes()
+        with self.assertRaisesRegex(ValueError, "cannot overwrite a GSC source file"):
+            runner.run_analysis({"carrier": self.mission}, source, overwrite=True)
+        self.assertEqual(source.read_bytes(), original)
+
     def test_rejects_existing_output_without_overwrite(self):
         output = self.root / "existing.json"
         output.write_text("keep", encoding="utf-8")
