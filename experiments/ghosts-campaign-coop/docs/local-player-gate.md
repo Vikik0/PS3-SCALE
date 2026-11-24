@@ -36,3 +36,6 @@ The gate and its host tests are implemented and compiled into the PRX build. The
 
 
 Observation flags are treated as strict booleans: the adapter must provide exactly `0` or `1`, not arbitrary nonzero values. This prevents corrupted or uninitialized flag bytes from being accepted as valid engine evidence.
+
+
+The engine observation frame identifier must itself be marked valid before the pair can pass. Two default-zero or unavailable frame counters must not be treated as proof that the players were observed together.
