@@ -52,6 +52,26 @@ public class ExportGhostsPpuFunctionInventory extends GhidraScript {
         int descriptorCount = 0;
         int exactEntryDescriptorCount = 0;
         int containingFunctionDescriptorCount = 0;
+        final TreeMap<String, TocRegionEvidence> tocRegions = new TreeMap<>();
+    }
+
+    private static class TocRegionEvidence {
+        final String address;
+        final String status;
+        final String blockName;
+        final String permissions;
+        final String blockOffset;
+
+        TocRegionEvidence(
+            String address, String status, String blockName,
+            String permissions, String blockOffset
+        ) {
+            this.address = address;
+            this.status = status;
+            this.blockName = blockName;
+            this.permissions = permissions;
+            this.blockOffset = blockOffset;
+        }
     }
 
     private static class OpdFunctionCollection {
@@ -156,10 +176,25 @@ public class ExportGhostsPpuFunctionInventory extends GhidraScript {
                 continue;
             }
 
-            boolean tocMapped = tocUnsigned != 0L &&
-                currentProgram.getMemory().contains(toAddr(tocUnsigned));
+            Address tocAddress = tocUnsigned == 0L ? null : toAddr(tocUnsigned);
+            MemoryBlock tocBlock = tocAddress == null
+                ? null : currentProgram.getMemory().getBlock(tocAddress);
+            boolean tocMapped = tocBlock != null;
             String tocStatus = tocUnsigned == 0L ? "ZERO" : (tocMapped ? "MAPPED" : "UNMAPPED");
-            String tocMapping = "0x" + String.format("%08X", tocUnsigned) + ":" + tocStatus;
+            String tocAddressText = "0x" + String.format("%08X", tocUnsigned);
+            String tocMapping = tocAddressText + ":" + tocStatus;
+            String tocBlockName = tocBlock == null ? "" : tocBlock.getName();
+            String tocPermissions = tocBlock == null ? "" :
+                (tocBlock.isRead() ? "r" : "-") +
+                (tocBlock.isWrite() ? "w" : "-") +
+                (tocBlock.isExecute() ? "x" : "-");
+            String tocBlockOffset = tocBlock == null ? "" :
+                "0x" + String.format(
+                    "%08X", tocAddress.getOffset() - tocBlock.getStart().getOffset()
+                );
+            TocRegionEvidence tocRegion = new TocRegionEvidence(
+                tocAddressText, tocStatus, tocBlockName, tocPermissions, tocBlockOffset
+            );
             String functionEntry = target.getEntryPoint().toString();
             OpdFunctionEvidence evidence = result.functions.get(functionEntry);
             if (evidence == null) {
@@ -169,6 +204,7 @@ public class ExportGhostsPpuFunctionInventory extends GhidraScript {
             evidence.descriptorCount++;
             evidence.descriptorAddresses.add(descriptor.toString());
             evidence.tocMappings.add(tocMapping);
+            evidence.tocRegions.put(tocAddressText, tocRegion);
             if (exactEntry) {
                 evidence.exactEntryDescriptorCount++;
                 result.exactEntryMatches++;
@@ -178,6 +214,45 @@ public class ExportGhostsPpuFunctionInventory extends GhidraScript {
             }
         }
         return result;
+    }
+
+    private String jsonEscape(String value) {
+        StringBuilder escaped = new StringBuilder();
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            if (ch == '\\' || ch == '"') {
+                escaped.append('\\').append(ch);
+            } else if (ch == '\n') {
+                escaped.append("\\n");
+            } else if (ch == '\r') {
+                escaped.append("\\r");
+            } else if (ch == '\t') {
+                escaped.append("\\t");
+            } else if (ch < 0x20) {
+                escaped.append(String.format("\\u%04X", (int)ch));
+            } else {
+                escaped.append(ch);
+            }
+        }
+        return escaped.toString();
+    }
+
+    private String serializeTocRegions(OpdFunctionEvidence evidence) {
+        StringBuilder json = new StringBuilder("[");
+        boolean first = true;
+        for (TocRegionEvidence region : evidence.tocRegions.values()) {
+            if (!first) json.append(",");
+            first = false;
+            json.append("{");
+            json.append("\"toc\":\"").append(jsonEscape(region.address)).append("\",");
+            json.append("\"status\":\"").append(jsonEscape(region.status)).append("\",");
+            json.append("\"block_name\":\"").append(jsonEscape(region.blockName)).append("\",");
+            json.append("\"permissions\":\"").append(jsonEscape(region.permissions)).append("\",");
+            json.append("\"block_offset\":\"").append(jsonEscape(region.blockOffset)).append("\"");
+            json.append("}");
+        }
+        json.append("]");
+        return json.toString();
     }
 
     private void writeOpdResolutionSummary(
@@ -229,7 +304,7 @@ public class ExportGhostsPpuFunctionInventory extends GhidraScript {
         int exported = 0;
         int skipped = 0;
         try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(args[0]), StandardCharsets.UTF_8)) {
-            writer.write("program,name,entry,body_address_count,instruction_count,fingerprint,call_targets,call_target_symbols,call_target_entries,opd_descriptor_addresses,opd_toc_mappings,opd_descriptor_count,opd_exact_entry_descriptor_count,opd_containing_function_descriptor_count\n");
+            writer.write("program,name,entry,body_address_count,instruction_count,fingerprint,call_targets,call_target_symbols,call_target_entries,opd_descriptor_addresses,opd_toc_mappings,opd_descriptor_count,opd_exact_entry_descriptor_count,opd_containing_function_descriptor_count,opd_toc_region_evidence\n");
 
             FunctionIterator functions = currentProgram.getFunctionManager().getFunctions(true);
             while (functions.hasNext()) {
@@ -323,6 +398,8 @@ public class ExportGhostsPpuFunctionInventory extends GhidraScript {
                 writer.write(Integer.toString(functionOpd == null ? 0 : functionOpd.exactEntryDescriptorCount));
                 writer.write(",");
                 writer.write(Integer.toString(functionOpd == null ? 0 : functionOpd.containingFunctionDescriptorCount));
+                writer.write(",");
+                writer.write(csv(functionOpd == null ? "[]" : serializeTocRegions(functionOpd)));
                 writer.write("\n");
                 exported++;
             }

@@ -59,6 +59,7 @@ OPD_RESOLUTION_COLUMNS = {
     "opd_exact_entry_descriptor_count",
     "opd_containing_function_descriptor_count",
 }
+OPD_REGION_COLUMNS = {"opd_toc_region_evidence"}
 OPD_TOC_MAPPING_RE = re.compile(r"^0x[0-9a-fA-F]{8}:(?:MAPPED|UNMAPPED|ZERO)$")
 
 
@@ -74,6 +75,58 @@ def _opd_toc_mappings(value: Any, path: Path, line_number: int) -> list[str]:
         if (status == "ZERO") != is_zero:
             raise InventoryError(f"{path}:{line_number}: OPD TOC mapping status contradicts its address")
     return mappings
+
+
+def _opd_toc_regions(
+    value: Any,
+    mappings: list[str],
+    path: Path,
+    line_number: int,
+) -> list[dict[str, str]]:
+    try:
+        regions = json.loads(value or "[]")
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise InventoryError(f"{path}:{line_number}: OPD TOC region evidence is not valid JSON") from exc
+    if not isinstance(regions, list):
+        raise InventoryError(f"{path}:{line_number}: OPD TOC region evidence must be a JSON array")
+    expected = set(mappings)
+    actual: set[str] = set()
+    parsed: list[dict[str, str]] = []
+    for region in regions:
+        if not isinstance(region, dict):
+            raise InventoryError(f"{path}:{line_number}: OPD TOC region record must be an object")
+        fields = ("toc", "status", "block_name", "permissions", "block_offset")
+        if any(not isinstance(region.get(field), str) for field in fields):
+            raise InventoryError(f"{path}:{line_number}: OPD TOC region fields must be strings")
+        address = region["toc"]
+        status = region["status"]
+        block_name = region["block_name"]
+        permissions = region["permissions"]
+        block_offset = region["block_offset"]
+        if not re.fullmatch(r"0x[0-9a-fA-F]{8}", address):
+            raise InventoryError(f"{path}:{line_number}: malformed OPD TOC region address")
+        if status not in {"MAPPED", "UNMAPPED", "ZERO"}:
+            raise InventoryError(f"{path}:{line_number}: unsupported OPD TOC region status")
+        is_zero = int(address, 16) == 0
+        if (status == "ZERO") != is_zero:
+            raise InventoryError(f"{path}:{line_number}: OPD TOC region status contradicts its address")
+        if status == "MAPPED":
+            if (
+                not block_name
+                or not re.fullmatch(r"[r-][w-][x-]", permissions)
+                or not re.fullmatch(r"0x[0-9a-fA-F]{8}", block_offset)
+            ):
+                raise InventoryError(f"{path}:{line_number}: mapped OPD TOC region lacks block permissions or offset")
+        elif block_name or permissions or block_offset:
+            raise InventoryError(f"{path}:{line_number}: unmapped/zero OPD TOC region cannot claim a memory block")
+        key = f"{address}:{status}"
+        if key in actual:
+            raise InventoryError(f"{path}:{line_number}: duplicate OPD TOC region")
+        actual.add(key)
+        parsed.append({field: region[field] for field in fields})
+    if actual != expected:
+        raise InventoryError(f"{path}:{line_number}: OPD TOC regions do not match TOC mapping statuses")
+    return sorted(parsed, key=lambda item: item["toc"])
 
 
 def read_inventory(path: Path) -> list[dict[str, Any]]:
@@ -93,6 +146,9 @@ def read_inventory(path: Path) -> list[dict[str, Any]]:
             raise InventoryError(
                 f"{path}: incomplete OPD evidence columns: {', '.join(sorted(missing_opd))}"
             )
+        present_region_columns = OPD_REGION_COLUMNS & columns
+        if present_region_columns and present_opd_columns != OPD_OPTIONAL_COLUMNS:
+            raise InventoryError(f"{path}: OPD TOC region evidence requires the complete OPD evidence columns")
         present_resolution_columns = OPD_RESOLUTION_COLUMNS & columns
         if present_resolution_columns and present_resolution_columns != OPD_RESOLUTION_COLUMNS:
             missing_resolution = OPD_RESOLUTION_COLUMNS - present_resolution_columns
@@ -156,6 +212,15 @@ def read_inventory(path: Path) -> list[dict[str, Any]]:
                 raise InventoryError(
                     f"{path}:{line_number}: OPD descriptor count and TOC mappings do not reconcile"
                 )
+            opd_toc_region_evidence = (
+                _opd_toc_regions(
+                    row.get("opd_toc_region_evidence"),
+                    opd_toc_mappings,
+                    path,
+                    line_number,
+                )
+                if present_region_columns else None
+            )
             opd_exact_entry_descriptor_count = None
             opd_containing_function_descriptor_count = None
             if present_resolution_columns:
@@ -200,6 +265,7 @@ def read_inventory(path: Path) -> list[dict[str, Any]]:
                 "opd_descriptor_count": opd_descriptor_count,
                 "opd_exact_entry_descriptor_count": opd_exact_entry_descriptor_count,
                 "opd_containing_function_descriptor_count": opd_containing_function_descriptor_count,
+                "opd_toc_region_evidence": opd_toc_region_evidence,
             })
     if not rows:
         raise InventoryError(f"{path}: inventory contains no function rows")
@@ -369,6 +435,7 @@ def _opd_toc_evidence(row: dict[str, Any]) -> dict[str, Any]:
         "descriptor_count": count,
         "descriptor_addresses": _values(row.get("opd_descriptor_addresses")),
         "toc_mappings": mappings,
+        "toc_region_evidence": row.get("opd_toc_region_evidence"),
         "code_pointer_resolution": {
             "status": resolution_status,
             "exact_entry_descriptor_count": exact_count,
@@ -635,6 +702,20 @@ def compare(
                 1 for item in priority
                 if item["opd_toc_evidence"]["code_pointer_resolution"]["status"]
                 == "CONTAINING_FUNCTION_ONLY"
+            ),
+            "priority_multiplayer_only_candidates_with_mapped_toc_block": sum(
+                1 for item in priority
+                if any(
+                    region["status"] == "MAPPED"
+                    for region in (item["opd_toc_evidence"].get("toc_region_evidence") or [])
+                )
+            ),
+            "priority_multiplayer_only_candidates_with_writable_toc_block": sum(
+                1 for item in priority
+                if any(
+                    region["status"] == "MAPPED" and "w" in region["permissions"]
+                    for region in (item["opd_toc_evidence"].get("toc_region_evidence") or [])
+                )
             ),
         },
         "matched_fingerprints": matched,
