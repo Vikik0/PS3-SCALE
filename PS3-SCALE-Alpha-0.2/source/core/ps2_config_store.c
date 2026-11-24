@@ -199,9 +199,19 @@ int ps3scale_ps2_config_store_restore(const char *target, const char *backup,
         return 1;
     if (ps3scale_ps2_config_store_probe(temporary, max_bytes, NULL) != 0)
         return -3;
-    if (target_state == 1 &&
-        ps3scale_ps2_config_store_probe(rollback_path, max_bytes, NULL) != 0)
-        return -3;
+    if (target_state == 1) {
+        int rollback_state =
+            ps3scale_ps2_config_store_probe(rollback_path, max_bytes, NULL);
+        if (rollback_state == 1 &&
+            files_equal(rollback_path, backup, max_bytes) == 1) {
+            /* The saved backup already contains these exact bytes. */
+            if (unlink(rollback_path) != 0)
+                return -3;
+            rollback_state = 0;
+        }
+        if (rollback_state != 0)
+            return -3;
+    }
 
     if (copy_bounded(backup, temporary, max_bytes) != 0 ||
         files_equal(backup, temporary, max_bytes) != 1) {
@@ -243,11 +253,38 @@ int ps3scale_ps2_config_store_install(const char *temporary,
     if (target_state < 0)
         return -4;
     if (target_state == 1) {
+        int rollback_state;
+        int rollback_matches_backup = 0;
+
         if (ps3scale_ps2_config_store_can_replace(
                 target, backup, max_bytes) != 1)
             return -2;
-        if (ps3scale_ps2_config_store_probe(
-                rollback_path, max_bytes, NULL) != 0)
+
+        rollback_state =
+            ps3scale_ps2_config_store_probe(rollback_path, max_bytes, NULL);
+        if (rollback_state < 0)
+            return -3;
+        if (rollback_state == 1)
+            rollback_matches_backup =
+                files_equal(rollback_path, backup, max_bytes) == 1;
+
+        if (rollback_state == 1 && !rollback_matches_backup) {
+            /*
+             * A previous rollback is already retained. The matching backup
+             * is a verified copy of target, so it protects recovery if the
+             * replacement rename fails.
+             */
+            if (unlink(target) != 0)
+                return -4;
+            if (rename(temporary, target) != 0) {
+                if (copy_bounded(backup, target, max_bytes) != 0)
+                    return -5;
+                return -4;
+            }
+            return 0;
+        }
+
+        if (rollback_matches_backup && unlink(rollback_path) != 0)
             return -3;
         if (rename(target, rollback_path) != 0)
             return -4;
