@@ -74,6 +74,7 @@ cc -std=c99 -Wall -Wextra -Werror \
 cc -std=c99 -Wall -Wextra -Werror \
   -I"$ROOT/include" \
   "$ROOT/source/core/community.c" \
+  "$ROOT/source/core/game.c" \
   "$ROOT/tests/test_community.c" \
   -o "$OUT/test_community"
 "$OUT/test_community"
