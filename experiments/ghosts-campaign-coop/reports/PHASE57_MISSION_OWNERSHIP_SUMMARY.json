@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "phase": 57,
+  "status": "THREE_MISSION_PLAYER_OWNERSHIP_AUDIT_EXPANDED",
+  "source_bundle": {
+    "missions": [
+      {
+        "name": "black_ice",
+        "fastfile_sha256": "950726399e16f55fd565438936ec59231649940c89763a87c805409536837532",
+        "target_functions": 21,
+        "found": 21,
+        "level_player_references": 225,
+        "ownership_patterns": {
+          "MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE": 15,
+          "PER_PLAYER_ACTIONS_VISIBLE": 5,
+          "NO_CLASSIFIED_OWNERSHIP_SIGNAL": 1
+        }
+      },
+      {
+        "name": "carrier",
+        "fastfile_sha256": "e3a616545f18a7dcae006b4e32264c56b01d627650ea574f3fe710e02543caee",
+        "target_functions": 23,
+        "found": 23,
+        "level_player_references": 270,
+        "ownership_patterns": {
+          "MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE": 16,
+          "PER_PLAYER_ACTIONS_VISIBLE": 4,
+          "PLAYER_ARRAY_AWARE_PATH": 1,
+          "SECONDARY_CLIENT_REFERENCE_PATH": 1,
+          "NO_CLASSIFIED_OWNERSHIP_SIGNAL": 1
+        }
+      },
+      {
+        "name": "cornered",
+        "fastfile_sha256": "1bcb1da55d7e5a893de2a513e6df9b5cd3786e4d642dc76e090ea551cdf39395",
+        "target_functions": 24,
+        "found": 24,
+        "level_player_references": 466,
+        "ownership_patterns": {
+          "MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE": 20,
+          "PLAYER_ARRAY_AWARE_WITH_PER_PLAYER_ACTIONS": 2,
+          "PLAYER_ARRAY_AWARE_PATH": 2
+        }
+      }
+    ],
+    "extracted_gsc_files": 249,
+    "parsed_functions": 4304
+  },
+  "totals": {
+    "target_functions": 68,
+    "found": 68,
+    "missing": 0,
+    "level_player_references": 961
+  },
+  "changes": [
+    "default audit targets use exact relative file path plus function name",
+    "same-name functions in unrelated ScriptFiles are no longer mixed",
+    "expanded from 17 selected functions to top-20 hotspots per mission plus eight special cases",
+    "missing targets are reported as path::function"
+  ],
+  "validation_boundary": "Read-only static audit of the supplied decompiled GSC extraction. No retail FastFile modifications and no native second Campaign player are claimed."
+}

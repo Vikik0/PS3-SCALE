@@ -67,9 +67,80 @@ METHOD_GROUPS = {
 }
 
 DEFAULT_TARGETS = {
-    "black_ice": ["player_fail_finale_instakill", "ascend_logic", "event_player_turns_key", "player_saw_kill"],
-    "carrier": ["knockback_hesh", "cut_the_rope", "victory_choppers_land", "playerview_playmissanim", "monitorscavengerpickup", "dog_monitor_goal_ent"],
-    "cornered": ["gun_down_trigger_internal", "fall_player", "upload_virus_enter", "bar_enemies", "courtyard_rorke", "enemy_threat_logic_dog_wait", "enemy_corpse_alert_level"],
+    "black_ice": [
+        ("maps/black_ice_exfil.gsc", "player_fail_finale_instakill"),
+        ("maps/black_ice_ascend.gsc", "ascend_logic"),
+        ("maps/black_ice_flarestack.gsc", "event_player_turns_key"),
+        ("maps/black_ice_swim.gsc", "player_swim_rubberband"),
+        ("maps/black_ice_util.gsc", "waittill_trigger"),
+        ("maps/black_ice_util.gsc", "player_animate_underwater_damage"),
+        ("maps/black_ice_command.gsc", "player_died_recently_degrades"),
+        ("maps/black_ice_swim.gsc", "player_swim_think"),
+        ("maps/black_ice_anim.gsc", "cw_common_breach_player"),
+        ("maps/black_ice_util.gsc", "player_animated_sequence_cleanup"),
+        ("maps/black_ice_anim.gsc", "notetrack_player_draw_weapon_ascend"),
+        ("maps/black_ice_exfil.gsc", "magicreloadwhenreachenemy"),
+        ("maps/black_ice_catwalks.gsc", "cw_tape_explode_player_effect"),
+        ("maps/black_ice_exfil.gsc", "ladder_chase_explosion_fx"),
+        ("maps/black_ice_swim.gsc", "snake_cam_fx"),
+        ("maps/black_ice_util.gsc", "god_rays_from_world_location"),
+        ("maps/black_ice_camp.gsc", "standwalktostand"),
+        ("maps/black_ice_command.gsc", "disable_player"),
+        ("maps/black_ice_exfil.gsc", "player_exit_to_inverted_rope"),
+        ("maps/black_ice_exfil.gsc", "exfil_deck_explosions"),
+        ("1062.gsc", "player_saw_kill"),
+    ],
+    "carrier": [
+        ("maps/carrier_sparrow_run.gsc", "knockback_hesh"),
+        ("maps/carrier_code_zodiac.gsc", "cut_the_rope"),
+        ("maps/carrier_deck_victory.gsc", "victory_choppers_land"),
+        ("maps/carrier_code.gsc", "player_slide_check"),
+        ("maps/carrier_code_sparrow.gsc", "sam_missiles"),
+        ("maps/carrier_code_zodiac.gsc", "can_cut_rope"),
+        ("maps/carrier_deck_tilt.gsc", "tilt_player_stumble"),
+        ("maps/carrier_deck_tilt.gsc", "tilt_player_slide"),
+        ("maps/carrier_slow_intro.gsc", "medbay_cleanup"),
+        ("maps/carrier_deck_tilt.gsc", "tilt_player_fail"),
+        ("maps/carrier_slow_intro.gsc", "promote_nearest_friendly_with_classname"),
+        ("maps/carrier_sparrow_run.gsc", "sparrow_run_enemy_logic"),
+        ("maps/carrier_slow_intro.gsc", "setup_mantle_hint"),
+        ("maps/carrier_deck_tilt.gsc", "tilt_exfil_planes"),
+        ("maps/carrier_defend_sparrow.gsc", "run_deck_transition"),
+        ("maps/carrier_defend_zodiac.gsc", "run_electric_trap"),
+        ("maps/carrier_code.gsc", "player_anim_origin"),
+        ("maps/carrier_audio.gsc", "aud_check"),
+        ("maps/carrier_code.gsc", "edge_lean_natural"),
+        ("maps/carrier_deck_tilt.gsc", "begin_deck_tilt"),
+        ("animscripts/dog/dog_combat.gsc", "playerview_playmissanim"),
+        ("1031.gsc", "monitorscavengerpickup"),
+        ("maps/ss_util.gsc", "dog_monitor_goal_ent"),
+    ],
+    "cornered": [
+        ("maps/cornered_building_entry.gsc", "gun_down_trigger_internal"),
+        ("maps/cornered_destruct.gsc", "fall_player"),
+        ("maps/cornered_building_entry.gsc", "upload_virus_enter"),
+        ("maps/cornered_building_entry.gsc", "gun_down_trigger"),
+        ("maps/cornered_audio.gsc", "aud_zipline"),
+        ("maps/cornered_building_entry.gsc", "player_invasion_wipe_flag"),
+        ("maps/cornered_zipline_turret.gsc", "player_handle_speed_for_knockdown"),
+        ("maps/cornered_building_entry.gsc", "player_ent"),
+        ("maps/cornered_building_entry.gsc", "player_in_rorkes_way"),
+        ("maps/cornered_building_entry.gsc", "player_escape_door_open"),
+        ("maps/cornered_destruct.gsc", "stairwell_cracks"),
+        ("maps/cornered_building_entry.gsc", "handle_rappel_inverted"),
+        ("maps/cornered_intro.gsc", "zipline_mvmt_npc"),
+        ("maps/cornered_rappel.gsc", "player_combat_rappel"),
+        ("maps/cornered_audio.gsc", "aud_rappel"),
+        ("maps/cornered_building_entry.gsc", "upload_virus_loop_anims"),
+        ("maps/cornered_interior.gsc", "junction_elevator_control_doors_open"),
+        ("maps/cornered_intro.gsc", "intro_plane_flyby_01"),
+        ("maps/cornered_audio.gsc", "aud_virus"),
+        ("maps/cornered_destruct.gsc", "fall_environment"),
+        ("maps/cornered_interior.gsc", "bar_enemies"),
+        ("maps/cornered_interior.gsc", "courtyard_rorke"),
+        ("1050.gsc", "enemy_threat_logic_dog_wait"),
+        ("1045.gsc", "enemy_corpse_alert_level"),
+    ],
 }
 
 
@@ -149,8 +220,11 @@ def audit_mission(name: str, root: Path, target_names: list[str] | None = None) 
     files = sorted(root.rglob("*.gsc"), key=lambda item: item.as_posix().casefold())
     if not files:
         raise OwnershipAuditError(f"no GSC source files found under {root}")
-    wanted = set(target_names or DEFAULT_TARGETS.get(name, []))
-    if not wanted:
+    target_specs = set(DEFAULT_TARGETS.get(name, [])) if target_names is None else None
+    wanted_names = set(target_names) if target_names is not None else None
+    if target_specs is not None and not target_specs:
+        raise OwnershipAuditError(f"no exact target functions configured for mission {name!r}")
+    if wanted_names is not None and not wanted_names:
         raise OwnershipAuditError(f"no target functions configured for mission {name!r}")
 
     findings: list[dict[str, Any]] = []
@@ -159,16 +233,26 @@ def audit_mission(name: str, root: Path, target_names: list[str] | None = None) 
         clean = clean_source_lines(original)
         relative = path.relative_to(root).as_posix()
         for function_name, start, end in function_ranges(clean):
-            if function_name in wanted:
+            if (
+                (relative, function_name) in target_specs
+                if target_specs is not None
+                else function_name in wanted_names
+            ):
                 findings.append(_audit_function(relative, function_name, start, end, clean))
 
-    found_names = {item["function"] for item in findings}
-    missing = sorted(wanted - found_names)
+    if target_specs is not None:
+        found_specs = {(item["file"], item["function"]) for item in findings}
+        missing = sorted(f"{relative}::{function}" for relative, function in target_specs - found_specs)
+        target_count = len(target_specs)
+    else:
+        found_names = {item["function"] for item in findings}
+        missing = sorted(wanted_names - found_names)
+        target_count = len(wanted_names)
     return {
         "mission": name,
         "status": "PLAYER_STATE_OWNERSHIP_AUDIT_COMPLETED",
         "source_file_count": len(files),
-        "target_function_count": len(wanted),
+        "target_function_count": target_count,
         "target_functions_found": len(findings),
         "missing_target_functions": missing,
         "findings": findings,

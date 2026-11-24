@@ -82,5 +82,49 @@ class GscPlayerStateOwnershipAuditTests(unittest.TestCase):
             self.assertEqual(report["missing_target_functions"], ["not_present"])
 
 
+
+    def test_default_targets_are_scoped_to_exact_file_and_function(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            maps = root / "maps"
+            maps.mkdir()
+            (maps / "black_ice_exfil.gsc").write_text(
+                "player_fail_finale_instakill()\n{\n"
+                "    level.player kill();\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            (root / "duplicate_name.gsc").write_text(
+                "player_fail_finale_instakill()\n{\n"
+                "    level.player giveweapon(\"wrong_target\");\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            report = audit_mission("black_ice", root)
+
+        self.assertEqual(report["target_function_count"], 21)
+        self.assertEqual(report["target_functions_found"], 1)
+        self.assertEqual(report["findings"][0]["file"], "maps/black_ice_exfil.gsc")
+        self.assertEqual(report["findings"][0]["function"], "player_fail_finale_instakill")
+        self.assertIn(
+            "maps/black_ice_ascend.gsc::ascend_logic",
+            report["missing_target_functions"],
+        )
+
+    def test_default_hotspot_inventory_contains_68_unique_file_function_pairs(self):
+        from gsc_player_state_ownership_audit import DEFAULT_TARGETS
+
+        flattened = [
+            (mission, relative, function)
+            for mission, specs in DEFAULT_TARGETS.items()
+            for relative, function in specs
+        ]
+        self.assertEqual(len(flattened), 68)
+        self.assertEqual(len(set(flattened)), 68)
+        self.assertEqual(
+            {mission: len(specs) for mission, specs in DEFAULT_TARGETS.items()},
+            {"black_ice": 21, "carrier": 23, "cornered": 24},
+        )
+
 if __name__ == "__main__":
     unittest.main()
