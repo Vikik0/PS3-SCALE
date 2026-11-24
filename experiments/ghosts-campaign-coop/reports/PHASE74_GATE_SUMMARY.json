@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "phase": 74,
+  "status": "LOCAL_PLAYER_GATE_OBSERVATION_FRAME_VALIDATED",
+  "changes": [
+    "require an explicitly valid engine observation frame for each player",
+    "reject default or unavailable frame counters before comparing pair timestamps",
+    "add GHC_LOCAL_GATE_OBSERVATION_FRAME_MISSING status code 23",
+    "include observation_frame_valid in canonical boolean validation",
+    "add missing-frame and malformed-frame-validity test cases",
+    "extend the host runtime simulator with a missing-frame mutant"
+  ],
+  "validation": {
+    "local_player_gate_c_test": "PASS",
+    "test_functions": 17,
+    "sanitizers": ["address", "undefined"],
+    "compiler_flags": "-std=c11 -O2 -Wall -Wextra -Werror -pedantic"
+  },
+  "validation_boundary": "Host validation only. The source of the engine frame counter is not yet verified in Ghosts TU 1.16; no native Campaign player-two behavior is claimed."
+}
