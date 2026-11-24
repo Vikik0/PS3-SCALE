@@ -1,4 +1,4 @@
-# Device test matrix — Alpha 0.30
+# Device test matrix — Alpha 0.31
 
 Primary device (user-reported):
 - Family: PS3 Slim
@@ -59,6 +59,20 @@ No real screenshot pairs are currently bundled in the repository; this part requ
 11. Disable webMAN; confirm the app shows a connection error and does not falsely report a successful launch.
 12. Confirm a stale or edited PS3 SCALE script is blocked, while a foreign webMAN script is never overwritten or deleted.
 13. Confirm that closing the game clears the process-memory change.
+
+## PS2 CONFIG Manager — Alpha 0.31
+
+1. Open Game Details for a PS2 ISO and press SQUARE; confirm PS2 CONFIG Manager opens.
+2. Confirm the current CONFIG, backup and rollback states and file sizes match the files on disk.
+3. Back up an existing `.CONFIG`; confirm the saved file is byte-identical to the original.
+4. Attempt a second backup; confirm the existing backup is not overwritten.
+5. Change the current CONFIG while retaining the old backup; confirm online replacement is blocked as stale.
+6. Restore the saved backup; confirm the old current CONFIG is preserved as a rollback copy.
+7. Press restore again; confirm it reports that the current file already matches the backup and does not rewrite it.
+8. For a game with an exact database match and no existing CONFIG, download and confirm the file is created beside the ISO.
+9. Repeat backup/restore for an installed PS2 Classics ENC only when the webMAN PS2CONFIG directory exists.
+10. Confirm oversized files, invalid paths, leftover temporary files and rollback conflicts are rejected without modifying the ISO, EBOOT or installed title.
+11. Launch the same PS2 game with and without the CONFIG and record actual behavior; do not infer compatibility from a successful file install alone.
 
 ## Other hardware targets after the Slim test
 
