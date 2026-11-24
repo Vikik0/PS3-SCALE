@@ -12,7 +12,7 @@
 
 الاستنتاج الذي نحتفظ به من هذه المراجع هو فقط سلوك مسار الخادم `SV_AddTestClient` و`SV_SpawnTestClient`: فهو ينشئ Test/Bot connection من نوع `NA_BOT`، وليس تسجيل DualShock محلي ثانٍ. تمت مقارنة pseudocode عند commit `513f0b6bdf0de32d16df3af914b26df01ee04ec9`.
 
-| المسار | PS4 x64 | Xbox One x64 | النتيجة |
+| المسار | iw6_ds_ps4 (Windows x64) | iw6_ds_xb3 (Windows x64) | النتيجة |
 |---|---:|---:|---|
 | `CL_DoesControllerIndexHaveALocalClientNum` (server reference only) | `0x1400AE7A0` | `0x1400AECE0` | يكتب `LOCAL_CLIENT_0` ويعيد true؛ لا نستنتج منه سلوك عميل retail |
 | `CL_ControllerIndexFromClientNum` (server reference only) | `0x1400AE790` | `0x1400AECD0` | يعيد `cl_controller_in_use`؛ لا نستنتج منه ربط يد التحكم في PS3 |
