@@ -39,6 +39,34 @@ else
         --required
 fi
 
+# Replace the generic external-disc instructions with accurate instructions for
+# this personal package, which embeds the supplied Crash Bash BIN/CUE pair.
+PERSONAL_README="$RETROARCH_DIR/README-Crash-Bash-Online.txt"
+cat > "$PERSONAL_README" <<'EOF'
+CRASH BASH ONLINE — PERSONAL GAME-INCLUSIVE PS3 PACKAGE
+
+This single PKG includes the Crash Bash game disc dump under:
+  /dev_hdd0/game/CBON00001/USRDIR/PSXISO/
+
+The built-in lobby launches the embedded RetroArch runtime and PCSX-ReARMed
+core. No second PKG or external game copy is required for this included disc.
+
+A PlayStation BIOS is not included. You may use HLE, or place a BIOS dumped
+from your own console in:
+  /dev_hdd0/game/CBON00001/USRDIR/retroarch/system/
+
+ONLINE PLAY
+1. Install this same single PKG on every compatible PS3.
+2. Launch Crash Bash Online from the XMB.
+3. Create or join a room in the built-in lobby.
+4. Every player must use the same embedded game dump, BIOS mode and core options.
+5. The host starts the match after all players are ready.
+
+Netplay is independent of PSN but requires an internet connection. Four-player
+performance and full hardware compatibility still require testing on the target
+PS3 consoles.
+EOF
+
 make -C "$ROOT" clean
 make -C "$ROOT" pkg
 test -s "$ROOT/crashbash.pkg"
