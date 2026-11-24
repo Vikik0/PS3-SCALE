@@ -18,6 +18,10 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
         self.multiplayer_dumps = self.root / "multiplayer-dumps"
         self.campaign_dumps.mkdir()
         self.multiplayer_dumps.mkdir()
+        (self.campaign_dumps / "GHOSTS_TU116_CAMPAIGN_SEG0.bin").write_bytes(b"campaign-seg0")
+        (self.campaign_dumps / "GHOSTS_TU116_CAMPAIGN_SEG1.bin").write_bytes(b"campaign-seg1")
+        (self.multiplayer_dumps / "GHOSTS_TU116_MULTIPLAYER_SEG0.bin").write_bytes(b"multiplayer-seg0")
+        (self.multiplayer_dumps / "GHOSTS_TU116_MULTIPLAYER_SEG1.bin").write_bytes(b"multiplayer-seg1")
         self.map_file = self.root / "memory-map.json"
         self.map_file.write_text('{"campaign": {}, "multiplayer": {}}', encoding="utf-8")
         self.output_dir = self.root / "analysis"
@@ -70,6 +74,23 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
         path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         return path
 
+    def write_metadata(self, name, mode, pid=1234, process_name="default.self"):
+        path = self.root / name
+        lines = [
+            "profile_title_id=BLUS31270",
+            "profile_app_ver=01.16",
+            f"operator_selected_mode={mode}",
+            "capture_date_local=2026-11-25 00:30:00",
+            f"ps3mapi_current_pid={pid}",
+            f"ps3mapi_process_name_verbatim={process_name}",
+            f"pad_probe_log_filename=ghosts_{mode.lower()}_pad_probe.log",
+            f"segment0_filename=GHOSTS_TU116_{mode}_SEG0.bin",
+            f"segment1_filename=GHOSTS_TU116_{mode}_SEG1.bin",
+            "notes=diagnostic only",
+        ]
+        path.write_text("\\n".join(lines) + "\\n", encoding="utf-8")
+        return path
+
     def run_analyzer(self, **kwargs):
         defaults = {
             "campaign_self": self.campaign_self,
@@ -100,9 +121,62 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
         self.assertTrue(result["pad_probe"]["capture_provenance_valid_in_both_modes"])
         self.assertEqual(result["player_two_gate"]["status"], "NOT_PROVEN")
         self.assertEqual(result["ppu_analysis"]["status"], "NOT_RUN")
+        self.assertEqual(result["capture_metadata"]["status"], "NOT_PROVIDED")
         self.assertTrue((self.output_dir / "campaign_tu116_runtime.elf").is_file())
         self.assertTrue((self.output_dir / "multiplayer_tu116_runtime.elf").is_file())
         self.assertTrue((self.output_dir / "capture_summary.json").is_file())
+
+    def test_metadata_pair_is_bound_to_the_exact_mode_files_and_hashes(self):
+        campaign_log = self.root / "ghosts_campaign_pad_probe.log"
+        multiplayer_log = self.root / "ghosts_multiplayer_pad_probe.log"
+        campaign_log.write_text("campaign probe\\n", encoding="utf-8")
+        multiplayer_log.write_text("multiplayer probe\\n", encoding="utf-8")
+        campaign_meta = self.write_metadata("campaign_capture_metadata.txt", "CAMPAIGN")
+        multiplayer_meta = self.write_metadata("multiplayer_capture_metadata.txt", "MULTIPLAYER")
+
+        result = self.run_analyzer(
+            campaign_log=campaign_log,
+            multiplayer_log=multiplayer_log,
+            campaign_metadata=campaign_meta,
+            multiplayer_metadata=multiplayer_meta,
+        )
+
+        self.assertEqual(result["capture_metadata"]["status"], "PASS_CAPTURE_METADATA_PAIR")
+        self.assertTrue(result["capture_metadata"]["both_modes_validated"])
+        self.assertEqual(result["capture_metadata"]["campaign"]["ps3mapi_pid"], 1234)
+        self.assertEqual(result["capture_metadata"]["multiplayer"]["ps3mapi_pid"], 1234)
+        self.assertTrue(result["capture_metadata"]["same_pid_is_allowed"])
+        self.assertFalse(result["capture_metadata"]["process_name_is_mode_discriminator"])
+        self.assertEqual(
+            result["input_sha256"]["campaign_capture_metadata"],
+            analyzer.sha256_file(campaign_meta),
+        )
+        self.assertEqual(
+            result["input_sha256"]["multiplayer_capture_metadata"],
+            analyzer.sha256_file(multiplayer_meta),
+        )
+        summary = __import__("json").loads(
+            (self.output_dir / "capture_summary.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(summary["capture_metadata"]["status"], "PASS_CAPTURE_METADATA_PAIR")
+
+    def test_only_one_metadata_file_is_rejected_before_dump_analysis(self):
+        campaign_meta = self.write_metadata("campaign_capture_metadata.txt", "CAMPAIGN")
+        with patch.object(analyzer, "verify_dump") as verify:
+            with self.assertRaisesRegex(ValueError, "both capture metadata files or neither"):
+                self.run_analyzer(campaign_metadata=campaign_meta)
+            verify.assert_not_called()
+
+    def test_wrong_metadata_mode_is_rejected_before_dump_analysis(self):
+        campaign_meta = self.write_metadata("campaign_capture_metadata.txt", "MULTIPLAYER")
+        multiplayer_meta = self.write_metadata("multiplayer_capture_metadata.txt", "MULTIPLAYER")
+        with patch.object(analyzer, "verify_dump") as verify:
+            with self.assertRaisesRegex(ValueError, "mode mismatch"):
+                self.run_analyzer(
+                    campaign_metadata=campaign_meta,
+                    multiplayer_metadata=multiplayer_meta,
+                )
+            verify.assert_not_called()
 
     def test_optional_ghidra_analysis_adds_six_outputs_and_summary_evidence(self):
         fake_manifest = {
