@@ -502,26 +502,17 @@ int ps3scale_community_file_matches_exact_game(
     const ps3scale_community_file_t *file,
     const ps3scale_game_t *game)
 {
-    int game_region;
-    int file_region;
-
     if (!file || !game || !game->title_id[0] ||
         !game->app_ver[0] || !file->app_ver[0] ||
         strcmp(file->app_ver, game->app_ver) != 0)
         return 0;
-    if (file->title_id[0] &&
-        strcmp(file->title_id, game->title_id) != 0)
-        return 0;
 
-    game_region = title_region(game->title_id);
-    file_region = file->title_id[0] ? title_region(file->title_id) :
-                                      game_region;
-    if (game_region && file_region && game_region != file_region)
-        return 0;
-
-    /* Exact installation must contain the actual Title ID somewhere in the
-       indexed identity/path metadata; fuzzy title and region hints never
-       authorize an install. */
+    /*
+     * Exact installation must contain the actual region-specific Title ID.
+     * Some community files explicitly list multiple regional IDs in their
+     * path, so the primary catalog ID may differ; only the exact game ID
+     * found in the indexed identity/path can authorize this install.
+     */
     return file_contains_title_id(file, game->title_id);
 }
 
