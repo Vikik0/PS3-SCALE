@@ -9,9 +9,15 @@ on:
         description: "One-use HTTPS download URL for the private BIN/CUE ZIP"
         required: true
         type: string
+      runtime_run_id:
+        description: "Successful PS3 RetroArch-stage workflow run ID"
+        required: true
+        default: "45256122232"
+        type: string
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: crash-bash-personal-pkg
@@ -96,20 +102,22 @@ jobs:
               print(f"Validated original BIN/CUE ZIP: {sizes['Crash Bash (USA).bin']:,} BIN bytes.")
           PY
 
-      - name: Build the pinned RetroArch and PCSX-ReARMed runtime
-        shell: bash
-        run: bash Crash-Bash-Enhanced/scripts/build_online_pkg_clean.sh
+      - name: Download the verified RetroArch + PCSX-ReARMed runtime
+        uses: actions/download-artifact@v4
+        with:
+          name: Crash-Bash-RetroArch-Stage
+          path: Crash-Bash-Enhanced/pkgfiles/USRDIR/retroarch
+          run-id: ${{ inputs.runtime_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Stage the runtime inside the unified application
+      - name: Verify the downloaded embedded runtime
         shell: bash
         run: |
           set -euo pipefail
-          RUNTIME="Crash-Bash-Enhanced/build-artifacts/retroarch-stage/USRDIR/retroarch"
-          DEST="Crash-Bash-Enhanced/pkgfiles/USRDIR/retroarch"
+          RUNTIME="Crash-Bash-Enhanced/pkgfiles/USRDIR/retroarch"
           test -s "$RUNTIME/EBOOT.BIN"
           test -s "$RUNTIME/cores/pcsx_rearmed_libretro_psl1ght.SELF"
-          mkdir -p "$DEST"
-          cp -a "$RUNTIME/." "$DEST/"
+          test -s "$RUNTIME/system/README-BIOS.txt"
 
       - name: Build and verify the personal game-inclusive PKG
         shell: bash
