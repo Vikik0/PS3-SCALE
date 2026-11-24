@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "phase": 50,
+  "status": "OPD_TOC_MEMORY_REGION_EVIDENCE_EXPORTED",
+  "changes": [
+    "TOC pointers are associated with their Ghidra MemoryBlock",
+    "per-function JSON evidence includes block name, read/write/execute permissions and relative offset",
+    "zero and unmapped pointers cannot claim mapped-region metadata",
+    "comparer validates region evidence against the TOC mapping column",
+    "Multiplayer-only candidate reports expose mapped and writable TOC region evidence"
+  ],
+  "validation_boundary": "Synthetic CSV validation only. Static block permissions do not prove runtime TOC correctness or safe Campaign calls."
+}
