@@ -231,3 +231,14 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - CI run [#1499](https://github.com/Vikik0/PS3-SCALE/actions/runs/45509141329): **6/6 jobs successful**, **487 tests passed**.
 - Report: reports/PHASE86_REPORT_AR.md; JSON: reports/PHASE86_CAPTURE_KIT_VALIDATION.json.
 - The validator proves file integrity only. It does not prove PS3 runtime compatibility or playable Campaign co-op.
+
+
+### Phase 87 — reproducible CI capture-kit packaging
+
+- Added tools/build_capture_kit.py and a package-capture-kit job that waits for all six build/test jobs, downloads the five PRX/GSC artifacts, assembles the PS3 and Experimental_GSC_Not_Installed directories, generates per-file SHA-256 manifests and runs verify_capture_kit.py before upload.
+- The builder fails closed on missing artifacts, missing dump scripts, bad GSC source/bytecode pins or invalid package layout.
+- CI run [#1511](https://github.com/Vikik0/PS3-SCALE/actions/runs/45510341497): **7/7 jobs successful**, **489 tests passed**.
+- Uploaded artifact: ghosts-tu116-development-capture-kit (ID 14974903362). Inner ZIP: 483,396 bytes; 46/46 files verified; both GSC manifests verified.
+- SHA-256: 477f6b84992369b78972cff16f7b57ed4df3d8cf4b395ed1f934ce162f44ea35.
+- Report: reports/PHASE87_REPORT_AR.md; JSON: reports/PHASE87_CAPTURE_KIT_CI.json.
+- The package is a reproducible development/capture kit, not a playable co-op mod. Hardware and native Local Client validation remain outstanding.
