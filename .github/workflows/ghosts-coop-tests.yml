@@ -93,6 +93,33 @@ jobs:
               assert len(binary) == manifest["compiled_gscbin_bytes"], "session bridge bytecode size mismatch"
           print(f"Session bridge build observed: source_sha256={source_hash}, binary_sha256={binary_hash}, binary_bytes={len(binary)}")
           PY
+      - name: Compile and round-trip reusable Campaign mission event lock
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          gsc-tool --mode comp --game iw6 --system ps3 client/ps3/gsc/ghc_campaign_event_lock.gsc
+          test -s compiled/iw6/ghc_campaign_event_lock.gscbin
+          gsc-tool --mode decomp --game iw6 --system ps3 compiled/iw6/ghc_campaign_event_lock.gscbin
+          test -s decompiled/iw6/ghc_campaign_event_lock.gsc
+          grep -q 'ghc_campaign_event_lock_acquire' decompiled/iw6/ghc_campaign_event_lock.gsc
+          grep -q 'ghc_campaign_event_lock_release' decompiled/iw6/ghc_campaign_event_lock.gsc
+          grep -q 'ghc_campaign_event_lock_abort_slot' decompiled/iw6/ghc_campaign_event_lock.gsc
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path("client/ps3/gsc/ghc_campaign_event_lock.manifest.json").read_text())
+          source_hash = hashlib.sha256(Path("client/ps3/gsc/ghc_campaign_event_lock.gsc").read_bytes()).hexdigest()
+          binary = Path("compiled/iw6/ghc_campaign_event_lock.gscbin").read_bytes()
+          binary_hash = hashlib.sha256(binary).hexdigest()
+          if manifest.get("source_sha256"):
+              assert source_hash == manifest["source_sha256"], "event lock source hash mismatch"
+          if manifest.get("compiled_gscbin_sha256"):
+              assert binary_hash == manifest["compiled_gscbin_sha256"], "event lock bytecode hash mismatch"
+          if manifest.get("compiled_gscbin_bytes"):
+              assert len(binary) == manifest["compiled_gscbin_bytes"], "event lock bytecode size mismatch"
+          print(f"Event lock build observed: source_sha256={source_hash}, binary_sha256={binary_hash}, binary_bytes={len(binary)}")
+          PY
       - name: Compile and round-trip Clockwork NVG player helper fixture
         working-directory: experiments/ghosts-campaign-coop
         run: |
@@ -151,6 +178,13 @@ jobs:
             experiments/ghosts-campaign-coop/compiled/iw6/ghc_campaign_local_session.gscbin
             experiments/ghosts-campaign-coop/client/ps3/gsc/ghc_campaign_local_session.gsc
             experiments/ghosts-campaign-coop/client/ps3/gsc/ghc_campaign_local_session.manifest.json
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ghosts-campaign-gsc-event-lock
+          path: |
+            experiments/ghosts-campaign-coop/compiled/iw6/ghc_campaign_event_lock.gscbin
+            experiments/ghosts-campaign-coop/client/ps3/gsc/ghc_campaign_event_lock.gsc
+            experiments/ghosts-campaign-coop/client/ps3/gsc/ghc_campaign_event_lock.manifest.json
       - name: Upload pinned GSC Tool for offline retail-source validation
         uses: actions/upload-artifact@v6
         with:
