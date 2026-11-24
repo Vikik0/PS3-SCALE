@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "phase": 65,
+  "status": "SOURCE_PINNED_PLAYER_CONTAINER_ANALYSIS",
+  "changes": [
+    "one-command ownership plus exact file-aware call-graph analysis",
+    "derive exact call-graph targets from every player_container_functions finding",
+    "per-file SHA-256 and deterministic per-mission source-tree digest",
+    "reject any source additions, removals or edits during analysis",
+    "reject symbolic-link GSC inputs",
+    "atomic JSON output with explicit overwrite opt-in"
+  ],
+  "tests_added": 6,
+  "validation_boundary": "Static GSC analysis only; does not prove runtime callback execution or native Campaign Player 2."
+}

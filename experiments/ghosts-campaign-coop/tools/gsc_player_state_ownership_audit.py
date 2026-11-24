@@ -14,7 +14,10 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from gsc_callgraph_audit import clean_source_lines, function_ranges
+try:
+    from .gsc_callgraph_audit import clean_source_lines, function_ranges
+except ImportError:
+    from gsc_callgraph_audit import clean_source_lines, function_ranges
 
 PLAYER_RE = re.compile(r"\blevel\.player\b")
 PLAYER_METHOD_RE = re.compile(
