@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "phase": 72,
+  "status": "LOCAL_PLAYER_READINESS_GATE_STRENGTHENED",
+  "changes": [
+    "require a valid input frame for each player",
+    "require both observations to share the same engine observation frame",
+    "require distinct native input-command buffers",
+    "require independent view/refdef/camera contexts",
+    "require independent HUD contexts",
+    "cross-check all six engine-owned address categories across both players",
+    "preserve existing status-code values and append new fail-closed statuses",
+    "extend portable C tests and adversarial runtime simulator faults",
+    "clear stale READY result when the player observation pointer is NULL"
+  ],
+  "new_status_codes": {
+    "16": "input frame missing or invalid",
+    "17": "player observations were captured in different engine frames",
+    "18": "input command address missing",
+    "19": "view context address missing",
+    "20": "HUD context address missing",
+    "21": "duplicate engine context address across players"
+  },
+  "validation": {
+    "local_player_gate_c_test": "PASS",
+    "local_player_gate_c_test_functions": 15,
+    "runtime_simulator_syntax_check": "PASS",
+    "sanitizers": ["address", "undefined"],
+    "compiler_flags": "-std=c11 -O2 -Wall -Wextra -Werror -pedantic",
+    "new_failure_cases": [
+      "missing input frame",
+      "mismatched observation frame",
+      "shared command buffer",
+      "shared view/camera context",
+      "shared HUD context",
+      "cross-category address alias",
+      "NULL player observations clear a stale READY result"
+    ]
+  },
+  "validation_boundary": "Portable host tests only. The gate is not wired to a verified Campaign frame hook; no PS3/RPCS3 runtime observations or playable co-op build are claimed."
+}
