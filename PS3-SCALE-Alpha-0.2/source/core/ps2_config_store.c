@@ -406,8 +406,7 @@ int ps3scale_ps2_config_store_restore(
 
 int ps3scale_ps2_config_store_install_download(
     const char *download_path, const char *target_path,
-    const char *original_backup_path, const char *rollback_path,
-    size_t max_bytes, int allow_replace)
+    const char *original_backup_path, size_t max_bytes, int allow_replace)
 {
     struct stat st;
     size_t download_size;
@@ -440,10 +439,7 @@ int ps3scale_ps2_config_store_install_download(
                 target_path, original_backup_path, max_bytes) != 1)
             return PS3SCALE_PS2_STORE_ERR_BACKUP_REQUIRED;
 
-        /* The immutable original backup already contains these exact bytes.
-         * Do not replace it with the downloaded file or overwrite a rollback
-         * snapshot created by an earlier restore. */
-        (void)rollback_path;
+        /* The immutable original backup already contains these exact bytes. */
     }
 
     /* Download and target are on the same HDD; rename replaces atomically. */
