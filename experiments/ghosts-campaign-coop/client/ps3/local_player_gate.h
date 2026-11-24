@@ -28,7 +28,13 @@ typedef enum {
     GHC_LOCAL_GATE_DUPLICATE_LOCAL_CLIENT_NUM = 12,
     GHC_LOCAL_GATE_DUPLICATE_CLIENT_ID = 13,
     GHC_LOCAL_GATE_DUPLICATE_ENTITY_ID = 14,
-    GHC_LOCAL_GATE_DUPLICATE_STATE_ADDRESS = 15
+    GHC_LOCAL_GATE_DUPLICATE_STATE_ADDRESS = 15,
+    GHC_LOCAL_GATE_INPUT_FRAME_MISSING = 16,
+    GHC_LOCAL_GATE_OBSERVATION_FRAME_MISMATCH = 17,
+    GHC_LOCAL_GATE_INPUT_COMMAND_ADDRESS_MISSING = 18,
+    GHC_LOCAL_GATE_VIEW_CONTEXT_ADDRESS_MISSING = 19,
+    GHC_LOCAL_GATE_HUD_CONTEXT_ADDRESS_MISSING = 20,
+    GHC_LOCAL_GATE_DUPLICATE_ENGINE_CONTEXT_ADDRESS = 21
 } GhcLocalPlayerGateStatus;
 
 typedef struct {
@@ -37,17 +43,23 @@ typedef struct {
     uint8_t is_primary;
     uint8_t controller_port;
     uint8_t input_connected;
+    uint8_t input_frame_valid;
     uint8_t client_id_valid;
     uint8_t entity_id_valid;
     uint8_t local_client_num_valid;
+    uint8_t role;
+    uint8_t reserved[2];
     uint16_t client_id;
     uint16_t entity_id;
     uint8_t local_client_num;
-    uint8_t role;
-    uint8_t reserved[6];
+    uint8_t reserved2[3];
+    uint32_t observation_frame;
     uint64_t gclient_address;
     uint64_t gentity_address;
     uint64_t player_state_address;
+    uint64_t input_command_address;
+    uint64_t view_context_address;
+    uint64_t hud_context_address;
 } GhcLocalPlayerObservation;
 
 typedef struct {
@@ -62,6 +74,11 @@ typedef struct {
  * function does not read memory or create players. Slot 0 must be Logan on
  * controller port 0 and the primary local player. Slot 1 must be the separate
  * guest soldier on controller port 1 and the secondary local player.
+ *
+ * A ready pair must also have fresh input frames captured in the same engine
+ * observation frame, distinct command streams, distinct player state, and
+ * independent view and HUD contexts. Local-client number, client ID, entity
+ * ID and controller port remain separate observations; they are not aliases.
  */
 GhcLocalPlayerGateStatus ghc_local_player_gate_validate(
     const GhcLocalPlayerObservation players[GHC_LOCAL_PLAYER_SLOT_COUNT],
