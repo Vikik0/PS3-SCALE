@@ -49,7 +49,7 @@
 ## Alpha 0.4 — PS3 title-specific patch manager
 
 - [ ] Signed online catalog/download.
-- [ ] Exact Title ID + region + game update matching.
+- [x] Exact Title ID + inferred region + APP_VER matching for FPS profiles; mismatched region or update version is rejected.
 - [ ] Patch preview, backup, apply and rollback.
 - [ ] First supported title only after repeatable hardware test.
 - [ ] CFW runtime component for game-start verification and notification.

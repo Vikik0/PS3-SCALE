@@ -91,3 +91,12 @@ CI build and host tests are necessary but not sufficient. Actual RSX appearance,
 5. Confirm BLAS / BCAS IDs display ASIA.
 6. Confirm an unknown or malformed ID displays UNKNOWN and is never assigned a guessed region.
 7. Confirm PS2 CONFIG lookup uses exact normalized Title ID or disc serial and never selects a different region's config.
+
+
+## Region-aware FPS profile matching
+
+1. Confirm a profile is available only for the exact scanned Title ID and APP_VER.
+2. Confirm the profile's inferred region matches the scanned game's region.
+3. Force a mismatched region in a host test while keeping Title ID and APP_VER unchanged; confirm the profile is rejected.
+4. Confirm a different APP_VER is rejected even when Title ID and region match.
+5. Confirm an unrecognized region is not guessed; exact Title ID and APP_VER are still required.

@@ -51,7 +51,7 @@ Temporary cleanup is intentionally performed on the next PS3 SCALE launch, not w
 
 ## Version-matched FPS profiles
 
-- A profile matches only when both Title ID and APP_VER are exact.
+- A profile matches only when Title ID, the region inferred from that ID, and APP_VER all match the scanned game record exactly.
 - A one-launch profile is armed only after PS3 SCALE revalidates the exact installed or mounted game and the user confirms.
 - Multi-write and manual-only profiles remain excluded from automatic application.
 - The generated webMAN script is one-launch only. It checks the Title ID, in-game state, target address and expected original bytes before attempting a memory write. PS3 SCALE does not claim success without a verified post-write value.
@@ -69,7 +69,7 @@ PS3 SCALE loads the PS3 NET and NETCTL modules, initializes the network control 
 ## Known limitations
 
 - The community index and NCL files are community-supplied, not independently hardware-verified by PS3 SCALE.
-- Exact Title ID + APP_VER matching reduces cross-version mistakes but cannot prove that a community patch is safe or stable on every console.
+- Exact Title ID + inferred region + APP_VER matching prevents cross-region and cross-version profile selection, but cannot prove that a community patch is safe or stable on every console.
 - The NCL installer accepts only text files tagged `GRAPHICS_FPS`; it does not install arbitrary binaries, EBOOT replacements, PKG files or general `.txt` downloads.
 - No universal upscaler, frame generation or guaranteed 60 FPS is provided.
 - A future binary patch installer would need cryptographic hashes, source/license metadata, backups, restore and rollback support before it could be enabled.
