@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "phase": 86,
+  "status": "CAPTURE_KIT_INTEGRITY_VALIDATOR_ADDED_AND_PACKAGE_VERIFIED",
+  "tool": "tools/verify_capture_kit.py",
+  "checks": [
+    "BLUS31270 / TU 01.16 target",
+    "required PRX and PS3MAPI files",
+    "all manifest file sizes and SHA-256 hashes",
+    "safe relative paths and path traversal rejection",
+    "Local Session and Player Registry source/GSCBIN hashes and byte counts",
+    "GSCBIN forbidden in PS3 payload directory",
+    "experimental GSC runtime status remains explicit"
+  ],
+  "tests": [
+    "valid package passes",
+    "modified file rejected",
+    "missing required probe rejected",
+    "manifest path traversal rejected",
+    "wrong title/TU rejected",
+    "GSC source hash mismatch rejected",
+    "GSCBIN in PS3 payload directory rejected"
+  ],
+  "validation": {
+    "actual_package_files_verified": 29,
+    "gsc_manifests_verified": 2,
+    "package_zip": "Ghosts_TU116_Development_Capture_Kit_Phase85.zip",
+    "package_size_bytes": 429668,
+    "package_sha256": "0e6ba4e8da8539a787f0cbbf2312c8054b73337687df6ba15014474bb09d22bd"
+  },
+  "ci": {
+    "run_number": 1499,
+    "run_id": 45509141329,
+    "run_url": "https://github.com/Vikik0/PS3-SCALE/actions/runs/45509141329",
+    "jobs": "6/6 SUCCESS",
+    "python_tests": "487 PASS"
+  },
+  "limitations": [
+    "Integrity verification does not prove hardware compatibility or runtime safety.",
+    "The GSC bridge remains experimental and is not injected into a retail FastFile.",
+    "No playable second Campaign local client is claimed."
+  ]
+}
