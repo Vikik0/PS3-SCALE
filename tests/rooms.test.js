@@ -1148,3 +1148,129 @@ test("a started Netplay match keeps its relay identity when the host seat expire
   assert.equal(lookup.body.ready, true);
   assert.equal(lookup.body.address, "madrid.relay.retroarch.com");
 });
+
+
+test("joining a waiting room resets the READY state of every existing player", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "set_ready", ready: true }, host.body.token);
+
+  const third = await call("POST", {
+    action: "join",
+    code: host.body.room.code,
+    displayName: "Third Player"
+  });
+  assert.equal(third.statusCode, 200);
+
+  const room = await call("GET", {}, host.body.token, { code: host.body.room.code });
+  assert.equal(room.body.room.players.length, 3);
+  assert.equal(room.body.room.status, "waiting");
+  assert.equal(room.body.room.players.every((player) => player.ready === false), true);
+  assert.equal(room.body.room.discSelectionCount, 0);
+  assert.ok(guest.body.player.id);
+});
+
+test("ANY BATTLE resets existing READY states when a new player joins", async () => {
+  const host = await call("POST", { action: "create", displayName: "Public Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "set_ready", ready: true }, host.body.token);
+
+  const quickJoin = await call("POST", { action: "any", displayName: "Quick Join" });
+  assert.equal(quickJoin.statusCode, 200);
+  assert.equal(quickJoin.body.room.code, host.body.room.code);
+
+  const room = await call("GET", {}, host.body.token, { code: host.body.room.code });
+  assert.equal(room.body.room.players.length, 3);
+  assert.equal(room.body.room.players.every((player) => player.ready === false), true);
+  assert.equal(room.body.room.status, "waiting");
+  assert.ok(guest.body.player.id);
+});
+
+test("disc confirmation is rejected until every active player is READY", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "set_ready", ready: true }, host.body.token);
+
+  const early = await call("POST", {
+    action: "set_disc",
+    fingerprint: "0123456789ABCDEF"
+  }, host.body.token);
+  assert.equal(early.statusCode, 409);
+  assert.match(early.body.error, /Every active player must be READY/);
+
+  await call("POST", { action: "set_ready", ready: true }, guest.body.token);
+  const confirmed = await call("POST", {
+    action: "set_disc",
+    fingerprint: "0123456789ABCDEF"
+  }, host.body.token);
+  assert.equal(confirmed.statusCode, 200);
+  assert.equal(confirmed.body.discSelectionCount, 1);
+  assert.equal(confirmed.body.discMatch, false);
+});
+
+test("a malformed relay session cannot silently fall back to the host direct IP", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "set_ready", ready: true }, host.body.token);
+  await call("POST", { action: "set_ready", ready: true }, guest.body.token);
+  await confirmMatchingDisc(host.body.token, guest.body.token);
+  await call("POST", { action: "game_start" }, host.body.token);
+  const room = await call("GET", {}, guest.body.token, { code: host.body.room.code });
+
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    async json() {
+      return [{
+        fields: {
+          username: "CB-" + room.body.room.netplayId + "-HOST",
+          connectable: true,
+          ip: "203.0.113.25",
+          port: 55435,
+          mitm_ip: "",
+          mitm_port: 0,
+          mitm_session: "invalid relay session!",
+          updated: new Date().toISOString()
+        }
+      }];
+    }
+  });
+
+  const lookup = await call("POST", { action: "netplay" }, guest.body.token);
+  assert.equal(lookup.statusCode, 200);
+  assert.equal(lookup.body.ready, false);
+  assert.equal(lookup.body.state, "host_not_connectable");
+});
+
+test("password-protected RetroArch hosts are not returned as automatic join endpoints", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "set_ready", ready: true }, host.body.token);
+  await call("POST", { action: "set_ready", ready: true }, guest.body.token);
+  await confirmMatchingDisc(host.body.token, guest.body.token);
+  await call("POST", { action: "game_start" }, host.body.token);
+  const room = await call("GET", {}, guest.body.token, { code: host.body.room.code });
+
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    async json() {
+      return [{
+        fields: {
+          username: "CB-" + room.body.room.netplayId + "-HOST",
+          connectable: true,
+          has_password: true,
+          mitm_ip: "madrid.relay.retroarch.com",
+          mitm_port: 55435,
+          mitm_session: "AbCdEf0123456789",
+          updated: new Date().toISOString()
+        }
+      }];
+    }
+  });
+
+  const lookup = await call("POST", { action: "netplay" }, guest.body.token);
+  assert.equal(lookup.statusCode, 200);
+  assert.equal(lookup.body.ready, false);
+  assert.equal(lookup.body.state, "host_password_required");
+});
