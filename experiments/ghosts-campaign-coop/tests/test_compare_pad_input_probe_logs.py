@@ -44,13 +44,18 @@ def write_log(root: Path, filename: str, mode: str, *, distinct=True, active=Tru
         p1_released = previous["1"] & ~p1_buttons
         previous["0"] = p0_buttons
         previous["1"] = p1_buttons
-        p0_axis = (50, 0, 0, 0) if axes and sample >= 4 else (0, 0, 0, 0)
+        p0_axis = (49, 0, 0, 0) if axes and sample >= 4 else (0, 0, 0, 0)
         p1_axis = (0, -50, 0, 0) if axes and sample >= 4 else (0, 0, 0, 0)
-        p1_raw_axes = (128, 128, 128, 128) if connected else (0, 0, 0, 0)
+        p0_raw_axes = (190, 128, 128, 128) if axes and sample >= 4 else (128, 128, 128, 128)
+        p1_raw_axes = (
+            (128, 65, 128, 128) if axes and sample >= 4
+            else (128, 128, 128, 128) if connected
+            else (0, 0, 0, 0)
+        )
         lines.append(
             f"  sample={sample} port=0 connected=1 read_error=0 "
             f"digital1=0x00000000 digital2=0x{p0_digital2:04x} buttons=0x{p0_buttons:08x} "
-            f"pressed=0x{p0_pressed:08x} released=0x{p0_released:08x} left_x=128 left_y=128 right_x=128 right_y=128 "
+            f"pressed=0x{p0_pressed:08x} released=0x{p0_released:08x} left_x={p0_raw_axes[0]} left_y={p0_raw_axes[1]} right_x={p0_raw_axes[2]} right_y={p0_raw_axes[3]} "
             f"norm_left_x={p0_axis[0]} norm_left_y={p0_axis[1]} norm_right_x={p0_axis[2]} norm_right_y={p0_axis[3]} "
             "l2_pressure=0 r2_pressure=0"
         )
@@ -106,6 +111,41 @@ class PadInputProbeComparatorTests(unittest.TestCase):
             campaign = parse_log(campaign_path)
             self.assertFalse(campaign["capture_complete"])
             self.assertTrue(any("pressed mask" in item["error"] for item in campaign["consistency_errors"]))
+
+    def test_normalized_axes_must_match_raw_stick_values(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            campaign_path = write_log(root, "campaign.log", "CAMPAIGN", axes=True)
+            text = campaign_path.read_text(encoding="utf-8").replace(
+                "norm_left_x=49",
+                "norm_left_x=50",
+                1,
+            )
+            campaign_path.write_text(text, encoding="utf-8")
+            campaign = parse_log(campaign_path)
+            self.assertFalse(campaign["capture_complete"])
+            self.assertTrue(any("normalized axes do not match raw" in item["error"] for item in campaign["port_line_errors"]))
+
+    def test_different_masks_without_exclusive_button_on_both_ports_do_not_pass(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            campaign_path = write_log(root, "campaign.log", "CAMPAIGN")
+            text = campaign_path.read_text(encoding="utf-8").replace(
+                "digital2=0x0020 buttons=0x00000400",
+                "digital2=0x0060 buttons=0x00000600",
+            )
+            text = text.replace(
+                "sample=4 port=1 connected=1 read_error=0 digital1=0x00000000 digital2=0x0060 buttons=0x00000600 pressed=0x00000400",
+                "sample=4 port=1 connected=1 read_error=0 digital1=0x00000000 digital2=0x0060 buttons=0x00000600 pressed=0x00000600",
+                1,
+            )
+            campaign_path.write_text(text, encoding="utf-8")
+            campaign = parse_log(campaign_path)
+            multiplayer_path = write_log(root, "multiplayer.log", "MULTIPLAYER")
+            multiplayer = parse_log(multiplayer_path)
+            self.assertTrue(campaign["capture_complete"])
+            self.assertFalse(campaign["independent_input_observed"])
+            self.assertEqual(compare(campaign, multiplayer)["status"], "INDEPENDENT_INPUT_NOT_PROVEN_SIMULTANEOUSLY")
 
     def test_axis_independence_is_reported_separately_from_button_proof(self):
         with tempfile.TemporaryDirectory() as temp:
