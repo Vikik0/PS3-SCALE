@@ -10,6 +10,8 @@ operator_selected_mode=CAMPAIGN_OR_MULTIPLAYER
 capture_date_local=
 ps3mapi_current_pid=
 ps3mapi_process_name_verbatim=
+# Optional: fill only when DualShock Input Probe v1 was run for this mode.
+pad_input_probe_log_filename=
 pad_probe_log_filename=
 segment0_filename=
 segment1_filename=
