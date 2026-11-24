@@ -123,6 +123,13 @@ class VerifiedMissionGscAnalysisTests(unittest.TestCase):
                     self.fastfiles, self.missions, output, overwrite=True
                 )
 
+    def test_rejects_missing_or_extra_mission_gsc_roles(self):
+        with self.assertRaisesRegex(ValueError, "exactly these mission GSC roles"):
+            runner.run_verified_analysis(
+                self.fastfiles,
+                {"carrier": self.missions["carrier"]},
+            )
+
     def test_rejects_missing_or_extra_fastfile_roles(self):
         with self.assertRaisesRegex(ValueError, "provide exactly these FastFile roles"):
             runner.run_verified_analysis(

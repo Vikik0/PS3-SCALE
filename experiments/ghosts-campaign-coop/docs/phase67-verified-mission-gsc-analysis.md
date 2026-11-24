@@ -7,7 +7,7 @@ Phase 61–63 verify the three supplied mission FastFiles. Phase 65–66 run the
 ## Changes
 
 - Add tools/run_verified_mission_gsc_analysis.py.
-- Require all three roles: Black Ice, Carrier and Cornered FastFiles, plus their extracted GSC source directories.
+- Require all three roles: Black Ice, Carrier and Cornered FastFiles, plus exactly matching extracted GSC source directories; partial or extra mission mappings are rejected.
 - Verify the exact size, SHA-256, IWff0100 magic and big-endian version before the GSC analysis.
 - Skip the ownership and call-graph stages if any FastFile does not match.
 - Re-verify all three FastFiles after the GSC analysis and mark the report blocked if an input changed during the run.

@@ -103,8 +103,10 @@ def run_verified_analysis(
         raise VerifiedMissionAnalysisError(
             "provide exactly these FastFile roles: " + ", ".join(sorted(EXPECTED_FASTFILES))
         )
-    if not missions:
-        raise VerifiedMissionAnalysisError("provide at least one mission GSC directory")
+    if set(missions) != set(EXPECTED_FASTFILES):
+        raise VerifiedMissionAnalysisError(
+            "provide exactly these mission GSC roles: " + ", ".join(sorted(EXPECTED_FASTFILES))
+        )
     if output_json is not None and Path(output_json).exists() and not overwrite:
         raise FileExistsError(f"refusing to overwrite existing report: {output_json}")
 

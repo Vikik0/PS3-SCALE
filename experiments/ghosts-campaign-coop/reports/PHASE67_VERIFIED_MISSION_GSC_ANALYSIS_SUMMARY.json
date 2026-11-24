@@ -8,8 +8,9 @@
     "skip GSC analysis when any FastFile identity fails",
     "block final status if a FastFile changes during analysis",
     "protect FastFile and GSC inputs from report-output collisions",
-    "emit one atomic report joining FastFile and source-tree provenance"
+    "emit one atomic report joining FastFile and source-tree provenance",
+    "require the GSC mission directory roles to exactly match the three verified FastFile roles"
   ],
-  "tests_added": 6,
+  "tests_added": 7,
   "validation_boundary": "Verified input provenance plus static GSC analysis only; no live Campaign Player 2 behavior is proven."
 }
