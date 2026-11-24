@@ -21,13 +21,15 @@ if titleid BLUS31270
     /getmem.ps3mapi?addr=10000&len=20&dump=7c2428
     abort if not exist /dev_hdd0/mem_dump.bin
     ren /dev_hdd0/mem_dump.bin=/dev_hdd0/GHOSTS_TU116_CAMPAIGN_SEG0.bin
-    log Campaign segment 0 captured
+    abort if not exist /dev_hdd0/GHOSTS_TU116_CAMPAIGN_SEG0.bin
+    log Campaign segment 0 saved and verified present
 
     # Campaign default.self PT_LOAD 1: vaddr 0x7E0000, p_filesz 0x1D1E0.
     /getmem.ps3mapi?addr=7e0000&len=20&dump=1d1e0
     abort if not exist /dev_hdd0/mem_dump.bin
     ren /dev_hdd0/mem_dump.bin=/dev_hdd0/GHOSTS_TU116_CAMPAIGN_SEG1.bin
-    log Campaign segment 1 captured
+    abort if not exist /dev_hdd0/GHOSTS_TU116_CAMPAIGN_SEG1.bin
+    log Campaign segment 1 saved and verified present
 
     logfile /dev_hdd0/GHOSTS_TU116_CAMPAIGN_DUMP_DONE
     log complete
