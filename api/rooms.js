@@ -216,6 +216,14 @@ function findPlayer(room, playerId) {
   return (room.players || []).find((player) => player.id === playerId);
 }
 
+function resetReadyForMembershipChange(room) {
+  for (const player of room.players || []) {
+    player.ready = false;
+    delete player.discFingerprint;
+  }
+  room.status = room.players && room.players.length ? "waiting" : "closed";
+}
+
 async function getLibretroLobbyEntry(hostNickname) {
   if (Date.now() < netplayLobbyCache.expiresAt &&
       netplayLobbyCache.hostNickname === hostNickname) {
@@ -241,8 +249,13 @@ async function getLibretroLobbyEntry(hostNickname) {
 
 function netplayEndpoint(fields) {
   if (!fields || fields.connectable !== true) return null;
+  const now = Date.now();
   const updatedAt = Date.parse(fields.updated || fields.created || "");
-  if (Number.isFinite(updatedAt) && Date.now() - updatedAt > 90000) return null;
+  if (!Number.isFinite(updatedAt) || updatedAt > now + 30000 || now - updatedAt > 90000) {
+    return null;
+  }
+
+  if (fields.has_password === true) return { passwordRequired: true };
 
   const validHost = (value) =>
     typeof value === "string" &&
@@ -251,15 +264,22 @@ function netplayEndpoint(fields) {
     /^[A-Za-z0-9.:-]+$/.test(value);
   const validPort = (value) => Number.isInteger(Number(value)) &&
     Number(value) >= 1 && Number(value) <= 65535;
+  const relaySession = typeof fields.mitm_session === "string"
+    ? fields.mitm_session.trim()
+    : "";
 
-  if (validHost(fields.mitm_ip) && validPort(fields.mitm_port) &&
-      typeof fields.mitm_session === "string" &&
-      /^[A-Za-z0-9+/=]{8,64}$/.test(fields.mitm_session)) {
+  // A host that advertises a relay session must use that relay. Do not silently
+  // fall back to its direct IP when the relay tuple is incomplete or malformed.
+  if (relaySession) {
+    if (!validHost(fields.mitm_ip) || !validPort(fields.mitm_port) ||
+        !/^[A-Za-z0-9+/=]{8,64}$/.test(relaySession)) {
+      return null;
+    }
     return {
       mode: "relay",
       address: fields.mitm_ip,
       port: Number(fields.mitm_port),
-      mitmSession: fields.mitm_session
+      mitmSession: relaySession
     };
   }
 
@@ -404,6 +424,7 @@ module.exports = async function handler(req, res) {
             return { write: false, skip: true };
           }
           room.players.push({ id: playerId, name, ready: false, discFingerprint: "", joinedAt: now, lastSeen: now });
+          resetReadyForMembershipChange(room);
           room.updatedAt = now;
           return {
             status: 200,
@@ -436,6 +457,7 @@ module.exports = async function handler(req, res) {
           return { write: false, status: 409, body: { error: "Room is full or already playing." } };
         }
         room.players.push({ id: playerId, name, ready: false, joinedAt: now, lastSeen: now });
+        resetReadyForMembershipChange(room);
         room.updatedAt = now;
         return {
           status: 200,
@@ -471,6 +493,11 @@ module.exports = async function handler(req, res) {
         const currentPlayer = active.find((entry) => entry.id === claims.sub);
         if (!currentPlayer) return { write: false, status: 403, body: { error: "Your room seat has expired. Rejoin the room." } };
         if (room.gameStartedAt) return { write: false, status: 409, body: { error: "The match has already started; disc selection is locked." } };
+        if (room.status !== "ready" || active.length < 2 ||
+            active.length !== (room.players || []).length ||
+            !active.every((entry) => entry.ready)) {
+          return { write: false, status: 409, body: { error: "Every active player must be READY before confirming a disc." } };
+        }
         currentPlayer.discFingerprint = fingerprint;
         currentPlayer.lastSeen = now;
         room.updatedAt = now;
@@ -577,6 +604,13 @@ module.exports = async function handler(req, res) {
       }
 
       const endpoint = netplayEndpoint(hostEntry.fields);
+      if (endpoint?.passwordRequired) {
+        return reply(res, 200, {
+          ready: false,
+          state: "host_password_required",
+          hostNickname
+        });
+      }
       if (!endpoint) {
         return reply(res, 200, {
           ready: false,
