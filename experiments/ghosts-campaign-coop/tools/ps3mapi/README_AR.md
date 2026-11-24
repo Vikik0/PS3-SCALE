@@ -152,6 +152,8 @@ python tools/ps3mapi/verify_capture_metadata.py --mode multiplayer --metadata "D
 python tools/ps3mapi/verify_capture_metadata.py --mode campaign --metadata "D:\Ghosts\captures\campaign_capture_metadata.txt" --dumps "D:\Ghosts\captures\campaign_dumps" --pad-log "D:\Ghosts\captures\ghosts_campaign_pad_probe.log" --pad-input-log "D:\Ghosts\captures\ghosts_campaign_pad_input_probe.log"
 ~~~
 
-ولتشغيل المحلل الموحد، مرّر الزوجين `--campaign-input-log` و`--multiplayer-input-log` بالإضافة إلى `--campaign-metadata` و`--multiplayer-metadata`. يرفض المحلل تمرير سجل Input Probe واحد فقط، ويربط اسم كل سجل بملف metadata المقابل، ويضيف SHA-256 للسجلين ونتيجة المقارنة إلى `capture_summary.json`.
+ولتشغيل المحلل الموحد، مرّر الزوجين `--campaign-input-log` و`--multiplayer-input-log` بالإضافة إلى `--campaign-metadata` و`--multiplayer-metadata`. يرفض المحلل تمرير سجل Input Probe واحد فقط، ويربط اسم كل سجل بملف metadata المقابل، ويضيف SHA-256 للسجلين ونتيجة المقارنة إلى `capture_summary.json`، كما ينشئ ملفاً مستقلاً `input_probe_comparison.json` حتى عندما تكون السجلات غير مقدمة (ويضع الحالة `NOT_PROVIDED`).
 
-النتيجة `INDEPENDENT_PORT_INPUT_OBSERVED_IN_BOTH_MODES` تعني أن بيانات الأزرار مختلفة على المنفذين في العينة نفسها في Campaign وMultiplayer. هذا يثبت استقلال بيانات المنفذين فقط، ولا يثبت Local Client ثانياً أو Player Entity ثانية.
+قبل قبول السجل، يعيد المحلل حساب mapped button mask من digital1/digital2، ويتحقق من حدود القيم ومن pressed/released بين العينات الناجحة، ويعيد حساب normalized stick axes من القيم الخام وفق deadzone الافتراضي 20. دليل استقلال الأزرار يتطلب وجود زر حصري لكل منفذ في العينة المتزامنة نفسها؛ اختلاف القناعين مع وجود أزرار مشتركة فقط لا يكفي. كما يسجل استقلال المحاور وL2/R2 بشكل منفصل.
+
+النتيجة `INDEPENDENT_PORT_INPUT_OBSERVED_IN_BOTH_MODES` تعني أن كل يد قدمت زرّاً حصرياً على منفذها في العينة نفسها في Campaign وMultiplayer، بعد اجتياز فحوص اتساق السجل. هذا يثبت استقلال بيانات المنافذ فقط، ولا يثبت Local Client ثانياً أو Player Entity ثانية أو كاميرا/HUD مستقلة.
