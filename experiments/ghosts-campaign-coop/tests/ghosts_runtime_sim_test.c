@@ -22,7 +22,10 @@ typedef enum {
     FAULT_AI_PLAYER_ONE_ONLY,
     FAULT_DROP_GUEST_ON_CHECKPOINT,
     FAULT_DUPLICATE_GUEST_ON_TRANSITION,
-    FAULT_ALIAS_PLAYER_STATE
+    FAULT_ALIAS_PLAYER_STATE,
+    FAULT_SHARED_COMMAND_STREAM,
+    FAULT_STALE_INPUT_FRAME,
+    FAULT_MISMATCHED_OBSERVATION_FRAME
 } SimFault;
 
 typedef struct {
@@ -101,6 +104,7 @@ static void sim_init(SimRuntime *rt, SimFault fault)
         o->is_primary = (uint8_t)(i == 0u);
         o->controller_port = (uint8_t)i;
         o->input_connected = 1u;
+        o->input_frame_valid = 1u;
         o->client_id_valid = 1u;
         o->entity_id_valid = 1u;
         o->local_client_num_valid = 1u;
@@ -108,9 +112,13 @@ static void sim_init(SimRuntime *rt, SimFault fault)
         o->entity_id = p->entity_id;
         o->local_client_num = (uint8_t)i;
         o->role = p->role;
+        o->observation_frame = 100u;
         o->gclient_address = 0x3000u + (uint64_t)i * 0x100u;
         o->gentity_address = 0x4000u + (uint64_t)i * 0x100u;
         o->player_state_address = p->player_state_address;
+        o->input_command_address = 0x6000u + (uint64_t)i * 0x100u;
+        o->view_context_address = p->camera_context;
+        o->hud_context_address = p->hud_context;
     }
 
     if (fault == FAULT_SHARED_CAMERA) {
@@ -121,6 +129,15 @@ static void sim_init(SimRuntime *rt, SimFault fault)
     }
     if (fault == FAULT_ALIAS_PLAYER_STATE) {
         rt->observations[1].player_state_address = rt->observations[0].player_state_address;
+    }
+    if (fault == FAULT_SHARED_COMMAND_STREAM) {
+        rt->observations[1].input_command_address = rt->observations[0].input_command_address;
+    }
+    if (fault == FAULT_STALE_INPUT_FRAME) {
+        rt->observations[1].input_frame_valid = 0u;
+    }
+    if (fault == FAULT_MISMATCHED_OBSERVATION_FRAME) {
+        rt->observations[1].observation_frame++;
     }
 }
 
@@ -210,7 +227,8 @@ static int sim_camera_hud_oracle(SimFault fault)
 {
     SimRuntime rt;
     sim_init(&rt, fault);
-    return rt.players[0].camera_context != rt.players[1].camera_context
+    return sim_gate_ready(&rt)
+        && rt.players[0].camera_context != rt.players[1].camera_context
         && rt.players[0].hud_context != rt.players[1].hud_context
         && rt.players[0].view_slot != rt.players[1].view_slot;
 }
@@ -327,13 +345,19 @@ static void test_gate_and_controller_routing(void)
     CHECK("controller mutant is detected", !sim_input_oracle(FAULT_CROSS_INPUT));
     sim_init(&rt, FAULT_ALIAS_PLAYER_STATE);
     CHECK("aliased engine player-state addresses fail closed", !sim_gate_ready(&rt));
+    sim_init(&rt, FAULT_SHARED_COMMAND_STREAM);
+    CHECK("shared native command stream fails closed", !sim_gate_ready(&rt));
+    sim_init(&rt, FAULT_STALE_INPUT_FRAME);
+    CHECK("stale or missing input frame fails closed", !sim_gate_ready(&rt));
+    sim_init(&rt, FAULT_MISMATCHED_OBSERVATION_FRAME);
+    CHECK("player observations from different engine frames fail closed", !sim_gate_ready(&rt));
 }
 
 static void test_camera_and_hud_isolation(void)
 {
     CHECK("each local player has a distinct camera, HUD and view slot", sim_camera_hud_oracle(FAULT_NONE));
-    CHECK("shared camera mutant is detected", !sim_camera_hud_oracle(FAULT_SHARED_CAMERA));
-    CHECK("shared HUD mutant is detected", !sim_camera_hud_oracle(FAULT_SHARED_HUD));
+    CHECK("shared camera mutant is detected by the readiness gate", !sim_camera_hud_oracle(FAULT_SHARED_CAMERA));
+    CHECK("shared HUD mutant is detected by the readiness gate", !sim_camera_hud_oracle(FAULT_SHARED_HUD));
 }
 
 static void test_ai_can_target_both_players(void)
@@ -376,7 +400,8 @@ static void test_deterministic_input_soak(void)
         CHECK("player identities stay distinct through the soak",
               rt.players[0].entity_id != rt.players[1].entity_id
               && rt.players[0].camera_context != rt.players[1].camera_context
-              && rt.players[0].hud_context != rt.players[1].hud_context);
+              && rt.players[0].hud_context != rt.players[1].hud_context
+              && sim_gate_ready(&rt));
     }
 }
 
