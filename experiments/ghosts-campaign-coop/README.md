@@ -120,3 +120,5 @@ CI validates the standalone codecs, controller-input decoder, local-player readi
 ## Important
 
 No retail game files, copyrighted game assets, original EBOOT or installable game PKG are included. The project uses public technical research and will require exact executable identity and runtime validation before enabling any game-memory hooks.
+
+Phase 53 adds an offline local-input verifier for the exact BLUS31270 TU 1.16 disc/update SFO and installed EBOOT/default.self/default_mp.self hashes. It never decrypts or uploads game files; it reports whether matching decrypted Campaign and Multiplayer PPU ELFs are available for the next analysis gate.
