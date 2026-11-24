@@ -3215,7 +3215,7 @@ static int ps2_config_paths_for_game(const ps3scale_game_t *game,
  if(!game||!target||!backup||!backup_temp||!rollback||!restore_temp||!download_temp||!max_bytes)return -1;
  if(game->kind==PS3SCALE_GAME_PS2_ISO){if(!game->path[0])return -1;n=snprintf(target,target_size,"%s.CONFIG",game->path);*max_bytes=PS3SCALE_PS2_CONFIG_MAX_BYTES;}
  else if(game->kind==PS3SCALE_GAME_PS2_CLASSIC){entry=ps2_config_for_game(game);id=(entry&&strcmp(entry->type,"ENC")==0)?entry->title_id:(game->disc_id[0]?game->disc_id:game->title_id);
-  if(!id[0]||ps3scale_ps2_config_db_normalize_id(id,normalized,sizeof(normalized))!=0)return -1;
+  if(!id[0]||ps3scale_ps2_config_normalize_id(id,normalized,sizeof(normalized))!=0)return -1;
   n=snprintf(target,target_size,"%s/%s.ENC",PS3SCALE_PS2_CLASSICS_CONFIG_DIR,normalized);*max_bytes=PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT;}
  else return -1;
  if(n<0||(size_t)n>=target_size)return -1;
