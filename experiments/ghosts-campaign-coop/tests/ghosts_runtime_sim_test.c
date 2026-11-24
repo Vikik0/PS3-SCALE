@@ -123,9 +123,11 @@ static void sim_init(SimRuntime *rt, SimFault fault)
 
     if (fault == FAULT_SHARED_CAMERA) {
         rt->players[1].camera_context = rt->players[0].camera_context;
+        rt->observations[1].view_context_address = rt->observations[0].view_context_address;
     }
     if (fault == FAULT_SHARED_HUD) {
         rt->players[1].hud_context = rt->players[0].hud_context;
+        rt->observations[1].hud_context_address = rt->observations[0].hud_context_address;
     }
     if (fault == FAULT_ALIAS_PLAYER_STATE) {
         rt->observations[1].player_state_address = rt->observations[0].player_state_address;
