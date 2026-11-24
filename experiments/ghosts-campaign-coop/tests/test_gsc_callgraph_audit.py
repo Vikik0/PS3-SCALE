@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from gsc_callgraph_audit import audit_mission, clean_source_lines, function_ranges
+from gsc_callgraph_audit import audit_mission, clean_source_lines, function_ranges, load_target_manifest
 
 
 class GscCallgraphAuditTests(unittest.TestCase):
@@ -94,6 +94,62 @@ class GscCallgraphAuditTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "does not exist"):
                 audit_mission("test", missing)
 
+
+    def test_exact_file_function_manifest_does_not_mix_duplicate_names(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "maps").mkdir()
+            (root / "helpers").mkdir()
+            (root / "maps" / "main.gsc").write_text(
+                "magicreloadwhenreachenemy()\n{\n    helper();\n}\n"
+                "helper()\n{\n    return;\n}\n", encoding="utf-8"
+            )
+            (root / "helpers" / "helper.gsc").write_text(
+                "helper()\n{\n    return;\n}\n", encoding="utf-8"
+            )
+            report = audit_mission("test", root, target_definitions_override=[
+                {"file": "maps/main.gsc", "function": "helper"},
+                {"file": "helpers/helper.gsc", "function": "helper"},
+                {"file": "missing/helper.gsc", "function": "helper"},
+            ])
+            local, helper, missing = report["target_findings"]
+            self.assertEqual(local["selection_status"], "FOUND_EXACT_FILE_FUNCTION")
+            self.assertEqual(local["definition"]["path"], "maps/main.gsc")
+            self.assertEqual(local["call_site_count"], 1)
+            self.assertEqual(helper["selection_status"], "FOUND_EXACT_FILE_FUNCTION")
+            self.assertEqual(helper["definition"]["path"], "helpers/helper.gsc")
+            self.assertEqual(helper["call_site_count"], 0)
+            self.assertEqual(missing["selection_status"], "MISSING_EXACT_FILE_FUNCTION")
+            self.assertIsNone(missing["definition"])
+            self.assertEqual(report["target_selection_mode"], "exact_file_function")
+
+    def test_phase60_target_manifest_loader_preserves_exact_file_paths(self):
+        import json
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "phase60.json"
+            path.write_text(json.dumps({"schema_version": 1, "missions": [
+                {"name": "black_ice", "functions_by_file": []},
+                {"name": "carrier", "functions_by_file": [
+                    {"file": "animscripts/dog/dog_combat.gsc", "function": "playerview_playmissanim"}
+                ]},
+            ]}), encoding="utf-8")
+            targets = load_target_manifest(path)
+        self.assertEqual(targets["black_ice"], [])
+        self.assertEqual(targets["carrier"], [{
+            "file": "animscripts/dog/dog_combat.gsc", "function": "playerview_playmissanim"
+        }])
+
+    def test_phase60_target_manifest_rejects_path_traversal(self):
+        import json
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "phase60.json"
+            path.write_text(json.dumps({"schema_version": 1, "missions": [{
+                "name": "carrier", "functions_by_file": [
+                    {"file": "../outside.gsc", "function": "helper"}
+                ]
+            }]}), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "unsafe target path"):
+                load_target_manifest(path)
 
 if __name__ == "__main__":
     unittest.main()

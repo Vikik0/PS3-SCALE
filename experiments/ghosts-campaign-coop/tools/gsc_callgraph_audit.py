@@ -12,7 +12,7 @@ import json
 import re
 import sys
 from collections import defaultdict, deque
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 FUNCTION_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\((.*)\)\s*$")
@@ -166,6 +166,7 @@ def audit_mission(
     root: Path,
     roots: list[str] | None = None,
     target_names_override: list[str] | None = None,
+    target_definitions_override: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     root = Path(root).expanduser().resolve()
     if not root.is_dir():
@@ -324,28 +325,58 @@ def audit_mission(
         path.reverse()
         return path
 
-    target_names = target_names_override or {
+    default_target_names = {
         "black_ice": ["player_saw_kill", "player_scuba", "player_fail_finale_instakill", "ascend_logic", "event_player_turns_key"],
         "carrier": ["monitorscavengerpickup", "dog_monitor_goal_ent", "get_different_favoriteenemy", "playerview_spawn", "playerview_playmissanim", "handlemeleefinishattacknotetracks", "knockback_hesh", "cut_the_rope", "victory_choppers_land"],
         "cornered": ["courtyard_rorke", "bar_enemies", "enemy_threat_logic_dog", "enemy_threat_logic_dog_wait", "enemy_threat_logic_dog_wakeup_dist", "enemy_corpse_alert_level", "gun_down_trigger_internal", "fall_player", "upload_virus_enter"],
     }.get(name, [])
     target_findings = []
-    for target_name in target_names:
-        for definition in definitions_by_name.get(target_name, []):
-            refs = incoming.get(definition["id"], [])
+
+    def add_target_finding(target_name: str, definition: dict[str, Any] | None, selection_status: str, selection_mode: str, requested_file: str | None = None) -> None:
+        if definition is None:
             target_findings.append({
-                "function": target_name,
-                "definition": {key: definition[key] for key in ("id", "path", "start_line", "end_line")},
-                "call_site_count": sum(item["kind"] != "function_pointer" for item in refs),
-                "function_pointer_count": sum(item["kind"] == "function_pointer" for item in refs),
-                "call_sites": [
-                    {key: item[key] for key in ("caller", "caller_file", "line", "kind", "resolution", "snippet")}
-                    for item in refs
-                ],
-                "reachable_from_script_roots_with_callbacks": definition["id"] in callback_reachable,
-                "reachable_from_script_roots_without_callbacks": definition["id"] in direct_reachable,
-                "shortest_root_path": path_to(definition["id"]),
+                "function": target_name, "requested_file": requested_file,
+                "definition": None, "selection_mode": selection_mode,
+                "selection_status": selection_status, "call_site_count": 0,
+                "function_pointer_count": 0, "call_sites": [],
+                "reachable_from_script_roots_with_callbacks": False,
+                "reachable_from_script_roots_without_callbacks": False,
+                "shortest_root_path": None,
             })
+            return
+        refs = incoming.get(definition["id"], [])
+        target_findings.append({
+            "function": target_name,
+            "definition": {key: definition[key] for key in ("id", "path", "start_line", "end_line")},
+            "requested_file": requested_file,
+            "selection_mode": selection_mode,
+            "selection_status": selection_status,
+            "call_site_count": sum(item["kind"] != "function_pointer" for item in refs),
+            "function_pointer_count": sum(item["kind"] == "function_pointer" for item in refs),
+            "call_sites": [
+                {key: item[key] for key in ("caller", "caller_file", "line", "kind", "resolution", "snippet")}
+                for item in refs
+            ],
+            "reachable_from_script_roots_with_callbacks": definition["id"] in callback_reachable,
+            "reachable_from_script_roots_without_callbacks": definition["id"] in direct_reachable,
+            "shortest_root_path": path_to(definition["id"]),
+        })
+
+    if target_definitions_override is not None:
+        for requested in target_definitions_override:
+            target_name, requested_file = requested["function"], requested["file"]
+            matches = [item for item in definitions if item["name"] == target_name and item["path"].casefold() == requested_file.casefold()]
+            if len(matches) == 1:
+                add_target_finding(target_name, matches[0], "FOUND_EXACT_FILE_FUNCTION", "exact_file_function", requested_file)
+            elif not matches:
+                add_target_finding(target_name, None, "MISSING_EXACT_FILE_FUNCTION", "exact_file_function", requested_file)
+            else:
+                add_target_finding(target_name, None, "AMBIGUOUS_DUPLICATE_IN_FILE", "exact_file_function", requested_file)
+    else:
+        target_names = target_names_override if target_names_override is not None else default_target_names
+        for target_name in target_names:
+            for definition in definitions_by_name.get(target_name, []):
+                add_target_finding(target_name, definition, "FOUND_NAME_MATCH", "name_only")
 
     kind_counts: dict[str, int] = defaultdict(int)
     resolution_counts: dict[str, int] = defaultdict(int)
@@ -369,6 +400,7 @@ def audit_mission(
         "resolution_counts": dict(sorted(resolution_counts.items())),
         "direct_reachable_definition_count": len(direct_reachable),
         "callback_inclusive_reachable_definition_count": len(callback_reachable),
+        "target_selection_mode": "exact_file_function" if target_definitions_override is not None else "name_only",
         "target_findings": target_findings,
         "unresolved_or_ambiguous_references": [
             {key: item[key] for key in ("caller", "caller_file", "line", "symbol", "namespace", "kind", "resolution", "snippet")}
@@ -383,10 +415,21 @@ def audit_mission(
     }
 
 
-def audit_paths(missions: dict[str, Path], roots: dict[str, list[str]] | None = None) -> dict[str, Any]:
+def audit_paths(
+    missions: dict[str, Path],
+    roots: dict[str, list[str]] | None = None,
+    target_definitions: dict[str, list[dict[str, str]]] | None = None,
+) -> dict[str, Any]:
     if not missions:
         raise CallGraphError("provide at least one mission directory")
-    reports = [audit_mission(name, path, (roots or {}).get(name)) for name, path in sorted(missions.items())]
+    reports = [
+        audit_mission(
+            name, path, (roots or {}).get(name),
+            target_definitions_override=(target_definitions or {}).get(name)
+            if target_definitions is not None else None,
+        )
+        for name, path in sorted(missions.items())
+    ]
     return {
         "schema_version": 1,
         "status": "CAMPAIGN_GSC_CALLGRAPH_COMPLETED",
@@ -403,6 +446,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("missions", nargs="+", help="NAME=PATH pairs containing decompiled .gsc files")
     parser.add_argument("--output-json", required=True, type=Path)
+    parser.add_argument("--target-manifest", type=Path, help="Phase 60 JSON; select exact file/function targets")
     args = parser.parse_args(argv)
     try:
         missions: dict[str, Path] = {}
@@ -413,7 +457,8 @@ def main(argv: list[str] | None = None) -> int:
             if not name or not path or name in missions:
                 raise CallGraphError(f"invalid or duplicate mission mapping: {item!r}")
             missions[name] = Path(path)
-        report = audit_paths(missions)
+        target_definitions = load_target_manifest(args.target_manifest) if args.target_manifest else None
+        report = audit_paths(missions, target_definitions=target_definitions)
         args.output_json.parent.mkdir(parents=True, exist_ok=True)
         args.output_json.write_text(
             json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -443,6 +488,49 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, CallGraphError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
+
+
+def load_target_manifest(path: Path) -> dict[str, list[dict[str, str]]]:
+    """Load the Phase 60 file/function manifest without name-only fallback."""
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise CallGraphError(f"unable to read target manifest {path}: {exc}") from exc
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        raise CallGraphError("target manifest must be a schema_version 1 JSON object")
+    mission_rows = payload.get("missions")
+    if not isinstance(mission_rows, list):
+        raise CallGraphError("target manifest missions must be a list")
+    result: dict[str, list[dict[str, str]]] = {}
+    for mission in mission_rows:
+        if not isinstance(mission, dict):
+            raise CallGraphError("target manifest mission entries must be objects")
+        name, entries = mission.get("name"), mission.get("functions_by_file", [])
+        if not isinstance(name, str) or not name or name in result:
+            raise CallGraphError(f"invalid or duplicate mission name in target manifest: {name!r}")
+        if not isinstance(entries, list):
+            raise CallGraphError(f"{name}: functions_by_file must be a list")
+        targets, seen = [], set()
+        for entry in entries:
+            if not isinstance(entry, dict):
+                raise CallGraphError(f"{name}: target entries must be objects")
+            file_name, function = entry.get("file"), entry.get("function")
+            if not isinstance(file_name, str) or not file_name or "\\" in file_name:
+                raise CallGraphError(f"{name}: target file must be a relative POSIX path")
+            relative = PurePosixPath(file_name)
+            if relative.is_absolute() or any(part in ("", ".", "..") for part in relative.parts):
+                raise CallGraphError(f"{name}: unsafe target path: {file_name!r}")
+            if not isinstance(function, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", function):
+                raise CallGraphError(f"{name}: invalid target function name: {function!r}")
+            key = (relative.as_posix().casefold(), function)
+            if key in seen:
+                raise CallGraphError(f"{name}: duplicate target {file_name}::{function}")
+            seen.add(key)
+            targets.append({"file": relative.as_posix(), "function": function})
+        result[name] = targets
+    if not result:
+        raise CallGraphError("target manifest contains no missions")
+    return result
 
 
 if __name__ == "__main__":

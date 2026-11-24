@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "phase": 64,
+  "status": "PLAYER_CONTAINER_FUNCTION_CALLGRAPH_TARGETED",
+  "changes": [
+    "consume Phase 60 player-container manifest as exact relative file/function targets",
+    "report incoming direct, thread, namespaced and callback references per exact definition",
+    "report direct and callback-inclusive reachability from script-entry candidates",
+    "report missing or duplicate exact targets without same-name fallback",
+    "reject unsafe manifest paths"
+  ],
+  "tests_added": 3,
+  "input_scope": {
+    "source_manifest": "reports/PHASE60_PLAYER_CONTAINER_PATHS_SUMMARY.json",
+    "known_targets": 13,
+    "missions": [
+      "black_ice",
+      "carrier",
+      "cornered"
+    ]
+  },
+  "validation_boundary": "Synthetic static call-graph tests only; no runtime callback execution or native Campaign Player 2 behavior is proven."
+}
