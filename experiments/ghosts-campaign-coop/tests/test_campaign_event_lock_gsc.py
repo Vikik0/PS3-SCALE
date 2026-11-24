@@ -13,7 +13,7 @@ SESSION = GSC_DIR / "ghc_campaign_local_session.gsc"
 
 
 def function_body(source: str, name: str) -> str:
-    match = re.search(rf"(?m)^[ \\t]*{re.escape(name)}\\s*\\([^)]*\\)\\s*\\{{", source)
+    match = re.search(rf"(?m)^[ \t]*{re.escape(name)}\s*\([^)]*\)\s*\{{", source)
     if match is None:
         raise AssertionError(f"function definition not found: {name}")
     opening = source.index("{", match.start())
@@ -95,7 +95,7 @@ class CampaignEventLockTests(unittest.TestCase):
             "ghc_campaign_event_lock_reset",
         ):
             with self.subTest(function=name):
-                self.assertNotRegex(function_body(self.source, name).lower(), r"\\bwait\\b")
+                self.assertNotRegex(function_body(self.source, name).lower(), r"\bwait\b")
 
     def test_event_lock_never_creates_players_or_polls_controller_input(self):
         source = self.source.lower()
