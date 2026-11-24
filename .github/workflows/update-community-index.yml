@@ -1,6 +1,10 @@
 name: Refresh PS3 SCALE community game index
 
 on:
+  push:
+    paths:
+      - "PS3-SCALE-Alpha-0.2/scripts/update_community_index.py"
+      - ".github/workflows/update-community-index.yml"
   schedule:
     - cron: "15 5 * * 1"
   workflow_dispatch:
