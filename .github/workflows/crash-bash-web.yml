@@ -4,32 +4,32 @@ on:
   push:
     branches: [crash-bash-enhanced]
     paths:
-      - "Crash-Bash-Enhanced/web/api/**"
-      - "Crash-Bash-Enhanced/web/tests/**"
-      - "Crash-Bash-Enhanced/web/index.html"
-      - "Crash-Bash-Enhanced/web/package.json"
-      - "Crash-Bash-Enhanced/web/vercel.json"
+      - "api/**"
+      - "tests/**"
+      - "index.html"
+      - "package.json"
+      - "vercel.json"
       - ".github/workflows/crash-bash-web.yml"
   pull_request:
     branches: [crash-bash-enhanced]
     paths:
-      - "Crash-Bash-Enhanced/web/api/**"
-      - "Crash-Bash-Enhanced/web/tests/**"
-      - "Crash-Bash-Enhanced/web/index.html"
-      - "Crash-Bash-Enhanced/web/package.json"
-      - "Crash-Bash-Enhanced/web/vercel.json"
+      - "api/**"
+      - "tests/**"
+      - "index.html"
+      - "package.json"
+      - "vercel.json"
       - ".github/workflows/crash-bash-web.yml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: crash-bash-web-v07-\${{ github.ref }}
+  group: crash-bash-web-v2-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   web-tests:
-    name: Web lobby protocol and room-concurrency tests
+    name: Web lobby security and room-concurrency tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -38,8 +38,6 @@ jobs:
         with:
           node-version: 22
       - name: Install web dependencies
-        working-directory: Crash-Bash-Enhanced/web
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: Run web tests
-        working-directory: Crash-Bash-Enhanced/web
         run: npm test
