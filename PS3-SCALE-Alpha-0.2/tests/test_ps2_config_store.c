@@ -100,12 +100,19 @@ int main(void)
     expect_file(target, "downloaded-config");
     expect_file(rollback, "original-config");
     assert(ps3scale_ps2_config_store_restore(
-        target, backup, rollback, restore_temp, TEST_LIMIT) == -3);
-    assert(unlink(rollback) == 0);
-    assert(ps3scale_ps2_config_store_restore(
         target, backup, rollback, restore_temp, TEST_LIMIT) == 0);
     expect_file(target, "original-config");
     expect_file(rollback, "downloaded-config");
+    assert(ps3scale_ps2_config_store_restore(
+        target, backup, rollback, restore_temp, TEST_LIMIT) == 1);
+
+    write_file(download_temp, "second-download");
+    assert(ps3scale_ps2_config_store_install(
+        download_temp, target, backup, rollback, TEST_LIMIT) == 0);
+    expect_file(target, "second-download");
+    expect_file(rollback, "downloaded-config");
+    assert(ps3scale_ps2_config_store_restore(
+        target, backup, rollback, restore_temp, TEST_LIMIT) == -3);
 
     write_file(download2, "new-title-config");
     assert(ps3scale_ps2_config_store_install(
