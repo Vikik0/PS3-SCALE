@@ -10,6 +10,7 @@ from tools.compare_ppu_function_inventories import (
     compare,
     read_inventory,
     validate_inventory_manifest,
+    _opd_toc_evidence,
 )
 
 
@@ -19,7 +20,12 @@ FIELDS = [
 ]
 
 
-OPD_FIELDS = ["opd_descriptor_addresses", "opd_toc_mappings", "opd_descriptor_count"]
+OPD_BASE_FIELDS = ["opd_descriptor_addresses", "opd_toc_mappings", "opd_descriptor_count"]
+OPD_RESOLUTION_FIELDS = [
+    "opd_exact_entry_descriptor_count",
+    "opd_containing_function_descriptor_count",
+]
+OPD_FIELDS = OPD_BASE_FIELDS + OPD_RESOLUTION_FIELDS
 
 
 def write_inventory(path: Path, rows, fields=FIELDS):
@@ -29,7 +35,11 @@ def write_inventory(path: Path, rows, fields=FIELDS):
         writer.writerows(rows)
 
 
-def row(name, entry, fingerprint, calls="", symbols=None, entries=None, opd_addresses=None, opd_mappings=None, opd_count=None):
+def row(
+    name, entry, fingerprint, calls="", symbols=None, entries=None,
+    opd_addresses=None, opd_mappings=None, opd_count=None,
+    opd_exact_count=None, opd_containing_count=0,
+):
     result = {
         "program": "Ghosts",
         "name": name,
@@ -49,6 +59,10 @@ def row(name, entry, fingerprint, calls="", symbols=None, entries=None, opd_addr
         result["opd_toc_mappings"] = opd_mappings
     if opd_count is not None:
         result["opd_descriptor_count"] = opd_count
+        result["opd_exact_entry_descriptor_count"] = (
+            opd_count if opd_exact_count is None else opd_exact_count
+        )
+        result["opd_containing_function_descriptor_count"] = opd_containing_count
     return result
 
 
@@ -416,6 +430,8 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
             ], fields=FIELDS + OPD_FIELDS)
             parsed = read_inventory(path)
             self.assertEqual(parsed[0]["opd_descriptor_count"], 2)
+            self.assertEqual(parsed[0]["opd_exact_entry_descriptor_count"], 2)
+            self.assertEqual(parsed[0]["opd_containing_function_descriptor_count"], 0)
             self.assertEqual(parsed[0]["opd_toc_mappings"], [
                 "0x00003000:MAPPED", "0x00004000:UNMAPPED"
             ])
@@ -447,6 +463,67 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
             with self.assertRaisesRegex(InventoryError, "incomplete OPD evidence columns"):
                 read_inventory(path)
 
+
+
+    def test_reports_containing_function_only_opd_matches_separately(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "containing-only.csv"
+            write_inventory(path, [
+                row(
+                    "FUN_inside", "0x1000", "a" * 64,
+                    opd_addresses="ram:00002000",
+                    opd_mappings="0x00003000:MAPPED",
+                    opd_count=1,
+                    opd_exact_count=0,
+                    opd_containing_count=1,
+                )
+            ], fields=FIELDS + OPD_FIELDS)
+            parsed = read_inventory(path)
+            evidence = _opd_toc_evidence(parsed[0])
+            self.assertEqual(
+                evidence["code_pointer_resolution"]["status"],
+                "CONTAINING_FUNCTION_ONLY",
+            )
+            self.assertEqual(
+                evidence["code_pointer_resolution"]["containing_function_descriptor_count"],
+                1,
+            )
+
+    def test_rejects_opd_resolution_counts_that_do_not_reconcile(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "bad-resolution.csv"
+            write_inventory(path, [
+                row(
+                    "FUN_bad", "0x1000", "a" * 64,
+                    opd_addresses="ram:00002000",
+                    opd_mappings="0x00003000:MAPPED",
+                    opd_count=1,
+                    opd_exact_count=1,
+                    opd_containing_count=1,
+                )
+            ], fields=FIELDS + OPD_FIELDS)
+            with self.assertRaisesRegex(InventoryError, "resolution counts do not match"):
+                read_inventory(path)
+
+    def test_legacy_opd_columns_remain_supported_without_resolution_classification(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "legacy-opd.csv"
+            legacy = row(
+                "SV_InitLocalClient", "0x9000", "a" * 64,
+                opd_addresses="ram:00002000",
+                opd_mappings="0x00003000:MAPPED",
+                opd_count=1,
+            )
+            legacy.pop("opd_exact_entry_descriptor_count")
+            legacy.pop("opd_containing_function_descriptor_count")
+            write_inventory(path, [legacy], fields=FIELDS + OPD_BASE_FIELDS)
+            parsed = read_inventory(path)
+            self.assertIsNone(parsed[0]["opd_exact_entry_descriptor_count"])
+            self.assertIsNone(parsed[0]["opd_containing_function_descriptor_count"])
+            self.assertEqual(
+                _opd_toc_evidence(parsed[0])["code_pointer_resolution"]["status"],
+                "NOT_RECORDED",
+            )
 
 if __name__ == "__main__":
     unittest.main()

@@ -34,6 +34,8 @@ CSV_FIELDS = [
     "opd_descriptor_addresses",
     "opd_toc_mappings",
     "opd_descriptor_count",
+    "opd_exact_entry_descriptor_count",
+    "opd_containing_function_descriptor_count",
 ]
 
 
@@ -74,6 +76,8 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
                 "opd_descriptor_addresses": "ram:00001000" if opd else "",
                 "opd_toc_mappings": "0x00003000:UNMAPPED" if opd else "",
                 "opd_descriptor_count": "1" if opd else "0",
+                "opd_exact_entry_descriptor_count": "1" if opd else "0",
+                "opd_containing_function_descriptor_count": "0",
             })
 
     def _write_xrefs(self, path, program):
@@ -144,6 +148,24 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         else:
             self._write_inventory(output_csv, "Multiplayer", "b" * 64, opd=export_opd)
             self._write_xrefs(output_xref_csv, "Multiplayer")
+        if export_opd:
+            resolution_path = Path(command[export_index + 4])
+            resolution_path.write_text(json.dumps({
+                "schema_version": 1,
+                "status": "OPD_FUNCTION_RESOLUTION_COMPLETED",
+                "opd_va": command[export_index + 2],
+                "opd_size": command[export_index + 3],
+                "descriptor_slots_scanned": 8,
+                "empty_descriptors": 4,
+                "nonempty_descriptors": 4,
+                "unreadable_descriptors": 0,
+                "valid_executable_code_pointers": 3,
+                "invalid_code_pointers": 1,
+                "exact_entry_matches": 1,
+                "containing_function_matches": 0,
+                "unresolved_executable_pointers": 2,
+                "functions_with_opd_descriptors": 1,
+            }), encoding="utf-8")
         if SEED_SCRIPT in command:
             seed_index = command.index(SEED_SCRIPT)
             summary_path = Path(command[seed_index + 3])
@@ -197,6 +219,7 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         export_index = campaign_command.index(EXPORT_SCRIPT)
         self.assertEqual(campaign_command[export_index + 2], "0x1000")
         self.assertEqual(campaign_command[export_index + 3], "0x40")
+        self.assertTrue(campaign_command[export_index + 4].endswith("campaign_opd_function_resolution.json"))
         self.assertNotIn(SEED_SCRIPT, multiplayer_command)
         self.assertIn(EXPORT_SCRIPT, campaign_command)
         self.assertIn(EXPORT_SCRIPT, multiplayer_command)
@@ -214,6 +237,19 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
         self.assertEqual(manifest["campaign"]["opd_seeding"]["summary"]["valid_code_pointers"], 3)
         self.assertEqual(manifest["campaign"]["opd_seeding"]["summary"]["functions_created"], 2)
         self.assertRegex(manifest["campaign"]["opd_seeding"]["summary_sha256"], r"^[0-9a-f]{64}$")
+        self.assertTrue(manifest["campaign"]["opd_function_resolution"]["enabled"])
+        self.assertEqual(
+            manifest["campaign"]["opd_function_resolution"]["summary"]["unresolved_executable_pointers"],
+            2,
+        )
+        self.assertEqual(
+            manifest["campaign"]["opd_function_resolution"]["summary"]["exact_entry_matches"],
+            1,
+        )
+        self.assertRegex(
+            manifest["campaign"]["opd_function_resolution"]["summary_sha256"],
+            r"^[0-9a-f]{64}$",
+        )
         self.assertFalse(manifest["multiplayer"]["opd_seeding"]["enabled"])
 
         saved = json.loads(
@@ -666,6 +702,34 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
                 )
         run.assert_not_called()
 
+
+
+    def test_opd_resolution_mismatch_does_not_promote_partial_inventory(self):
+        def bad_resolution_run(command, check):
+            self._fake_run(command, check)
+            if EXPORT_SCRIPT in command:
+                export_index = command.index(EXPORT_SCRIPT)
+                if command[export_index + 2] != "-postScript":
+                    summary_path = Path(command[export_index + 4])
+                    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+                    summary["exact_entry_matches"] = 2
+                    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+
+        with patch(
+            "tools.run_ghidra_ppu_inventory.subprocess.run",
+            side_effect=bad_resolution_run,
+        ):
+            with self.assertRaisesRegex(ValueError, "matches do not reconcile"):
+                generate_inventories(
+                    self.headless,
+                    self.campaign_elf,
+                    self.multiplayer_elf,
+                    self.output_dir,
+                    script_dir=self.script_dir,
+                    campaign_opd=(0x1000, 0x40),
+                )
+        self.assertFalse((self.output_dir / "campaign_ppu_inventory.csv").exists())
+        self.assertFalse((self.output_dir / "ppu_inventory_manifest.json").exists())
 
 if __name__ == "__main__":
     unittest.main()
