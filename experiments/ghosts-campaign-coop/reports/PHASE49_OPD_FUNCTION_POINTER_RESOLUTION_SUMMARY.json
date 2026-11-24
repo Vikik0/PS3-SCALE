@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "phase": 49,
+  "status": "OPD_FUNCTION_POINTER_RESOLUTION_ACCOUNTED",
+  "changes": [
+    "exact-entry, containing-function and unresolved executable OPD pointers are distinguished",
+    "per-function inventory rows carry exact and containing descriptor counts",
+    "structured resolution summary accounts for every OPD slot and code pointer",
+    "runner reconciles summary against OPD seeder and per-function CSV before atomic promotion",
+    "legacy Phase 48 OPD CSV remains readable as NOT_RECORDED"
+  ],
+  "validation_boundary": "Synthetic CSV and mocked Ghidra tests only. No actual retail PPU ELF or live Campaign Player 2 path is claimed."
+}

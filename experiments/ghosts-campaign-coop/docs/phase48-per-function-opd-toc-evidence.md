@@ -8,10 +8,10 @@ The earlier OPD stages reported aggregate TOC values but did not associate each 
 
 - The Ghidra function exporter accepts the validated OPD address/size when OPD seeding is enabled.
 - It scans the same descriptor table after the seeder has created functions.
-- Each inventory row now includes OPD descriptor addresses, unique TOC mappings with MAPPED/UNMAPPED/ZERO status, and descriptor count for that function.
+- Each inventory row now includes OPD descriptor addresses, unique TOC mappings with MAPPED/UNMAPPED/ZERO status, descriptor count, and exact-entry versus containing-function descriptor counts.
 - The Python inventory reader validates the optional columns and remains backward-compatible with legacy CSVs that have no OPD metadata.
 - Multiplayer-only priority candidates now expose their OPD/TOC evidence and a cautious status: no mapping, unmapped TOC present, zero TOC present, or mapped TOC static-only.
-- Summary counters report how many Campaign and Multiplayer functions have OPD descriptors and how many priority candidates have unmapped TOCs.
+- Summary counters report how many Campaign and Multiplayer functions have OPD descriptors and how many priority candidates have unmapped TOCs. Phase 49 adds a separate all-slots resolution report and reconciles it against the OPD seeder.
 
 ## Validation boundary
 
