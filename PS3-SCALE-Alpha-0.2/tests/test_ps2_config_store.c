@@ -149,6 +149,12 @@ int main(void)
         target, TEST_LIMIT, NULL) == 1);
     assert(unlink(symlink_path) == 0);
 
+    assert(symlink(target2, symlink_temp) == 0);
+    assert(ps3scale_ps2_config_store_backup(
+        target2, backup2, symlink_temp, TEST_LIMIT) == -3);
+    expect_file(target2, "new-title-config");
+    assert(unlink(symlink_temp) == 0);
+
     /* An existing rollback is preserved while replacement stays atomic. */
     expect_file(target, "second-download");
     expect_file(rollback, "downloaded-config");
