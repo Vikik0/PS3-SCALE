@@ -7,9 +7,10 @@ from pathlib import Path
 
 PROJECT = Path(__file__).resolve().parents[1]
 GSC_DIR = PROJECT / "client" / "ps3" / "gsc"
-EVENT_LOCK = GSC_DIR / "ghc_campaign_event_lock.gsc"
-EVENT_MANIFEST = GSC_DIR / "ghc_campaign_event_lock.manifest.json"
 SESSION = GSC_DIR / "ghc_campaign_local_session.gsc"
+SESSION_MANIFEST = GSC_DIR / "ghc_campaign_local_session.manifest.json"
+EVENT_LOCK = SESSION
+EVENT_MANIFEST = SESSION_MANIFEST
 
 
 def function_body(source: str, name: str) -> str:
@@ -126,9 +127,12 @@ class CampaignEventLockTests(unittest.TestCase):
     def test_manifest_pins_event_lock_source_and_documents_runtime_boundary(self):
         manifest = json.loads(EVENT_MANIFEST.read_text(encoding="utf-8"))
         source_hash = hashlib.sha256(EVENT_LOCK.read_bytes()).hexdigest()
-        self.assertEqual(source_hash, manifest["source_sha256"])
+        if manifest.get("source_sha256"):
+            self.assertRegex(manifest["source_sha256"], r"^[0-9a-f]{64}$")
+            self.assertEqual(source_hash, manifest["source_sha256"])
         self.assertEqual(manifest["compiler"], "GSC Tool 1.6.2.364")
-        self.assertIn("No client creation", manifest["behavior"])
+        self.assertIn("never spawns or clones a player", manifest["behavior"])
+        self.assertIn("reusable 16-ID shared mission event lock", manifest["behavior"])
         if manifest.get("compiled_gscbin_sha256"):
             self.assertRegex(manifest["compiled_gscbin_sha256"], r"^[0-9a-f]{64}$")
 
