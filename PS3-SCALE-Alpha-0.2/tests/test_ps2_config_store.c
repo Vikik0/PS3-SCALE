@@ -1,3 +1,7 @@
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700
+#endif
+
 #include "ps3scale/ps2_config_store.h"
 
 #include <assert.h>
@@ -38,6 +42,7 @@ int main(void)
     char rollback[192], restore_temp[192], download_temp[192];
     char target2[192], backup2[192], rollback2[192], download2[192];
     char oversized[192], oversized_backup[192], oversized_temp[192];
+    char symlink_path[192], symlink_backup[192], symlink_temp[192];
     char large[TEST_LIMIT + 2u];
     int written;
 
@@ -64,6 +69,9 @@ int main(void)
     MAKE_PATH(oversized, "large.CONFIG");
     MAKE_PATH(oversized_backup, "large.CONFIG.bak");
     MAKE_PATH(oversized_temp, "large.CONFIG.tmp");
+    MAKE_PATH(symlink_path, "linked.CONFIG");
+    MAKE_PATH(symlink_backup, "linked.CONFIG.bak");
+    MAKE_PATH(symlink_temp, "linked.CONFIG.tmp");
 
     write_file(target, "original-config");
     assert(ps3scale_ps2_config_store_probe(target, TEST_LIMIT, NULL) == 1);
@@ -130,6 +138,21 @@ int main(void)
         oversized, TEST_LIMIT, NULL) == -1);
     assert(ps3scale_ps2_config_store_backup(
         oversized, oversized_backup, oversized_temp, TEST_LIMIT) == -4);
+
+    /* Symlinks are not accepted as CONFIG files or writable temp paths. */
+    assert(symlink(target, symlink_path) == 0);
+    assert(ps3scale_ps2_config_store_probe(
+        symlink_path, TEST_LIMIT, NULL) == -1);
+    assert(ps3scale_ps2_config_store_backup(
+        symlink_path, symlink_backup, symlink_temp, TEST_LIMIT) == -4);
+    assert(ps3scale_ps2_config_store_probe(
+        target, TEST_LIMIT, NULL) == 1);
+    assert(unlink(symlink_path) == 0);
+
+    /* An existing rollback is preserved while replacement stays atomic. */
+    expect_file(target, "second-download");
+    expect_file(rollback, "downloaded-config");
+    expect_file(backup, "original-config");
 
     assert(unlink(target) == 0);
     assert(unlink(backup) == 0);
