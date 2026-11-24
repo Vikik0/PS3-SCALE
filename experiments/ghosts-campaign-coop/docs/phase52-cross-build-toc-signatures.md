@@ -10,7 +10,7 @@ Campaign and Multiplayer are separate PPU builds. Absolute TOC addresses can dif
 - Absolute TOC addresses are deliberately excluded from the normalized signature.
 - The comparison reports MATCHED_REGION_SIGNATURES, PARTIAL_REGION_OVERLAP, DIFFERENT_REGION_SIGNATURES, NO_TOC_REGION_EVIDENCE, or NOT_RECORDED.
 - Summary counters report matching fingerprint groups with equal, partial, different, or missing TOC-region signatures.
-- Legacy inventories without Phase 50/51 region metadata remain supported and are marked NOT_RECORDED.
+- Legacy inventories without Phase 50/51 region metadata remain supported and are marked NOT_RECORDED. Phase 53 adds an offline local-input verification tool that checks the installed game/update identity and the expected SELF hashes without requiring the PS3 or transferring retail files.
 
 ## Validation boundary
 

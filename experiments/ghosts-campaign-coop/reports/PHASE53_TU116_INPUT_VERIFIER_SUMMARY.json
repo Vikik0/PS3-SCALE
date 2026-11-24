@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "phase": 53,
+  "status": "OFFLINE_TU116_INPUT_VERIFIER_ADDED",
+  "changes": [
+    "local disc and update PARAM.SFO identity is checked",
+    "known BLUS31270 TU 1.16 update SFO hash is verified",
+    "EBOOT.BIN, default.self and default_mp.self size, SHA-256 and PPU/SELF metadata are checked",
+    "optional FastFiles are hash-checked when present",
+    "optional decrypted PPU ELFs are checked for expected entry points and format",
+    "metadata-only report; no decryption, copying or upload"
+  ],
+  "validation_boundary": "Synthetic SFO/SELF fixtures only. Matching encrypted SELF inputs do not reveal PPU instructions or make native analysis ready."
+}
