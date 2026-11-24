@@ -15,7 +15,7 @@
 
 ## النتيجة المتوقعة من الملفات المرفوعة
 
-- خمسة استدعاءات client visibility في Carrier ضمن playerview_playmissanim: واحد showonclient وأربعة؟ لا، أربعة hideonclient.
+- خمسة استدعاءات client visibility في Carrier ضمن playerview_playmissanim: واحد showonclient وأربعة hideonclient.
 - selector level.player يظهر مرتين في hideonclient، وlevel.playengineeffects يظهر مرتين.
 - ربطا FOV موجودان في monitorscavengerpickup.
 - يوجد استدعاءان لـ setsaveddvar على self.sniper_degy.

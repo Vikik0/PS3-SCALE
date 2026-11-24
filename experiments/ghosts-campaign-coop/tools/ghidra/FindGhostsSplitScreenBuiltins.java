@@ -20,7 +20,10 @@ public class FindGhostsSplitScreenBuiltins extends GhidraScript {
         "isPlayingSolo", "PlayerCMD_IsSplitScreenPlayer",
         "PlayerCMD_IsSplitScreenPlayerPrimary", "PlayerCMD_Spawn",
         "PlayerCMD_ClonePlayer", "SV_InitLocalClient",
-        "CL_InitLocalClients", "CL_SetSplitScreen"
+        "CL_InitLocalClients", "CL_SetSplitScreen",
+        "playerpiggyback", "playengineeffects",
+        "cg_playerFovScale0", "cg_playerFovScale1",
+        "hideonclient", "showonclient", "createclientfontstring"
     };
 
     private String csv(String value) {

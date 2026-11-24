@@ -21,6 +21,13 @@ tools/ghidra/FindGhostsSplitScreenBuiltins.java now writes a CSV. It scans initi
 - SV_InitLocalClient
 - CL_InitLocalClients
 - CL_SetSplitScreen
+- playerpiggyback
+- playengineeffects
+- cg_playerFovScale0
+- cg_playerFovScale1
+- hideonclient
+- showonclient
+- createclientfontstring
 
 For each string hit, the exporter records Ghidra references to the string address, reference type, explicit is_call and is_data flags, source, containing function name and entry, function body range, and instruction at the reference. Strings without recorded references are retained with blank reference fields and explicit false values for both is_call and is_data, so strict CSV validation accepts them. Both PPU inventory and XREF CSV exporters write UTF-8.
 

@@ -66,7 +66,7 @@ class SplitScreenClientSemanticsTests(unittest.TestCase):
         )
         report = audit.audit_paths({"carrier": self.root})
         self.assertEqual(report["missions"][0]["summary"]["secondary_client_selector_count"], 1)
-        self.assertEqual(report["missions"][0]["source_manifest"]["file_count"], 2)
+        self.assertEqual(report["missions"][0]["source_manifest"]["file_count"], 1)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "phase": 71,
+  "status": "NATIVE_PPU_XREF_TARGETS_EXPANDED",
+  "new_terms": [
+    "playerpiggyback",
+    "playengineeffects",
+    "cg_playerFovScale0",
+    "cg_playerFovScale1",
+    "hideonclient",
+    "showonclient",
+    "createclientfontstring"
+  ],
+  "retained_terms": [
+    "PlayerCMD_Spawn",
+    "SV_InitLocalClient",
+    "CL_InitLocalClients",
+    "CL_SetSplitScreen"
+  ],
+  "changes": [
+    "extend read-only Ghidra PPU string/XREF scan using observed Campaign GSC client semantics",
+    "retain explicit call/data/computed reference classification",
+    "extend source-contract tests for all new terms"
+  ],
+  "tests_added": 0,
+  "validation_boundary": "Source-contract validation only; no real Ghidra run or decrypted TU 1.16 PPU ELF was available."
+}

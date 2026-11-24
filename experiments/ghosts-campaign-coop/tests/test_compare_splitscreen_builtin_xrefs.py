@@ -250,6 +250,13 @@ class BuiltinXrefTests(unittest.TestCase):
 
             "PlayerCMD_Spawn",
             "CL_InitLocalClients",
+            "playerpiggyback",
+            "playengineeffects",
+            "cg_playerFovScale0",
+            "cg_playerFovScale1",
+            "hideonclient",
+            "showonclient",
+            "createclientfontstring",
         ):
             with self.subTest(token=token):
                 self.assertIn(token, source)
