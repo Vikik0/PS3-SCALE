@@ -67,6 +67,26 @@ class GscPlayerStateOwnershipAuditTests(unittest.TestCase):
         self.assertIn("MISSION_FAILURE_SIDE_EFFECT", finding["event_risk_flags"])
         self.assertIn("GLOBAL_SLOW_MOTION_SIDE_EFFECT", finding["event_risk_flags"])
 
+    def test_player_animation_rig_keeps_shared_interaction_context(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "rope.gsc").write_text(
+                "cut_rope()\\n{\\n"
+                "    var_0 = spawn_anim_ent(\\"player_rig\\");\\n"
+                "    level.player playerlinktoblend(var_0, \\"tag_player\\", 0.4);\\n"
+                "}\\n",
+                encoding="utf-8",
+            )
+            report = audit_mission("test", root, ["cut_rope"])
+            finding = report["findings"][0]
+
+        self.assertEqual(finding["shared_side_effect_counts"]["animation_rig_spawns"], 1)
+        self.assertEqual(
+            finding["event_ownership_pattern"],
+            "PLAYER_RIG_WITH_SHARED_TRIGGER_CONTEXT",
+        )
+        self.assertIn("SCRIPTED_ANIMATION_RIGS", finding["event_risk_flags"])
+
     def test_player_array_reference_is_marked_as_array_aware(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
