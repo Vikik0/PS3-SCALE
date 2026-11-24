@@ -7,7 +7,7 @@ A TOC pointer being present in Ghidra memory is not enough to characterize the r
 ## Changes
 
 - The Ghidra exporter resolves each non-zero TOC pointer to its containing MemoryBlock.
-- Per-function CSV now includes a JSON array named opd_toc_region_evidence. Each unique TOC value records MAPPED/UNMAPPED/ZERO status, block name, read/write/execute permissions, and offset from the block start.
+- Per-function CSV now includes a JSON array named opd_toc_region_evidence. Each unique TOC value records MAPPED/UNMAPPED/ZERO status, block name, read/write/execute permissions, and offset from the block start. Phase 51 adds loaded, initialized, artificial, external and volatile flags for mapped blocks; unmapped and zero pointers must leave these flags null.
 - Zero and unmapped pointers cannot claim a block name, permissions or offset.
 - The Python comparer validates the JSON shape, address/status consistency, permissions, relative offset and exact agreement with the existing TOC mapping column.
 - Multiplayer-only candidate evidence exposes the TOC memory regions and counts candidates with mapped or writable TOC blocks.

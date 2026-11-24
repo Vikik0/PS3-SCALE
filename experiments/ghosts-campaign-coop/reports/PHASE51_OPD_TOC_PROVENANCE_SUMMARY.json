@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "phase": 51,
+  "status": "OPD_TOC_BLOCK_PROVENANCE_CLASSIFIED",
+  "changes": [
+    "mapped TOC blocks export loaded, initialized, artificial, external and volatile flags",
+    "unmapped and zero TOC entries require null block provenance",
+    "comparer validates boolean provenance fields",
+    "candidate summary distinguishes loaded/initialized from artificial/external TOC blocks"
+  ],
+  "validation_boundary": "Synthetic host tests and source-contract checks only. No actual Ghidra PPU import or runtime call safety is claimed."
+}
