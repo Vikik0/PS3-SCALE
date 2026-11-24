@@ -3335,6 +3335,10 @@ copy_message:
 }
 static void perform_ps2_config_manager_action(void){
  int result;const ps3scale_game_t *game=selected_game();const ps3scale_ps2_config_entry_t *entry=ps2_config_for_game(game);
+ if(g_network_task_running||g_ps2_config_download_running||g_ps2_config_download_done||g_ps2_config_download_thread_started){
+  snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),"WAIT FOR THE CURRENT PS2 CONFIG TASK TO FINISH.");
+  return;
+ }
  refresh_ps2_config_manager_cache();
  if(g_ps2_config_manager_target_state<0){snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),"CONFIG PATH IS INVALID OR THE FILE EXCEEDS THE SAFE SIZE LIMIT.");return;}
  if(g_ps2_config_manager_selection==0){
@@ -5453,7 +5457,20 @@ static void draw_ps2_config_manager(void){
  draw_soft_button(552.0f,248.0f,226.0f,46.0f,entry?"DOWNLOAD / REPLACE CONFIG":"NO MATCHED DOWNLOAD",g_ps2_config_manager_selection==2);
  set_ui_font_size(7,11);draw_text(48.0f,326.0f,0x514b69ff,"Replacing an existing file requires a byte-matching backup.");
  draw_text(48.0f,348.0f,0x514b69ff,"Restore keeps the replaced file as a separate rollback copy.");
- draw_text(48.0f,386.0f,0x875be8ff,g_ps2_config_manager_message);
+ if(g_ps2_config_download_running){
+  unsigned long downloaded_kb=(unsigned long)((g_ps2_config_downloaded+1023u)/1024u);
+  unsigned long total_kb=(unsigned long)((g_ps2_config_download_total+1023u)/1024u);
+  float progress=0.12f;
+  if(g_ps2_config_download_total>0){
+   unsigned int percent=(unsigned int)(g_ps2_config_downloaded>=g_ps2_config_download_total?100u:(g_ps2_config_downloaded*100u)/g_ps2_config_download_total);
+   snprintf(line,sizeof(line),"DOWNLOAD: %u%%  %lu/%lu KB",percent,downloaded_kb,total_kb);
+   progress=(float)g_ps2_config_downloaded/(float)g_ps2_config_download_total;
+   if(progress>1.0f)progress=1.0f;
+  }else snprintf(line,sizeof(line),"DOWNLOAD: %lu KB RECEIVED",downloaded_kb);
+  draw_text(48.0f,374.0f,0x875be8ff,line);
+  draw_rounded_rect(48.0f,386.0f,730.0f,5.0f,2.0f,0xe4deefff);
+  if(progress>0.0f)draw_rounded_rect(48.0f,386.0f,730.0f*progress,5.0f,2.0f,0x9568edff);
+ }else draw_text(48.0f,386.0f,0x875be8ff,g_ps2_config_manager_message);
  draw_text(24.0f,PS3SCALE_UI_FOOTER_SINGLE_Y,0x77718fff,"UP/DOWN: SELECT ACTION | CROSS: EXECUTE | CIRCLE / SELECT / LEFT: BACK");set_ui_font_size(14,22);
 }
 static void draw_fps_control(void)
