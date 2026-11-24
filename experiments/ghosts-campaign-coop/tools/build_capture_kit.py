@@ -116,12 +116,36 @@ def build_capture_kit(
             root / "Docs" / "PAD_INPUT_PROBE_README_AR.md",
         )
 
-        # CEX bootstrap PRX build.
-        _copy_tree(artifact_dirs["bootstrap"], root / "PS3" / "ghosts_coop")
+        # CEX bootstrap PRX build; flatten the artifact's build/ folder.
+        for filename in (
+            "ghosts_coop.prx",
+            "ghosts_coop.fake.sprx",
+            "ghosts_coop.elf",
+            "libghosts_coop_stub.a",
+        ):
+            _copy_one(
+                artifact_dirs["bootstrap"], filename,
+                root / "PS3" / "ghosts_coop" / filename,
+            )
 
         # Experimental GSC scripts are deliberately kept outside PS3 payloads.
-        _copy_tree(artifact_dirs["session"], root / "Experimental_GSC_Not_Installed")
-        _copy_tree(artifact_dirs["registry"], root / "Experimental_GSC_Not_Installed")
+        for filename in (
+            "ghc_campaign_local_session.gsc",
+            "ghc_campaign_local_session.gscbin",
+            "ghc_campaign_local_session.manifest.json",
+        ):
+            _copy_one(
+                artifact_dirs["session"], filename,
+                root / "Experimental_GSC_Not_Installed" / filename,
+            )
+        for filename in (
+            "ghc_campaign_player_registry.gscbin",
+            "ghc_campaign_player_registry.manifest.json",
+        ):
+            _copy_one(
+                artifact_dirs["registry"], filename,
+                root / "Experimental_GSC_Not_Installed" / filename,
+            )
         registry_source = (
             project_root / "client" / "ps3" / "gsc" / "ghc_campaign_player_registry.gsc"
         )
