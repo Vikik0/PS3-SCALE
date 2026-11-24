@@ -21,13 +21,15 @@ if titleid BLUS31270
     /getmem.ps3mapi?addr=10000&len=20&dump=a48c28
     abort if not exist /dev_hdd0/mem_dump.bin
     ren /dev_hdd0/mem_dump.bin=/dev_hdd0/GHOSTS_TU116_MULTIPLAYER_SEG0.bin
-    log Multiplayer segment 0 captured
+    abort if not exist /dev_hdd0/GHOSTS_TU116_MULTIPLAYER_SEG0.bin
+    log Multiplayer segment 0 saved and verified present
 
     # Multiplayer default_mp.self PT_LOAD 1: vaddr 0xA60000, p_filesz 0xE39D0.
     /getmem.ps3mapi?addr=a60000&len=20&dump=e39d0
     abort if not exist /dev_hdd0/mem_dump.bin
     ren /dev_hdd0/mem_dump.bin=/dev_hdd0/GHOSTS_TU116_MULTIPLAYER_SEG1.bin
-    log Multiplayer segment 1 captured
+    abort if not exist /dev_hdd0/GHOSTS_TU116_MULTIPLAYER_SEG1.bin
+    log Multiplayer segment 1 saved and verified present
 
     logfile /dev_hdd0/GHOSTS_TU116_MULTIPLAYER_DUMP_DONE
     log complete
