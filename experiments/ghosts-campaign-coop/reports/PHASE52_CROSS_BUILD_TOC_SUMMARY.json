@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "phase": 52,
+  "status": "CROSS_BUILD_TOC_REGION_SIGNATURE_COMPARISON_ADDED",
+  "changes": [
+    "matching function fingerprints now compare normalized TOC region signatures across Campaign and Multiplayer",
+    "absolute TOC addresses are excluded from signatures",
+    "signatures retain block name, relative offset, permissions and memory provenance flags",
+    "comparison reports matched, partial, different, absent and legacy-unrecorded evidence states",
+    "summary counters quantify cross-build TOC region compatibility evidence"
+  ],
+  "validation_boundary": "Synthetic cross-build fixtures only. Matching static TOC-region signatures do not prove equal TOC contents, ABI compatibility or safe cross-build calls."
+}
