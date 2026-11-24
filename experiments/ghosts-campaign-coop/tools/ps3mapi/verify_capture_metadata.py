@@ -171,7 +171,7 @@ def verify_capture_metadata(
 
     input_log_verified = False
     input_log_path = None
-    input_log_filename = values.get("pad_input_probe_log_filename")
+    input_log_filename = values.get("pad_input_probe_log_filename") or None
     if input_log_filename is not None:
         if input_log_filename.casefold() != expected["pad_input_log"].casefold():
             raise ValueError(
