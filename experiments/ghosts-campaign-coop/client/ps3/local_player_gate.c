@@ -49,6 +49,7 @@ GhcLocalPlayerGateStatus ghc_local_player_gate_validate(
             || player->is_split_screen_player > 1u
             || player->input_connected > 1u
             || player->input_frame_valid > 1u
+            || player->observation_frame_valid > 1u
             || player->client_id_valid > 1u
             || player->entity_id_valid > 1u
             || player->local_client_num_valid > 1u) {
@@ -71,6 +72,9 @@ GhcLocalPlayerGateStatus ghc_local_player_gate_validate(
         }
         if (!player->input_frame_valid) {
             return gh_fail(result, slot, GHC_LOCAL_GATE_INPUT_FRAME_MISSING);
+        }
+        if (!player->observation_frame_valid) {
+            return gh_fail(result, slot, GHC_LOCAL_GATE_OBSERVATION_FRAME_MISSING);
         }
         if (player->role != expected_role) {
             return gh_fail(result, slot, GHC_LOCAL_GATE_ROLE_MISMATCH);
