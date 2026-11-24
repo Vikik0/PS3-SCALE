@@ -109,3 +109,14 @@ CI build and host tests are necessary but not sufficient. Actual RSX appearance,
 3. Provide an index record with a different regional Title ID and no occurrence of the game's exact Title ID in its path; confirm installation is rejected.
 4. Provide a multi-region NCL path that explicitly lists the game's exact Title ID alongside another regional ID; confirm that exact ID may match.
 4. Confirm US, EU, Japan, Asia and Korea region labels use the shared game-ID prefix map.
+
+
+## Community NCL Git-blob integrity
+
+1. Parse a valid 11-column record with a 40-character Git blob SHA-1.
+2. Confirm legacy 8- and 10-column records remain readable but cannot authorize installation.
+3. Verify the known Git blob vector for `hello\n` (`ce013625030ba8dba906f756967f9e9ca394464a`).
+4. Change one byte while preserving file size; confirm hash verification fails.
+5. Change the expected size; confirm verification fails before install.
+6. Confirm the download worker deletes a hash-mismatched temporary NCL and does not create the Artemis destination file.
+7. Confirm the index builder exports the SHA from each GitHub tree blob entry.

@@ -48,7 +48,7 @@
 
 ## Alpha 0.4 — PS3 title-specific patch manager
 
-- [ ] Signed online catalog/download.
+- [ ] Cryptographically sign the online catalog and downloads; Git blob SHA-1 verification is an integrity check, not a signature.
 - [x] Exact Title ID + inferred region + APP_VER matching for FPS profiles and community NCL installs; mismatched region or update version is rejected.
 - [ ] Patch preview, backup, apply and rollback.
 - [ ] First supported title only after repeatable hardware test.
@@ -75,3 +75,4 @@ A release is not considered console-tested until its PKG is installed, launched 
 - [x] Add host tests for locale translations, glyph conversion and keyboard layouts.
 - [ ] Verify Arabic glyph appearance, keyboard navigation, frame pacing, startup scan and settings persistence on the target PS3.
 - [ ] Complete signed online update-manifest support before any network download is considered.
+- [x] Verify community NCL downloads against the indexed GitHub Git-blob SHA-1 and exact byte size before installation.

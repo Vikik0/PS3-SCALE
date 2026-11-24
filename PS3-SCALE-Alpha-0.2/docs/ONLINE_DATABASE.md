@@ -76,3 +76,10 @@ PS3 SCALE loads the PS3 NET and NETCTL modules, initializes the network control 
 
 
 Community NCL install matching is stricter than discovery matching. A fuzzy title or same-region suggestion can be shown for discovery, but installation requires exact APP_VER and the actual Title ID in the indexed identity/path. If the index supplies a different primary Title ID, a multi-region entry is accepted only when the scanned game's exact region-specific Title ID also appears as a separate ID in the indexed path. A title-only or same-region match is never sufficient. Region labels use the same shared prefix map as Game Details.
+
+
+## Community NCL integrity verification
+
+The refreshed community index now carries the GitHub Git-blob SHA-1 for each NCL file, taken from the repository tree object. Before installation, PS3 SCALE verifies both the exact byte count and the Git blob object hash (`SHA1("blob " + size + NUL + file bytes)`) of the downloaded temporary file. A mismatch deletes the temporary file and blocks installation.
+
+This is an integrity check against the indexed GitHub object, not a cryptographic signature. HTTPS and the trusted GitHub repository remain part of the trust chain. Legacy eight- or ten-column cache rows can still be parsed for discovery, but cannot authorize installation without the 40-character blob hash; refresh the community index to enable verified downloads.

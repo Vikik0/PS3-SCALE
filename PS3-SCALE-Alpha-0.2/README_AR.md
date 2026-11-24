@@ -144,3 +144,5 @@ chmod +x scripts/test_host.sh
 ~~~
 
 من GitHub Actions نزّل أحدث Artifact ناجح لفرع التطوير. حزمة GNPDRM هي نسخة التثبيت العادية على CFW؛ لا تعتمد على نجاح CI وحده لإعلان توافق الجهاز، بل اختبر التثبيت والفحص والمزامنة وتشغيل لعبة واحدة على PS3 فعلي.
+
+**Community NCL integrity:** verified downloads require an exact Title ID / game version match, the indexed file size, and the GitHub Git-blob SHA-1. Legacy index entries without a blob hash are discovery-only until the community index is refreshed. This hash check is not a cryptographic signature.
