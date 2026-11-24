@@ -159,10 +159,6 @@ static int copy_file_to_exclusive_temp(const char *source_path,
     if (written < 0 || (size_t)written >= temporary_capacity)
         return PS3SCALE_PS2_STORE_ERR_INVALID;
 
-    if (regular_file_size(source_path, max_bytes, NULL) !=
-        PS3SCALE_PS2_STORE_ERR_INVALID) {
-        /* The real size check is repeated below with a valid output pointer. */
-    }
     {
         size_t source_size;
         int check = regular_file_size(source_path, max_bytes, &source_size);
@@ -440,16 +436,14 @@ int ps3scale_ps2_config_store_install_download(
         if (!allow_replace)
             return PS3SCALE_PS2_STORE_ERR_EXISTS;
         if (!original_backup_path || !original_backup_path[0] ||
-            !rollback_path || !rollback_path[0] ||
             ps3scale_ps2_config_store_file_matches(
                 target_path, original_backup_path, max_bytes) != 1)
             return PS3SCALE_PS2_STORE_ERR_BACKUP_REQUIRED;
 
-        result = ps3scale_ps2_config_store_backup(
-            target_path, rollback_path, max_bytes);
-        if (result != PS3SCALE_PS2_STORE_OK &&
-            result != PS3SCALE_PS2_STORE_ALREADY_MATCHES)
-            return result;
+        /* The immutable original backup already contains these exact bytes.
+         * Do not replace it with the downloaded file or overwrite a rollback
+         * snapshot created by an earlier restore. */
+        (void)rollback_path;
     }
 
     /* Download and target are on the same HDD; rename replaces atomically. */
