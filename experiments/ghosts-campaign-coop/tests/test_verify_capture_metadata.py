@@ -55,7 +55,16 @@ class CaptureMetadataVerificationTests(unittest.TestCase):
         self.assertEqual(result["ps3mapi_process_name_verbatim"], "default.self")
         self.assertTrue(result["process_name_is_diagnostic_only"])
         self.assertEqual(result["segment_files"]["0"]["size_bytes"], len(b"campaign0"))
+        self.assertTrue(result["pad_probe_log_verified"])
+        self.assertEqual(result["pad_probe_log_path"], str(self.campaign_log))
         self.assertEqual(len(result["metadata_sha256"]), 64)
+
+    def test_metadata_without_a_supplied_pad_log_does_not_claim_log_verification(self):
+        result = verify_capture_metadata(
+            self.campaign_meta, "campaign", self.campaign_dir
+        )
+        self.assertFalse(result["pad_probe_log_verified"])
+        self.assertIsNone(result["pad_probe_log_path"])
 
     def test_valid_multiplayer_metadata_accepts_same_pid_and_process_name(self):
         self.write_metadata(
