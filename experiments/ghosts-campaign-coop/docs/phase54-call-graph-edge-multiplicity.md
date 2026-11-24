@@ -6,7 +6,7 @@ The cross-build call-graph comparison previously converted all callee fingerprin
 
 ## Changes
 
-- Count one resolved caller-function-to-callee-fingerprint edge per caller function instance.
+- Count one edge per distinct resolved callee function entry for each caller-function instance, aggregated by callee fingerprint.
 - Preserve the existing rule that repeated call instructions from one function to the same callee fingerprint count as one graph edge.
 - Compare counters rather than only unique fingerprint sets.
 - Report per-build edge counts, shared and side-only multiplicities, and whether the unique callee sets are equal.

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "phase": 55,
+  "status": "DISTINCT_CALLEE_ENTRY_MULTIPLICITY_PRESERVED",
+  "changes": [
+    "count each distinct resolved callee entry per caller function instance",
+    "aggregate target-entry edges by callee fingerprint",
+    "deduplicate repeated references to the same target entry",
+    "preserve distinct target entries that share an identical code fingerprint"
+  ],
+  "tests_added": 1,
+  "validation_boundary": "Synthetic static inventories only. Counts represent distinct resolved function-entry relationships, not call-instruction frequency or runtime execution."
+}

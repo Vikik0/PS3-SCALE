@@ -991,5 +991,44 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
             0,
         )
 
+
+    def test_call_graph_counts_distinct_callee_entries_with_same_fingerprint(self):
+        caller_fingerprint = "c" * 64
+        target_fingerprint = "d" * 64
+        campaign = [
+            row(
+                "CampaignCaller", "0x1000", caller_fingerprint,
+                entries="0x2000;0x2000;0x2100",
+            ),
+            row("CampaignTargetA", "0x2000", target_fingerprint, entries=""),
+            row("CampaignTargetB", "0x2100", target_fingerprint, entries=""),
+        ]
+        multiplayer = [
+            row(
+                "MultiplayerCaller", "0x9000", caller_fingerprint,
+                entries="0xA000;0xA000",
+            ),
+            row("MultiplayerTarget", "0xA000", target_fingerprint, entries=""),
+        ]
+
+        result = compare(campaign, multiplayer)
+        delta = next(
+            item for item in result["call_graph_deltas"]
+            if item["caller_fingerprint"] == caller_fingerprint
+        )
+        self.assertTrue(delta["callee_fingerprint_sets_equal"])
+        self.assertEqual(
+            delta["campaign_callee_fingerprint_edge_counts"][0]["caller_function_edge_count"],
+            2,
+        )
+        self.assertEqual(
+            delta["multiplayer_callee_fingerprint_edge_counts"][0]["caller_function_edge_count"],
+            1,
+        )
+        self.assertEqual(
+            delta["callee_fingerprint_edge_multiplicity"][0]["campaign_only_edge_count"],
+            1,
+        )
+
 if __name__ == "__main__":
     unittest.main()

@@ -423,9 +423,13 @@ def _target_fingerprint_multiplicity(
     """Count caller-function instances that reach each resolved callee fingerprint."""
     counts: Counter[str] = Counter()
     for row in rows:
-        # One caller function contributes at most one graph edge per callee
-        # fingerprint, even if multiple call instructions target that same build entry.
-        counts.update(_target_fingerprints(row, functions_by_entry))
+        # Count each distinct resolved callee entry. _target_functions deduplicates
+        # repeated references to the same entry, while preserving separate entries
+        # whose code happens to share a fingerprint.
+        counts.update(
+            target["fingerprint"]
+            for target in _target_functions(row, functions_by_entry)
+        )
     return counts
 
 
