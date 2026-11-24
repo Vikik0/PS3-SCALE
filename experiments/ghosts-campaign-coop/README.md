@@ -221,3 +221,13 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - CI run [#1494](https://github.com/Vikik0/PS3-SCALE/actions/runs/45508312714): **6/6 jobs successful**, **480 tests passed**, PS3 PRX and both read-only probes built and validated.
 - Report: reports/PHASE85_REPORT_AR.md; API summary: reports/PHASE85_EVENT_LOCK_API.json.
 - **Runtime gate unchanged:** the bridge is compiled but not injected or tested on a physical PS3. It does not create a Local Client or prove playable Campaign co-op.
+
+
+### Phase 86 — capture-kit integrity validator
+
+- Added tools/verify_capture_kit.py to validate the kit target (BLUS31270/TU 01.16), required probe/bootstrap/dump files, all manifest sizes and SHA-256 hashes, safe relative paths, both GSC source/GSCBIN manifests, and separation of experimental GSCBIN files from the PS3 payload directory.
+- Added seven tests for valid packages, tampering, missing files, path traversal, wrong TU, GSC source mismatch and misplaced GSCBIN.
+- Ran the validator against the actual Phase 85 package: **29/29 files verified**, both GSC manifests verified.
+- CI run [#1499](https://github.com/Vikik0/PS3-SCALE/actions/runs/45509141329): **6/6 jobs successful**, **487 tests passed**.
+- Report: reports/PHASE86_REPORT_AR.md; JSON: reports/PHASE86_CAPTURE_KIT_VALIDATION.json.
+- The validator proves file integrity only. It does not prove PS3 runtime compatibility or playable Campaign co-op.
