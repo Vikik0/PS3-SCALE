@@ -183,11 +183,44 @@ def parse_log(path: Path) -> dict:
         for port, details in sample["ports"].items()
         if details["read_error"] != 0
     ]
+    consistency_errors = []
+    for index, sample in data["samples"].items():
+        expected_mask = 0
+        observed_error_mask = 0
+        for port in (0, 1):
+            details = sample["ports"].get(str(port))
+            if details is None:
+                continue
+            if details["connected"] == 1 and details["read_error"] == 0:
+                expected_mask |= 1 << port
+            if details["read_error"] != 0:
+                observed_error_mask |= 1 << port
+        if (sample["connected_mask"] & 0x03) != expected_mask:
+            consistency_errors.append({
+                "sample": index, "error": "connected_mask does not match per-port lines"
+            })
+        if (sample["read_error_mask"] & 0x03) != observed_error_mask:
+            consistency_errors.append({
+                "sample": index, "error": "read_error_mask does not match per-port lines"
+            })
+        if sample["connected_count"] != expected_mask.bit_count():
+            consistency_errors.append({
+                "sample": index, "error": "connected_count does not match ports 0/1"
+            })
+        if sample["valid_mask"] != (0x03 & ~observed_error_mask):
+            consistency_errors.append({
+                "sample": index, "error": "valid_mask does not match per-port read status"
+            })
+        if sample["frame_connected_mask"] != expected_mask:
+            consistency_errors.append({
+                "sample": index, "error": "frame_connected_mask does not match current ports"
+            })
     data["sample_indices"] = indices
     data["missing_samples"] = missing_samples
     data["out_of_range_samples"] = out_of_range
     data["missing_port_samples"] = missing_port_samples
     data["port_read_errors"] = port_read_errors
+    data["consistency_errors"] = consistency_errors
 
     simultaneous_samples = []
     port_activity = {"0": False, "1": False}
@@ -236,6 +269,8 @@ def parse_log(path: Path) -> dict:
         and not data["sample_errors"]
         and not data["port_line_errors"]
         and not port_read_errors
+        and not consistency_errors
+        and all(sample["result"] == "OK" and sample["read_error_mask"] == 0 for sample in data["samples"].values())
         and len(indices) == EXPECTED_SAMPLE_COUNT
     )
     return data
