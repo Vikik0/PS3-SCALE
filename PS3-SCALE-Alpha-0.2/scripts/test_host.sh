@@ -76,8 +76,8 @@ cc -std=c99 -Wall -Wextra -Werror \
   "$ROOT/source/core/community.c" \
   "$ROOT/source/core/game.c" \
   "$ROOT/tests/test_community.c" \
-  -o "$OUT/test_community" "$ROOT/data/community_game_files.tsv"
-"$OUT/test_community"
+  -o "$OUT/test_community"
+"$OUT/test_community" "$ROOT/data/community_game_files.tsv"
 
 python3 "$ROOT/tests/test_community_index_builder.py"
 
