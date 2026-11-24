@@ -33,6 +33,21 @@ def _number(fields: dict[str, str], key: str, base: int = 10) -> int:
     return int(value, base)
 
 
+
+def _mapped_buttons(digital1: int, digital2: int) -> int:
+    """Mirror the portable C decoder's exact DualShock digital-button mapping."""
+    mapping = (
+        (digital1, ((7, 2), (6, 1), (5, 3), (4, 0), (3, 4), (2, 7), (1, 6), (0, 5))),
+        (digital2, ((7, 8), (6, 9), (5, 10), (4, 11), (3, 12), (2, 13), (1, 14), (0, 15))),
+    )
+    buttons = 0
+    for raw, pairs in mapping:
+        for raw_bit, mapped_bit in pairs:
+            if raw & (1 << raw_bit):
+                buttons |= 1 << mapped_bit
+    return buttons
+
+
 def parse_log(path: Path) -> dict:
     path = Path(path)
     data = {
@@ -161,6 +176,71 @@ def parse_log(path: Path) -> dict:
                     "error": str(exc),
                 })
                 continue
+
+            bounded_fields = {
+                "connected": (0, 1),
+                "read_error": (0, 1),
+                "digital1": (0, 0xFFFF),
+                "digital2": (0, 0xFFFF),
+                "buttons": (0, 0xFFFF),
+                "pressed": (0, 0xFFFF),
+                "released": (0, 0xFFFF),
+                "left_x": (0, 255),
+                "left_y": (0, 255),
+                "right_x": (0, 255),
+                "right_y": (0, 255),
+                "norm_left_x": (-127, 127),
+                "norm_left_y": (-127, 127),
+                "norm_right_x": (-127, 127),
+                "norm_right_y": (-127, 127),
+                "l2_pressure": (0, 255),
+                "r2_pressure": (0, 255),
+            }
+            invalid = [
+                key for key, (minimum, maximum) in bounded_fields.items()
+                if not minimum <= port_data[key] <= maximum
+            ]
+            if invalid:
+                data["port_line_errors"].append({
+                    "line": line_number, "sample": sample_index, "port": port,
+                    "error": "out-of-range fields: " + ", ".join(invalid),
+                })
+                continue
+            if port_data["connected"] and port_data["read_error"]:
+                data["port_line_errors"].append({
+                    "line": line_number, "sample": sample_index, "port": port,
+                    "error": "port cannot be connected and in read-error state simultaneously",
+                })
+                continue
+            if port_data["pressed"] & port_data["released"]:
+                data["port_line_errors"].append({
+                    "line": line_number, "sample": sample_index, "port": port,
+                    "error": "pressed and released masks overlap",
+                })
+                continue
+            if port_data["connected"]:
+                expected_buttons = _mapped_buttons(
+                    port_data["digital1"], port_data["digital2"]
+                )
+                if port_data["buttons"] != expected_buttons:
+                    data["port_line_errors"].append({
+                        "line": line_number, "sample": sample_index, "port": port,
+                        "error": (
+                            "mapped buttons mask does not match raw digital1/digital2 "
+                            f"(expected 0x{expected_buttons:04x})"
+                        ),
+                    })
+                    continue
+            elif any(port_data[key] for key in (
+                "digital1", "digital2", "buttons", "left_x", "left_y",
+                "right_x", "right_y", "l2_pressure", "r2_pressure",
+            )):
+                data["port_line_errors"].append({
+                    "line": line_number, "sample": sample_index, "port": port,
+                    "error": "disconnected or unreadable port contains raw input data",
+                })
+                continue
+
             if str(port) in data["samples"][sample_index]["ports"]:
                 data["port_line_errors"].append({
                     "line": line_number, "sample": sample_index, "port": port,
@@ -184,7 +264,9 @@ def parse_log(path: Path) -> dict:
         if details["read_error"] != 0
     ]
     consistency_errors = []
-    for index, sample in data["samples"].items():
+    previous_buttons = {"0": 0, "1": 0}
+    for index in sorted(data["samples"]):
+        sample = data["samples"][index]
         expected_mask = 0
         observed_error_mask = 0
         for port in (0, 1):
@@ -207,14 +289,33 @@ def parse_log(path: Path) -> dict:
             consistency_errors.append({
                 "sample": index, "error": "connected_count does not match ports 0/1"
             })
-        if sample["valid_mask"] != (0x03 & ~observed_error_mask):
-            consistency_errors.append({
-                "sample": index, "error": "valid_mask does not match per-port read status"
-            })
-        if sample["frame_connected_mask"] != expected_mask:
-            consistency_errors.append({
-                "sample": index, "error": "frame_connected_mask does not match current ports"
-            })
+        if sample["result"] == "OK":
+            if sample["valid_mask"] != (0x03 & ~observed_error_mask):
+                consistency_errors.append({
+                    "sample": index, "error": "valid_mask does not match per-port read status"
+                })
+            if observed_error_mask == 0 and sample["frame_connected_mask"] != expected_mask:
+                consistency_errors.append({
+                    "sample": index, "error": "frame_connected_mask does not match current ports"
+                })
+            for port in (0, 1):
+                details = sample["ports"].get(str(port))
+                if details is None or details["read_error"]:
+                    continue
+                current = details["buttons"]
+                expected_pressed = current & ~previous_buttons[str(port)]
+                expected_released = previous_buttons[str(port)] & ~current
+                if details["pressed"] != expected_pressed:
+                    consistency_errors.append({
+                        "sample": index, "port": port,
+                        "error": "pressed mask does not match the previous successful sample",
+                    })
+                if details["released"] != expected_released:
+                    consistency_errors.append({
+                        "sample": index, "port": port,
+                        "error": "released mask does not match the previous successful sample",
+                    })
+                previous_buttons[str(port)] = current
     data["sample_indices"] = indices
     data["missing_samples"] = missing_samples
     data["out_of_range_samples"] = out_of_range
@@ -224,8 +325,14 @@ def parse_log(path: Path) -> dict:
 
     simultaneous_samples = []
     port_activity = {"0": False, "1": False}
+    axis_activity = {"0": False, "1": False}
+    trigger_activity = {"0": False, "1": False}
     independent_samples = []
-    for index, sample in data["samples"].items():
+    independent_button_evidence = []
+    independent_axis_samples = []
+    independent_trigger_samples = []
+    for index in sorted(data["samples"]):
+        sample = data["samples"][index]
         port0 = sample["ports"].get("0")
         port1 = sample["ports"].get("1")
         if not port0 or not port1:
@@ -244,13 +351,53 @@ def parse_log(path: Path) -> dict:
                 port_activity["0"] = True
             if port1["buttons"] != 0:
                 port_activity["1"] = True
-            if port0["buttons"] != 0 and port1["buttons"] != 0 and port0["buttons"] != port1["buttons"]:
+            exclusive0 = port0["buttons"] & ~port1["buttons"]
+            exclusive1 = port1["buttons"] & ~port0["buttons"]
+            if exclusive0 and exclusive1:
                 independent_samples.append(index)
+                independent_button_evidence.append({
+                    "sample": index,
+                    "port0_only_buttons": f"0x{exclusive0:04x}",
+                    "port1_only_buttons": f"0x{exclusive1:04x}",
+                })
+
+            axes0 = (
+                port0["norm_left_x"], port0["norm_left_y"],
+                port0["norm_right_x"], port0["norm_right_y"],
+            )
+            axes1 = (
+                port1["norm_left_x"], port1["norm_left_y"],
+                port1["norm_right_x"], port1["norm_right_y"],
+            )
+            active0 = any(abs(value) > 0 for value in axes0)
+            active1 = any(abs(value) > 0 for value in axes1)
+            if active0:
+                axis_activity["0"] = True
+            if active1:
+                axis_activity["1"] = True
+            if active0 and active1 and axes0 != axes1:
+                independent_axis_samples.append(index)
+
+            triggers0 = (port0["l2_pressure"], port0["r2_pressure"])
+            triggers1 = (port1["l2_pressure"], port1["r2_pressure"])
+            trigger0 = any(value > 0 for value in triggers0)
+            trigger1 = any(value > 0 for value in triggers1)
+            if trigger0:
+                trigger_activity["0"] = True
+            if trigger1:
+                trigger_activity["1"] = True
+            if trigger0 and trigger1 and triggers0 != triggers1:
+                independent_trigger_samples.append(index)
 
     data["simultaneous_samples"] = simultaneous_samples
     data["both_ports_simultaneously_connected"] = bool(simultaneous_samples)
     data["port_button_activity"] = port_activity
+    data["port_axis_activity"] = axis_activity
+    data["port_trigger_activity"] = trigger_activity
     data["independent_button_samples"] = independent_samples
+    data["independent_button_evidence"] = independent_button_evidence
+    data["independent_axis_samples"] = independent_axis_samples
+    data["independent_trigger_samples"] = independent_trigger_samples
     data["independent_input_observed"] = bool(independent_samples)
     data["capture_complete"] = (
         data["probe_version"] == EXPECTED_VERSION
