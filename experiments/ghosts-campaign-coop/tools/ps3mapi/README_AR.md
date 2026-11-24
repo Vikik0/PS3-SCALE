@@ -113,3 +113,25 @@ getmem.ps3mapi?proc=<id>&addr=<start>&len=<length>&dump=<size>.
 ملف `DUMP_DONE` هو علامة انتهاء للسكربت فقط، وليس إثباتاً على صحة المحتوى أو حجمه. يجب تمرير الملفات على `verify_tu116_dump.py`؛ فهو يتحقق من حجم 64 KiB padded، ومطابقة PT_LOAD، ومحتوى المقطع التنفيذي قبل إعادة البناء.
 
 لإعادة الالتقاط بعد نجاح سابق، احذف ملف `GHOSTS_TU116_<MODE>_DUMP_DONE` من `/dev_hdd0` أولاً، ثم أعد تشغيل السكربت داخل الوضع الصحيح. لا تحذف ملفات المقاطع إلا إذا كنت تنوي إعادة التقاطها.
+
+
+## 5) التحقق من metadata وربطها بملفات الالتقاط
+
+أنشئ نسختين من `CAPTURE_METADATA_TEMPLATE.txt`، واحدة باسم `campaign_capture_metadata.txt` والأخرى `multiplayer_capture_metadata.txt`. املأ كل الحقول، مع الالتزام بالتالي:
+
+- `operator_selected_mode`: اكتب `CAMPAIGN` أو `MULTIPLAYER` حسب الوضع الذي كنت داخله فعلياً.
+- `capture_date_local`: الصيغة `YYYY-MM-DD HH:MM:SS) بنظام 24 ساعة.
+- `ps3mapi_current_pid`: رقم PID موجب كما ظهر من `PROCESS GETCURRENTPID`.
+- `ps3mapi_process_name_verbatim`: اسم العملية كما أعاده `PROCESS GETNAME` دون تخمين.
+- أسماء ملفات SEG وسجل Pad Probe يجب أن تطابق الأسماء القياسية الموجودة في الحزمة.
+
+يمكن فحص كل ملف metadata منفرداً:
+
+~~~powershell
+python tools/ps3mapi/verify_capture_metadata.py --mode campaign --metadata "D:\Ghosts\captures\campaign_capture_metadata.txt" --dumps "D:\Ghosts\captures\campaign_dumps" --pad-log "D:\Ghosts\captures\ghosts_campaign_pad_probe.log"
+python tools/ps3mapi/verify_capture_metadata.py --mode multiplayer --metadata "D:\Ghosts\captures\multiplayer_capture_metadata.txt" --dumps "D:\Ghosts\captures\multiplayer_dumps" --pad-log "D:\Ghosts\captures\ghosts_multiplayer_pad_probe.log"
+~~~
+
+ثم مرّر الملفين إلى المحلل الموحد باستخدام `--campaign-metadata` و`--multiplayer-metadata` إلى جانب مدخلات Campaign وMultiplayer المعتادة. يرفض المحلل تقديم ملف metadata واحد فقط، أو metadata بوضع/عنوان لعبة/تحديث خاطئ، أو أسماء SEG لا تطابق الملفات الموجودة، أو اسم سجل لا يطابق السجل المقدم. يضيف SHA-256 لكل ملف metadata إلى `capture_summary.json`.
+
+الـPID واسم العملية بيانات سجلّها المشغّل؛ الأداة لا تتصل بالجهاز ولا تستطيع إثبات أن PID كان تابعاً للوضع المختار. لا يُشترط اختلاف PID أو اسم العملية بين Campaign وMultiplayer، ولا يستخدم اسم العملية لاكتشاف الوضع تلقائياً. يبقى تحقق SELF/PT_LOAD وحجم كل dump إلزامياً في `analyze_tu116_runtime_capture.py`.
