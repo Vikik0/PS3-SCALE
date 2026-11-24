@@ -43,7 +43,7 @@
 - [x] PS2 Classics/PS2 ISO metadata enrichment: retain Title ID / disc serial and infer a conservative region label; unknown IDs remain UNKNOWN.
 - [x] Match known ps2_netemu CONFIG files by exact normalized Title ID or disc serial; IDs are region-specific and no cross-region fallback is used.
 - [x] Byte-for-byte verified backup, atomic restore and guarded replacement with retained rollback copy (host-tested).
-- [x] Reject symlinked CONFIG/backup/temp/rollback paths; use exclusive temp creation and atomic replacement without deleting the current file first (host-tested).
+- [x] Reject symlinked CONFIG/backup/temp/rollback paths in host tests; use exclusive temp creation and atomic replacement on PS3 without writing through symlink destinations or deleting the current file first.
 - [x] No automatic CONFIG writes; all file changes require an explicit action in PS2 CONFIG Manager.
 - [ ] Physical validation of backup, restore and one matched CONFIG on the target PS3 Slim.
 
