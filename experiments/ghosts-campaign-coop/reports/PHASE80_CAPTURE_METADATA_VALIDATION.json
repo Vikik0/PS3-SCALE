@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "phase": 80,
+  "status": "PASS_CAPTURE_METADATA_INTAKE",
+  "target": {
+    "title_id": "BLUS31270",
+    "app_ver": "01.16",
+    "platform": "PS3 CEX"
+  },
+  "changes": [
+    "strict key/value parser with duplicate, unknown, missing, and malformed-field rejection",
+    "validate title id, app version, manually selected mode, local timestamp, positive uint32 PID, and bounded process name",
+    "bind expected Campaign/Multiplayer SEG and Pad Probe basenames to the corresponding input files",
+    "hash metadata and segment files; explicitly mark whether the Pad Probe log itself was supplied and verified",
+    "integrate paired --campaign-metadata and --multiplayer-metadata options into runtime analyzer",
+    "add dedicated CI capture-metadata intake job"
+  ],
+  "validation": {
+    "metadata_validator_tests": "15/15 PASS",
+    "runtime_analyzer_integration_tests": "19/19 PASS",
+    "full_project_unittest_suite": "435/435 PASS",
+    "github_actions_run_number": 1413,
+    "github_actions_run_url": "https://github.com/Vikik0/PS3-SCALE/actions/runs/45497725014",
+    "github_actions_jobs": "6/6 SUCCESS",
+    "validated_commit": "eb5ec9713d821286bd7e2ff84166cfdfa6c22774"
+  },
+  "limitations": [
+    "PID and process name are operator-recorded diagnostics; they do not prove the process was in the selected mode.",
+    "PROCESS GETNAME is not treated as automatic mode detection.",
+    "No live PS3 Campaign/Multiplayer memory dumps or Pad Probe logs were available.",
+    "No runtime PPU/Ghidra analysis or playable Campaign Player 2 is claimed."
+  ]
+}
