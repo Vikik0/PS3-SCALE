@@ -135,3 +135,23 @@ python tools/ps3mapi/verify_capture_metadata.py --mode multiplayer --metadata "D
 ثم مرّر الملفين إلى المحلل الموحد باستخدام `--campaign-metadata` و`--multiplayer-metadata` إلى جانب مدخلات Campaign وMultiplayer المعتادة. يرفض المحلل تقديم ملف metadata واحد فقط، أو metadata بوضع/عنوان لعبة/تحديث خاطئ، أو أسماء SEG لا تطابق الملفات الموجودة، أو اسم سجل لا يطابق السجل المقدم. يضيف SHA-256 لكل ملف metadata إلى `capture_summary.json`.
 
 الـPID واسم العملية بيانات سجلّها المشغّل؛ الأداة لا تتصل بالجهاز ولا تستطيع إثبات أن PID كان تابعاً للوضع المختار. لا يُشترط اختلاف PID أو اسم العملية بين Campaign وMultiplayer، ولا يستخدم اسم العملية لاكتشاف الوضع تلقائياً. يبقى تحقق SELF/PT_LOAD وحجم كل dump إلزامياً في `analyze_tu116_runtime_capture.py`.
+
+
+## 6) ربط سجل DualShock Input Probe v1
+
+إذا شغّلت `pad_input_probe`، املأ الحقل الاختياري في metadata لكل وضع:
+
+- Campaign: `pad_input_probe_log_filename=ghosts_campaign_pad_input_probe.log`
+- Multiplayer: `pad_input_probe_log_filename=ghosts_multiplayer_pad_input_probe.log`
+
+إذا لم تشغّل Input Probe، اترك الحقل فارغاً. لا تضع اسم ملف غير موجود.
+
+للتحقق المنفرد أضف `--pad-input-log`:
+
+~~~powershell
+python tools/ps3mapi/verify_capture_metadata.py --mode campaign --metadata "D:\Ghosts\captures\campaign_capture_metadata.txt" --dumps "D:\Ghosts\captures\campaign_dumps" --pad-log "D:\Ghosts\captures\ghosts_campaign_pad_probe.log" --pad-input-log "D:\Ghosts\captures\ghosts_campaign_pad_input_probe.log"
+~~~
+
+ولتشغيل المحلل الموحد، مرّر الزوجين `--campaign-input-log` و`--multiplayer-input-log` بالإضافة إلى `--campaign-metadata` و`--multiplayer-metadata`. يرفض المحلل تمرير سجل Input Probe واحد فقط، ويربط اسم كل سجل بملف metadata المقابل، ويضيف SHA-256 للسجلين ونتيجة المقارنة إلى `capture_summary.json`.
+
+النتيجة `INDEPENDENT_PORT_INPUT_OBSERVED_IN_BOTH_MODES` تعني أن بيانات الأزرار مختلفة على المنفذين في العينة نفسها في Campaign وMultiplayer. هذا يثبت استقلال بيانات المنفذين فقط، ولا يثبت Local Client ثانياً أو Player Entity ثانية.
