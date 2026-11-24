@@ -70,13 +70,19 @@ int main(void)
         PS3SCALE_PS2_STORE_ALREADY_MATCHES);
     expect_file(rollback, "user-edited-config");
 
-    /* Replacement requires a matching original backup and preserves rollback. */
+    /* Replacement requires the exact original backup and leaves rollback intact. */
     write_file(download, "community-config-v2");
     assert(ps3scale_ps2_config_store_install_download(
         download, target, backup, 16384u, 1) ==
         PS3SCALE_PS2_STORE_OK);
     expect_file(target, "community-config-v2");
-    expect_file(rollback, "original-config");
+    expect_file(rollback, "user-edited-config");
+
+    write_file(download, "replacement-without-consent");
+    assert(ps3scale_ps2_config_store_install_download(
+        download, target, NULL, 16384u, 0) ==
+        PS3SCALE_PS2_STORE_ERR_EXISTS);
+    expect_file(target, "community-config-v2");
 
     /* The immutable original backup must not be overwritten on later changes. */
     write_file(download, "community-config-v3");
