@@ -33,3 +33,6 @@ The address checks compare the two players' engine-owned objects across categori
 ## Current status
 
 The gate and its host tests are implemented and compiled into the PRX build. The strengthened host contract now rejects missing/stale input frames, mismatched observation frames, shared command buffers, shared view contexts and shared HUD contexts. It is not yet called by the PRX because no Campaign frame hook or verified local-player observations exist. Passing tests prove only the validation logic, not that Ghosts currently supplies the required observations.
+
+
+Observation flags are treated as strict booleans: the adapter must provide exactly `0` or `1`, not arbitrary nonzero values. This prevents corrupted or uninitialized flag bytes from being accepted as valid engine evidence.
