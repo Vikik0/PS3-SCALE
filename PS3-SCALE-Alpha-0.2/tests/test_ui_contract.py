@@ -541,7 +541,8 @@ assert "i = page_start;" in online_ui
 assert "visible_count < page_size;" in online_ui
 assert "RESULTS %u  |  PAGE %u/%u" in online_ui
 assert "SEARCH RESULT: NO LOCAL GAME MATCH" in online_ui
-assert "MATCH: EXACT TITLE ID / APP VERSION" in online_ui
+assert "MATCH: EXACT ID / VERSION + HASH" in online_ui
+assert "MATCH: EXACT ID / VERSION; HASH MISSING" in online_ui
 assert "RESULTS 0  |  NO MATCHES" in online_ui
 assert 'kind = "VER OK";' in online_ui
 assert "MATCH: REVIEW TITLE ID / VERSION" in online_ui
