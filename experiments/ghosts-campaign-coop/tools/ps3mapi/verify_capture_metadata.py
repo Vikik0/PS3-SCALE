@@ -241,10 +241,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--metadata", type=Path, required=True)
     parser.add_argument("--dumps", type=Path, required=True)
     parser.add_argument("--pad-log", type=Path)
+    parser.add_argument("--pad-input-log", type=Path)
     args = parser.parse_args(argv)
     try:
         result = verify_capture_metadata(
-            args.metadata, args.mode, args.dumps, pad_log=args.pad_log
+            args.metadata, args.mode, args.dumps, pad_log=args.pad_log,
+            pad_input_log=args.pad_input_log,
         )
     except (OSError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
