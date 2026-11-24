@@ -191,9 +191,9 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 ### Phase 83 — DualShock input capture integrity
 
 - The input-log comparator now recomputes the mapped button mask from raw `digital1`/`digital2` using the exact portable decoder mapping. It rejects out-of-range fields, impossible connected/read-error combinations, and inconsistent button masks.
-- It replays per-port `pressed`/`released` edges against the previous successful sample; transient read failures do not advance the expected state.
-- Strong button independence now requires each controller to hold at least one distinct button in the same simultaneous sample. Stick-axis and L2/R2 activity/independence are reported separately as supporting evidence.
+- It replays per-port `pressed`/`released` edges against the previous successful sample; transient read failures do not advance the expected state. It also recomputes normalized stick axes from raw axis values using the v1 default deadzone (20), rejecting mismatches.
+- Strong button independence now requires each controller to hold at least one exclusive button in the same simultaneous sample; a merely different overlapping mask is not enough. Stick-axis and L2/R2 activity/independence are reported separately as supporting evidence.
 - The runtime analyzer now always writes `input_probe_comparison.json`, including an explicit `NOT_PROVIDED` state when logs are absent, and includes per-mode independent button/axis/trigger sample indices in `capture_summary.json`.
-- Initial CI run #1454 server-tests passed **465 tests**; protocol-header and GSC compile passed. Full workflow completion is checked separately after the documentation commits.
+- CI run [#1460](https://github.com/Vikik0/PS3-SCALE/actions/runs/45504502823): **6/6 jobs successful**, including **467 Python tests**, PS3 adapter/PRX builds and `prx-gen check`.
 - Report: `reports/PHASE83_REPORT_AR.md`; machine-readable summary: `reports/PHASE83_INPUT_VALIDATION.json`.
 - **Hardware gate unchanged:** no physical PS3 logs are claimed. Input telemetry does not prove a native second local client, player entity, camera/HUD, or playable Campaign co-op.
