@@ -88,7 +88,7 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
             f"segment1_filename=GHOSTS_TU116_{mode}_SEG1.bin",
             "notes=diagnostic only",
         ]
-        path.write_text("\\n".join(lines) + "\\n", encoding="utf-8")
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         return path
 
     def run_analyzer(self, **kwargs):
@@ -129,8 +129,8 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
     def test_metadata_pair_is_bound_to_the_exact_mode_files_and_hashes(self):
         campaign_log = self.root / "ghosts_campaign_pad_probe.log"
         multiplayer_log = self.root / "ghosts_multiplayer_pad_probe.log"
-        campaign_log.write_text("campaign probe\\n", encoding="utf-8")
-        multiplayer_log.write_text("multiplayer probe\\n", encoding="utf-8")
+        campaign_log.write_text("campaign probe\n", encoding="utf-8")
+        multiplayer_log.write_text("multiplayer probe\n", encoding="utf-8")
         campaign_meta = self.write_metadata("campaign_capture_metadata.txt", "CAMPAIGN")
         multiplayer_meta = self.write_metadata("multiplayer_capture_metadata.txt", "MULTIPLAYER")
 
