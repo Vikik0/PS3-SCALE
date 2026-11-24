@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "phase": 76,
+  "status": "PASS_STATIC_INPUTS",
+  "target": {
+    "title_id": "BLUS31270",
+    "app_ver": "01.16",
+    "ps3_system_ver": "04.4000",
+    "title": "Call of Duty® Ghosts"
+  },
+  "sfo": {
+    "file": "PARAM(2).SFO",
+    "size_bytes": 432,
+    "sha256": "bd329d97380933ce0fff988e7c196b74520a1ae83bd856943c39cb05d9a62025",
+    "version_field": "01.00",
+    "note": "VERSION is disc metadata; APP_VER is the update identifier."
+  },
+  "executables": {
+    "eboot": {
+      "file": "EBOOT(1).BIN",
+      "size_bytes": 41488,
+      "sha256": "af0dc21621d4c12c7f63899d1eef7c66405c3aa78c13daccfca58d02dc165aab",
+      "entry_point": "0x20080",
+      "encrypted_segments": 2
+    },
+    "campaign": {
+      "file": "default(1).self",
+      "size_bytes": 4291568,
+      "sha256": "ffa0f174740cc588b85a8fe0a730695c858413572841a01cbcc2b161a6d9006e",
+      "entry_point": "0x7E9508",
+      "encrypted_segments": 2,
+      "pt_load_segments": [
+        {"index": 0, "virtual_address": "0x10000", "file_size": 8135720, "memory_size": 8135720, "alignment": 65536},
+        {"index": 1, "virtual_address": "0x7E0000", "file_size": 119264, "memory_size": 31551768, "alignment": 65536}
+      ]
+    },
+    "multiplayer": {
+      "file": "default_mp(1).self",
+      "size_bytes": 6265632,
+      "sha256": "6dfa702761860435e22f2db7bc8bb848f2286223605415523680770ea03f6bfd",
+      "entry_point": "0xA75E38",
+      "encrypted_segments": 2,
+      "pt_load_segments": [
+        {"index": 0, "virtual_address": "0x10000", "file_size": 10783784, "memory_size": 10783784, "alignment": 65536},
+        {"index": 1, "virtual_address": "0xA60000", "file_size": 932304, "memory_size": 31434904, "alignment": 65536}
+      ]
+    }
+  },
+  "validation": {
+    "sfo_identity": "PASS",
+    "self_container_ranges": "PASS",
+    "sha256_manifest": "PASS",
+    "entry_points": "PASS",
+    "pt_load_memory_map": "PASS",
+    "synthetic_tool_tests": "5/5 PASS"
+  },
+  "runtime_capture": {
+    "campaign_seg0_seg1": "NOT_PROVIDED",
+    "multiplayer_seg0_seg1": "NOT_PROVIDED",
+    "campaign_pad_probe_log": "NOT_PROVIDED",
+    "multiplayer_pad_probe_log": "NOT_PROVIDED",
+    "ghidra_ppu_inventory": "NOT_RUN",
+    "campaign_player_two": "NOT_PROVEN"
+  },
+  "limitations": [
+    "Static SFO/SELF metadata only; encrypted segments were not decrypted.",
+    "No runtime memory dump or pad probe evidence was found in the Library.",
+    "No Campaign local client, hook, independent camera/HUD, or playable co-op build is claimed."
+  ]
+}
