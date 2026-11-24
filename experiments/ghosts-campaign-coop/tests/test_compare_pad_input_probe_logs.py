@@ -46,6 +46,7 @@ def write_log(root: Path, filename: str, mode: str, *, distinct=True, active=Tru
         previous["1"] = p1_buttons
         p0_axis = (50, 0, 0, 0) if axes and sample >= 4 else (0, 0, 0, 0)
         p1_axis = (0, -50, 0, 0) if axes and sample >= 4 else (0, 0, 0, 0)
+        p1_raw_axes = (128, 128, 128, 128) if connected else (0, 0, 0, 0)
         lines.append(
             f"  sample={sample} port=0 connected=1 read_error=0 "
             f"digital1=0x00000000 digital2=0x{p0_digital2:04x} buttons=0x{p0_buttons:08x} "
@@ -56,7 +57,7 @@ def write_log(root: Path, filename: str, mode: str, *, distinct=True, active=Tru
         lines.append(
             f"  sample={sample} port=1 connected={1 if connected else 0} read_error=0 "
             f"digital1=0x00000000 digital2=0x{p1_digital2:04x} buttons=0x{p1_buttons:08x} "
-            f"pressed=0x{p1_pressed:08x} released=0x{p1_released:08x} left_x=128 left_y=128 right_x=128 right_y=128 "
+            f"pressed=0x{p1_pressed:08x} released=0x{p1_released:08x} left_x={p1_raw_axes[0]} left_y={p1_raw_axes[1]} right_x={p1_raw_axes[2]} right_y={p1_raw_axes[3]} "
             f"norm_left_x={p1_axis[0]} norm_left_y={p1_axis[1]} norm_right_x={p1_axis[2]} norm_right_y={p1_axis[3]} "
             "l2_pressure=0 r2_pressure=0"
         )
