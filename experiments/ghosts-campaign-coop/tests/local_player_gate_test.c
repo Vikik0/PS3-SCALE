@@ -13,6 +13,7 @@ static void make_ready_pair(GhcLocalPlayerObservation players[2]) {
     players[0].controller_port = 0u;
     players[0].input_connected = 1u;
     players[0].input_frame_valid = 1u;
+    players[0].observation_frame_valid = 1u;
     players[0].client_id_valid = 1u;
     players[0].entity_id_valid = 1u;
     players[0].local_client_num_valid = 1u;
@@ -34,6 +35,7 @@ static void make_ready_pair(GhcLocalPlayerObservation players[2]) {
     players[1].controller_port = 1u;
     players[1].input_connected = 1u;
     players[1].input_frame_valid = 1u;
+    players[1].observation_frame_valid = 1u;
     players[1].client_id_valid = 1u;
     players[1].entity_id_valid = 1u;
     players[1].local_client_num_valid = 1u;
@@ -111,6 +113,15 @@ static void test_both_players_need_a_valid_fresh_input_frame(void) {
     assert(result.failing_slot == 1u);
 }
 
+static void test_both_observations_need_a_valid_engine_frame_id(void) {
+    GhcLocalPlayerObservation players[2];
+    GhcLocalPlayerGateResult result;
+    make_ready_pair(players);
+    players[1].observation_frame_valid = 0u;
+    assert(ghc_local_player_gate_validate(players, &result) == GHC_LOCAL_GATE_OBSERVATION_FRAME_MISSING);
+    assert(result.failing_slot == 1u);
+}
+
 static void test_both_observations_must_belong_to_the_same_engine_frame(void) {
     GhcLocalPlayerObservation players[2];
     GhcLocalPlayerGateResult result;
@@ -137,6 +148,10 @@ static void test_boolean_observation_flags_must_be_canonical(void) {
 
     make_ready_pair(players);
     players[1].input_frame_valid = 2u;
+    assert(ghc_local_player_gate_validate(players, &result) == GHC_LOCAL_GATE_INVALID_BOOLEAN_FLAG);
+
+    make_ready_pair(players);
+    players[1].observation_frame_valid = 2u;
     assert(ghc_local_player_gate_validate(players, &result) == GHC_LOCAL_GATE_INVALID_BOOLEAN_FLAG);
 
     make_ready_pair(players);
@@ -269,6 +284,7 @@ int main(void) {
     test_controller_ports_must_be_distinct_and_ordered();
     test_both_controller_inputs_must_be_connected();
     test_both_players_need_a_valid_fresh_input_frame();
+    test_both_observations_need_a_valid_engine_frame_id();
     test_both_observations_must_belong_to_the_same_engine_frame();
     test_boolean_observation_flags_must_be_canonical();
     test_story_identity_must_be_preserved();
