@@ -45,11 +45,11 @@ int ps3scale_ps2_config_store_restore(
     const char *rollback_path, size_t max_bytes);
 
 /* Install a validated downloaded file. Replacing an existing target requires
- * an original backup that still matches the current target; the current target
- * is also preserved in rollback_path before the atomic replacement. */
+ * an original backup that still matches the current target. The original
+ * backup remains immutable and is sufficient to restore the pre-replacement
+ * bytes if the new community config is not suitable. */
 int ps3scale_ps2_config_store_install_download(
     const char *download_path, const char *target_path,
-    const char *original_backup_path, const char *rollback_path,
-    size_t max_bytes, int allow_replace);
+    const char *original_backup_path, size_t max_bytes, int allow_replace);
 
 #endif
