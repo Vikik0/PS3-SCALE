@@ -98,7 +98,8 @@ int main(void)
         backup_path, sizeof(backup_path),
         rollback_path, sizeof(rollback_path),
         root, "../SLUS/209.09", target) == PS3SCALE_PS2_STORE_OK);
-    assert(strstr(backup_path, "___SLUS_209.09_") != NULL);
+    assert(strstr(backup_path, ".._SLUS_209.09_") != NULL);
+    assert(strchr(backup_path, '/') == strrchr(backup_path, '/'));
     assert(strstr(backup_path, ".original.bak") != NULL);
     assert(strstr(rollback_path, ".rollback.bak") != NULL);
 
