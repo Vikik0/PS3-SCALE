@@ -352,3 +352,21 @@ jobs:
         run: npm test
       - name: Bundle Worker without deploying
         run: npx wrangler deploy --dry-run --outdir "$RUNNER_TEMP/ghosts-worker-dist"
+
+  capture-metadata-intake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile strict capture metadata verifier
+        working-directory: experiments/ghosts-campaign-coop
+        run: python -m py_compile tools/ps3mapi/verify_capture_metadata.py tools/ps3mapi/analyze_tu116_runtime_capture.py
+      - name: Run capture metadata validator tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: python -m unittest discover -s tests -p "test_verify_capture_metadata.py" -v
+      - name: Run metadata-to-runtime-analyzer integration tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: python -m unittest discover -s tests -p "test_analyze_tu116_runtime_capture.py" -v
