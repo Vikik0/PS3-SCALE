@@ -165,3 +165,14 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - Same PID or same process name across the two captures is allowed. PROCESS GETNAME remains diagnostic metadata, not mode detection or proof that a PID belonged to the selected mode.
 - Added direct validator and analyzer integration tests. This remains host-side intake validation; no physical PS3 runtime capture or Campaign Player 2 is claimed.
 - Report: `reports/PHASE80_REPORT_AR.md`; summary: `reports/PHASE80_CAPTURE_METADATA_VALIDATION.json`.
+
+
+### Phase 81 — reject the bot/test-client path as local Player 2
+
+- Compared the public IW6 PS4 and Xbox One decompilations at lizardpeter/ghosts-decomp commit 513f0b6bdf0de32d16df3af914b26df01ee04ec9.
+- In both x64 references, CL_DoesControllerIndexHaveALocalClientNum maps the controller to LOCAL_CLIENT_0; the multiplayer PlayerCmd_IsSplitscreenPlayer implementation returns false.
+- SV_AddTestClient creates an NA_BOT connection through svs.botport and SV_DirectConnect, then marks the slot as a test client. GScr_AddTestClient and GScr_SpawnTestClient are wrappers for that bot/test-client path; they are not physical local-controller registration.
+- Rejected SV_AddTestClient/SV_SpawnTestClient as a local Player 2 implementation. Added a regression test that prevents the Campaign local-session bridge from calling spawnTestClient/addTestClient/addBot or their native names.
+- All listed addresses are x64 PS4/Xbox reference addresses, not PS3 PPU addresses. No PS4/Xbox offsets are copied into the PS3 PRX.
+- Report: reports/PHASE81_REPORT_AR.md; machine-readable summary: reports/PHASE81_CROSS_PLATFORM_REFERENCE_AUDIT.json.
+- **PS3-specific proof remains blocked** on Campaign/Multiplayer SEG0/SEG1 runtime captures and Pad Probe logs.
