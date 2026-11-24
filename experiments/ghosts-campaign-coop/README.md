@@ -173,6 +173,6 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - In those server binaries, SV_AddTestClient creates an NA_BOT connection through svs.botport and SV_DirectConnect, then marks the slot as a test client. GScr_AddTestClient and GScr_SpawnTestClient are wrappers for that bot/test-client path; they are not physical local-controller registration.
 - CL_DoesControllerIndexHaveALocalClientNum and PlayerCmd_IsSplitscreenPlayer observations from these server binaries are not transferable to retail PS3/PS4/Xbox client split-screen behavior.
 - Rejected SV_AddTestClient/SV_SpawnTestClient as a local Player 2 implementation. Added a regression test that prevents the Campaign local-session bridge from calling spawnTestClient/addTestClient/addBot or their native names.
-- All listed addresses are x64 PS4/Xbox reference addresses, not PS3 PPU addresses. No PS4/Xbox offsets are copied into the PS3 PRX.
+- All listed addresses are Windows x64 dedicated-server reference addresses for PS4/Xbox-hosted server builds, not retail console-client addresses or PS3 PPU addresses. No such offsets are copied into the PS3 PRX.
 - Report: reports/PHASE81_REPORT_AR.md; machine-readable summary: reports/PHASE81_CROSS_PLATFORM_REFERENCE_AUDIT.json.
 - **PS3-specific proof remains blocked** on Campaign/Multiplayer SEG0/SEG1 runtime captures and Pad Probe logs.
