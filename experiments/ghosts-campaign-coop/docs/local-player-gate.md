@@ -39,3 +39,6 @@ Observation flags are treated as strict booleans: the adapter must provide exact
 
 
 The engine observation frame identifier must itself be marked valid before the pair can pass. Two default-zero or unavailable frame counters must not be treated as proof that the players were observed together.
+
+
+Each input frame must carry the same frame number as that player's validated engine observation frame. A connected pad or a boolean `input_frame_valid` alone is insufficient if the command data is stale.
