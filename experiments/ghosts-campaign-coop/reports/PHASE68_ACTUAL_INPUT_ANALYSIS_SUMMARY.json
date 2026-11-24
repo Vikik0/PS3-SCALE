@@ -1,0 +1,339 @@
+{
+  "schema_version": 1,
+  "phase": 68,
+  "status": "ACTUAL_UPLOADED_MISSION_INPUTS_ANALYZED",
+  "input_basis": {
+    "fastfiles": [
+      {
+        "role": "black_ice",
+        "file": "black_ice.ff",
+        "size_bytes": 91355961,
+        "sha256": "950726399e16f55fd565438936ec59231649940c89763a87c805409536837532",
+        "magic": "IWff0100",
+        "version": "0x0000022E",
+        "extraction_status": "VALIDATED_PARTIAL",
+        "stop_reason": "invalid_or_non_deflate_trailing_data",
+        "extraction_report_hash_matches": true
+      },
+      {
+        "role": "carrier",
+        "file": "carrier.ff",
+        "size_bytes": 87088544,
+        "sha256": "e3a616545f18a7dcae006b4e32264c56b01d627650ea574f3fe710e02543caee",
+        "magic": "IWff0100",
+        "version": "0x0000022E",
+        "extraction_status": "VALIDATED_PARTIAL",
+        "stop_reason": "invalid_or_non_deflate_trailing_data",
+        "extraction_report_hash_matches": true
+      },
+      {
+        "role": "cornered",
+        "file": "cornered.ff",
+        "size_bytes": 93933243,
+        "sha256": "1bcb1da55d7e5a893de2a513e6df9b5cd3786e4d642dc76e090ea551cdf39395",
+        "magic": "IWff0100",
+        "version": "0x0000022E",
+        "extraction_status": "VALIDATED_PARTIAL",
+        "stop_reason": "zero_terminator",
+        "extraction_report_hash_matches": true
+      }
+    ],
+    "gsc_archive": "Ghosts_Campaign_Missions_Phase31.zip",
+    "gsc_source_tree_sha256": {
+      "black_ice": "992be06e1ad148c151b239dd38f224aa2dd9b24a2905d70ea167a564f2c81b6f",
+      "carrier": "5017f2f99755a2e179577755ce2a9335c5a98a6f019cf86c493e26a378b4dfa6",
+      "cornered": "36515b7f957d37f28c309b9aec992ead8c53088a25624de681984fcc857e11e4"
+    }
+  },
+  "summary": {
+    "mission_count": 3,
+    "fastfiles_verified": 3,
+    "gsc_source_files": 249,
+    "gsc_function_definitions": 4304,
+    "player_container_functions": 13,
+    "playerpiggyback_references": 19,
+    "level_players_references": 0,
+    "playengineeffects_references": 4,
+    "incoming_call_sites": 14,
+    "function_pointer_references_to_targets": 0,
+    "directly_reachable_targets": 1,
+    "callback_inclusive_reachable_targets": 8,
+    "targets_unreachable_from_static_roots": 5,
+    "exact_target_definitions_missing_or_duplicated": 0
+  },
+  "mission_counts": [
+    {
+      "mission": "black_ice",
+      "source_files": 76,
+      "function_definitions": 1217,
+      "player_container_functions": 0,
+      "playerpiggyback_refs": 0,
+      "playengineeffects_refs": 0
+    },
+    {
+      "mission": "carrier",
+      "source_files": 118,
+      "function_definitions": 1537,
+      "player_container_functions": 4,
+      "playerpiggyback_refs": 9,
+      "playengineeffects_refs": 4
+    },
+    {
+      "mission": "cornered",
+      "source_files": 55,
+      "function_definitions": 1550,
+      "player_container_functions": 9,
+      "playerpiggyback_refs": 10,
+      "playengineeffects_refs": 0
+    }
+  ],
+  "targets": [
+    {
+      "mission": "carrier",
+      "file": "1031.gsc",
+      "function": "monitorscavengerpickup",
+      "calls": 0,
+      "ptr": 0,
+      "direct": false,
+      "callbacks": false,
+      "call_sites": []
+    },
+    {
+      "mission": "carrier",
+      "file": "987.gsc",
+      "function": "getenemytarget",
+      "calls": 1,
+      "ptr": 0,
+      "direct": false,
+      "callbacks": false,
+      "call_sites": [
+        {
+          "caller_file": "987.gsc",
+          "caller": "chopper_turret_on",
+          "line": 24,
+          "kind": "direct_call",
+          "resolution": "same_file_symbol"
+        }
+      ]
+    },
+    {
+      "mission": "carrier",
+      "file": "animscripts/dog/dog_combat.gsc",
+      "function": "playerview_playmissanim",
+      "calls": 1,
+      "ptr": 0,
+      "direct": false,
+      "callbacks": true,
+      "call_sites": [
+        {
+          "caller_file": "animscripts/dog/dog_combat.gsc",
+          "caller": "playerview_spawn",
+          "line": 1484,
+          "kind": "direct_call",
+          "resolution": "same_file_symbol"
+        }
+      ]
+    },
+    {
+      "mission": "carrier",
+      "file": "maps/ss_util.gsc",
+      "function": "get_different_favoriteenemy",
+      "calls": 2,
+      "ptr": 0,
+      "direct": false,
+      "callbacks": false,
+      "call_sites": [
+        {
+          "caller_file": "maps/ss_util.gsc",
+          "caller": "dog_monitor_goal_ent",
+          "line": 277,
+          "kind": "direct_call",
+          "resolution": "same_file_symbol"
+        },
+        {
+          "caller_file": "maps/ss_util.gsc",
+          "caller": "dog_swap_enemy",
+          "line": 329,
+          "kind": "direct_call",
+          "resolution": "same_file_symbol"
+        }
+      ]
+    },
+    {
+      "mission": "cornered",
+      "file": "1045.gsc",
+      "function": "enemy_corpse_alert_level",
+      "calls": 1,
+      "ptr": 0,
+      "direct": false,
+      "callbacks": true,
+      "call_sites": [
+        {
+          "caller_file": "1045.gsc",
+          "caller": "enemy_corpse_found_loop",
+          "line": 346,
+          "kind": "direct_call",
+          "resolution": "same_file_symbol"
+        }
+      ]
+    },
+    {
+      "mission": "cornered",
+      "file": "1050.gsc",
+      "function": "enemy_threat_logic_dog_wait",
+      "calls": 1,
+      "ptr": 0,
+      "direct": false,
+      "callbacks": true,
+      "call_sites": [
+        {
+          "caller_file": "1050.gsc",
+          "caller": "enemy_threat_logic_dog",
+          "line": 59,
+          "kind": "direct_call",
+          "resolution": "same_file_symbol"
+        }
+      ]
+    },
+    {
+      "mission": "cornered",
+      "file": "1051.gsc",
+      "function": "enable_stealth_system",
+      "calls": 0,
+      "ptr": 0,
+      "direct": false,
+      "callbacks": false,
+      "call_sites": []
+    },
+    {
+      "mission": "cornered",
+      "file": "1051.gsc",
+      "function": "disable_stealth_system",
+      "calls": 3,
+      "ptr": 0,
+      "direct": false,
+      "callbacks": true,
+      "call_sites": [
+        {
+          "caller_file": "maps/cornered_interior.gsc",
+          "caller": "courtyard_office_stealth_end",
+          "line": 697,
+          "kind": "namespaced_call",
+          "resolution": "unique_symbol_fallback_namespace_unmapped"
+        },
+        {
+          "caller_file": "maps/cornered_interior.gsc",
+          "caller": "bar_enemies",
+          "line": 1481,
+          "kind": "namespaced_call",
+          "resolution": "unique_symbol_fallback_namespace_unmapped"
+        },
+        {
+          "caller_file": "maps/cornered_interior.gsc",
+          "caller": "junction_fireworks",
+          "line": 2036,
+          "kind": "namespaced_call",
+          "resolution": "unique_symbol_fallback_namespace_unmapped"
+        }
+      ]
+    },
+    {
+      "mission": "cornered",
+      "file": "1052.gsc",
+      "function": "event_awareness_waitclear_ai_proc",
+      "calls": 1,
+      "ptr": 0,
+      "direct": false,
+      "callbacks": true,
+      "call_sites": [
+        {
+          "caller_file": "1052.gsc",
+          "caller": "enemy_event_awareness",
+          "line": 258,
+          "kind": "direct_call",
+          "resolution": "same_file_symbol"
+        }
+      ]
+    },
+    {
+      "mission": "cornered",
+      "file": "1054.gsc",
+      "function": "system_message_loop",
+      "calls": 1,
+      "ptr": 0,
+      "direct": true,
+      "callbacks": true,
+      "call_sites": [
+        {
+          "caller_file": "1054.gsc",
+          "caller": "system_handle_clipbrush",
+          "line": 248,
+          "kind": "direct_call",
+          "resolution": "same_file_symbol"
+        }
+      ]
+    },
+    {
+      "mission": "cornered",
+      "file": "987.gsc",
+      "function": "getenemytarget",
+      "calls": 1,
+      "ptr": 0,
+      "direct": false,
+      "callbacks": false,
+      "call_sites": [
+        {
+          "caller_file": "987.gsc",
+          "caller": "chopper_turret_on",
+          "line": 24,
+          "kind": "direct_call",
+          "resolution": "same_file_symbol"
+        }
+      ]
+    },
+    {
+      "mission": "cornered",
+      "file": "maps/cornered_interior.gsc",
+      "function": "courtyard_rorke",
+      "calls": 1,
+      "ptr": 0,
+      "direct": false,
+      "callbacks": true,
+      "call_sites": [
+        {
+          "caller_file": "maps/cornered_interior.gsc",
+          "caller": "courtyard_intro_handler",
+          "line": 255,
+          "kind": "thread_call",
+          "resolution": "same_file_symbol"
+        }
+      ]
+    },
+    {
+      "mission": "cornered",
+      "file": "maps/cornered_interior.gsc",
+      "function": "bar_enemies",
+      "calls": 1,
+      "ptr": 0,
+      "direct": false,
+      "callbacks": true,
+      "call_sites": [
+        {
+          "caller_file": "maps/cornered_interior.gsc",
+          "caller": "bar_prep",
+          "line": 1036,
+          "kind": "thread_call",
+          "resolution": "same_file_symbol"
+        }
+      ]
+    }
+  ],
+  "interpretation": [
+    "Carrier contains an explicit playerpiggyback.size == 2 branch assigning cg_playerFovScale0 and cg_playerFovScale1 by array index.",
+    "Carrier get_different_favoriteenemy selects between playerpiggyback entries using comparison with level.playengineeffects.",
+    "Carrier playerview_playmissanim uses level.playengineeffects and level.player as hideonclient selectors in the player-drone animation path.",
+    "These are strong per-client/split-screen clues, but do not prove the array contains two native local players or that Campaign initializes Player 2.",
+    "Five target functions are not reachable from the current static script roots; engine callbacks, missing shared scripts or extraction gaps may explain the absence."
+  ],
+  "validation_boundary": "Actual user-uploaded FastFiles and Phase 31 extracted GSC source files were hashed and cross-checked against the extraction reports. The FastFile extraction status remains VALIDATED_PARTIAL. The callgraph was run over the uploaded Phase 31 decompiled GSC tree with exact file/function filtering; no native PPU ELF or PS3MAPI runtime segment capture was present in the uploaded files. No playable co-op claim is made."
+}
