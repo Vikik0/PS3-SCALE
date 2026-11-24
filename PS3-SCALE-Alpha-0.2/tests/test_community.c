@@ -18,7 +18,7 @@ static int write_index(const char *path, const char *contents)
     return fclose(file) == 0 ? 0 : -1;
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
     static const char valid[] =
         "# PS3 SCALE community index test\n"
@@ -186,6 +186,23 @@ int main(void)
 
     ps3scale_community_index_free(&index);
     unlink(path);
+
+    if (argc > 1) {
+        ps3scale_community_index_t refreshed;
+        size_t i;
+        int loaded;
+        memset(&refreshed, 0, sizeof(refreshed));
+        loaded = ps3scale_community_index_load(argv[1], &refreshed);
+        if (loaded <= 0)
+            return 36;
+        for (i = 0; i < refreshed.count; i++) {
+            if (strlen(refreshed.items[i].git_blob_sha1) != 40) {
+                ps3scale_community_index_free(&refreshed);
+                return 37;
+            }
+        }
+        ps3scale_community_index_free(&refreshed);
+    }
     puts("PS3 SCALE community index tests: PASS");
     return 0;
 }
