@@ -40,8 +40,8 @@
 - [x] Restricted in-memory PS2 netemu CONFIG builder for commands 0x44/0x46, with host tests.
 - [x] Triangle-triggered PS2 ISO CONFIG preview (preview only; no writes).
 - [x] Scan and launch webMAN-supported PS2 ISO `.ISO` / `.BIN` / `.IMG` / `.MDF` formats; keep `.BIN.ENC` classified as PS2 Classics.
-- [ ] PS2 Classics/PS2 ISO metadata enrichment.
-- [ ] Match known ps2_netemu CONFIG files by title ID and region.
+- [x] PS2 Classics/PS2 ISO metadata enrichment: retain Title ID / disc serial and infer a conservative region label; unknown IDs remain UNKNOWN.
+- [x] Match known ps2_netemu CONFIG files by exact normalized Title ID or disc serial; IDs are region-specific and no cross-region fallback is used.
 - [x] Byte-for-byte verified backup, atomic restore and guarded replacement with retained rollback copy (host-tested).
 - [x] No automatic CONFIG writes; all file changes require an explicit action in PS2 CONFIG Manager.
 - [ ] Physical validation of backup, restore and one matched CONFIG on the target PS3 Slim.
