@@ -73,7 +73,7 @@ int main(void)
     /* Replacement requires a matching original backup and preserves rollback. */
     write_file(download, "community-config-v2");
     assert(ps3scale_ps2_config_store_install_download(
-        download, target, backup, rollback, 16384u, 1) ==
+        download, target, backup, 16384u, 1) ==
         PS3SCALE_PS2_STORE_OK);
     expect_file(target, "community-config-v2");
     expect_file(rollback, "original-config");
@@ -81,8 +81,8 @@ int main(void)
     /* The immutable original backup must not be overwritten on later changes. */
     write_file(download, "community-config-v3");
     assert(ps3scale_ps2_config_store_install_download(
-        download, target, backup, rollback, 16384u, 1) ==
-        PS3SCALE_PS2_STORE_ERR_CONFLICT);
+        download, target, backup, 16384u, 1) ==
+        PS3SCALE_PS2_STORE_ERR_BACKUP_REQUIRED);
     expect_file(target, "community-config-v2");
     expect_file(backup, "original-config");
 
@@ -90,7 +90,7 @@ int main(void)
     assert(unlink(target) == 0);
     write_file(download, "first-install");
     assert(ps3scale_ps2_config_store_install_download(
-        download, target, NULL, NULL, 16384u, 0) ==
+        download, target, NULL, 16384u, 0) ==
         PS3SCALE_PS2_STORE_OK);
     expect_file(target, "first-install");
 
@@ -99,7 +99,11 @@ int main(void)
         rollback_path, sizeof(rollback_path),
         root, "../SLUS/209.09", target) == PS3SCALE_PS2_STORE_OK);
     assert(strstr(backup_path, ".._SLUS_209.09_") != NULL);
-    assert(strchr(backup_path, '/') == strrchr(backup_path, '/'));
+    {
+        const char *base = strrchr(backup_path, '/');
+        assert(base != NULL);
+        assert(strchr(base + 1, '/') == NULL);
+    }
     assert(strstr(backup_path, ".original.bak") != NULL);
     assert(strstr(rollback_path, ".rollback.bak") != NULL);
 
