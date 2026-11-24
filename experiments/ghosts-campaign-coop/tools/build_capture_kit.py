@@ -217,6 +217,10 @@ Run from the extracted package root:
 
 Do not copy files to the console unless the validator prints PASS.
 
+The event-lock plan can also be checked explicitly:
+
+    python Tools/verify_mission_event_lock_map.py --map Reports/PHASE88_MISSION_EVENT_LOCK_MAP.json --gsc Experimental_GSC_Not_Installed/ghc_campaign_local_session.gsc
+
 ## Contents
 
 - PS3 CEX bootstrap PRX build and the two read-only controller probes.
