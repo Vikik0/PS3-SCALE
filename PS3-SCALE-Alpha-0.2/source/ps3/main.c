@@ -4911,12 +4911,17 @@ static void draw_online_database(void)
                   "Original ISO / classic is not overwritten.");
     } else if (selected_community) {
         const char *dot = strrchr(selected_community->path, '.');
-        int exact_local_game =
+        int title_version_match =
             selected && game_is_ps3(selected) &&
             selected->title_id[0] && selected->app_ver[0] &&
             strncmp(selected->path, "/dev_hdd0/", 10) == 0 &&
+            ps3scale_community_file_matches_id_version(
+                selected_community, selected);
+        int exact_local_game =
+            title_version_match &&
             ps3scale_community_file_matches_exact_game(
                 selected_community, selected);
+        int hash_ready = strlen(selected_community->git_blob_sha1) == 40;
         int can_download =
             exact_local_game && g_artemis_installed &&
             strcmp(selected_community->category, "GRAPHICS_FPS") == 0 &&
@@ -4944,42 +4949,46 @@ static void draw_online_database(void)
         draw_text(414.0f, 313.0f, 0x514b69ff, line);
         snprintf(line, sizeof(line), "FILE: %.44s", selected_community->path);
         draw_text(414.0f, 335.0f, 0x514b69ff, line);
-        if (selected &&
-            ps3scale_community_file_matches_exact_game(selected_community,
-                                                        selected)) {
-            draw_text(414.0f, 357.0f, 0x26794bff,
-                      "MATCH: EXACT TITLE ID / APP VERSION");
+        draw_text(414.0f, 357.0f, hash_ready ? 0x26794bff : 0xb27b35ff,
+                  hash_ready ? "GIT BLOB SHA-1: PRESENT" :
+                               "HASH MISSING - REFRESH INDEX");
+        if (exact_local_game) {
+            draw_text(414.0f, 376.0f, 0x26794bff,
+                      "MATCH: EXACT ID / VERSION + HASH");
+        } else if (title_version_match) {
+            draw_text(414.0f, 376.0f, 0xb27b35ff,
+                      "MATCH: EXACT ID / VERSION; HASH MISSING");
         } else if (selected) {
-            draw_text(414.0f, 357.0f, 0xb27b35ff,
+            draw_text(414.0f, 376.0f, 0xb27b35ff,
                       "MATCH: REVIEW TITLE ID / VERSION");
         } else {
-            draw_text(414.0f, 357.0f, 0xb27b35ff,
+            draw_text(414.0f, 376.0f, 0xb27b35ff,
                       "SEARCH RESULT: NO LOCAL GAME MATCH");
         }
         snprintf(line, sizeof(line), "SIZE: %u KB | %s",
                  (unsigned)((selected_community->file_size + 1023u) / 1024u),
                  can_download ? "NCL GRAPHICS PATCH" : "NOT INSTALLABLE");
-        draw_text(414.0f, 381.0f, 0x514b69ff, line);
+        draw_text(414.0f, 394.0f, 0x514b69ff, line);
         if (can_download) {
-            draw_text(414.0f, 393.0f, 0x875be8ff,
+            draw_text(414.0f, 406.0f, 0x875be8ff,
                       "CROSS: INSTALL TO ARTEMIS USERLIST");
         } else if (!selected) {
-            draw_text(414.0f, 393.0f, 0xb27b35ff,
+            draw_text(414.0f, 406.0f, 0xb27b35ff,
                       "CROSS: SCAN THE EXACT GAME FIRST");
         } else if (!g_artemis_installed) {
-            draw_text(414.0f, 393.0f, 0xb27b35ff,
+            draw_text(414.0f, 406.0f, 0xb27b35ff,
                       "INSTALL ARTEMIS PS3 FIRST");
         } else if (strcmp(selected_community->category, "GRAPHICS_FPS") != 0) {
-            draw_text(414.0f, 393.0f, 0xb27b35ff,
+            draw_text(414.0f, 406.0f, 0xb27b35ff,
                       "NOT A GRAPHICS / FPS PATCH");
         } else if (!exact_local_game) {
-            draw_text(414.0f, 393.0f, 0xb27b35ff,
-                      "EXACT TITLE ID + VERSION REQUIRED");
+            draw_text(414.0f, 406.0f, 0xb27b35ff,
+                      "EXACT ID + VERSION + HASH REQUIRED");
         } else {
-            draw_text(414.0f, 393.0f, 0xb27b35ff,
+            draw_text(414.0f, 406.0f, 0xb27b35ff,
                       "ONLY NCL PATCH FILES ARE SUPPORTED");
         }
-        draw_text(414.0f, 414.0f, 0xb27b35ff,
+        draw_text(414.0f, 421.0f, 0xb27b35ff,
                   g_enhancement_persistent ?
                   "MODE: PERMANENT | SELECT IT IN ARTEMIS" :
                   "MODE: TEMPORARY | CLEARED NEXT PS3 SCALE START");
