@@ -3200,7 +3200,14 @@ static const ps3scale_ps2_config_entry_t *ps2_config_for_game(
     }
 
     if (game->kind == PS3SCALE_GAME_PS2_CLASSIC) {
-        id = game->disc_id[0] ? game->disc_id : game->title_id;
+        if (game->title_id[0]) {
+            const ps3scale_ps2_config_entry_t *by_title_id =
+                ps3scale_ps2_config_db_find(
+                    &g_ps2_config_db, game->title_id, "ENC");
+            if (by_title_id)
+                return by_title_id;
+        }
+        id = game->disc_id;
         if (!id[0])
             return NULL;
         return ps3scale_ps2_config_db_find(&g_ps2_config_db, id, "ENC");
@@ -5425,6 +5432,8 @@ static void draw_ps2_config_manager(void){
  const char *ts=g_ps2_config_manager_target_state==1?"PRESENT":g_ps2_config_manager_target_state==0?"MISSING":"INVALID / TOO LARGE";
  const char *bs=g_ps2_config_manager_backup_state==1?"SAVED":g_ps2_config_manager_backup_state==0?"NOT SAVED":"INVALID";
  const char *rs=g_ps2_config_manager_rollback_state==1?"AVAILABLE":g_ps2_config_manager_rollback_state==0?"NONE":"INVALID";
+ const char *target_name=strrchr(g_ps2_config_manager_target,'/');
+ target_name=target_name?target_name+1:g_ps2_config_manager_target;
  draw_page_header("PS2 CONFIG MANAGER","Reversible per-title CONFIG files; the original ISO / game package stays untouched.");
  draw_soft_card(24.0f,92.0f,806.0f,340.0f,0);set_ui_font_size(10,16);
  snprintf(line,sizeof(line),"Game: %.48s",game?game->title:"No PS2 game selected");draw_text(48.0f,120.0f,0x29243fff,line);set_ui_font_size(7,11);
@@ -5433,13 +5442,15 @@ static void draw_ps2_config_manager(void){
  snprintf(line,sizeof(line),"Previous version: %s",rs);draw_text(48.0f,198.0f,g_ps2_config_manager_rollback_state==1?0x26794bff:0x77718fff,line);
  if(g_ps2_config_manager_target_state==1){snprintf(line,sizeof(line),"Current file size: %lu bytes",(unsigned long)g_ps2_config_manager_target_size);draw_text(470.0f,154.0f,0x514b69ff,line);}
  if(g_ps2_config_manager_backup_state==1){snprintf(line,sizeof(line),"Backup size: %lu bytes",(unsigned long)g_ps2_config_manager_backup_size);draw_text(470.0f,176.0f,0x514b69ff,line);}
- snprintf(line,sizeof(line),"Matched online config: %s",entry?entry->type:"NONE");draw_text(470.0f,198.0f,entry?0x26794bff:0xb27b35ff,line);
- draw_soft_button(48.0f,232.0f,226.0f,48.0f,"BACK UP CURRENT CONFIG",g_ps2_config_manager_selection==0);
- draw_soft_button(300.0f,232.0f,226.0f,48.0f,"RESTORE SAVED BACKUP",g_ps2_config_manager_selection==1);
- draw_soft_button(552.0f,232.0f,226.0f,48.0f,entry?"DOWNLOAD / REPLACE CONFIG":"NO MATCHED DOWNLOAD",g_ps2_config_manager_selection==2);
- set_ui_font_size(7,11);draw_text(48.0f,318.0f,0x514b69ff,"Replacing an existing file requires a byte-matching backup.");
- draw_text(48.0f,340.0f,0x514b69ff,"Restore keeps the replaced file as a separate rollback copy.");
- draw_text(48.0f,378.0f,0x875be8ff,g_ps2_config_manager_message);
+ snprintf(line,sizeof(line),"Target: %.54s",target_name&&target_name[0]?target_name:"Unavailable");draw_text(48.0f,220.0f,0x514b69ff,line);
+ snprintf(line,sizeof(line),"Match: %.40s",entry?entry->title:"NO EXACT MATCH");draw_text(470.0f,198.0f,entry?0x26794bff:0xb27b35ff,line);
+ snprintf(line,sizeof(line),"ID: %s | Type: %s",entry?entry->title_id:"--",entry?entry->type:"--");draw_text(470.0f,220.0f,0x514b69ff,line);
+ draw_soft_button(48.0f,248.0f,226.0f,46.0f,"BACK UP CURRENT CONFIG",g_ps2_config_manager_selection==0);
+ draw_soft_button(300.0f,248.0f,226.0f,46.0f,"RESTORE SAVED BACKUP",g_ps2_config_manager_selection==1);
+ draw_soft_button(552.0f,248.0f,226.0f,46.0f,entry?"DOWNLOAD / REPLACE CONFIG":"NO MATCHED DOWNLOAD",g_ps2_config_manager_selection==2);
+ set_ui_font_size(7,11);draw_text(48.0f,326.0f,0x514b69ff,"Replacing an existing file requires a byte-matching backup.");
+ draw_text(48.0f,348.0f,0x514b69ff,"Restore keeps the replaced file as a separate rollback copy.");
+ draw_text(48.0f,386.0f,0x875be8ff,g_ps2_config_manager_message);
  draw_text(24.0f,PS3SCALE_UI_FOOTER_SINGLE_Y,0x77718fff,"UP/DOWN: SELECT ACTION | CROSS: EXECUTE | CIRCLE / SELECT / LEFT: BACK");set_ui_font_size(14,22);
 }
 static void draw_fps_control(void)
