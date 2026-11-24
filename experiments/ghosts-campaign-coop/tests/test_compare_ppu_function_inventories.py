@@ -930,5 +930,66 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
         self.assertEqual(comparison["shared_region_signature_count"], 2)
         self.assertEqual(len(comparison["shared_region_signatures"]), 2)
 
+
+    def test_call_graph_reports_callee_multiplicity_delta_when_target_sets_match(self):
+        caller_fingerprint = "f" * 64
+        target_fingerprint = "a" * 64
+        campaign = [
+            row("CampaignCallerA", "0x1000", caller_fingerprint, entries="0x2000"),
+            row("CampaignCallerB", "0x1100", caller_fingerprint, entries="0x2000"),
+            row("CampaignTarget", "0x2000", target_fingerprint, entries=""),
+        ]
+        multiplayer = [
+            row("MultiplayerCaller", "0x9000", caller_fingerprint, entries="0xA000"),
+            row("MultiplayerTarget", "0xA000", target_fingerprint, entries=""),
+        ]
+
+        result = compare(campaign, multiplayer)
+        delta = next(
+            item for item in result["call_graph_deltas"]
+            if item["caller_fingerprint"] == caller_fingerprint
+        )
+        self.assertTrue(delta["callee_fingerprint_sets_equal"])
+        self.assertEqual(
+            delta["campaign_callee_fingerprint_edge_counts"][0]["caller_function_edge_count"],
+            2,
+        )
+        self.assertEqual(
+            delta["multiplayer_callee_fingerprint_edge_counts"][0]["caller_function_edge_count"],
+            1,
+        )
+        self.assertEqual(
+            delta["callee_fingerprint_edge_multiplicity"][0]["campaign_only_edge_count"],
+            1,
+        )
+        self.assertEqual(
+            result["summary"]["matching_fingerprint_groups_with_call_graph_multiplicity_delta"],
+            1,
+        )
+
+    def test_call_graph_does_not_report_delta_when_callee_multiplicity_matches(self):
+        caller_fingerprint = "e" * 64
+        target_fingerprint = "b" * 64
+        campaign = [
+            row("CampaignCallerA", "0x1000", caller_fingerprint, entries="0x2000"),
+            row("CampaignCallerB", "0x1100", caller_fingerprint, entries="0x2000"),
+            row("CampaignTarget", "0x2000", target_fingerprint, entries=""),
+        ]
+        multiplayer = [
+            row("MultiplayerCallerA", "0x9000", caller_fingerprint, entries="0xA000"),
+            row("MultiplayerCallerB", "0x9100", caller_fingerprint, entries="0xA000"),
+            row("MultiplayerTarget", "0xA000", target_fingerprint, entries=""),
+        ]
+
+        result = compare(campaign, multiplayer)
+        self.assertFalse(any(
+            item["caller_fingerprint"] == caller_fingerprint
+            for item in result["call_graph_deltas"]
+        ))
+        self.assertEqual(
+            result["summary"]["matching_fingerprint_groups_with_call_graph_multiplicity_delta"],
+            0,
+        )
+
 if __name__ == "__main__":
     unittest.main()

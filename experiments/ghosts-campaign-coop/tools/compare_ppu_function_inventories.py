@@ -416,6 +416,19 @@ def _target_fingerprints(
     }
 
 
+def _target_fingerprint_multiplicity(
+    rows: list[dict[str, Any]],
+    functions_by_entry: dict[str, dict[str, Any]],
+) -> Counter[str]:
+    """Count caller-function instances that reach each resolved callee fingerprint."""
+    counts: Counter[str] = Counter()
+    for row in rows:
+        # One caller function contributes at most one graph edge per callee
+        # fingerprint, even if multiple call instructions target that same build entry.
+        counts.update(_target_fingerprints(row, functions_by_entry))
+    return counts
+
+
 
 def _normalized_toc_region_signatures(rows: list[dict[str, Any]]) -> list[dict[str, Any]] | None:
     signatures: list[str] = []
@@ -611,13 +624,15 @@ def compare(
                 "multiplicity_delta": len(m_rows) - len(c_rows),
                 "toc_region_comparison": _compare_toc_region_signatures(c_rows, m_rows),
             })
-            campaign_targets = set().union(*(
-                _target_fingerprints(row, campaign_by_entry) for row in c_rows
-            ))
-            multiplayer_targets = set().union(*(
-                _target_fingerprints(row, multiplayer_by_entry) for row in m_rows
-            ))
-            if campaign_targets != multiplayer_targets:
+            campaign_target_counts = _target_fingerprint_multiplicity(
+                c_rows, campaign_by_entry
+            )
+            multiplayer_target_counts = _target_fingerprint_multiplicity(
+                m_rows, multiplayer_by_entry
+            )
+            campaign_targets = set(campaign_target_counts)
+            multiplayer_targets = set(multiplayer_target_counts)
+            if campaign_target_counts != multiplayer_target_counts:
                 campaign_callees = {
                     target["entry"]: target
                     for row in c_rows
@@ -638,6 +653,37 @@ def compare(
                     ],
                     "campaign_callee_fingerprints": sorted(campaign_targets),
                     "multiplayer_callee_fingerprints": sorted(multiplayer_targets),
+                    "callee_fingerprint_sets_equal": campaign_targets == multiplayer_targets,
+                    "campaign_callee_fingerprint_edge_counts": [
+                        {"fingerprint": fingerprint, "caller_function_edge_count": count}
+                        for fingerprint, count in sorted(campaign_target_counts.items())
+                    ],
+                    "multiplayer_callee_fingerprint_edge_counts": [
+                        {"fingerprint": fingerprint, "caller_function_edge_count": count}
+                        for fingerprint, count in sorted(multiplayer_target_counts.items())
+                    ],
+                    "callee_fingerprint_edge_multiplicity": [
+                        {
+                            "fingerprint": fingerprint,
+                            "campaign_edge_count": campaign_target_counts[fingerprint],
+                            "multiplayer_edge_count": multiplayer_target_counts[fingerprint],
+                            "shared_edge_count": min(
+                                campaign_target_counts[fingerprint],
+                                multiplayer_target_counts[fingerprint],
+                            ),
+                            "campaign_only_edge_count": max(
+                                campaign_target_counts[fingerprint]
+                                - multiplayer_target_counts[fingerprint], 0
+                            ),
+                            "multiplayer_only_edge_count": max(
+                                multiplayer_target_counts[fingerprint]
+                                - campaign_target_counts[fingerprint], 0
+                            ),
+                        }
+                        for fingerprint in sorted(
+                            campaign_target_counts.keys() | multiplayer_target_counts.keys()
+                        )
+                    ],
                     "campaign_callee_functions": [
                         {
                             "name": target["name"],
@@ -796,6 +842,10 @@ def compare(
             "campaign_resolved_internal_call_edges": campaign_edges,
             "multiplayer_resolved_internal_call_edges": multiplayer_edges,
             "matching_fingerprint_groups_with_call_graph_delta": len(call_graph_deltas),
+            "matching_fingerprint_groups_with_call_graph_multiplicity_delta": sum(
+                1 for item in call_graph_deltas
+                if item["callee_fingerprint_sets_equal"]
+            ),
             "matching_fingerprint_groups_with_same_toc_region_signature": sum(
                 1 for item in matched
                 if item["toc_region_comparison"]["status"] == "MATCHED_REGION_SIGNATURES"

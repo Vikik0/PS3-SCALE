@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "phase": 54,
+  "status": "CALL_GRAPH_EDGE_MULTIPLICITY_PRESERVED",
+  "changes": [
+    "count one resolved caller-function-to-callee-fingerprint edge per caller function instance",
+    "compare call graph multiplicities instead of unique target sets only",
+    "report per-build, shared and side-only edge counts",
+    "report multiplicity-only deltas when unique callee sets match",
+    "retain one edge per caller function and callee fingerprint regardless of repeated call instructions"
+  ],
+  "tests_added": 2,
+  "validation_boundary": "Synthetic static inventories only. Edge multiplicity is not runtime call frequency and does not establish Campaign call safety."
+}
