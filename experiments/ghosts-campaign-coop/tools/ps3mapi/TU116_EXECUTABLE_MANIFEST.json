@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "target": {
+    "title_id": "BLUS31270",
+    "app_ver": "01.16",
+    "ps3_system_ver": "04.4000",
+    "title": "Call of Duty® Ghosts",
+    "self_key_revision": 28,
+    "elf_class": "ELF64",
+    "endianness": "big",
+    "machine": "PowerPC64"
+  },
+  "sfo": {
+    "file": "PARAM(2).SFO",
+    "size_bytes": 432,
+    "sha256": "bd329d97380933ce0fff988e7c196b74520a1ae83bd856943c39cb05d9a62025"
+  },
+  "executables": {
+    "eboot": {
+      "file": "EBOOT(1).BIN",
+      "size_bytes": 41488,
+      "sha256": "af0dc21621d4c12c7f63899d1eef7c66405c3aa78c13daccfca58d02dc165aab",
+      "key_revision": 28,
+      "entry_point": "0x20080"
+    },
+    "campaign": {
+      "file": "default(1).self",
+      "size_bytes": 4291568,
+      "sha256": "ffa0f174740cc588b85a8fe0a730695c858413572841a01cbcc2b161a6d9006e",
+      "key_revision": 28,
+      "entry_point": "0x7E9508",
+      "pt_load_segments": [
+        {
+          "segment_index": 0,
+          "virtual_address": "0x10000",
+          "file_size": 8135720,
+          "memory_size": 8135720,
+          "alignment": 65536
+        },
+        {
+          "segment_index": 1,
+          "virtual_address": "0x7E0000",
+          "file_size": 119264,
+          "memory_size": 31551768,
+          "alignment": 65536
+        }
+      ]
+    },
+    "multiplayer": {
+      "file": "default_mp(1).self",
+      "size_bytes": 6265632,
+      "sha256": "6dfa702761860435e22f2db7bc8bb848f2286223605415523680770ea03f6bfd",
+      "key_revision": 28,
+      "entry_point": "0xA75E38",
+      "pt_load_segments": [
+        {
+          "segment_index": 0,
+          "virtual_address": "0x10000",
+          "file_size": 10783784,
+          "memory_size": 10783784,
+          "alignment": 65536
+        },
+        {
+          "segment_index": 1,
+          "virtual_address": "0xA60000",
+          "file_size": 932304,
+          "memory_size": 31434904,
+          "alignment": 65536
+        }
+      ]
+    }
+  },
+  "source_note": "Hashes and metadata were independently rechecked against user-owned Library files on 2026-11-24. This manifest records static identity only; it is not a runtime capture manifest."
+}
