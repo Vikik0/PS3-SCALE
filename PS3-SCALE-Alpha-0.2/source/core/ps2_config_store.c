@@ -1,6 +1,11 @@
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700
+#endif
+
 #include "ps3scale/ps2_config_store.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -17,7 +22,7 @@ int ps3scale_ps2_config_store_probe(const char *path, size_t max_bytes,
         *file_size = 0;
     if (!path || !path[0] || max_bytes == 0)
         return -1;
-    if (stat(path, &st) != 0)
+    if (lstat(path, &st) != 0)
         return errno == ENOENT ? 0 : -1;
     if (!S_ISREG(st.st_mode) || st.st_size <= 0 ||
         (unsigned long long)st.st_size > (unsigned long long)max_bytes)
@@ -84,6 +89,7 @@ static int copy_bounded(const char *source, const char *destination,
     unsigned char buffer[COPY_CHUNK];
     size_t expected = 0;
     size_t total = 0;
+    int fd = -1;
     int ok = 0;
 
     if (ps3scale_ps2_config_store_probe(source, max_bytes, &expected) != 1 ||
@@ -93,9 +99,13 @@ static int copy_bounded(const char *source, const char *destination,
     src = fopen(source, "rb");
     if (!src)
         goto done;
-    dst = fopen(destination, "wb");
+    fd = open(destination, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    if (fd < 0)
+        goto done;
+    dst = fdopen(fd, "wb");
     if (!dst)
         goto done;
+    fd = -1;
 
     for (;;) {
         size_t count = fread(buffer, 1, sizeof(buffer), src);
@@ -122,6 +132,8 @@ done:
         ok = 0;
     if (dst && fclose(dst) != 0)
         ok = 0;
+    else if (fd >= 0)
+        close(fd);
     if (!ok)
         (void)unlink(destination);
     return ok ? 0 : -1;
@@ -238,6 +250,7 @@ int ps3scale_ps2_config_store_install(const char *temporary,
                                       size_t max_bytes)
 {
     int target_state;
+    int rollback_state;
 
     if (!temporary || !target || !backup || !rollback_path ||
         !temporary[0] || !target[0] || !backup[0] || !rollback_path[0] ||
@@ -252,10 +265,8 @@ int ps3scale_ps2_config_store_install(const char *temporary,
     target_state = ps3scale_ps2_config_store_probe(target, max_bytes, NULL);
     if (target_state < 0)
         return -4;
-    if (target_state == 1) {
-        int rollback_state;
-        int rollback_matches_backup = 0;
 
+    if (target_state == 1) {
         if (ps3scale_ps2_config_store_can_replace(
                 target, backup, max_bytes) != 1)
             return -2;
@@ -264,35 +275,24 @@ int ps3scale_ps2_config_store_install(const char *temporary,
             ps3scale_ps2_config_store_probe(rollback_path, max_bytes, NULL);
         if (rollback_state < 0)
             return -3;
-        if (rollback_state == 1)
-            rollback_matches_backup =
-                files_equal(rollback_path, backup, max_bytes) == 1;
 
-        if (rollback_state == 1 && !rollback_matches_backup) {
-            /*
-             * A previous rollback is already retained. The matching backup
-             * is a verified copy of target, so it protects recovery if the
-             * replacement rename fails.
-             */
-            if (unlink(target) != 0)
+        if (rollback_state == 0) {
+            /* Preserve the current file before attempting the replacement. */
+            if (rename(target, rollback_path) != 0)
                 return -4;
             if (rename(temporary, target) != 0) {
-                if (copy_bounded(backup, target, max_bytes) != 0)
-                    return -5;
+                (void)rename(rollback_path, target);
                 return -4;
             }
             return 0;
         }
 
-        if (rollback_matches_backup && unlink(rollback_path) != 0)
-            return -3;
-        if (rename(target, rollback_path) != 0)
-            return -4;
-        if (rename(temporary, target) != 0) {
-            (void)rename(rollback_path, target);
-            return -4;
-        }
-        return 0;
+        /*
+         * A rollback snapshot already exists. The immutable backup is a
+         * byte-identical copy of the current target, so retain both snapshots
+         * and use one atomic rename to replace the target.
+         */
+        return rename(temporary, target) == 0 ? 0 : -4;
     }
 
     return rename(temporary, target) == 0 ? 0 : -4;
