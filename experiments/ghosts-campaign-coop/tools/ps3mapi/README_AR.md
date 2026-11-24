@@ -98,3 +98,12 @@ getmem.ps3mapi?proc=<id>&addr=<start>&len=<length>&dump=<size>.
 - https://github.com/aldostools/webMAN-MOD/wiki/Web-Commands
 - https://github.com/aldostools/webMAN-MOD/blob/master/include/ps3mapi/ps3mapi.h
 - https://github.com/aldostools/webMAN-MOD/blob/master/include/ps3mapi/debug_mem.h
+
+
+## تحقق إضافي من اكتمال الحفظ
+
+تم تشديد سكربتي الالتقاط: بعد نقل كل `mem_dump.bin` إلى اسم المقطع النهائي، ينفذ السكربت `abort if not exist` على الملف الناتج نفسه. لا يصل إلى ملف `DUMP_DONE` إلا بعد نجاح فحص وجود SEG0 وSEG1 معاً. إذا فشل أمر إعادة التسمية، يتوقف السكربت ولا يعلن اكتمال الالتقاط.
+
+ملف `DUMP_DONE` هو علامة انتهاء للسكربت فقط، وليس إثباتاً على صحة المحتوى أو حجمه. يجب تمرير الملفات على `verify_tu116_dump.py`؛ فهو يتحقق من حجم 64 KiB padded، ومطابقة PT_LOAD، ومحتوى المقطع التنفيذي قبل إعادة البناء.
+
+لإعادة الالتقاط بعد نجاح سابق، احذف ملف `GHOSTS_TU116_<MODE>_DUMP_DONE` من `/dev_hdd0` أولاً، ثم أعد تشغيل السكربت داخل الوضع الصحيح. لا تحذف ملفات المقاطع إلا إذا كنت تنوي إعادة التقاطها.
