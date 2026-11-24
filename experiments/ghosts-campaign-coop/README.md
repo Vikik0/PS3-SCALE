@@ -209,3 +209,15 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - CI run [#1470](https://github.com/Vikik0/PS3-SCALE/actions/runs/45505931126): **6/6 jobs successful**, **469 tests passed**.
 - Report: reports/PHASE84_REPORT_AR.md; machine-readable audit: reports/PHASE84_MISSION_EVENT_OWNERSHIP.json.
 - **Implementation gate:** this is static GSC analysis only. No FastFile was patched. Native PS3 Local Client 1 and physical Campaign/Multiplayer input evidence are still unverified.
+
+
+### Phase 85 — reusable Campaign event ownership lock
+
+- Added a 16-ID GSC event-lock API inside the Local Session bridge. Each event has one owner; each local player can own one active event; different event IDs can run concurrently for different players.
+- Acquire/release validate the current native player pair. Release is owner-only; completion is recorded only on successful release; abort releases without marking complete. Completed event state survives session rebind, while active locks are cleared before stale player aliases are removed.
+- The API fails closed before initialization and has no wait/yield inside acquire/release/abort critical sections.
+- It is lifecycle-integrated with the session bridge but is **not yet wired into the original Black Ice/Carrier/Cornered mission handlers**. Those handlers still require a real native second local player before integration.
+- GSC Tool 1.6.2.364 compile/decompile round-trip passed; the 3,680-byte GSCBIN source and bytecode hashes are pinned in the manifest.
+- CI run [#1494](https://github.com/Vikik0/PS3-SCALE/actions/runs/45508312714): **6/6 jobs successful**, **480 tests passed**, PS3 PRX and both read-only probes built and validated.
+- Report: reports/PHASE85_REPORT_AR.md; API summary: reports/PHASE85_EVENT_LOCK_API.json.
+- **Runtime gate unchanged:** the bridge is compiled but not injected or tested on a physical PS3. It does not create a Local Client or prove playable Campaign co-op.
