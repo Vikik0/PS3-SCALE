@@ -36,7 +36,8 @@ typedef enum {
     GHC_LOCAL_GATE_HUD_CONTEXT_ADDRESS_MISSING = 20,
     GHC_LOCAL_GATE_DUPLICATE_ENGINE_CONTEXT_ADDRESS = 21,
     GHC_LOCAL_GATE_INVALID_BOOLEAN_FLAG = 22,
-    GHC_LOCAL_GATE_OBSERVATION_FRAME_MISSING = 23
+    GHC_LOCAL_GATE_OBSERVATION_FRAME_MISSING = 23,
+    GHC_LOCAL_GATE_INPUT_FRAME_STALE = 24
 } GhcLocalPlayerGateStatus;
 
 typedef struct {
@@ -57,6 +58,7 @@ typedef struct {
     uint8_t local_client_num;
     uint8_t reserved2[3];
     uint32_t observation_frame;
+    uint32_t input_frame_number;
     uint64_t gclient_address;
     uint64_t gentity_address;
     uint64_t player_state_address;
@@ -78,8 +80,8 @@ typedef struct {
  * controller port 0 and the primary local player. Slot 1 must be the separate
  * guest soldier on controller port 1 and the secondary local player.
  *
- * A ready pair must also have fresh input frames captured in the same engine
- * valid observation frame, distinct command streams, distinct player state, and
+ * A ready pair must also have valid input frames whose frame numbers match
+ * the same valid engine observation frame, distinct command streams, distinct player state, and
  * independent view and HUD contexts. Local-client number, client ID, entity
  * ID and controller port remain separate observations; they are not aliases.
  */
