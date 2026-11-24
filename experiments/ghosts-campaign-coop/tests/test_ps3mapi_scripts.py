@@ -34,7 +34,7 @@ class Ps3MapiScriptTests(unittest.TestCase):
 
     def test_each_dump_is_checked_after_rename_before_done_marker(self):
         for mode in ("campaign", "multiplayer"):
-            prefix = f"GHOSTS_TU116_{mode.upper()}"
+            prefix = f"ghosts_tu116_{mode}"
             script = (ROOT / f"dump_{mode}_tu116.bat").read_text(encoding="utf-8").lower()
             done_marker = f"/dev_hdd0/{prefix}_dump_done"
             self.assertIn(done_marker, script)
