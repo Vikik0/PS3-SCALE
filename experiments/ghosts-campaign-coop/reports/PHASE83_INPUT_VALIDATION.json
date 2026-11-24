@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "phase": 83,
+  "title": "DualShock input capture integrity and evidence hardening",
+  "status": "HOST_VALIDATION_PASS_HARDWARE_CAPTURE_PENDING",
+  "changes": {
+    "raw_button_mapping_cross_check": true,
+    "field_range_validation": true,
+    "connected_read_error_contradiction_rejected": true,
+    "pressed_released_transition_validation": true,
+    "transition_history_skips_failed_reads": true,
+    "independent_button_proof_requires_exclusive_buttons_on_both_ports": true,
+    "independent_axis_activity_reported": true,
+    "independent_trigger_activity_reported": true,
+    "standalone_input_probe_comparison_json": true,
+    "comparison_json_emitted_when_logs_absent": true
+  },
+  "tests": {
+    "github_actions_run": 1454,
+    "run_id": 45504097309,
+    "run_url": "https://github.com/Vikik0/PS3-SCALE/actions/runs/45504097309",
+    "server_tests": "465 PASS",
+    "protocol_header": "PASS",
+    "gsc_script_compile": "PASS",
+    "other_jobs": "pending at report creation"
+  },
+  "evidence_limits": [
+    "All tests use synthetic logs and host mocks; no physical PS3 input logs have been captured.",
+    "Independent button/axis/trigger telemetry does not establish native Local Client 1, a second player entity, camera, HUD or playable Campaign co-op.",
+    "The exact Campaign and Multiplayer SEG0/SEG1 runtime dumps and corresponding capture metadata remain required for PPU/Ghidra analysis."
+  ],
+  "next_gate": "Collect genuine Campaign and Multiplayer Input Probe v1 logs, Pad Probe v4 logs, PS3MAPI SEG0/SEG1 dumps and matching metadata, then run analyze_tu116_runtime_capture.py with both input-log arguments and Ghidra enabled."
+}
