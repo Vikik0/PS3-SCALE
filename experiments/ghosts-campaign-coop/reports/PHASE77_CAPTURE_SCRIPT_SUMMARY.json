@@ -14,9 +14,20 @@
   "unchanged": {
     "title_id": "BLUS31270",
     "title_update": "1.16",
-    "campaign_pt_load_addresses": ["0x10000", "0x7E0000"],
-    "multiplayer_pt_load_addresses": ["0x10000", "0xA60000"],
+    "campaign_pt_load_addresses": [
+      "0x10000",
+      "0x7E0000"
+    ],
+    "multiplayer_pt_load_addresses": [
+      "0x10000",
+      "0xA60000"
+    ],
     "memory_write_commands_added": false
   },
-  "validation_boundary": "Source-level and CI tests only. No PS3MAPI hardware capture, live runtime ELF, or Campaign Player 2 is claimed."
+  "validation_boundary": "Source-level and CI tests only. No PS3MAPI hardware capture, live runtime ELF, or Campaign Player 2 is claimed.",
+  "validation": {
+    "local_ps3mapi_script_tests": "5/5 PASS",
+    "script_order_checks": "PASS",
+    "manual_read_only_checks": "PASS"
+  }
 }
