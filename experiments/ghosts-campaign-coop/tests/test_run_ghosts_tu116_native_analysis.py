@@ -1,4 +1,5 @@
 import json
+import struct
 import tempfile
 import unittest
 from pathlib import Path
@@ -39,6 +40,40 @@ def inspector_report(name, digest, entry, opd_range):
             },
         },
     }
+
+
+
+def make_ppc64_elf_with_opd(entry_point, code_base):
+    """Minimal ELF64 BE PPU image with a readable OPD section at e_entry."""
+    ident = b"\x7fELF" + bytes([2, 2, 1, 0, 0]) + bytes(7)
+    header = struct.pack(
+        ">16sHHIQQQIHHHHHH", ident, 2, 21, 1,
+        entry_point, 64, 0x300, 0, 64, 56, 2, 64, 2, 0,
+    )
+    code_segment = struct.pack(
+        ">IIQQQQQQ", 1, 5, 0x100, code_base,
+        code_base, 0x80, 0x80, 0x1000,
+    )
+    data_segment = struct.pack(
+        ">IIQQQQQQ", 1, 4, 0x200, entry_point,
+        entry_point, 0x10, 0x10, 8,
+    )
+    null_section = bytes(64)
+    opd_section = struct.pack(
+        ">IIQQQQIIQQ", 0, 1, 0, entry_point, 0x200, 0x10, 0, 0, 8, 8,
+    )
+    data = bytearray(0x380)
+    data[:64] = header
+    data[64:120] = code_segment
+    data[120:176] = data_segment
+    data[0x100:0x180] = bytes(range(0x80))
+    data[0x200:0x210] = struct.pack(
+        ">IIII", code_base + 0x10, code_base + 0x2000,
+        code_base + 0x20, code_base + 0x2000,
+    )
+    data[0x300:0x340] = null_section
+    data[0x340:0x380] = opd_section
+    return bytes(data)
 
 
 class RunGhostsNativeAnalysisTests(unittest.TestCase):
@@ -199,6 +234,62 @@ class RunGhostsNativeAnalysisTests(unittest.TestCase):
         )
         self.assertFalse((self.output / "native_input_preflight.json").exists())
         self.assertFalse((self.output / "native_analysis_status.json").exists())
+
+
+    def test_real_elf_inspector_opd_ranges_are_handed_to_ghidra_runner(self):
+        self.campaign.write_bytes(make_ppc64_elf_with_opd(0x2000, 0x1000))
+        self.multiplayer.write_bytes(make_ppc64_elf_with_opd(0x4000, 0x3000))
+        fake_manifest = {
+            "campaign": {"function_records": 2},
+            "multiplayer": {"function_records": 2},
+            "multiplayer_only_builtin_lead_count": 0,
+        }
+
+        def fake_generate(*args, **kwargs):
+            output_dir = Path(args[3])
+            output_dir.mkdir(parents=True, exist_ok=True)
+            (output_dir / pipeline.OUTPUT_NAMES[5]).write_text("{}", encoding="utf-8")
+            campaign_report = json.loads(
+                kwargs["campaign_opd_inspector_report"].read_text(encoding="utf-8")
+            )
+            multiplayer_report = json.loads(
+                kwargs["multiplayer_opd_inspector_report"].read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                campaign_report["elf"]["opd"]["operator_seed_range_candidate"]["virtual_address"],
+                "0x2000",
+            )
+            self.assertEqual(
+                campaign_report["elf"]["opd"]["operator_seed_range_candidate"]["size"],
+                "0x10",
+            )
+            self.assertEqual(
+                multiplayer_report["elf"]["opd"]["operator_seed_range_candidate"]["virtual_address"],
+                "0x4000",
+            )
+            self.assertEqual(
+                multiplayer_report["elf"]["opd"]["operator_seed_range_candidate"]["size"],
+                "0x10",
+            )
+            self.assertEqual(campaign_report["input"]["sha256"], pipeline._sha256(self.campaign))
+            self.assertEqual(multiplayer_report["input"]["sha256"], pipeline._sha256(self.multiplayer))
+            return fake_manifest
+
+        with patch.object(
+            pipeline, "verify_inputs", return_value=retail_preflight(True)
+        ), patch.object(
+            pipeline, "generate_inventories", side_effect=fake_generate
+        ) as generate:
+            code, report = pipeline.run_pipeline(
+                self.disc, self.update, self.output,
+                self.campaign, self.multiplayer, self.headless,
+            )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(report["status"], "NATIVE_PPU_INVENTORIES_GENERATED")
+        self.assertTrue(report["ghidra_invoked"])
+        self.assertEqual(report["campaign_function_records"], 2)
+        self.assertTrue(generate.called)
 
 if __name__ == "__main__":
     unittest.main()
