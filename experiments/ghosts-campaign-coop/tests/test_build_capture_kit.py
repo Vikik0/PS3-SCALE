@@ -12,7 +12,7 @@ def write_gsc_manifest(directory: Path, name: str, *, include_source=True):
     source = directory / f"{name}.gsc"
     binary = directory / f"{name}.gscbin"
     if include_source:
-        source.write_text(f"{name}() {{ return 1; }}\\n", encoding="utf-8")
+        source.write_text(f"{name}() {{ return 1; }}\n", encoding="utf-8")
     binary.write_bytes((name + "-compiled").encode("utf-8"))
     manifest = {
         "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
@@ -27,13 +27,13 @@ def make_project(root: Path):
     ps3mapi = root / "tools" / "ps3mapi"
     ps3mapi.mkdir(parents=True)
     for filename in PS3MAPI_FILES:
-        (ps3mapi / filename).write_text(f"tool {filename}\\n", encoding="utf-8")
+        (ps3mapi / filename).write_text(f"tool {filename}\n", encoding="utf-8")
     for filename in ("compare_pad_probe_logs.py", "compare_pad_input_probe_logs.py", "verify_capture_kit.py"):
-        (root / "tools" / filename).write_text(f"# {filename}\\n", encoding="utf-8")
+        (root / "tools" / filename).write_text(f"# {filename}\n", encoding="utf-8")
     gsc = root / "client" / "ps3" / "gsc"
     gsc.mkdir(parents=True)
     (gsc / "ghc_campaign_player_registry.gsc").write_text(
-        "ghc_campaign_player_registry_init() { return 1; }\\n", encoding="utf-8"
+        "ghc_campaign_player_registry_init() { return 1; }\n", encoding="utf-8"
     )
 
 
@@ -49,8 +49,8 @@ def make_artifacts(root: Path):
     (dirs["pad-probe"] / "README_AR.md").write_text("pad probe readme", encoding="utf-8")
     modes = dirs["pad-probe"] / "mode_files"
     modes.mkdir()
-    (modes / "ghosts_probe_mode_CAMPAIGN.txt").write_text("CAMPAIGN\\n", encoding="utf-8")
-    (modes / "ghosts_probe_mode_MULTIPLAYER.txt").write_text("MULTIPLAYER\\n", encoding="utf-8")
+    (modes / "ghosts_probe_mode_CAMPAIGN.txt").write_text("CAMPAIGN\n", encoding="utf-8")
+    (modes / "ghosts_probe_mode_MULTIPLAYER.txt").write_text("MULTIPLAYER\n", encoding="utf-8")
 
     for filename in ("ghosts_pad_input_probe.prx", "ghosts_pad_input_probe.fake.sprx", "ghosts_pad_input_probe.elf"):
         target = dirs["input-probe"] / "build" / filename
