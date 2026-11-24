@@ -145,6 +145,10 @@ int main(void)
     assert(list.items[0].title_id[0] != '\0');
     assert(strcmp(ps3scale_game_region_name("SLPM_654.32"), "JAPAN") == 0);
     assert(strcmp(ps3scale_game_region_name("SLKA_123.45"), "KOREA") == 0);
+    assert(strcmp(ps3scale_game_region_name("NPKB12345"), "KOREA") == 0);
+    assert(strcmp(ps3scale_game_region_name("NPED12345"), "EUROPE") == 0);
+    assert(strcmp(ps3scale_game_region_name("NPJD12345"), "JAPAN") == 0);
+    assert(strcmp(ps3scale_game_region_name("BLAS12345"), "ASIA") == 0);
     assert(strcmp(ps3scale_game_region_name("unmapped-id"), "UNKNOWN") == 0);
     assert(strcmp(list.items[0].app_ver, "01.04") == 0);
 
