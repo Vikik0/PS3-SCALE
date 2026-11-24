@@ -610,6 +610,9 @@ assert "open_online_search_keyboard" in online_input
 assert "open_selected_online_match();" in online_input
 assert "ONLINE_FILTER_MODE_COUNT" in online_input
 assert "design/splash-transitions-ui-v6" in src
+assert "GIT BLOB SHA-1: PRESENT" in src
+assert "HASH MISSING - REFRESH INDEX" in src
+assert "ps3scale_community_file_matches_id_version" in src
 
 online_source = source_path.with_name("online_catalog.c").read_text(encoding="utf-8")
 assert "CURLOPT_SSL_VERIFYPEER, 1L" in online_source
