@@ -10,7 +10,10 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-from verify_capture_kit import validate_package
+try:
+    from .verify_capture_kit import validate_package
+except ImportError:  # Direct script execution in the CI packaging job.
+    from verify_capture_kit import validate_package
 
 PS3MAPI_FILES = (
     "CAPTURE_METADATA_TEMPLATE.txt",
