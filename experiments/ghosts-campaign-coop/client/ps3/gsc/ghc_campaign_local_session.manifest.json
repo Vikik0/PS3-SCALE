@@ -5,9 +5,9 @@
   "platform": "PS3",
   "compiler": "GSC Tool 1.6.2.364",
   "compile_command": "gsc-tool --mode comp --game iw6 --system ps3 ghc_campaign_local_session.gsc",
-  "source_sha256": "",
-  "status": "compiled and round-trip decompiled with GSC Tool 1.6.2.364; source and bytecode hash pins pending final CI capture; not injected or runtime-tested",
+  "source_sha256": "7156ac56906d361de9348af9c558ea4a6bb04720596e156cca31d78d3b10e3a4",
+  "status": "compiled and round-trip decompiled with GSC Tool 1.6.2.364; source and bytecode hashes pinned by CI; not injected or runtime-tested",
   "behavior": "Reuses only engine-created native split-screen players; validates the exact live primary/secondary pair against the current player entity array before session reuse and Campaign actions; centralized invalidation sets status 8, releases the active sequential drill stage, preserves only a still-valid primary alias, and clears stale secondary/player handles; the Clockwork drill ownership helper allows one global active owner at a time and requires Stage 1 completion before Stage 2; owner may change between stages; exposes Player 2 loadout helper; never spawns or clones a player. Adds a single guarded lifecycle watcher after a successful bind; it revalidates the exact native pair and Campaign aliases every 250 ms, tolerates seven consecutive transient failures, and invalidates/releases drill ownership on the eighth failure (2 seconds). It does not create or rebind players; bridge main() must be called again after status 8. Initializes the reusable 16-ID shared mission event lock after native-pair validation and aborts active event locks on rebind or stale-session invalidation while preserving completed mission events. Adds a reusable 16-ID mission event lock: one active event per local player, one owner per shared event ID, owner-only release, optional shared completion, and abort on player/session invalidation without marking completion. Different event IDs may be owned concurrently by different players; completed events persist across session rebind.",
-  "compiled_gscbin_sha256": "",
-  "compiled_gscbin_bytes": 0
+  "compiled_gscbin_sha256": "2ba80b1be5497a522c08b519a5bd7b8eecbd2b435963313c790075f060850967",
+  "compiled_gscbin_bytes": 3680
 }
