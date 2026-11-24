@@ -6,17 +6,19 @@
 
 **القرار: لا.** في مراجع IW6 المتاحة لنسختي PS4 وXbox One، هذان المساران ينشئان Test/Bot client عبر عنوان شبكة من نوع `NA_BOT`، وليس Local Client مرتبطاً بوحدة تحكم ثانية.
 
-## نتائج PS4 وXbox One المرجعية
+## تصحيح مصدر المراجع وحدودها
 
-تمت مقارنة pseudocode للمنصتين عند commit `513f0b6bdf0de32d16df3af914b26df01ee04ec9` في مستودع `lizardpeter/ghosts-decomp`.
+مستودع `lizardpeter/ghosts-decomp` يعرّف `iw6_ds_ps4` و`iw6_ds_xb3` في README على أنها **Windows x64 dedicated-server reference builds** مع PDB وMAP، مرتبطة بمضيفات PS4 وXbox One. هذه ليست ملفات retail console client. لذلك لا يجوز استخدام دوال `client/splitscreen.cpp` أو `PlayerCmd_IsSplitscreenPlayer` في هذه البنايات لاستنتاج عدد Local Clients أو سلوك وحدات التحكم في عميل PS3/PS4/Xbox One.
+
+الاستنتاج الذي نحتفظ به من هذه المراجع هو فقط سلوك مسار الخادم `SV_AddTestClient` و`SV_SpawnTestClient`: فهو ينشئ Test/Bot connection من نوع `NA_BOT`، وليس تسجيل DualShock محلي ثانٍ. تمت مقارنة pseudocode عند commit `513f0b6bdf0de32d16df3af914b26df01ee04ec9`.
 
 | المسار | PS4 x64 | Xbox One x64 | النتيجة |
 |---|---:|---:|---|
-| `CL_DoesControllerIndexHaveALocalClientNum` | `0x1400AE7A0` | `0x1400AECE0` | يكتب `LOCAL_CLIENT_0` ويعيد true |
-| `CL_ControllerIndexFromClientNum` | `0x1400AE790` | `0x1400AECD0` | يعيد `cl_controller_in_use` |
-| `PlayerCmd_IsSplitscreenPlayer` في game_mp | `0x1401232B0` | `0x140123570` | يعيد false بعد فحص كيان اللاعب |
-| `PlayerCmd_IsSplitscreenPlayerPrimary` | `0x1401232F0` | `0x1401235B0` | يقرأ حقول حالة العميل؛ لا ينشئ لاعباً |
-| `SV_AddTestClient` | `0x1401F1AF0` | `0x1401F0390` | ينشئ اتصال Test/Bot |
+| `CL_DoesControllerIndexHaveALocalClientNum` (server reference only) | `0x1400AE7A0` | `0x1400AECE0` | يكتب `LOCAL_CLIENT_0` ويعيد true؛ لا نستنتج منه سلوك عميل retail |
+| `CL_ControllerIndexFromClientNum` (server reference only) | `0x1400AE790` | `0x1400AECD0` | يعيد `cl_controller_in_use`؛ لا نستنتج منه ربط يد التحكم في PS3 |
+| `PlayerCmd_IsSplitscreenPlayer` في game_mp server reference | `0x1401232B0` | `0x140123570` | يعيد false في هذا البناء الخادمي فقط |
+| `PlayerCmd_IsSplitscreenPlayerPrimary` (server reference only) | `0x1401232F0` | `0x1401235B0` | يقرأ حقول حالة العميل؛ لا ينشئ لاعباً |
+| `SV_AddTestClient` | `0x1401F1AF0` | `0x1401F0390` | ينشئ اتصال Test/Bot من جهة الخادم |
 | `SV_SpawnTestClient` | `0x1401F5120` | `0x1401F3890` | يرسل gamestate ثم يدخل Test Client إلى العالم |
 
 ### الدليل على أن Test Client ليس لاعباً محلياً
@@ -31,15 +33,13 @@
 
 أما `GScr_AddTestClient` فيستدعي `SV_AddTestClient`، و`GScr_SpawnTestClient` يستدعي `SV_SpawnTestClient`. مسار Spawn يرسل Game State ويدخل العميل باستخدام `usercmd_s` محلي مهيأ صفرياً. هذه آلية Bot/Test Client، وليست ربط DualShock ثانٍ أو إنشاء Local Client ثانٍ.
 
-### نتيجة Local Client في مراجع المنصتين
+### دوال Local Client وSplit-screen في ملفات الخادم
 
-دالة `CL_DoesControllerIndexHaveALocalClientNum` في نسختي PS4 وXbox One تتجاهل قيمة controller index، وتضع `LOCAL_CLIENT_0` في خرجها ثم تعيد true. ودالة `CL_ControllerIndexFromClientNum` تعيد متغيراً عالمياً واحداً هو `cl_controller_in_use`.
-
-هذا دليل على أن هذين البناءين المرجعيين لا يقدمان عبر هاتين الدالتين mapping مستقلاً إلى Local Client 1. لكنه **ليس دليلاً على سلوك نسخة PS3**؛ يجب استخراج تنفيذ PS3 الفعلي قبل اعتماد النتيجة على BLUS31270.
+تظهر في ملفات dedicated-server pseudocode دوال تحمل أسماء Local Client وSplit-screen، لكن هذا لا يجعلها دوال عميل retail. القيم التي تعيدها (`LOCAL_CLIENT_0` أو false) قد تكون جزءاً من بيئة الخادم أو stubs خاصة بها. لذلك تم تسجيلها للرجوع فقط، ولا نستخدمها لاستنتاج أن PS3 أو PS4 retail يملك Local Client واحداً أو أن `issplitscreenplayer()` يعيد false على الجهاز.
 
 ## قرار المشروع
 
-- استبعاد `SV_AddTestClient` و`SV_SpawnTestClient` كحل لإنشاء اللاعب المحلي الثاني.
+- استبعاد `SV_AddTestClient` و`SV_SpawnTestClient` كحل لإنشاء اللاعب المحلي الثاني؛ الدليل هنا يخص مسار الخادم في مراجع Windows x64.
 - إبقاء GSC Campaign bridge على مبدأ إعادة استخدام زوج اللاعبين الذي أنشأه محرك اللعبة أصلاً، والتحقق من هوية primary/secondary قبل ربط aliases.
 - أضيف اختبار يمنع إدخال `spawnTestClient` أو `addTestClient` أو `addBot` إلى local-session bridge مستقبلاً.
 - عدم نقل أي عنوان PS4/Xbox x64 إلى PRX الخاص بـPS3؛ اختلاف المعمارية والعناوين يمنع ذلك.
