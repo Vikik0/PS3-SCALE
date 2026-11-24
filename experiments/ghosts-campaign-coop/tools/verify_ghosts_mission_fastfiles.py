@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -34,12 +35,45 @@ EXPECTED_FASTFILES = {
 }
 
 
-def _sha256(path: Path) -> str:
+def _stat_signature(info: os.stat_result) -> tuple[int, int, int, int, int]:
+    return (
+        info.st_dev,
+        info.st_ino,
+        info.st_size,
+        info.st_mtime_ns,
+        info.st_ctime_ns,
+    )
+
+
+def _read_identity(path: Path) -> tuple[int, bytes, str]:
+    """Hash and inspect one stable file snapshot through a single open handle."""
     digest = hashlib.sha256()
+    header = bytearray()
+    bytes_read = 0
     with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+        before = os.fstat(stream.fileno())
+        while True:
+            chunk = stream.read(1024 * 1024)
+            if not chunk:
+                break
+            if len(header) < 12:
+                header.extend(chunk[: 12 - len(header)])
             digest.update(chunk)
-    return digest.hexdigest()
+            bytes_read += len(chunk)
+        after = os.fstat(stream.fileno())
+
+    # The descriptor must remain stable, and the path must still name that same
+    # file after the read. This catches in-place writes, truncation/growth and
+    # path replacement while the hash is being calculated.
+    current_path = path.stat()
+    if (
+        bytes_read != before.st_size
+        or _stat_signature(before) != _stat_signature(after)
+        or _stat_signature(after) != _stat_signature(current_path)
+    ):
+        raise OSError(f"FastFile changed while being read: {path}; retry the verification")
+
+    return bytes_read, bytes(header), digest.hexdigest()
 
 
 def verify_fastfiles(paths: dict[str, Path | str | None]) -> dict[str, Any]:
@@ -63,15 +97,12 @@ def verify_fastfiles(paths: dict[str, Path | str | None]) -> dict[str, Any]:
             continue
 
         try:
-            size_bytes = path.stat().st_size
-            with path.open("rb") as stream:
-                header = stream.read(12)
+            size_bytes, header, digest = _read_identity(path)
             magic = header[:8].decode("ascii", errors="replace")
             version = (
                 f"0x{int.from_bytes(header[8:12], 'big'):08X}"
                 if len(header) >= 12 else None
             )
-            digest = _sha256(path)
         except OSError as exc:
             reports[role] = {"status": "UNREADABLE", "file_name": path.name}
             errors.append(f"{role}: unable to read FastFile: {exc}")

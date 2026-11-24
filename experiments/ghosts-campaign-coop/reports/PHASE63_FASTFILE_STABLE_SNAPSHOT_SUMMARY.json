@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "phase": 63,
+  "status": "FASTFILE_SINGLE_SNAPSHOT_VERIFICATION",
+  "changes": [
+    "read header and calculate SHA-256 in one streaming pass on one open descriptor",
+    "compare device, inode, size, mtime_ns and ctime_ns before and after reading",
+    "verify the path still resolves to the same file after reading",
+    "reject in-place mutation, truncation/growth and path replacement during verification"
+  ],
+  "tests_added": 2,
+  "validation_boundary": "Read-only stable input identity verification only; no native Player 2 behavior is claimed."
+}

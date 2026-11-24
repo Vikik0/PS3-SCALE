@@ -2,6 +2,7 @@ import hashlib
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from tools import verify_ghosts_mission_fastfiles as verifier
@@ -73,6 +74,36 @@ class VerifyGhostsMissionFastFilesTests(unittest.TestCase):
         self.assertEqual(report["status"], "MISMATCH_OR_INCOMPLETE")
 
 
+
+    def test_rejects_file_modified_during_single_pass_hash(self):
+        path = self.paths["black_ice"]
+        before = path.stat()
+        changed = SimpleNamespace(
+            st_dev=before.st_dev,
+            st_ino=before.st_ino,
+            st_size=before.st_size,
+            st_mtime_ns=before.st_mtime_ns + 1,
+            st_ctime_ns=before.st_ctime_ns,
+        )
+        with patch.object(verifier.os, "fstat", side_effect=[before, changed]):
+            with self.assertRaisesRegex(OSError, "changed while being read"):
+                verifier._read_identity(path)
+
+    def test_rejects_path_replacement_during_single_pass_hash(self):
+        path = self.paths["black_ice"]
+        opened = path.stat()
+        replaced = SimpleNamespace(
+            st_dev=opened.st_dev,
+            st_ino=opened.st_ino + 1,
+            st_size=opened.st_size,
+            st_mtime_ns=opened.st_mtime_ns,
+            st_ctime_ns=opened.st_ctime_ns,
+        )
+        with patch.object(verifier.os, "fstat", side_effect=[opened, opened]), patch.object(
+            Path, "stat", return_value=replaced
+        ):
+            with self.assertRaisesRegex(OSError, "changed while being read"):
+                verifier._read_identity(path)
 
     def test_rejects_wrong_version_even_when_hash_and_size_match(self):
         wrong_version = self.root / "wrong-version-carrier.ff"
