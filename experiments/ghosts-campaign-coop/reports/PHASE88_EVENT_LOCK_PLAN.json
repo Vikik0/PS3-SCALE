@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "phase": 88,
+  "status": "MISSION_EVENT_LOCK_ASSIGNMENTS_VALIDATED",
+  "map": "reports/PHASE88_MISSION_EVENT_LOCK_MAP.json",
+  "validator": "tools/verify_mission_event_lock_map.py",
+  "critical_routines": 9,
+  "event_id_range": [
+    0,
+    15
+  ],
+  "shared_interaction_ids": [
+    {
+      "id": 0,
+      "mission": "Black Ice",
+      "routine": "event_player_turns_key"
+    },
+    {
+      "id": 1,
+      "mission": "Carrier",
+      "routine": "cut_the_rope"
+    },
+    {
+      "id": 2,
+      "mission": "Cornered",
+      "routine": "gun_down_trigger_internal"
+    },
+    {
+      "id": 3,
+      "mission": "Cornered",
+      "routine": "upload_virus_enter"
+    }
+  ],
+  "mission_coordinator_only": [
+    "Black Ice::player_fail_finale_instakill",
+    "Black Ice::ascend_logic",
+    "Carrier::knockback_hesh",
+    "Carrier::victory_choppers_land",
+    "Cornered::fall_player"
+  ],
+  "validations": [
+    "all nine critical routines are present exactly once",
+    "four shared interactions use stable unique IDs 0..3",
+    "all IDs stay within 0..15",
+    "mission coordinator events do not claim player-owned locks",
+    "shared interactions require first-valid-player ownership",
+    "Local Session GSC lock API functions are present",
+    "map explicitly remains not wired to original mission handlers"
+  ],
+  "limitations": [
+    "The map is a plan; original mission handlers were not modified.",
+    "No FastFile injection or physical PS3 test is claimed.",
+    "Native second Campaign Local Client remains unproven."
+  ]
+}
