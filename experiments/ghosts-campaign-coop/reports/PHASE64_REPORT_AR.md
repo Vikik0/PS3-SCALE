@@ -11,7 +11,7 @@
 3. إذا لم توجد الدالة في الملف المحدد، يظهر MISSING ولا يتم استبدالها بدالة أخرى تحمل الاسم نفسه.
 4. أضيفت نتائج incoming call sites وfunction-pointer callbacks لكل دالة مستهدفة.
 5. التقرير يوضح الوصول المباشر والوصول الذي يعتمد على callback registration من script-entry candidates.
-6. تمت إضافة تحقق يمنع path traversal في ملف manifest.
+6. تمت إضافة تحقق يمنع path traversal ومسارات Windows المطلقة، ويشترط تطابق أسماء المهمات في manifest مع مجلدات المصدر.
 
 ## الاختبارات
 

@@ -422,6 +422,14 @@ def audit_paths(
 ) -> dict[str, Any]:
     if not missions:
         raise CallGraphError("provide at least one mission directory")
+    if target_definitions is not None:
+        missing_missions = sorted(set(missions) - set(target_definitions))
+        extra_missions = sorted(set(target_definitions) - set(missions))
+        if missing_missions or extra_missions:
+            raise CallGraphError(
+                "target manifest mission set must exactly match input missions; "
+                f"missing={missing_missions}, extra={extra_missions}"
+            )
     reports = [
         audit_mission(
             name, path, (roots or {}).get(name),
@@ -515,10 +523,14 @@ def load_target_manifest(path: Path) -> dict[str, list[dict[str, str]]]:
             if not isinstance(entry, dict):
                 raise CallGraphError(f"{name}: target entries must be objects")
             file_name, function = entry.get("file"), entry.get("function")
-            if not isinstance(file_name, str) or not file_name or "\\" in file_name:
+            if (
+                not isinstance(file_name, str) or not file_name
+                or "\\" in file_name or ":" in file_name or "\x00" in file_name
+            ):
                 raise CallGraphError(f"{name}: target file must be a relative POSIX path")
+            raw_parts = file_name.split("/")
             relative = PurePosixPath(file_name)
-            if relative.is_absolute() or any(part in ("", ".", "..") for part in relative.parts):
+            if relative.is_absolute() or any(part in ("", ".", "..") for part in raw_parts):
                 raise CallGraphError(f"{name}: unsafe target path: {file_name!r}")
             if not isinstance(function, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", function):
                 raise CallGraphError(f"{name}: invalid target function name: {function!r}")

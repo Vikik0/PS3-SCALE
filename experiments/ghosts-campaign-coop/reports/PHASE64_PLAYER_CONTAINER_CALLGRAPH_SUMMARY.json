@@ -7,9 +7,11 @@
     "report incoming direct, thread, namespaced and callback references per exact definition",
     "report direct and callback-inclusive reachability from script-entry candidates",
     "report missing or duplicate exact targets without same-name fallback",
-    "reject unsafe manifest paths"
+    "reject unsafe manifest paths",
+    "require manifest mission names to exactly match supplied mission directories",
+    "reject drive-qualified and malformed POSIX target paths"
   ],
-  "tests_added": 3,
+  "tests_added": 4,
   "input_scope": {
     "source_manifest": "reports/PHASE60_PLAYER_CONTAINER_PATHS_SUMMARY.json",
     "known_targets": 13,

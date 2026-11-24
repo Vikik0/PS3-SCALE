@@ -139,17 +139,28 @@ class GscCallgraphAuditTests(unittest.TestCase):
             "file": "animscripts/dog/dog_combat.gsc", "function": "playerview_playmissanim"
         }])
 
-    def test_phase60_target_manifest_rejects_path_traversal(self):
+    def test_phase60_target_manifest_rejects_path_traversal_and_drive_paths(self):
         import json
+        for unsafe in ("../outside.gsc", "C:/outside.gsc", "maps//helper.gsc"):
+            with self.subTest(path=unsafe), tempfile.TemporaryDirectory() as temp:
+                path = Path(temp) / "phase60.json"
+                path.write_text(json.dumps({"schema_version": 1, "missions": [{
+                    "name": "carrier", "functions_by_file": [
+                        {"file": unsafe, "function": "helper"}
+                    ]
+                }]}), encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "target file must be a relative POSIX path|unsafe target path"):
+                    load_target_manifest(path)
+
+    def test_target_manifest_mission_set_must_match_input_missions(self):
+        from gsc_callgraph_audit import audit_paths
         with tempfile.TemporaryDirectory() as temp:
-            path = Path(temp) / "phase60.json"
-            path.write_text(json.dumps({"schema_version": 1, "missions": [{
-                "name": "carrier", "functions_by_file": [
-                    {"file": "../outside.gsc", "function": "helper"}
-                ]
-            }]}), encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "unsafe target path"):
-                load_target_manifest(path)
+            root = Path(temp)
+            with self.assertRaisesRegex(ValueError, "mission set must exactly match"):
+                audit_paths(
+                    {"carrier": root},
+                    target_definitions={"black_ice": []},
+                )
 
 if __name__ == "__main__":
     unittest.main()

@@ -7,7 +7,7 @@ Phase 60 inventories 13 functions containing Campaign player-container markers a
 ## Changes
 
 - Add --target-manifest to gsc_callgraph_audit.py.
-- Load the Phase 60 JSON manifest and validate every relative POSIX path and function identifier.
+- Load the Phase 60 JSON manifest and validate every relative POSIX path and function identifier. The manifest mission set must exactly match the supplied source directories; Windows drive paths, traversal and malformed path segments are rejected.
 - Select a target only when both file path and function name match exactly.
 - Report missing or duplicate-in-file targets explicitly; never fall back to another same-name function.
 - For each exact target, report incoming direct/thread/namespaced call sites, callback registrations, direct reachability and callback-inclusive reachability from script-entry candidates.
