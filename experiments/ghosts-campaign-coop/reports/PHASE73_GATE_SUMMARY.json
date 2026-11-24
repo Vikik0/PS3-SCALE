@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "phase": 73,
+  "status": "LOCAL_PLAYER_GATE_BOOLEAN_INPUTS_HARDENED",
+  "changes": [
+    "reject non-canonical boolean observation flags",
+    "add GHC_LOCAL_GATE_INVALID_BOOLEAN_FLAG status code 22",
+    "test all seven boolean evidence flags against invalid value 2",
+    "document adapter boolean normalization requirements"
+  ],
+  "validated_flags": [
+    "split_screen_active",
+    "is_split_screen_player",
+    "input_connected",
+    "input_frame_valid",
+    "client_id_valid",
+    "entity_id_valid",
+    "local_client_num_valid"
+  ],
+  "validation": {
+    "local_player_gate_c_test": "PASS",
+    "test_functions": 16,
+    "sanitizers": ["address", "undefined"],
+    "compiler_flags": "-std=c11 -O2 -Wall -Wextra -Werror -pedantic"
+  },
+  "validation_boundary": "Host validation only; no native Campaign adapter, PS3 runtime capture, or playable co-op build is claimed."
+}
