@@ -12,7 +12,8 @@
     "architectures": [
       "x86_64"
     ],
-    "not_target_build": true
+    "not_target_build": true,
+    "role": "Windows x64 dedicated-server reference builds with PDB/MAP; platform labels identify console hosts, not retail console client binaries."
   },
   "functions": {
     "ps4": {
@@ -33,18 +34,18 @@
     }
   },
   "observations": [
-    "Both PS4 and Xbox One local-client mapping functions assign LOCAL_CLIENT_0 and return true without using the controller-index argument.",
-    "Both PS4 and Xbox One multiplayer PlayerCmd_IsSplitscreenPlayer implementations return false after validating the player entity.",
-    "SV_AddTestClient creates a NA_BOT connection using svs.botport, SV_DirectConnect, and the testClient field.",
+    "Repository README identifies iw6_ds_ps4 and iw6_ds_xb3 as Windows x64 dedicated-server reference builds, not retail console clients.",
+    "In those server references, SV_AddTestClient creates an NA_BOT connection using svs.botport, builds a connect bot command, calls SV_DirectConnect, and marks the client slot as a test client.",
     "GScr_AddTestClient forwards to SV_AddTestClient; GScr_SpawnTestClient forwards to SV_SpawnTestClient.",
-    "SV_SpawnTestClient sends the game state and enters the test client using a zero-initialized usercmd_s.",
-    "SV_ClientThink is downstream of a client slot's usercmd and is not by itself proof of a physical local controller mapping."
+    "SV_SpawnTestClient sends the game state and enters the test client using a zero-initialized usercmd_s; this is a test/bot path, not a physical local controller registration.",
+    "The CL_DoesControllerIndexHaveALocalClientNum and PlayerCmd_IsSplitscreenPlayer observations are from dedicated-server binaries only and must not be used to infer retail PS3/PS4/Xbox client split-screen behavior."
   ],
   "decisions": {
     "SV_AddTestClient": "REJECT_AS_LOCAL_CONTROLLER",
     "SV_SpawnTestClient": "REJECT_AS_LOCAL_CONTROLLER",
     "campaign_gsc_bridge": "REUSE_ENGINE_CREATED_NATIVE_PAIR_ONLY",
-    "import_ps4_or_xb3_offsets_into_ps3_prx": false
+    "import_ps4_or_xb3_offsets_into_ps3_prx": false,
+    "reference_client_local_mapping": "NOT_TRANSFERABLE_FROM_DEDICATED_SERVER"
   },
   "validation": {
     "new_gsc_bridge_guard_test": "ADDED",
@@ -57,8 +58,9 @@
     ]
   },
   "limitations": [
-    "All function addresses listed are x64 reference addresses and must not be used on PS3 PPU.",
-    "PS4/Xbox One observations do not prove PS3 behavior.",
+    "All listed addresses are Windows x64 dedicated-server reference addresses, not PS3 PPU addresses.",
+    "Dedicated-server client/splitscreen pseudocode is not evidence for retail console local-client count or controller mapping.",
+    "Only the server-side NA_BOT/testClient path is used to reject the test-client route as a physical local player.",
     "No Campaign/Multiplayer PS3 runtime ELF or Pad Probe logs have been supplied.",
     "No native PS3 Campaign Local Client 1 or playable Player 2 is claimed."
   ]
