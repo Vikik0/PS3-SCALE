@@ -44,6 +44,13 @@ cc -std=c99 -Wall -Wextra -Werror \
 
 cc -std=c99 -Wall -Wextra -Werror \
   -I"$ROOT/include" \
+  "$ROOT/source/core/ps2_config_store.c" \
+  "$ROOT/tests/test_ps2_config_store.c" \
+  -o "$OUT/test_ps2_config_store"
+"$OUT/test_ps2_config_store"
+
+cc -std=c99 -Wall -Wextra -Werror \
+  -I"$ROOT/include" \
   "$ROOT/source/core/locale.c" \
   "$ROOT/tests/test_locale.c" \
   -o "$OUT/test_locale"

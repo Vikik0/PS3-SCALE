@@ -42,8 +42,9 @@
 - [x] Scan and launch webMAN-supported PS2 ISO `.ISO` / `.BIN` / `.IMG` / `.MDF` formats; keep `.BIN.ENC` classified as PS2 Classics.
 - [ ] PS2 Classics/PS2 ISO metadata enrichment.
 - [ ] Match known ps2_netemu CONFIG files by title ID and region.
-- [ ] Hash verification, backup and restore.
-- [ ] No automatic CONFIG writes until hardware tests pass.
+- [x] Byte-for-byte verified backup, atomic restore and guarded replacement with retained rollback copy (host-tested).
+- [x] No automatic CONFIG writes; all file changes require an explicit action in PS2 CONFIG Manager.
+- [ ] Physical validation of backup, restore and one matched CONFIG on the target PS3 Slim.
 
 ## Alpha 0.4 — PS3 title-specific patch manager
 
