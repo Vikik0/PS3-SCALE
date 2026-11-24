@@ -126,5 +126,44 @@ class GscPlayerStateOwnershipAuditTests(unittest.TestCase):
             {"black_ice": 21, "carrier": 23, "cornered": 24},
         )
 
+
+    def test_audit_reports_all_player_container_function_sites(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "container_paths.gsc"
+            source.write_text(
+                "container_scan()\n{\n"
+                "    foreach (player in level.playerpiggyback)\n"
+                "    {\n"
+                "        player iprintln(\"piggyback\");\n"
+                "    }\n"
+                "    foreach (player in level.players)\n"
+                "    {\n"
+                "        player iprintln(\"players\");\n"
+                "    }\n"
+                "    level.playengineeffects doSomething();\n"
+                "}\n"
+                "ordinary_player_function()\n{\n"
+                "    level.player giveweapon(\"rifle\");\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            report = audit_mission("synthetic", root, ["container_scan"])
+
+        self.assertEqual(report["target_functions_found"], 1)
+        self.assertEqual(report["player_container_function_count"], 1)
+        self.assertEqual(
+            report["player_container_summary"]["player_array_references"],
+            {"level.playerpiggyback": 1, "level.players": 1},
+        )
+        self.assertEqual(
+            report["player_container_summary"]["secondary_client_reference_count"],
+            1,
+        )
+        self.assertEqual(
+            report["player_container_functions"][0]["function"],
+            "container_scan",
+        )
+
 if __name__ == "__main__":
     unittest.main()

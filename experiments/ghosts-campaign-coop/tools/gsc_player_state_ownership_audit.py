@@ -228,17 +228,28 @@ def audit_mission(name: str, root: Path, target_names: list[str] | None = None) 
         raise OwnershipAuditError(f"no target functions configured for mission {name!r}")
 
     findings: list[dict[str, Any]] = []
+    player_container_functions: list[dict[str, Any]] = []
     for path in files:
         original = path.read_text(encoding="utf-8", errors="replace").splitlines()
         clean = clean_source_lines(original)
         relative = path.relative_to(root).as_posix()
         for function_name, start, end in function_ranges(clean):
-            if (
+            target_match = (
                 (relative, function_name) in target_specs
                 if target_specs is not None
                 else function_name in wanted_names
-            ):
+            )
+            body = "\n".join(clean[start - 1:end])
+            has_player_container = (
+                any(pattern.search(body) for pattern in PLAYER_ARRAY_PATTERNS.values())
+                or SECONDARY_CLIENT_RE.search(body) is not None
+            )
+            if target_match:
                 findings.append(_audit_function(relative, function_name, start, end, clean))
+            if has_player_container:
+                player_container_functions.append(
+                    _audit_function(relative, function_name, start, end, clean)
+                )
 
     if target_specs is not None:
         found_specs = {(item["file"], item["function"]) for item in findings}
@@ -256,6 +267,17 @@ def audit_mission(name: str, root: Path, target_names: list[str] | None = None) 
         "target_functions_found": len(findings),
         "missing_target_functions": missing,
         "findings": findings,
+        "player_container_function_count": len(player_container_functions),
+        "player_container_summary": {
+            "player_array_references": {
+                key: sum(item["player_array_references"][key] for item in player_container_functions)
+                for key in PLAYER_ARRAY_PATTERNS
+            },
+            "secondary_client_reference_count": sum(
+                item["secondary_client_reference_count"] for item in player_container_functions
+            ),
+        },
+        "player_container_functions": player_container_functions,
         "interpretation": (
             "The audit distinguishes visible player entity operations from mission-level state references. "
             "A level-scoped field is listed for ownership review; its presence under level does not prove "

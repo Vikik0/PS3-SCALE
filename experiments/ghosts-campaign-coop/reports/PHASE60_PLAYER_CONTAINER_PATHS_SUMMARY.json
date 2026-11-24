@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "phase": 60,
+  "status": "ALL_MISSION_PLAYER_CONTAINER_PATHS_INVENTORIED",
+  "missions": [
+    {
+      "name": "black_ice",
+      "functions": 0,
+      "playerpiggyback_references": 0,
+      "players_references": 0,
+      "playengineeffects_references": 0
+    },
+    {
+      "name": "carrier",
+      "functions": 4,
+      "playerpiggyback_references": 9,
+      "players_references": 0,
+      "playengineeffects_references": 4,
+      "functions_by_file": [
+        {
+          "file": "1031.gsc",
+          "function": "monitorscavengerpickup",
+          "playerpiggyback": 6
+        },
+        {
+          "file": "987.gsc",
+          "function": "getenemytarget",
+          "playerpiggyback": 2
+        },
+        {
+          "file": "animscripts/dog/dog_combat.gsc",
+          "function": "playerview_playmissanim",
+          "playengineeffects": 3
+        },
+        {
+          "file": "maps/ss_util.gsc",
+          "function": "get_different_favoriteenemy",
+          "playerpiggyback": 1,
+          "playengineeffects": 1
+        }
+      ]
+    },
+    {
+      "name": "cornered",
+      "functions": 9,
+      "playerpiggyback_references": 10,
+      "players_references": 0,
+      "playengineeffects_references": 0,
+      "functions_by_file": [
+        {
+          "file": "1045.gsc",
+          "function": "enemy_corpse_alert_level",
+          "playerpiggyback": 1
+        },
+        {
+          "file": "1050.gsc",
+          "function": "enemy_threat_logic_dog_wait",
+          "playerpiggyback": 1
+        },
+        {
+          "file": "1051.gsc",
+          "function": "enable_stealth_system",
+          "playerpiggyback": 1
+        },
+        {
+          "file": "1051.gsc",
+          "function": "disable_stealth_system",
+          "playerpiggyback": 1
+        },
+        {
+          "file": "1052.gsc",
+          "function": "event_awareness_waitclear_ai_proc",
+          "playerpiggyback": 1
+        },
+        {
+          "file": "1054.gsc",
+          "function": "system_message_loop",
+          "playerpiggyback": 1
+        },
+        {
+          "file": "987.gsc",
+          "function": "getenemytarget",
+          "playerpiggyback": 2
+        },
+        {
+          "file": "maps/cornered_interior.gsc",
+          "function": "courtyard_rorke",
+          "playerpiggyback": 1,
+          "level_player": 1
+        },
+        {
+          "file": "maps/cornered_interior.gsc",
+          "function": "bar_enemies",
+          "playerpiggyback": 1,
+          "level_player": 1
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "functions": 13,
+    "playerpiggyback_references": 19,
+    "players_references": 0,
+    "playengineeffects_references": 4
+  },
+  "changes": [
+    "audit all parsed GSC functions for playerpiggyback, players and playengineeffects",
+    "report exact file/function and per-marker reference counts",
+    "include all-player-container findings alongside the 68 exact hotspot targets"
+  ],
+  "validation_boundary": "Read-only static script analysis. These markers do not prove a second local controller or native Campaign Player 2."
+}
