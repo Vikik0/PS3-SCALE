@@ -216,6 +216,8 @@ def _audit_function(relative: str, name: str, start: int, end: int, clean: list[
         event_ownership_pattern = "MISSION_WIDE_SINGLETON_SIDE_EFFECTS"
     elif flag_calls or side_effects["level_event_calls"] or dvar_calls:
         event_ownership_pattern = "SHARED_MISSION_EVENT_WITH_PLAYER_STATE"
+    elif side_effects["animation_rig_spawns"] and player_refs:
+        event_ownership_pattern = "PLAYER_RIG_WITH_SHARED_TRIGGER_CONTEXT"
     elif player_refs:
         event_ownership_pattern = "PLAYER_ENTITY_ACTIONS"
     else:
