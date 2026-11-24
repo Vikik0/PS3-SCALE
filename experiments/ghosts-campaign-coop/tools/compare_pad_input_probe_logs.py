@@ -48,6 +48,25 @@ def _mapped_buttons(digital1: int, digital2: int) -> int:
     return buttons
 
 
+def _normalize_axis(raw: int, deadzone: int = 20) -> int:
+    """Mirror ghc_normalize_axis() with the v1 probe's fixed default deadzone."""
+    delta = raw - 128
+    if delta > 0:
+        if delta <= deadzone:
+            return 0
+        magnitude = delta - deadzone
+        available = 127 - deadzone
+        scaled = (magnitude * 127) // available
+        return min(scaled, 127)
+    magnitude = -delta
+    if magnitude <= deadzone:
+        return 0
+    magnitude -= deadzone
+    available = 128 - deadzone
+    scaled = (magnitude * 127) // available
+    return -min(scaled, 127)
+
+
 def parse_log(path: Path) -> dict:
     path = Path(path)
     data = {
@@ -231,9 +250,26 @@ def parse_log(path: Path) -> dict:
                         ),
                     })
                     continue
-            elif any(port_data[key] for key in (
+                raw_axes = {
+                    "norm_left_x": port_data["left_x"],
+                    "norm_left_y": port_data["left_y"],
+                    "norm_right_x": port_data["right_x"],
+                    "norm_right_y": port_data["right_y"],
+                }
+                axis_mismatches = [
+                    key for key, raw_value in raw_axes.items()
+                    if port_data[key] != _normalize_axis(raw_value)
+                ]
+                if axis_mismatches:
+                    data["port_line_errors"].append({
+                        "line": line_number, "sample": sample_index, "port": port,
+                        "error": "normalized axes do not match raw stick values: " + ", ".join(axis_mismatches),
+                    })
+                    continue
+            elif not port_data["read_error"] and any(port_data[key] for key in (
                 "digital1", "digital2", "buttons", "left_x", "left_y",
-                "right_x", "right_y", "l2_pressure", "r2_pressure",
+                "right_x", "right_y", "norm_left_x", "norm_left_y",
+                "norm_right_x", "norm_right_y", "l2_pressure", "r2_pressure",
             )):
                 data["port_line_errors"].append({
                     "line": line_number, "sample": sample_index, "port": port,
