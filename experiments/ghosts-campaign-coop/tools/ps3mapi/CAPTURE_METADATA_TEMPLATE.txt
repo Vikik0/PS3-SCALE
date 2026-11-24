@@ -1,0 +1,14 @@
+# Ghosts TU 1.16 runtime capture metadata
+# Make one copy for Campaign and one for Multiplayer.
+# PROCESS GETNAME is diagnostic metadata only, not automatic mode detection.
+
+profile_title_id=BLUS31270
+profile_app_ver=01.16
+operator_selected_mode=CAMPAIGN_OR_MULTIPLAYER
+capture_date_local=
+ps3mapi_current_pid=
+ps3mapi_process_name_verbatim=
+pad_probe_log_filename=
+segment0_filename=
+segment1_filename=
+notes=
