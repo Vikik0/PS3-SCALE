@@ -57,6 +57,13 @@ class CampaignEventLockTests(unittest.TestCase):
         self.assertIn("level.ghc_campaign_event_lock_owner[event_id] = var_0", body)
         self.assertIn("level.ghc_campaign_event_lock_active[var_0] = event_id", body)
 
+    def test_release_and_owner_queries_fail_closed_before_lock_initialization(self):
+        release = function_body(self.source, "ghc_campaign_event_lock_release")
+        is_owner = function_body(self.source, "ghc_campaign_event_lock_is_owner")
+        for body in (release, is_owner):
+            self.assertIn("level.ghc_campaign_event_lock_initialized", body)
+            self.assertIn("return 0", body)
+
     def test_release_is_owner_only_and_commits_completion_only_when_requested(self):
         body = function_body(self.source, "ghc_campaign_event_lock_release")
         self.assertIn("ghc_campaign_native_pair_is_current()", body)
