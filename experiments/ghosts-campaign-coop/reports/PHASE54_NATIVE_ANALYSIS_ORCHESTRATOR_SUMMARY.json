@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "phase": 54,
+  "status": "ONE_COMMAND_TU116_NATIVE_ANALYSIS_ORCHESTRATOR_ADDED",
+  "changes": [
+    "retail input preflight gates all further work",
+    "both decrypted PPU ELFs are validated against the installed TU 1.16 profile",
+    "OPD ranges are derived from each ELF inspector report and hash-bound to the exact input",
+    "Ghidra inventory/comparison runner is invoked without manual OPD address entry",
+    "missing ELF or invalid OPD evidence stops without guessing",
+    "read-only local workflow; no binary upload or modification"
+  ],
+  "validation_boundary": "Mocked host orchestration tests only. The tool does not decrypt SELF files or prove runtime Campaign co-op."
+}

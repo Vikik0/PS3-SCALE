@@ -19,6 +19,12 @@ The native PPU analysis must use the exact BLUS31270 disc and TU 1.16 update pai
 
 Optional decrypted ELF paths can be added with --campaign-elf and --multiplayer-elf. The report distinguishes verified encrypted SELF containers from actual decrypted PPU ELF availability.
 
+Phase 54 adds the full local pipeline:
+
+    python tools/run_ghosts_tu116_native_analysis.py --disc-root "D:\\Games\\Ghosts\\PS3_GAME" --update-root "D:\\RPCS3\\dev_hdd0\\game\\BLUS31270" --campaign-elf "D:\\Ghosts\\decrypted\\default.elf" --multiplayer-elf "D:\\Ghosts\\decrypted\\default_mp.elf" --analyze-headless "C:\\ghidra\\support\\analyzeHeadless.bat"
+
+If decrypted ELFs are omitted, it writes the input preflight and reports WAITING_FOR_BOTH_DECRYPTED_PPU_ELFS. If both are supplied, it checks their installed TU entry points, creates hash-bound ELF inspector reports, requires a structural OPD range in both builds, and calls the existing atomic Ghidra runner. Use --overwrite only when replacing an existing output bundle.
+
 ## Validation boundary
 
 Host tests use synthetic SFO and SELF fixtures with the expected profile constants patched to fixture hashes. A successful local SELF identity check does not decrypt its executable segments and does not by itself enable Ghidra function analysis.
