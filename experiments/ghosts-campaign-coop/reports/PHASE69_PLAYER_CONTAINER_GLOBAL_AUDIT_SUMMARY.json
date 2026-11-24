@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "phase": 69,
+  "status": "PLAYER_CONTAINER_GLOBAL_INITIALIZER_SCAN",
+  "changes": [
+    "scan nested decompiled and raw GSC source files",
+    "distinguish global assignment, array slot assignment, array mutator, entity property write and reads",
+    "separate playengineeffects initialization from reads",
+    "pin source tree before and after scan"
+  ],
+  "actual_uploaded_input_result": {
+    "source_files": 252,
+    "playerpiggyback_references": 19,
+    "playerpiggyback_global_assignments": 0,
+    "playerpiggyback_array_slot_assignments": 0,
+    "playerpiggyback_array_mutators": 0,
+    "playerpiggyback_entity_property_writes": 2,
+    "playengineeffects_references": 4,
+    "playengineeffects_global_assignments": 0,
+    "playerpiggyback_initializer_status": "NO_SCRIPT_INITIALIZER_IN_SCANNED_GSC",
+    "playengineeffects_initializer_status": "NO_SCRIPT_INITIALIZER_IN_SCANNED_GSC",
+    "property_writes": [
+      {
+        "mission": "carrier",
+        "file": "decompiled_gsc/1031.gsc",
+        "line": 208,
+        "field": "sniper_degy",
+        "value": "cg_playerFovScale0",
+        "array_index": 0
+      },
+      {
+        "mission": "carrier",
+        "file": "decompiled_gsc/1031.gsc",
+        "line": 211,
+        "field": "sniper_degy",
+        "value": "cg_playerFovScale1",
+        "array_index": 1
+      }
+    ]
+  },
+  "tests_added": 5,
+  "validation_boundary": "No script-side initializer was found in the supplied 252 GSC files. Shared scripts outside this extraction or native engine code may still initialize these globals."
+}
