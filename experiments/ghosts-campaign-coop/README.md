@@ -154,4 +154,4 @@ Phases 72–75 harden the native local-player readiness gate. Phase 72 added exp
 - Report: reports/PHASE79_REPORT_AR.md; summary: reports/PHASE79_CAPTURE_METADATA_SUMMARY.json.
 
 
-The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 files; SHA-256 cb7fe7720e62cc7043201db0c935e22067ce32aa4c53401c7413f51570ae7184). It includes the PROCESS GETNAME metadata step and capture template. The binary remains a local handoff artifact; no original game files are included.
+The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload files + manifest (9 ZIP entries); SHA-256 11d8efcce114a5c422c3ac9f57eca774acdf011e9b4d6d886db3afbf190fac08). It includes the PROCESS GETNAME metadata step and capture template. The binary remains a local handoff artifact; no original game files are included.
