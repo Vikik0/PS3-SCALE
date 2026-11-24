@@ -176,3 +176,13 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - All listed addresses are Windows x64 dedicated-server reference addresses for PS4/Xbox-hosted server builds, not retail console-client addresses or PS3 PPU addresses. No such offsets are copied into the PS3 PRX.
 - Report: reports/PHASE81_REPORT_AR.md; machine-readable summary: reports/PHASE81_CROSS_PLATFORM_REFERENCE_AUDIT.json.
 - **PS3-specific proof remains blocked** on Campaign/Multiplayer SEG0/SEG1 runtime captures and Pad Probe logs.
+
+
+### Phase 82 — independent DualShock input telemetry
+
+- Added a separate read-only `pad_input_probe` PRX that reuses `ghc_local_input_poll_ps3` to call `cellPadGetInfo2` and `cellPadGetData` for ports 0 and 1. It logs raw digital buttons, mapped button masks, pressed/released edges, raw/normalized sticks and L2/R2 pressure for 30 one-second samples.
+- Campaign and Multiplayer logs are separate; mode remains manually selected. The probe does not call `cellPadInit`, `cellPadEnd`, or `cellPadSet*`, and does not patch game memory or create a local client.
+- Added host-mock tests for the PS3 adapter and `tools/compare_pad_input_probe_logs.py` to require simultaneous port visibility, successful reads, button activity on both ports, and distinct button states in the same sample in both modes.
+- CI run #1437: 452 Python tests passed, PS3 adapter mock passed, PS3DK PRX build and `prx-gen check` passed, 6/6 jobs successful.
+- Report: `reports/PHASE82_REPORT_AR.md`; machine-readable summary: `reports/PHASE82_DUALSHOCK_INPUT_PROBE.json`.
+- **Hardware gate remains:** no physical PS3 run is claimed. Input telemetry must be captured in Campaign Offline and Multiplayer Offline before native PS3 Local Client analysis can proceed.
