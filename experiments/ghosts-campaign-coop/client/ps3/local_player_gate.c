@@ -45,6 +45,15 @@ GhcLocalPlayerGateStatus ghc_local_player_gate_validate(
         uint8_t expected_role = slot == 0u
             ? GHC_LOCAL_ROLE_LOGAN : GHC_LOCAL_ROLE_GUEST_SOLDIER;
 
+        if (player->split_screen_active > 1u
+            || player->is_split_screen_player > 1u
+            || player->input_connected > 1u
+            || player->input_frame_valid > 1u
+            || player->client_id_valid > 1u
+            || player->entity_id_valid > 1u
+            || player->local_client_num_valid > 1u) {
+            return gh_fail(result, slot, GHC_LOCAL_GATE_INVALID_BOOLEAN_FLAG);
+        }
         if (!player->split_screen_active) {
             return gh_fail(result, slot, GHC_LOCAL_GATE_SPLITSCREEN_INACTIVE);
         }
