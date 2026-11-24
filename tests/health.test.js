@@ -18,7 +18,11 @@ test("health endpoint reports lobby readiness without claiming gameplay transpor
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.headers["Cache-Control"], "no-store");
-  assert.equal(response.body.version, "0.8.4");
+  assert.equal(response.body.version, "0.8.5");
+  assert.equal(response.body.discConfirmationRequiresReady, true);
+  assert.equal(response.body.membershipJoinReset, "all-active-ready-and-disc-confirmations");
+  assert.equal(response.body.netplayHostValidation, "retroarch-only-relay-first-no-direct-downgrade");
+  assert.equal(response.body.passwordProtectedHosts, "blocked-from-automatic-join");
   assert.equal(response.body.discFingerprintVerification, "fnv1a-64-content-and-track-layout");
   assert.equal(response.body.discConfirmationReset, "on-selection-change-or-unready-or-membership-change");
   assert.equal(response.body.readyLeaseSeconds, 90);
