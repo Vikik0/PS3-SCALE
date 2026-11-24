@@ -26,4 +26,4 @@ The report contains the exact source-file hashes, ownership findings, exact targ
 
 ## Validation boundary
 
-Synthetic tests exercise the complete orchestration, duplicate-name handling, source mutation detection, deterministic source manifests and output safety. This remains static GSC evidence; it does not prove that a callback executes or that Campaign can initialize a second native local player.
+Synthetic tests exercise the complete orchestration, duplicate-name handling, source mutation detection, symbolic-link rejection, deterministic source manifests and output safety. This remains static GSC evidence; it does not prove that a callback executes or that Campaign can initialize a second native local player.

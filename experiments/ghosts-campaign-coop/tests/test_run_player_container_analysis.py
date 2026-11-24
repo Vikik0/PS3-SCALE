@@ -88,10 +88,25 @@ class PlayerContainerAnalysisTests(unittest.TestCase):
         output = self.root / "reports" / "analysis.json"
         report = runner.run_analysis({"carrier": self.mission}, output)
         self.assertTrue(output.is_file())
-        self.assertEqual(output.stat().st_size, output.stat().st_size)
+        import json
+        saved = json.loads(output.read_text(encoding="utf-8"))
+        self.assertEqual(saved["summary"], report["summary"])
+        self.assertEqual(saved["status"], "PLAYER_CONTAINER_CALLGRAPH_COMPLETED")
         self.assertEqual(report["status"], "PLAYER_CONTAINER_CALLGRAPH_COMPLETED")
         with self.assertRaises(FileExistsError):
             runner.run_analysis({"carrier": self.mission}, output)
+
+
+    def test_rejects_symbolic_link_gsc_source(self):
+        outside = self.root / "outside.gsc"
+        outside.write_text("external_helper()\\n{\\n return;\\n}\\n", encoding="utf-8")
+        link = self.mission / "linked.gsc"
+        try:
+            link.symlink_to(outside)
+        except (OSError, NotImplementedError) as exc:
+            self.skipTest(f"symbolic links unavailable: {exc}")
+        with self.assertRaisesRegex(ValueError, "symbolic-link GSC inputs"):
+            runner.hash_gsc_tree(self.mission)
 
 
 if __name__ == "__main__":
