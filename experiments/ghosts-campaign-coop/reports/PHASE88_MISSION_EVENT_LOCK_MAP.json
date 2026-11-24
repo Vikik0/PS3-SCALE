@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "phase": 88,
+  "event_id_range": {
+    "min": 0,
+    "max": 15
+  },
+  "lock_api": "ghc_campaign_event_lock",
+  "integration_status": "PLANNED_NOT_WIRED_TO_ORIGINAL_MISSION_HANDLERS",
+  "mission_handlers_modified": false,
+  "events": [
+    {
+      "mission": "Black Ice",
+      "routine": "player_fail_finale_instakill",
+      "policy": "MISSION_COORDINATOR_ONLY",
+      "event_lock_id": null,
+      "owner": "mission_coordinator",
+      "shared_state": [
+        "missionfailed",
+        "flag_player_dying_on_rig",
+        "finale dvars",
+        "world earthquakes"
+      ],
+      "per_player_state": [
+        "camera",
+        "overlay",
+        "rumble",
+        "player rig"
+      ],
+      "reason": "Mission failure and world effects must execute once; do not create a second death/failure sequence."
+    },
+    {
+      "mission": "Black Ice",
+      "routine": "ascend_logic",
+      "policy": "MISSION_COORDINATOR_WITH_PLAYER_INPUT_HANDLERS",
+      "event_lock_id": null,
+      "owner": "single_ascend_coordinator",
+      "shared_state": [
+        "rope choreography",
+        "ally state",
+        "launcher state",
+        "ascend flags",
+        "shared animation timeline"
+      ],
+      "per_player_state": [
+        "input readiness",
+        "camera clamp",
+        "player rig",
+        "damage/death response"
+      ],
+      "reason": "Keep the global ascend timeline single-shot; split only player input and presentation handlers. Assign an event lock only to a concrete shared interaction trigger if separately extracted."
+    },
+    {
+      "mission": "Black Ice",
+      "routine": "event_player_turns_key",
+      "policy": "SHARED_INTERACTION_SINGLE_OWNER",
+      "event_lock_id": 0,
+      "owner": "first_valid_player_to_acquire",
+      "shared_state": [
+        "flare-stack console trigger",
+        "console mission flag",
+        "shared notification"
+      ],
+      "per_player_state": [
+        "animation context",
+        "control lock",
+        "camera context"
+      ],
+      "reason": "One player owns the console interaction; shared console state is changed once."
+    },
+    {
+      "mission": "Carrier",
+      "routine": "knockback_hesh",
+      "policy": "MISSION_COORDINATOR_ONLY",
+      "event_lock_id": null,
+      "owner": "mission_coordinator",
+      "shared_state": [
+        "Sparrow knockback timeline",
+        "slow motion",
+        "mission flags",
+        "autosave"
+      ],
+      "per_player_state": [
+        "camera",
+        "local rumble",
+        "actor presentation"
+      ],
+      "reason": "The scripted knockback and autosave are one mission event, not one event per player."
+    },
+    {
+      "mission": "Carrier",
+      "routine": "cut_the_rope",
+      "policy": "SHARED_INTERACTION_SINGLE_OWNER",
+      "event_lock_id": 1,
+      "owner": "first_valid_player_to_acquire",
+      "shared_state": [
+        "rope trigger entity",
+        "rope cut state",
+        "shared objective notification"
+      ],
+      "per_player_state": [
+        "active_rope",
+        "weapon/control restore",
+        "interaction animation"
+      ],
+      "reason": "The same rope trigger must not be cut by two players concurrently."
+    },
+    {
+      "mission": "Carrier",
+      "routine": "victory_choppers_land",
+      "policy": "MISSION_COORDINATOR_ONLY",
+      "event_lock_id": null,
+      "owner": "mission_coordinator",
+      "shared_state": [
+        "victory landing timeline",
+        "mission completion",
+        "autosave"
+      ],
+      "per_player_state": [
+        "camera",
+        "local actor rig"
+      ],
+      "reason": "Victory and save execute once; any second-player rig follows the same timeline."
+    },
+    {
+      "mission": "Cornered",
+      "routine": "gun_down_trigger_internal",
+      "policy": "SHARED_INTERACTION_SINGLE_OWNER",
+      "event_lock_id": 2,
+      "owner": "first_valid_player_to_acquire",
+      "shared_state": [
+        "level.has_hidden_weapon_equipped",
+        "ammoCounterHide",
+        "weapon-hide trigger"
+      ],
+      "per_player_state": [
+        "equipped weapon snapshot",
+        "ammo",
+        "viewmodel",
+        "weapon restore"
+      ],
+      "reason": "The shared HUD/level toggle cannot be changed by two concurrent weapon-hide handlers."
+    },
+    {
+      "mission": "Cornered",
+      "routine": "fall_player",
+      "policy": "MISSION_COORDINATOR_ONLY",
+      "event_lock_id": null,
+      "owner": "world_collapse_coordinator",
+      "shared_state": [
+        "fall path rig",
+        "world gravity",
+        "physics explosions",
+        "mission flags",
+        "autosave",
+        "mission failure"
+      ],
+      "per_player_state": [
+        "camera",
+        "local rig",
+        "viewmodel",
+        "local rumble"
+      ],
+      "reason": "World collapse and mission failure remain single-shot; player presentation is separated only after native client proof."
+    },
+    {
+      "mission": "Cornered",
+      "routine": "upload_virus_enter",
+      "policy": "SHARED_INTERACTION_SINGLE_OWNER",
+      "event_lock_id": 3,
+      "owner": "first_valid_player_to_acquire",
+      "shared_state": [
+        "virus device",
+        "upload flags",
+        "dynamic DOF",
+        "level.allow_fire"
+      ],
+      "per_player_state": [
+        "weapon state",
+        "thermal vision",
+        "viewmodel",
+        "control restore"
+      ],
+      "reason": "One player owns the shared upload device; global allow-fire and device state are not toggled concurrently."
+    }
+  ]
+}
