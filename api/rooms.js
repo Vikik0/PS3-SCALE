@@ -248,7 +248,7 @@ async function getLibretroLobbyEntry(hostNickname) {
 }
 
 function netplayEndpoint(fields) {
-  if (!fields || fields.connectable !== true) return null;
+  if (!fields || fields.connectable !== true || fields.is_retroarch !== true) return null;
   const now = Date.now();
   const updatedAt = Date.parse(fields.updated || fields.created || "");
   if (!Number.isFinite(updatedAt) || updatedAt > now + 30000 || now - updatedAt > 90000) {
@@ -268,10 +268,11 @@ function netplayEndpoint(fields) {
     ? fields.mitm_session.trim()
     : "";
 
-  // A host that advertises a relay session must use that relay. Do not silently
-  // fall back to its direct IP when the relay tuple is incomplete or malformed.
-  if (relaySession) {
-    if (!validHost(fields.mitm_ip) || !validPort(fields.mitm_port) ||
+  // RetroArch host_method 3 is the MITM relay path. If it advertises a relay
+  // session, a broken relay tuple must never be downgraded to a direct IP.
+  if (relaySession || Number(fields.host_method) === 3) {
+    if (Number(fields.host_method) !== 3 ||
+        !validHost(fields.mitm_ip) || !validPort(fields.mitm_port) ||
         !/^[A-Za-z0-9+/=]{8,64}$/.test(relaySession)) {
       return null;
     }
@@ -283,7 +284,9 @@ function netplayEndpoint(fields) {
     };
   }
 
-  if (validHost(fields.ip) && validPort(fields.port)) {
+  // Direct host_method 0 is accepted only when no relay session is advertised.
+  if (Number(fields.host_method) === 0 && !relaySession &&
+      validHost(fields.ip) && validPort(fields.port)) {
     return {
       mode: "direct",
       address: fields.ip,
