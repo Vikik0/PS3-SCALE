@@ -1,0 +1,284 @@
+{
+  "schema_version": 1,
+  "phase": 84,
+  "status": "STATIC_MISSION_EVENT_OWNERSHIP_AUDIT_COMPLETED",
+  "source": {
+    "archive": "Ghosts_Campaign_Missions_Phase31.zip",
+    "extractor": "GSC Tool 1.6.2.364",
+    "decompile_recompile": "249/249",
+    "missions": {
+      "black_ice": {
+        "fastfile": "black_ice.ff",
+        "bytes": 91355961,
+        "sha256": "950726399e16f55fd565438936ec59231649940c89763a87c805409536837532",
+        "gsc_scripts": 76
+      },
+      "carrier": {
+        "fastfile": "carrier.ff",
+        "bytes": 87088544,
+        "sha256": "e3a616545f18a7dcae006b4e32264c56b01d627650ea574f3fe710e02543caee",
+        "gsc_scripts": 118
+      },
+      "cornered": {
+        "fastfile": "cornered.ff",
+        "bytes": 93933243,
+        "sha256": "1bcb1da55d7e5a893de2a513e6df9b5cd3786e4d642dc76e090ea551cdf39395",
+        "gsc_scripts": 55
+      }
+    }
+  },
+  "critical_functions": {
+    "black_ice::player_fail_finale_instakill": {
+      "file": "maps/black_ice_exfil.gsc",
+      "level_player_refs": 26,
+      "mission_flag_api_calls": 1,
+      "dvar_api_calls": 5,
+      "anim_rig_spawns": 1,
+      "player_link_calls": 1,
+      "mission_failure_calls": 1,
+      "autosave_calls": 0,
+      "slow_motion_calls": 0,
+      "world_physics_calls": 3,
+      "level_event_calls": 0,
+      "level_field_writes": {},
+      "player_field_writes": {}
+    },
+    "black_ice::ascend_logic": {
+      "file": "maps/black_ice_ascend.gsc",
+      "level_player_refs": 22,
+      "mission_flag_api_calls": 4,
+      "dvar_api_calls": 0,
+      "anim_rig_spawns": 3,
+      "player_link_calls": 1,
+      "mission_failure_calls": 0,
+      "autosave_calls": 0,
+      "slow_motion_calls": 0,
+      "world_physics_calls": 0,
+      "level_event_calls": 5,
+      "level_field_writes": {
+        "launcher_write_clipboard": 1,
+        "ascend_launch_pos": 1,
+        "player_ledge_logic": 1,
+        "ascend_launcher": 1,
+        "ascend_state": 1,
+        "ascend_state_transition": 1,
+        "start_ascend": 1
+      },
+      "player_field_writes": {
+        "waitill_damage_or_death": 2,
+        "ignoreme": 1
+      }
+    },
+    "black_ice::event_player_turns_key": {
+      "file": "maps/black_ice_flarestack.gsc",
+      "level_player_refs": 17,
+      "mission_flag_api_calls": 1,
+      "dvar_api_calls": 0,
+      "anim_rig_spawns": 1,
+      "player_link_calls": 1,
+      "mission_failure_calls": 0,
+      "autosave_calls": 0,
+      "slow_motion_calls": 0,
+      "world_physics_calls": 0,
+      "level_event_calls": 3,
+      "level_field_writes": {},
+      "player_field_writes": {}
+    },
+    "carrier::knockback_hesh": {
+      "file": "maps/carrier_sparrow_run.gsc",
+      "level_player_refs": 51,
+      "mission_flag_api_calls": 3,
+      "dvar_api_calls": 0,
+      "anim_rig_spawns": 2,
+      "player_link_calls": 4,
+      "mission_failure_calls": 0,
+      "autosave_calls": 1,
+      "slow_motion_calls": 5,
+      "world_physics_calls": 0,
+      "level_event_calls": 1,
+      "level_field_writes": {},
+      "player_field_writes": {
+        "dontmelee": 2
+      }
+    },
+    "carrier::cut_the_rope": {
+      "file": "maps/carrier_code_zodiac.gsc",
+      "level_player_refs": 22,
+      "mission_flag_api_calls": 0,
+      "dvar_api_calls": 0,
+      "anim_rig_spawns": 1,
+      "player_link_calls": 1,
+      "mission_failure_calls": 0,
+      "autosave_calls": 0,
+      "slow_motion_calls": 0,
+      "world_physics_calls": 0,
+      "level_event_calls": 0,
+      "level_field_writes": {},
+      "player_field_writes": {
+        "active_rope": 1
+      }
+    },
+    "carrier::victory_choppers_land": {
+      "file": "maps/carrier_deck_victory.gsc",
+      "level_player_refs": 20,
+      "mission_flag_api_calls": 1,
+      "dvar_api_calls": 0,
+      "anim_rig_spawns": 1,
+      "player_link_calls": 2,
+      "mission_failure_calls": 0,
+      "autosave_calls": 1,
+      "slow_motion_calls": 0,
+      "world_physics_calls": 0,
+      "level_event_calls": 1,
+      "level_field_writes": {},
+      "player_field_writes": {}
+    },
+    "cornered::gun_down_trigger_internal": {
+      "file": "maps/cornered_building_entry.gsc",
+      "level_player_refs": 78,
+      "mission_flag_api_calls": 2,
+      "dvar_api_calls": 1,
+      "anim_rig_spawns": 0,
+      "player_link_calls": 0,
+      "mission_failure_calls": 0,
+      "autosave_calls": 0,
+      "slow_motion_calls": 0,
+      "world_physics_calls": 0,
+      "level_event_calls": 2,
+      "level_field_writes": {
+        "has_hidden_weapon_equipped": 3
+      },
+      "player_field_writes": {
+        "computer_idf": 2,
+        "equipped_weapon": 4,
+        "unequipped_hide_weapon": 1,
+        "equipped_hide_weapon": 3,
+        "unearned_icon_col": 1
+      }
+    },
+    "cornered::fall_player": {
+      "file": "maps/cornered_destruct.gsc",
+      "level_player_refs": 47,
+      "mission_flag_api_calls": 16,
+      "dvar_api_calls": 3,
+      "anim_rig_spawns": 2,
+      "player_link_calls": 4,
+      "mission_failure_calls": 1,
+      "autosave_calls": 1,
+      "slow_motion_calls": 0,
+      "world_physics_calls": 3,
+      "level_event_calls": 2,
+      "level_field_writes": {
+        "fall_arms_and_legs": 1
+      },
+      "player_field_writes": {}
+    },
+    "cornered::upload_virus_enter": {
+      "file": "maps/cornered_building_entry.gsc",
+      "level_player_refs": 44,
+      "mission_flag_api_calls": 2,
+      "dvar_api_calls": 4,
+      "anim_rig_spawns": 0,
+      "player_link_calls": 0,
+      "mission_failure_calls": 0,
+      "autosave_calls": 0,
+      "slow_motion_calls": 0,
+      "world_physics_calls": 0,
+      "level_event_calls": 0,
+      "level_field_writes": {
+        "allow_fire": 3
+      },
+      "player_field_writes": {
+        "is_in_thermal_vision": 2,
+        "currentweapon": 1
+      }
+    }
+  },
+  "recommendations": {
+    "black_ice::player_fail_finale_instakill": "Run the fatal mission transition once. Keep missionfailed, flag_player_dying_on_rig, shared fog/dvar and world earthquake side effects in the mission coordinator; only camera, overlay, rumble and player-link work can be player-contextualized.",
+    "black_ice::ascend_logic": "Keep one ascend coordinator for ropes, allies, flags, launch state and shared rigs. A future second-player handler needs its own player rig, view clamp and input readiness, synchronized to the same timeline; do not duplicate the global trigger or ally choreography.",
+    "black_ice::event_player_turns_key": "Treat the flare-stack console as a single-owner interaction. Pass the chosen player explicitly to the animation/control helper, but set the console flag and play shared audio/mission notifications once.",
+    "carrier::knockback_hesh": "Keep the Sparrow knockdown/slide and slow-motion timeline as one mission event. A second-player rig may only be added as a synchronized actor after native client creation; never start another global slow-motion/autosave/flag sequence.",
+    "carrier::cut_the_rope": "Keep the rope trigger entity (self/var_0) as the interaction owner and add an explicit player parameter only if refactoring. Lock the rope to one player; store active_rope and control/inventory restore state on that player.",
+    "carrier::victory_choppers_land": "Run the landing/victory/save coordinator once. If a second local player exists, add a separate actor rig to the same animation timeline rather than duplicating the mission end and autosave.",
+    "cornered::gun_down_trigger_internal": "Keep gun-down activation shared and single-owner while weapon inventory/ammo snapshots remain per-player. level.has_hidden_weapon_equipped and ammoCounterHide are shared state and cannot safely be toggled by two concurrent handlers.",
+    "cornered::fall_player": "Split the sequence into one world-collapse coordinator and per-player camera/control/rig handlers. Keep global flags, fall path, world gravity, physics explosions, autosave and mission failure single-shot; make fall_arms_and_legs and player view/weapon state player-indexed only after native Local Client 1 is proven.",
+    "cornered::upload_virus_enter": "Treat the device, upload completion, dynamic DOF and device animation as one shared interaction. Track one interaction owner and restore that player's weapons/view state; review level.allow_fire and dvars because they are level/global side effects that can affect P2."
+  },
+  "existing_multiplayer_patterns": {
+    "carrier_monitorscavengerpickup": {
+      "file": "1031.gsc",
+      "playerpiggyback_refs": 6,
+      "per_player_hud": true,
+      "fov_dvars": [
+        "cg_playerFovScale0",
+        "cg_playerFovScale1"
+      ],
+      "shared_dvar": "sm_sunShadowCenter",
+      "classification": "PER_PLAYER_HUD_WITH_SHARED_GLOBAL_RENDER_SETTING"
+    },
+    "carrier_get_different_favoriteenemy": {
+      "file": "maps/ss_util.gsc",
+      "playerpiggyback_refs": 1,
+      "playengineeffects_refs": 1,
+      "classification": "SELECTS_OTHER_EXISTING_PLAYER_FROM_LIST"
+    },
+    "cornered_courtyard_rorke": {
+      "file": "maps/cornered_interior.gsc",
+      "playerpiggyback_refs": 1,
+      "level_player_refs": 1,
+      "classification": "MIXED_PRIMARY_PLAYER_AND_ALL_PLAYER_STEALTH_VISIBILITY"
+    },
+    "cornered_bar_enemies": {
+      "file": "maps/cornered_interior.gsc",
+      "playerpiggyback_refs": 1,
+      "level_player_refs": 1,
+      "classification": "MIXED_PRIMARY_TRIGGER_AND_ALL_PLAYER_STEALTH_VISIBILITY"
+    },
+    "black_ice_player_saw_kill": {
+      "file": "1062.gsc",
+      "issplitscreen_calls": 1,
+      "self_equals_level_player_checks": 1,
+      "classification": "SPLITSCREEN_PATH_RUNS_SCUBA_LOOP_ONLY_FOR_PRIMARY_PLAYER"
+    }
+  },
+  "engineering_decisions": [
+    "Do not globally replace level.player.",
+    "Use one mission event coordinator plus explicit per-player handlers.",
+    "Keep mission flags, autosave, mission failure, world physics, slow motion and shared objectives single-shot.",
+    "Use a single-owner lock for shared rope, console, weapon-hide and virus-upload interactions.",
+    "Keep Logan as Player 1 and Hesh as an NPC; do not convert or spawn a second Hesh.",
+    "Only bind per-player state after native PS3 Local Client 1 and independent controller mapping are verified."
+  ],
+  "tool_extension": {
+    "file": "tools/gsc_player_state_ownership_audit.py",
+    "fields": [
+      "player_field_writes",
+      "level_scope_field_writes",
+      "shared_side_effect_counts",
+      "event_risk_flags",
+      "event_ownership_pattern"
+    ],
+    "side_effects": [
+      "mission_failure_calls",
+      "autosave_calls",
+      "slow_motion_calls",
+      "world_physics_calls",
+      "level_event_calls",
+      "animation_rig_spawns"
+    ]
+  },
+  "ci": {
+    "run_number": 1470,
+    "run_id": 45505931126,
+    "run_url": "https://github.com/Vikik0/PS3-SCALE/actions/runs/45505931126",
+    "jobs": "6/6 SUCCESS",
+    "python_tests": "469 PASS"
+  },
+  "limitations": [
+    "Static GSC review only; no FastFile was modified.",
+    "No mission GSC patch was compiled into retail FastFiles.",
+    "No PPU runtime dumps or physical PS3 input logs have been supplied.",
+    "This report does not prove a native second local client or playable Campaign co-op."
+  ]
+}
