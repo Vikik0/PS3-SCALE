@@ -100,3 +100,11 @@ CI build and host tests are necessary but not sufficient. Actual RSX appearance,
 3. Force a mismatched region in a host test while keeping Title ID and APP_VER unchanged; confirm the profile is rejected.
 4. Confirm a different APP_VER is rejected even when Title ID and region match.
 5. Confirm an unrecognized region is not guessed; exact Title ID and APP_VER are still required.
+
+
+## Community NCL region safety
+
+1. Confirm fuzzy title / same-region matches remain discovery suggestions only.
+2. Confirm exact installation requires the same Title ID and APP_VER.
+3. Provide an index record with a different regional Title ID while its path contains the game's Title ID; confirm installation is rejected.
+4. Confirm US, EU, Japan, Asia and Korea region labels use the shared game-ID prefix map.
