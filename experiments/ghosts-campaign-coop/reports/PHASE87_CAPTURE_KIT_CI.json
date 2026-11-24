@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "phase": 87,
+  "status": "CI_CAPTURE_KIT_AUTOMATION_COMPLETE",
+  "builder": "tools/build_capture_kit.py",
+  "workflow_job": "package-capture-kit",
+  "artifacts_downloaded": [
+    "ghosts-campaign-pad-probe",
+    "ghosts-dualshock-input-probe",
+    "ghosts-coop-prx-bootstrap",
+    "ghosts-campaign-gsc-session-bridge",
+    "ghosts-campaign-gsc-registry"
+  ],
+  "validations": [
+    "manifest file hashes",
+    "file sizes",
+    "required PS3 payloads",
+    "GSC source/bytecode manifests",
+    "no GSCBIN in PS3 directory",
+    "path safety"
+  ],
+  "output": {
+    "artifact_name": "ghosts-tu116-development-capture-kit",
+    "artifact_id": 14974903362,
+    "inner_zip": "Ghosts_TU116_Development_Capture_Kit.zip",
+    "size_bytes": 483396,
+    "file_count": 46,
+    "files_verified": 46,
+    "gsc_manifests_verified": 2,
+    "sha256": "477f6b84992369b78972cff16f7b57ed4df3d8cf4b395ed1f934ce162f44ea35"
+  },
+  "ci": {
+    "run_number": 1511,
+    "run_id": 45510341497,
+    "run_url": "https://github.com/Vikik0/PS3-SCALE/actions/runs/45510341497",
+    "jobs": "7/7 SUCCESS",
+    "python_tests": "489 PASS",
+    "source_commit": "2018f977415f3fa2afc108151184ce070e430c8e"
+  },
+  "limitations": [
+    "Package generation and integrity do not prove PS3 hardware runtime compatibility.",
+    "Experimental GSC is not injected into a retail FastFile.",
+    "Native second Campaign Local Client and playable Player 2 remain unproven."
+  ]
+}
