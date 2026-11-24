@@ -197,3 +197,15 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - CI run [#1460](https://github.com/Vikik0/PS3-SCALE/actions/runs/45504502823): **6/6 jobs successful**, including **467 Python tests**, PS3 adapter/PRX builds and `prx-gen check`.
 - Report: `reports/PHASE83_REPORT_AR.md`; machine-readable summary: `reports/PHASE83_INPUT_VALIDATION.json`.
 - **Hardware gate unchanged:** no physical PS3 logs are claimed. Input telemetry does not prove a native second local client, player entity, camera/HUD, or playable Campaign co-op.
+
+
+### Phase 84 — mission event ownership and duplication-risk audit
+
+- Re-reviewed nine high-priority routines from the supplied Black Ice, Carrier and Cornered GSC archive: finale death, ascend, flare-stack console, Sparrow knockback, rope cut, victory landing, gun-down weapon hide, building fall, and virus upload.
+- The audit separates per-player field writes from level field writes and records mission failure, autosave, slow-motion, world-physics, level-wide event and animation-rig side effects.
+- Confirmed existing multi-player script patterns: Carrier's monitorscavengerpickup iterates level.playerpiggyback and creates per-player HUD/FOV state while also writing a shared shadow-center dvar; Carrier's get_different_favoriteenemy selects the other existing player; Cornered stealth scripts iterate all existing players; Black Ice's scuba branch still only runs its player routine for the primary player.
+- Engineering rule: one mission-event coordinator plus explicit per-player handlers. Never duplicate mission flags, autosave, mission failure, slow motion, world physics, shared objectives or devices. Shared rope/console/weapon-hide/virus-upload interactions need a single-owner lock.
+- Keep Logan as Player 1 and Hesh as an NPC. Do not globally replace level.player, and do not mistake level.playerpiggyback or level.playengineeffects for creation of a native second Local Client.
+- CI run [#1470](https://github.com/Vikik0/PS3-SCALE/actions/runs/45505931126): **6/6 jobs successful**, **469 tests passed**.
+- Report: reports/PHASE84_REPORT_AR.md; machine-readable audit: reports/PHASE84_MISSION_EVENT_OWNERSHIP.json.
+- **Implementation gate:** this is static GSC analysis only. No FastFile was patched. Native PS3 Local Client 1 and physical Campaign/Multiplayer input evidence are still unverified.
