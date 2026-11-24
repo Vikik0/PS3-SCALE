@@ -132,6 +132,6 @@ Phases 72–75 harden the native local-player readiness gate. Phase 72 added exp
 ### Static TU 1.16 intake + PS3MAPI capture hardening (Phases 76–77)
 
 - **Phase 76:** verified the user-owned BLUS31270 PARAM(2).SFO, EBOOT, Campaign default.self, and Multiplayer default_mp.self by exact SHA-256, file size, SELF key revision, entry point, ELF64/BE/PowerPC64 identity, and PT_LOAD map. The result is PASS_STATIC_INPUTS; encrypted segments were not decrypted.
-- **Phase 77:** hardened both manual read-only PS3MAPI dump scripts. Each SEG file is now checked after rename, and the DUMP_DONE marker is reached only after both final segment files exist. Added regression checks for the required command order and updated the Arabic capture instructions.
+- **Phase 77:** hardened both manual read-only PS3MAPI dump scripts. Each SEG file is now checked after rename, and the DUMP_DONE marker is reached only after both final segment files exist. Added regression checks for the required command order; the five local PS3MAPI script tests pass.
 - The latest available Library inventory still has no Campaign/Multiplayer SEG0/SEG1 runtime dumps or Pad Probe v4 logs. Therefore no runtime ELF, Ghidra PPU inventory, native Campaign Local Client initializer, or playable Player 2 has been demonstrated.
 - Reports: reports/PHASE76_REPORT_AR.md, reports/PHASE77_REPORT_AR.md; machine-readable summaries: reports/PHASE76_INPUT_VERIFICATION.json, reports/PHASE77_CAPTURE_SCRIPT_SUMMARY.json.
