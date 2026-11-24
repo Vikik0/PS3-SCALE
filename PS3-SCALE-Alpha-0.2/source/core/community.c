@@ -442,33 +442,18 @@ int ps3scale_community_file_matches_game(
 
 static int title_region(const char *title_id)
 {
-    if (!title_id || strlen(title_id) < 4)
-        return 0;
-    if (strncmp(title_id, "BLUS", 4) == 0 ||
-        strncmp(title_id, "BCUS", 4) == 0 ||
-        strncmp(title_id, "NPUB", 4) == 0 ||
-        strncmp(title_id, "NPUS", 4) == 0)
-        return 1; /* North America / US */
-    if (strncmp(title_id, "BLES", 4) == 0 ||
-        strncmp(title_id, "BCES", 4) == 0 ||
-        strncmp(title_id, "NPEB", 4) == 0 ||
-        strncmp(title_id, "NPED", 4) == 0)
-        return 2; /* Europe */
-    if (strncmp(title_id, "BLJM", 4) == 0 ||
-        strncmp(title_id, "BCJS", 4) == 0 ||
-        strncmp(title_id, "NPJB", 4) == 0 ||
-        strncmp(title_id, "NPJJ", 4) == 0 ||
-        strncmp(title_id, "NPJA", 4) == 0)
-        return 3; /* Japan */
-    if (strncmp(title_id, "BCAS", 4) == 0 ||
-        strncmp(title_id, "BLAS", 4) == 0 ||
-        strncmp(title_id, "NPHB", 4) == 0 ||
-        strncmp(title_id, "NPHA", 4) == 0)
-        return 4; /* Asia */
-    if (strncmp(title_id, "BLKS", 4) == 0 ||
-        strncmp(title_id, "BCKS", 4) == 0 ||
-        strncmp(title_id, "NPKS", 4) == 0)
-        return 5; /* Korea */
+    const char *region = ps3scale_game_region_name(title_id);
+
+    if (strcmp(region, "NORTH AMERICA") == 0)
+        return 1;
+    if (strcmp(region, "EUROPE") == 0)
+        return 2;
+    if (strcmp(region, "JAPAN") == 0)
+        return 3;
+    if (strcmp(region, "ASIA") == 0)
+        return 4;
+    if (strcmp(region, "KOREA") == 0)
+        return 5;
     return 0;
 }
 
@@ -517,14 +502,26 @@ int ps3scale_community_file_matches_exact_game(
     const ps3scale_community_file_t *file,
     const ps3scale_game_t *game)
 {
+    int game_region;
+    int file_region;
+
     if (!file || !game || !game->title_id[0] ||
         !game->app_ver[0] || !file->app_ver[0] ||
         strcmp(file->app_ver, game->app_ver) != 0)
         return 0;
+    if (file->title_id[0] &&
+        strcmp(file->title_id, game->title_id) != 0)
+        return 0;
+
+    game_region = title_region(game->title_id);
+    file_region = file->title_id[0] ? title_region(file->title_id) :
+                                      game_region;
+    if (game_region && file_region && game_region != file_region)
+        return 0;
 
     /* Exact installation must contain the actual Title ID somewhere in the
-       indexed identity/path metadata. Same title + same region is only a
-       discovery hint and must never authorize an install. */
+       indexed identity/path metadata; fuzzy title and region hints never
+       authorize an install. */
     return file_contains_title_id(file, game->title_id);
 }
 

@@ -55,6 +55,7 @@ const char *ps3scale_game_region_name(const char *id)
         region_prefix_matches(prefix, "BLUS") ||
         region_prefix_matches(prefix, "BCUS") ||
         region_prefix_matches(prefix, "NPUB") ||
+        region_prefix_matches(prefix, "NPUS") ||
         region_prefix_matches(prefix, "NPUD") ||
         region_prefix_matches(prefix, "PS2U"))
         return "NORTH AMERICA";
@@ -63,6 +64,7 @@ const char *ps3scale_game_region_name(const char *id)
         region_prefix_matches(prefix, "BLES") ||
         region_prefix_matches(prefix, "BCES") ||
         region_prefix_matches(prefix, "NPEB") ||
+        region_prefix_matches(prefix, "NPEA") ||
         region_prefix_matches(prefix, "NPED") ||
         region_prefix_matches(prefix, "PS2E"))
         return "EUROPE";
@@ -71,19 +73,25 @@ const char *ps3scale_game_region_name(const char *id)
         region_prefix_matches(prefix, "SCPS") ||
         region_prefix_matches(prefix, "SCAJ") ||
         region_prefix_matches(prefix, "BLJS") ||
+        region_prefix_matches(prefix, "BLJM") ||
         region_prefix_matches(prefix, "BCJS") ||
         region_prefix_matches(prefix, "NPJB") ||
         region_prefix_matches(prefix, "NPJD") ||
+        region_prefix_matches(prefix, "NPJJ") ||
+        region_prefix_matches(prefix, "NPJA") ||
         region_prefix_matches(prefix, "PS2J"))
         return "JAPAN";
     if (region_prefix_matches(prefix, "SLKA") ||
         region_prefix_matches(prefix, "SCKA") ||
         region_prefix_matches(prefix, "BLKS") ||
         region_prefix_matches(prefix, "BCKS") ||
-        region_prefix_matches(prefix, "NPKB"))
+        region_prefix_matches(prefix, "NPKB") ||
+        region_prefix_matches(prefix, "NPKS"))
         return "KOREA";
     if (region_prefix_matches(prefix, "BLAS") ||
-        region_prefix_matches(prefix, "BCAS"))
+        region_prefix_matches(prefix, "BCAS") ||
+        region_prefix_matches(prefix, "NPHB") ||
+        region_prefix_matches(prefix, "NPHA"))
         return "ASIA";
     return "UNKNOWN";
 }

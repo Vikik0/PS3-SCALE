@@ -90,8 +90,20 @@ int main(void)
     if (ps3scale_community_file_matches_exact_game(&index.items[0], &game))
         return 24;
     if (strcmp(ps3scale_community_region_label("BLES00016"), "EU") != 0 ||
-        strcmp(ps3scale_community_region_label("BLUS30012"), "US") != 0)
+        strcmp(ps3scale_community_region_label("BLUS30012"), "US") != 0 ||
+        strcmp(ps3scale_community_region_label("NPHA12345"), "ASIA") != 0 ||
+        strcmp(ps3scale_community_region_label("NPKS12345"), "KOREA") != 0 ||
+        strcmp(ps3scale_community_region_label("NPJA12345"), "JAPAN") != 0)
         return 19;
+
+    {
+        ps3scale_community_file_t cross_region = index.items[0];
+        strcpy(game.title_id, "BLES30464");
+        strcpy(game.app_ver, "01.05");
+        strcpy(cross_region.path, "Skate 3 BLES30464 v01.05.ncl");
+        if (ps3scale_community_file_matches_exact_game(&cross_region, &game))
+            return 27;
+    }
 
     strcpy(game.title, "Just Cause 2");
     strcpy(game.title_id, "BLUS30400");
