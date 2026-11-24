@@ -22,7 +22,11 @@ int ps3scale_ps2_config_store_probe(const char *path, size_t max_bytes,
         *file_size = 0;
     if (!path || !path[0] || max_bytes == 0)
         return -1;
+#if defined(PS3SCALE_HOST_TEST)
     if (lstat(path, &st) != 0)
+#else
+    if (stat(path, &st) != 0)
+#endif
         return errno == ENOENT ? 0 : -1;
     if (!S_ISREG(st.st_mode) || st.st_size <= 0 ||
         (unsigned long long)st.st_size > (unsigned long long)max_bytes)
@@ -90,6 +94,7 @@ static int copy_bounded(const char *source, const char *destination,
     size_t expected = 0;
     size_t total = 0;
     int fd = -1;
+    int created = 0;
     int ok = 0;
 
     if (ps3scale_ps2_config_store_probe(source, max_bytes, &expected) != 1 ||
@@ -102,6 +107,7 @@ static int copy_bounded(const char *source, const char *destination,
     fd = open(destination, O_WRONLY | O_CREAT | O_EXCL, 0600);
     if (fd < 0)
         goto done;
+    created = 1;
     dst = fdopen(fd, "wb");
     if (!dst)
         goto done;
@@ -134,7 +140,7 @@ done:
         ok = 0;
     else if (fd >= 0)
         close(fd);
-    if (!ok)
+    if (!ok && created)
         (void)unlink(destination);
     return ok ? 0 : -1;
 }
