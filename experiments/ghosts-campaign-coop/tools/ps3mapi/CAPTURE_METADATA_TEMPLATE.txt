@@ -1,6 +1,8 @@
 # Ghosts TU 1.16 runtime capture metadata
 # Make one copy for Campaign and one for Multiplayer.
 # PROCESS GETNAME is diagnostic metadata only, not automatic mode detection.
+# capture_date_local format: YYYY-MM-DD HH:MM:SS (24-hour local time).
+# Record the PID and process name returned while the matching mode is active.
 
 profile_title_id=BLUS31270
 profile_app_ver=01.16
