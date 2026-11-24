@@ -23,9 +23,11 @@
   ],
   "capture_kit": {
     "filename": "Ghosts_TU116_Capture_Kit_Phase79.zip",
-    "size_bytes": 43441,
-    "sha256": "cb7fe7720e62cc7043201db0c935e22067ce32aa4c53401c7413f51570ae7184",
-    "file_count": 8,
-    "zip_integrity": "PASS"
+    "size_bytes": 43470,
+    "sha256": "11d8efcce114a5c422c3ac9f57eca774acdf011e9b4d6d886db3afbf190fac08",
+    "payload_file_count": 8,
+    "archive_entry_count": 9,
+    "zip_integrity": "PASS",
+    "internal_manifest": "PASS"
   }
 }
