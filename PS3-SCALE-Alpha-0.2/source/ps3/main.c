@@ -350,6 +350,3162 @@ static void service_profile_arm(void);
 static void start_selected_game(void);
 static void refresh_details_cache(void);
 static void service_ps2_config_download(void);
+static void start_ps2_config_download(void);
+static void service_community_download(void);
+static void start_community_file_download(const ps3scale_community_file_t *entry,
+                                          const ps3scale_game_t *game);
+static const ps3scale_ps2_config_entry_t *ps2_config_for_game(const ps3scale_game_t *game);
+static const char *ps2_config_preferred_type(void);
+
+static void app_sysutil_callback(u64 status, u64 param, void *userdata)
+{
+    (void)param; (void)userdata;
+    if (status == SYSUTIL_EXIT_GAME) g_exit_requested = 1;
+}
+
+static int open_search_keyboard(void)
+{
+    g_keyboard_online_mode = 0;
+    snprintf(g_search_backup, sizeof(g_search_backup), "%s", g_search);
+    g_keyboard_selected = 0;
+    g_screen = SCREEN_KEYBOARD;
+    return 0;
+}
+
+static int open_online_search_keyboard(void)
+{
+    snprintf(g_scan_search_stash, sizeof(g_scan_search_stash), "%s", g_search);
+    snprintf(g_search_backup, sizeof(g_search_backup), "%s", g_online_query);
+    snprintf(g_search, sizeof(g_search), "%s", g_online_query);
+    g_keyboard_online_mode = 1;
+    g_keyboard_selected = 0;
+    g_screen = SCREEN_KEYBOARD;
+    return 0;
+}
+
+static int open_support_keyboard(int field)
+{
+    g_keyboard_online_mode = 0;
+    g_keyboard_support_mode = 1;
+    g_support_selected = field;
+    snprintf(g_search_backup, sizeof(g_search_backup), "%s", g_search);
+    snprintf(g_search, sizeof(g_search), "%s",
+             field == 0 ? g_support_title : g_support_details);
+    g_keyboard_selected = 0;
+    g_screen = SCREEN_KEYBOARD;
+    return 0;
+}
+
+static int base64_value(char c)
+{
+    if (c >= 'A' && c <= 'Z') return c - 'A';
+    if (c >= 'a' && c <= 'z') return c - 'a' + 26;
+    if (c >= '0' && c <= '9') return c - '0' + 52;
+    if (c == '+') return 62;
+    if (c == '/') return 63;
+    return -1;
+}
+
+static int decode_base64(const char *source, unsigned char *output,
+                         size_t capacity)
+{
+    uint32_t value = 0;
+    int bits = -8;
+    size_t used = 0, i;
+    for (i = 0; source && source[i]; i++) {
+        int digit;
+        if (source[i] == '=') break;
+        digit = base64_value(source[i]);
+        if (digit < 0) continue;
+        value = (value << 6) | (uint32_t)digit;
+        bits += 6;
+        if (bits >= 0) {
+            if (used >= capacity) return -1;
+            output[used++] = (unsigned char)((value >> bits) & 0xff);
+            bits -= 8;
+        }
+    }
+    return (int)used;
+}
+
+static void build_extended_font_metrics(void)
+{
+    const size_t bytes_per_row = (PS3SCALE_FONT_WIDTH + 7u) / 8u;
+    const size_t bytes_per_glyph = bytes_per_row * PS3SCALE_FONT_HEIGHT;
+    unsigned glyph;
+
+    memset(g_extended_glyph_min_x, 0, sizeof(g_extended_glyph_min_x));
+    memset(g_extended_glyph_ink_width, 0, sizeof(g_extended_glyph_ink_width));
+
+    /*
+     * The atlas is 1bpp, row-major, and uses BIT7_FIRST_PIXEL. Measure the
+     * visible ink bounds once at startup so Arabic glyphs can be positioned
+     * by their actual bitmap width instead of a guessed fixed character gap.
+     */
+    for (glyph = PS3SCALE_FONT_EXTENDED_FIRST;
+         glyph <= PS3SCALE_FONT_LAST; glyph++) {
+        size_t offset =
+            (size_t)(glyph - PS3SCALE_FONT_FIRST) * bytes_per_glyph;
+        unsigned min_x = PS3SCALE_FONT_WIDTH;
+        unsigned max_x = 0;
+        unsigned row, col;
+        int found = 0;
+
+        if (offset + bytes_per_glyph > sizeof(g_extended_font_bitmap))
+            continue;
+
+        for (row = 0; row < PS3SCALE_FONT_HEIGHT; row++) {
+            for (col = 0; col < PS3SCALE_FONT_WIDTH; col++) {
+                size_t byte_index = offset +
+                    (size_t)row * bytes_per_row + (size_t)(col >> 3);
+                unsigned char mask =
+                    (unsigned char)(0x80u >> (col & 7u));
+
+                if ((g_extended_font_bitmap[byte_index] & mask) != 0) {
+                    if (col < min_x) min_x = col;
+                    if (!found || col > max_x) max_x = col;
+                    found = 1;
+                }
+            }
+        }
+
+        if (found) {
+            g_extended_glyph_min_x[glyph] = (unsigned char)min_x;
+            g_extended_glyph_ink_width[glyph] =
+                (unsigned char)(max_x - min_x + 1u);
+        } else {
+            /* Keep a safe full-cell advance for an empty/unmapped glyph. */
+            g_extended_glyph_min_x[glyph] = 0;
+            g_extended_glyph_ink_width[glyph] = PS3SCALE_FONT_WIDTH;
+        }
+    }
+}
+
+static void set_ui_font_size(int width, int height)
+{
+    g_ui_font_width = width;
+    g_ui_font_height = height;
+    SetFontSize(width, height);
+}
+
+static int load_extended_font(void)
+{
+    unsigned char compressed[2048];
+    int compressed_size;
+    uLongf output_size = (uLongf)sizeof(g_extended_font_bitmap);
+    u8 *texture_cursor;
+    const size_t bytes_per_glyph =
+        (PS3SCALE_FONT_WIDTH * PS3SCALE_FONT_HEIGHT) / 8u;
+    const size_t extended_offset =
+        (size_t)(PS3SCALE_FONT_EXTENDED_FIRST - PS3SCALE_FONT_FIRST) *
+        bytes_per_glyph;
+    const size_t extended_size =
+        (size_t)(PS3SCALE_FONT_LAST - PS3SCALE_FONT_EXTENDED_FIRST + 1u) *
+        bytes_per_glyph;
+
+    compressed_size = decode_base64(ps3scale_font_z64, compressed,
+                                     sizeof(compressed));
+    if (compressed_size <= 0) return -1;
+    if (uncompress(g_extended_font_bitmap, &output_size, compressed,
+                   (uLong)compressed_size) != Z_OK ||
+        output_size != sizeof(g_extended_font_bitmap))
+        return -1;
+    if (extended_offset + extended_size > sizeof(g_extended_font_bitmap))
+        return -1;
+
+    build_extended_font_metrics();
+
+    /*
+     * libfont keeps each bitmap range as a separate font. Register the
+     * original ASCII bitmap as font 0, then the Arabic/extended atlas as
+     * font 1. The compressed atlas starts at codepoint 32, so skip its
+     * first 96 ASCII slots before registering codepoints 128..255.
+     */
+    ResetFont();
+    texture_cursor = (u8 *)g_font_texture;
+    texture_cursor = AddFontFromBitmapArray((u8 *)ps3scale_font8x12,
+        texture_cursor, 32, 126, 8, 12, 1, BIT7_FIRST_PIXEL);
+    texture_cursor = AddFontFromBitmapArray(
+        g_extended_font_bitmap + extended_offset, texture_cursor,
+        PS3SCALE_FONT_EXTENDED_FIRST, PS3SCALE_FONT_LAST,
+        PS3SCALE_FONT_WIDTH, PS3SCALE_FONT_HEIGHT, 1, BIT7_FIRST_PIXEL);
+    if (!texture_cursor || texture_cursor <= (u8 *)g_font_texture)
+        return -1;
+
+    SetCurrentFont(0);
+    g_extended_font_ready = 1;
+    return 0;
+}
+
+static u32 ui_theme_color(u32 color)
+{
+    u32 rgb = color & 0xffffff00u;
+    u32 alpha = color & 0x000000ffu;
+    switch (rgb) {
+        case 0xcaff3900u: rgb = 0x875be800u; break;
+        case 0x9ee56a00u: rgb = 0x2c9f8e00u; break;
+        case 0xffffff00u: rgb = 0x29243f00u; break;
+        case 0xdce3e800u: rgb = 0x514b6900u; break;
+        case 0x9aa6ad00u: rgb = 0x77718f00u; break;
+        case 0x6f7b8300u: rgb = 0x9992ad00u; break;
+        case 0xffcc6600u: rgb = 0xc58a4d00u; break;
+        case 0xff7b7b00u: rgb = 0xd65d8500u; break;
+        case 0x0d172200u: rgb = 0xf3efff00u; break;
+        case 0x111b2500u: rgb = 0xf8f5ff00u; break;
+        case 0x111e1800u: rgb = 0xeee8ff00u; break;
+        case 0x14261d00u: rgb = 0xe9e2ff00u; break;
+        case 0x173a3500u: rgb = 0xe8e0ff00u; break;
+        case 0x1c594d00u: rgb = 0xe5dcff00u; break;
+        case 0x101b2700u: rgb = 0xf4f1ff00u; break;
+        case 0x26445c00u: rgb = 0xc6b8ed00u; break;
+        case 0x34465400u: rgb = 0xc6b8ed00u; break;
+        case 0x344f6300u: rgb = 0xc6b8ed00u; break;
+        case 0x42647a00u: rgb = 0xc8bee800u; break;
+        case 0x8bd45000u: rgb = 0x875be800u; break;
+        case 0x4aafca00u: rgb = 0x875be800u; break;
+        case 0x65c8e600u: rgb = 0xb49af700u; break;
+        case 0x397fb600u: rgb = 0x9079dc00u; break;
+        case 0x55b9d600u: rgb = 0x9c86e700u; break;
+        default: break;
+    }
+    return rgb | alpha;
+}
+
+static u32 color_with_alpha(u32 color, unsigned alpha)
+{
+    return (color & 0xffffff00u) | (alpha & 0xffu);
+}
+
+static void draw_text(float x, float y, u32 color, const char *text)
+{
+    char translated[512];
+    char glyph_text[512];
+    const char *source = text ? text : "";
+    size_t i, length;
+    int contains_arabic = 0;
+    int arabic_width = (g_ui_font_width * 18 + 7) / 14;
+
+    if (arabic_width < g_ui_font_width)
+        arabic_width = g_ui_font_width;
+
+    if (g_language == LANGUAGE_ARABIC || g_language == LANGUAGE_SPANISH) {
+        (void)ps3scale_locale_translate(g_language, source, translated,
+                                        sizeof(translated));
+        source = translated;
+    }
+    if (!g_extended_font_ready &&
+        (g_language == LANGUAGE_ARABIC || g_language == LANGUAGE_SPANISH))
+        source = text ? text : "";
+
+    (void)ps3scale_locale_to_glyphs(source, glyph_text, sizeof(glyph_text));
+    length = strlen(glyph_text);
+    for (i = 0; i < length; i++) {
+        if (ps3scale_locale_is_arabic_glyph(
+                (unsigned char)glyph_text[i])) {
+            contains_arabic = 1;
+            break;
+        }
+    }
+
+    SetFontColor(ui_theme_color(color), 0x00000000);
+    if (g_extended_font_ready) {
+        float cursor = x;
+
+        for (i = 0; i < length; i++) {
+            unsigned char glyph = (unsigned char)glyph_text[i];
+            int font_index = ps3scale_locale_glyph_font_index(glyph);
+
+            if (glyph == ' ') {
+                cursor += contains_arabic ?
+                    ((float)arabic_width * 0.5f) :
+                    (float)g_ui_font_width;
+                continue;
+            }
+
+            SetCurrentFont(font_index);
+            if (ps3scale_locale_is_arabic_glyph(glyph)) {
+                float scale_x =
+                    (float)arabic_width / (float)PS3SCALE_FONT_WIDTH;
+                float ink_width =
+                    (float)g_extended_glyph_ink_width[glyph];
+                unsigned min_x = g_extended_glyph_min_x[glyph];
+                unsigned char next_glyph =
+                    (i + 1u < length) ?
+                    (unsigned char)glyph_text[i + 1u] : 0;
+
+                if (ink_width <= 0.0f)
+                    ink_width = (float)PS3SCALE_FONT_WIDTH;
+
+                /*
+                 * Arabic glyphs in the 32x32 atlas contain more vertical
+                 * padding than the compact ASCII font. Enlarge only their
+                 * cell height (about 1.35x) and center it on the UI line so
+                 * Arabic remains readable at both normal and compact sizes.
+                 */
+                {
+                    int arabic_height =
+                        (g_ui_font_height * 27 + 10) / 20;
+                    float y_offset =
+                        (float)(arabic_height - g_ui_font_height) * 0.5f;
+                    SetFontSize(arabic_width, arabic_height);
+                    DrawChar(cursor - ((float)min_x * scale_x),
+                             y - y_offset, 0.0f, glyph);
+                    SetFontSize(g_ui_font_width, g_ui_font_height);
+                }
+                cursor += ink_width * scale_x;
+
+                if (ps3scale_locale_is_arabic_glyph(next_glyph)) {
+                    if (ps3scale_locale_glyphs_joined(glyph, next_glyph)) {
+                        /* Four source pixels close the joining seam without merging separate glyphs. */
+                        cursor -= scale_x * 4.0f;
+                    } else {
+                        /* Non-joining Arabic letters retain a small natural gap. */
+                        cursor += scale_x * 2.0f;
+                    }
+                } else if (next_glyph != 0 && next_glyph != ' ') {
+                    cursor += scale_x;
+                }
+            } else {
+                DrawChar(cursor, y, 0.0f, glyph);
+                cursor += (float)g_ui_font_width;
+            }
+        }
+        SetCurrentFont(0);
+    } else {
+        SetCurrentFont(0);
+        DrawString(x, y, glyph_text);
+    }
+}
+
+
+static int import_music1_from_usb(void)
+{
+    static const char *usb_paths[] = {
+        "/dev_usb000/music1.mp3", "/dev_usb001/music1.mp3",
+        "/dev_usb002/music1.mp3", "/dev_usb003/music1.mp3",
+        "/dev_usb000/PS3SCALE/music1.mp3",
+        "/dev_usb001/PS3SCALE/music1.mp3",
+        "/dev_usb002/PS3SCALE/music1.mp3",
+        "/dev_usb003/PS3SCALE/music1.mp3",
+        "/dev_usb000/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb001/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb002/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb003/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb000/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3",
+        "/dev_usb001/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3",
+        "/dev_usb002/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3",
+        "/dev_usb003/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3",
+        "/dev_usb000/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb001/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb002/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb003/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1).mp3",
+        "/dev_usb000/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3",
+        "/dev_usb001/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3",
+        "/dev_usb002/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3",
+        "/dev_usb003/PS3SCALE/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3"
+    };
+    char temp_path[PS3SCALE_PATH_MAX];
+    unsigned char buffer[32768];
+    FILE *existing;
+    size_t i;
+
+    if (!g_mpg123)
+        return -1;
+
+    existing = fopen(PS3SCALE_MUSIC1_PATH, "rb");
+    if (existing) {
+        fclose(existing);
+        if (mpg123_open(g_mpg123, PS3SCALE_MUSIC1_PATH) == MPG123_OK) {
+            mpg123_close(g_mpg123);
+            return 0;
+        }
+        (void)remove(PS3SCALE_MUSIC1_PATH);
+    }
+
+    if (snprintf(temp_path, sizeof(temp_path), "%s.tmp",
+                 PS3SCALE_MUSIC1_PATH) >= (int)sizeof(temp_path))
+        return -1;
+
+    for (i = 0; i < sizeof(usb_paths) / sizeof(usb_paths[0]); i++) {
+        FILE *source = fopen(usb_paths[i], "rb");
+        FILE *destination;
+        size_t total = 0;
+        int valid = 1;
+
+        if (!source)
+            continue;
+        destination = fopen(temp_path, "wb");
+        if (!destination) {
+            fclose(source);
+            return -1;
+        }
+
+        for (;;) {
+            size_t got = fread(buffer, 1, sizeof(buffer), source);
+            if (got > 0) {
+                if (total > (20u * 1024u * 1024u) - got ||
+                    fwrite(buffer, 1, got, destination) != got) {
+                    valid = 0;
+                    break;
+                }
+                total += got;
+            }
+            if (got < sizeof(buffer)) {
+                if (ferror(source))
+                    valid = 0;
+                break;
+            }
+        }
+
+        if (fflush(destination) != 0)
+            valid = 0;
+        if (fclose(source) != 0)
+            valid = 0;
+        if (fclose(destination) != 0)
+            valid = 0;
+
+        /* Verify the copied file is a decodable MP3 before replacing anything. */
+        if (valid && total >= 16384u &&
+            mpg123_open(g_mpg123, temp_path) == MPG123_OK) {
+            mpg123_close(g_mpg123);
+            if (rename(temp_path, PS3SCALE_MUSIC1_PATH) == 0) {
+                g_music1_imported_from_usb = 1;
+                return 1;
+            }
+        }
+        (void)remove(temp_path);
+    }
+    return -1;
+}
+
+static int open_music_track(int track)
+{
+    const char *path = (track == 1) ? PS3SCALE_MUSIC1_PATH :
+                                      PS3SCALE_MUSIC2_PATH;
+    long rate = 0;
+    int channels = 0;
+    int encoding = 0;
+
+    if (!g_mpg123 || !path || !path[0])
+        return -1;
+    if (g_music_file_open) {
+        (void)mpg123_close(g_mpg123);
+        g_music_file_open = 0;
+    }
+    if (mpg123_open(g_mpg123, path) != MPG123_OK)
+        return -1;
+    g_music_file_open = 1;
+    if (mpg123_getformat(g_mpg123, &rate, &channels, &encoding) != MPG123_OK ||
+        rate != 48000 || channels != MPG123_STEREO ||
+        encoding != MPG123_ENC_SIGNED_16) {
+        (void)mpg123_close(g_mpg123);
+        g_music_file_open = 0;
+        return -1;
+    }
+    g_music_current_track = track;
+    return 0;
+}
+
+static int open_background_music(void)
+{
+    int error = 0;
+    int requested_track;
+
+    if (mpg123_init() != MPG123_OK)
+        return -1;
+    g_mpg123_initialized = 1;
+
+    g_mpg123 = mpg123_new(NULL, &error);
+    if (!g_mpg123)
+        return -1;
+
+    if (mpg123_format_none(g_mpg123) != MPG123_OK ||
+        mpg123_param(g_mpg123, MPG123_FORCE_RATE, 48000, 0.0) != MPG123_OK ||
+        mpg123_format(g_mpg123, 48000, MPG123_STEREO,
+                      MPG123_ENC_SIGNED_16) != MPG123_OK)
+        return -1;
+
+    requested_track = (g_music_mode == 1) ? 1 :
+                      (g_music_mode == 2) ? 2 : g_music_start_track;
+    g_music_track1_missing = 0;
+    g_music1_imported_from_usb = 0;
+    if (g_music_mode != 2)
+        (void)import_music1_from_usb();
+    if (open_music_track(requested_track) != 0) {
+        if (requested_track == 1) {
+            g_music_track1_missing = 1;
+            if (open_music_track(2) != 0)
+                return -1;
+        } else if (open_music_track(1) != 0) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+static float music_sample_fade(off_t sample_position, off_t total_samples)
+{
+    float fade_in = 1.0f;
+    float fade_out = 1.0f;
+    off_t fade_frames = (off_t)g_music_fade_ms * 48;
+
+    if (fade_frames < 12000)
+        fade_frames = 12000;
+    if (sample_position < 0)
+        sample_position = 0;
+    if (sample_position < fade_frames)
+        fade_in = (float)sample_position / (float)fade_frames;
+
+    if (total_samples > 0) {
+        off_t remaining = total_samples - sample_position;
+        if (remaining < fade_frames) {
+            fade_out = remaining <= 0 ? 0.0f :
+                       (float)remaining / (float)fade_frames;
+        }
+    }
+    return fade_in < fade_out ? fade_in : fade_out;
+}
+
+static int cycle_music_fade_ms(int current, int direction)
+{
+    static const int choices[4] = {500, 1000, 1500, 2000};
+    int index = 1;
+    int i;
+    for (i = 0; i < 4; i++) {
+        if (choices[i] == current) {
+            index = i;
+            break;
+        }
+    }
+    index = (index + (direction >= 0 ? 1 : 3)) % 4;
+    return choices[index];
+}
+
+static void fill_audio_block(float *output)
+{
+    short pcm[AUDIO_BLOCK_SAMPLES * 2];
+    size_t total = 0, target = sizeof(pcm), i, decoded_frames;
+    off_t start_sample, track_length;
+    float gain = g_music_enabled ? ((float)g_music_volume / 255.0f) : 0.0f;
+
+    if (!output)
+        return;
+    if (gain <= 0.0f || !g_mpg123 || !g_music_file_open) {
+        memset(output, 0, sizeof(float) * AUDIO_BLOCK_SAMPLES * 2);
+        return;
+    }
+
+    memset(pcm, 0, sizeof(pcm));
+    start_sample = mpg123_tell(g_mpg123);
+    if (start_sample < 0)
+        start_sample = 48000;
+    track_length = mpg123_length(g_mpg123);
+
+    while (total < target && g_audio_thread_running) {
+        size_t decoded = 0;
+        int rc = mpg123_read(g_mpg123, ((unsigned char *)pcm) + total,
+                             target - total, &decoded);
+        total += decoded;
+        if (rc == MPG123_NEW_FORMAT) {
+            long rate = 0; int channels = 0; int encoding = 0;
+            if (mpg123_getformat(g_mpg123, &rate, &channels, &encoding) != MPG123_OK ||
+                rate != 48000 || channels != MPG123_STEREO ||
+                encoding != MPG123_ENC_SIGNED_16)
+                break;
+            continue;
+        }
+        if (rc == MPG123_DONE) {
+            if (g_music_mode == 0) {
+                int next_track = (g_music_current_track == 1) ? 2 : 1;
+                if (open_music_track(next_track) != 0) {
+                    if (next_track == 1)
+                        g_music_track1_missing = 1;
+                    if (open_music_track(2) != 0)
+                        break;
+                }
+            } else if (mpg123_seek(g_mpg123, 0, SEEK_SET) < 0) {
+                break;
+            }
+            /* Keep this block on one track; the next block fades in the next. */
+            break;
+        }
+        if (rc == MPG123_ERR || (decoded == 0 && rc == MPG123_OK))
+            break;
+    }
+
+    decoded_frames = total / (sizeof(short) * 2u);
+    for (i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
+        float fade = 0.0f;
+        if (i < decoded_frames)
+            fade = music_sample_fade(start_sample + (off_t)i, track_length);
+        output[i * 2] =
+            ((float)pcm[i * 2] / 32768.0f) * gain * fade;
+        output[i * 2 + 1] =
+            ((float)pcm[i * 2 + 1] / 32768.0f) * gain * fade;
+    }
+}
+
+static void audio_output_thread(void *arg)
+{
+    (void)arg;
+
+    while (g_audio_thread_running) {
+        sys_event_t event;
+        u64 current_block;
+        u32 next_block;
+        float *audio_data;
+        float *destination;
+        s32 rc = sysEventQueueReceive(g_audio_queue, &event, 20 * 1000);
+
+        if (rc != 0)
+            continue;
+        if (!g_audio_thread_running)
+            break;
+
+        current_block = *(volatile u64 *)(uintptr_t)g_audio_config.readIndex;
+        next_block = (u32)((current_block + 1) % g_audio_config.numBlocks);
+        audio_data = (float *)(uintptr_t)g_audio_config.audioDataStart;
+        destination = audio_data +
+            ((size_t)next_block * (size_t)g_audio_config.channelCount *
+             AUDIO_BLOCK_SAMPLES);
+
+        fill_audio_block(destination);
+    }
+}
+
+static void set_background_music_enabled(int enabled)
+{
+    g_music_enabled = enabled ? 1 : 0;
+}
+
+static void set_background_music_volume(int volume)
+{
+    if (volume < 0) volume = 0;
+    if (volume > 255) volume = 255;
+    g_music_volume = volume;
+}
+
+static void shutdown_audio_backend(void)
+{
+    u64 thread_result = 0;
+
+    g_audio_thread_running = 0;
+
+    if (g_audio_thread_started) {
+        (void)sysThreadJoin(g_audio_thread, &thread_result);
+        g_audio_thread_started = 0;
+    }
+
+    if (g_audio_port_started) {
+        (void)audioPortStop(g_audio_port);
+        g_audio_port_started = 0;
+    }
+
+    if (g_audio_notify_ready) {
+        (void)audioRemoveNotifyEventQueue(g_audio_queue_key);
+        g_audio_notify_ready = 0;
+    }
+
+    if (g_audio_port_open) {
+        (void)audioPortClose(g_audio_port);
+        g_audio_port_open = 0;
+    }
+
+    if (g_audio_queue_ready) {
+        (void)sysEventQueueDestroy(g_audio_queue, 0);
+        g_audio_queue_ready = 0;
+    }
+
+    if (g_audio_initialized) {
+        (void)audioQuit();
+        g_audio_initialized = 0;
+    }
+
+    if (g_mpg123) {
+        if (g_music_file_open)
+            (void)mpg123_close(g_mpg123);
+        g_music_file_open = 0;
+        mpg123_delete(g_mpg123);
+        g_mpg123 = NULL;
+    }
+
+    if (g_mpg123_initialized) {
+        mpg123_exit();
+        g_mpg123_initialized = 0;
+    }
+
+    g_music_playing = 0;
+}
+
+static int initialize_audio_backend(void)
+{
+    int rc;
+
+    if (!g_music_enabled || g_music_playing)
+        return 0;
+    if (open_background_music() != 0)
+        goto fail;
+
+    rc = audioInit();
+    if (rc != 0)
+        goto fail;
+    g_audio_initialized = 1;
+
+    g_audio_params.numChannels = AUDIO_PORT_2CH;
+    g_audio_params.numBlocks = AUDIO_BLOCK_8;
+    g_audio_params.attrib = AUDIO_PORT_INITLEVEL;
+    g_audio_params.level = 1.0f;
+
+    rc = audioPortOpen(&g_audio_params, &g_audio_port);
+    if (rc != 0)
+        goto fail;
+    g_audio_port_open = 1;
+
+    rc = audioGetPortConfig(g_audio_port, &g_audio_config);
+    if (rc != 0)
+        goto fail;
+
+    rc = audioCreateNotifyEventQueue(&g_audio_queue, &g_audio_queue_key);
+    if (rc != 0)
+        goto fail;
+    g_audio_queue_ready = 1;
+
+    rc = audioSetNotifyEventQueue(g_audio_queue_key);
+    if (rc != 0)
+        goto fail;
+    g_audio_notify_ready = 1;
+
+    (void)sysEventQueueDrain(g_audio_queue);
+
+    rc = audioPortStart(g_audio_port);
+    if (rc != 0)
+        goto fail;
+    g_audio_port_started = 1;
+
+    g_audio_thread_running = 1;
+    rc = sysThreadCreate(&g_audio_thread, audio_output_thread, NULL,
+                         1000, 0x4000, THREAD_JOINABLE, "PS3 SCALE Music");
+    if (rc != 0) {
+        g_audio_thread_running = 0;
+        goto fail;
+    }
+
+    g_audio_thread_started = 1;
+    g_music_playing = 1;
+    return 0;
+
+fail:
+    shutdown_audio_backend();
+    return -1;
+}
+
+static void draw_solid_rect(float x, float y, float w, float h, u32 color)
+{
+    tiny3d_SetPolygon(TINY3D_QUADS);
+    tiny3d_VertexPos(x, y, 65535.0f);
+    tiny3d_VertexColor(ui_theme_color(color));
+    tiny3d_VertexPos(x + w, y, 65535.0f);
+    tiny3d_VertexPos(x + w, y + h, 65535.0f);
+    tiny3d_VertexPos(x, y + h, 65535.0f);
+    tiny3d_End();
+}
+
+static void draw_outline_rect(float x, float y, float w, float h, u32 color)
+{
+    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+    tiny3d_VertexPos(x, y, 65535.0f);
+    tiny3d_VertexColor(ui_theme_color(color));
+    tiny3d_VertexPos(x + w, y, 65535.0f);
+    tiny3d_VertexPos(x + w, y + h, 65535.0f);
+    tiny3d_VertexPos(x, y + h, 65535.0f);
+    tiny3d_End();
+}
+
+static void draw_icon_line(float x1, float y1, float x2, float y2, u32 color)
+{
+    tiny3d_SetPolygon(TINY3D_LINES);
+    tiny3d_VertexPos(x1, y1, 65535.0f);
+    tiny3d_VertexColor(ui_theme_color(color));
+    tiny3d_VertexPos(x2, y2, 65535.0f);
+    tiny3d_End();
+}
+
+static void draw_circle_outline(float cx, float cy, float radius, u32 color)
+{
+    int i;
+    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+    for (i = 0; i < 24; i++) {
+        float angle = 6.28318530718f * (float)i / 24.0f;
+        tiny3d_VertexPos(cx + cosf(angle) * radius,
+                         cy + sinf(angle) * radius, 65535.0f);
+        if (i == 0)
+            tiny3d_VertexColor(ui_theme_color(color));
+    }
+    tiny3d_End();
+}
+
+static void draw_gear_outline(float cx, float cy, float radius, u32 color)
+{
+    int i;
+    tiny3d_SetPolygon(TINY3D_LINE_LOOP);
+    for (i = 0; i < 24; i++) {
+        float angle = 6.28318530718f * (float)i / 24.0f;
+        float r = (i % 3 == 0) ? radius : radius * 0.78f;
+        tiny3d_VertexPos(cx + cosf(angle) * r,
+                         cy + sinf(angle) * r, 65535.0f);
+        if (i == 0)
+            tiny3d_VertexColor(ui_theme_color(color));
+    }
+    tiny3d_End();
+}
+
+/* Tiny3D draws the icon shapes in vector geometry at the current video
+   resolution, avoiding enlarged low-resolution bitmap icons. */
+static void draw_icon_diamond(float cx, float cy,
+                              float rx, float ry, u32 color)
+{
+    tiny3d_SetPolygon(TINY3D_QUADS);
+    tiny3d_VertexPos(cx, cy - ry, 65535.0f);
+    tiny3d_VertexColor(ui_theme_color(color));
+    tiny3d_VertexPos(cx + rx, cy, 65535.0f);
+    tiny3d_VertexPos(cx, cy + ry, 65535.0f);
+    tiny3d_VertexPos(cx - rx, cy, 65535.0f);
+    tiny3d_End();
+}
+
+static void draw_menu_icon(int index, float x, float y, int selected)
+{
+    u32 ink = selected ? 0xfffbffff : 0x32294fff;
+    u32 detail = selected ? 0x6120bfff : 0xf6f1ffff;
+    u32 tile = selected ? 0x833be3ff : 0xf7f5fdf4;
+    u32 border = selected ? 0xb67affff : 0xe1d9eeff;
+
+    /* Soft plate shadow, body and single top-edge specular highlight. */
+    draw_solid_rect(x + 2.0f, y + 4.0f, 42.0f, 42.0f,
+                    selected ? 0x50258c55 : 0x88809d32);
+    draw_solid_rect(x, y, 42.0f, 42.0f, tile);
+    draw_outline_rect(x, y, 42.0f, 42.0f, border);
+    draw_solid_rect(x + 4.0f, y + 3.0f, 34.0f, 2.0f,
+                    selected ? 0xb77bffb8 : 0xffffffc8);
+
+    if (index == 0) {
+        /* Filled, symmetric controller glyph with bright shoulder buttons. */
+        draw_solid_rect(x + 8.0f, y + 14.0f, 26.0f, 15.0f, ink);
+        draw_solid_rect(x + 6.0f, y + 18.0f, 6.0f, 13.0f, ink);
+        draw_solid_rect(x + 30.0f, y + 18.0f, 6.0f, 13.0f, ink);
+        draw_solid_rect(x + 9.0f, y + 12.0f, 10.0f, 3.0f, ink);
+        draw_solid_rect(x + 23.0f, y + 12.0f, 10.0f, 3.0f, ink);
+        draw_solid_rect(x + 13.0f, y + 19.0f, 3.0f, 11.0f, detail);
+        draw_solid_rect(x + 9.0f, y + 23.0f, 11.0f, 3.0f, detail);
+        draw_circle_outline(x + 28.0f, y + 20.5f, 2.2f, detail);
+        draw_circle_outline(x + 32.0f, y + 25.5f, 2.2f, detail);
+        draw_solid_rect(x + 20.0f, y + 18.0f, 3.0f, 2.0f,
+                        selected ? 0xeccaffff : 0x9275c3ff);
+    } else if (index == 1) {
+        /* Three stacked 3D-looking layers, like the reference screenshot. */
+        draw_icon_diamond(x + 21.0f, y + 12.0f, 15.0f, 7.0f, ink);
+        draw_icon_diamond(x + 21.0f, y + 22.0f, 15.0f, 7.0f, ink);
+        draw_icon_diamond(x + 21.0f, y + 32.0f, 15.0f, 7.0f, ink);
+        draw_icon_line(x + 9.0f, y + 13.0f, x + 21.0f, y + 19.0f, detail);
+        draw_icon_line(x + 21.0f, y + 19.0f, x + 33.0f, y + 13.0f, detail);
+    } else if (index == 2) {
+        /* Thick, high-contrast gear with a clear central bearing. */
+        draw_gear_outline(x + 21.0f, y + 21.0f, 15.0f, ink);
+        draw_gear_outline(x + 21.0f, y + 21.0f, 13.0f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 5.6f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 4.0f, detail);
+    } else if (index == 3) {
+        /* Help: legible question mark inside a double-ring circle. */
+        draw_circle_outline(x + 21.0f, y + 21.0f, 15.0f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 13.0f, ink);
+        draw_icon_line(x + 14.0f, y + 16.0f, x + 18.0f, y + 12.0f, ink);
+        draw_icon_line(x + 18.0f, y + 12.0f, x + 24.0f, y + 12.0f, ink);
+        draw_icon_line(x + 24.0f, y + 12.0f, x + 28.0f, y + 17.0f, ink);
+        draw_icon_line(x + 28.0f, y + 17.0f, x + 21.0f, y + 24.0f, ink);
+        draw_solid_rect(x + 20.0f, y + 23.0f, 3.0f, 5.0f, ink);
+        draw_solid_rect(x + 20.0f, y + 31.0f, 3.0f, 3.0f, ink);
+    } else if (index == 4) {
+        /* Companion tools / enhancements. */
+        draw_gear_outline(x + 21.0f, y + 21.0f, 14.0f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 5.0f, ink);
+        draw_icon_line(x + 10.0f, y + 32.0f, x + 32.0f, y + 10.0f, ink);
+    } else {
+        /* About: information glyph matches the main dashboard reference. */
+        draw_circle_outline(x + 21.0f, y + 21.0f, 15.0f, ink);
+        draw_circle_outline(x + 21.0f, y + 21.0f, 13.0f, ink);
+        draw_solid_rect(x + 19.5f, y + 18.0f, 3.0f, 12.0f, ink);
+        draw_solid_rect(x + 19.5f, y + 12.0f, 3.0f, 3.0f, ink);
+    }
+}
+
+static void draw_ps_symbol(float x, float y, u32 color)
+{
+    draw_icon_line(x + 5.0f, y + 2.0f, x + 5.0f, y + 32.0f, color);
+    draw_icon_line(x + 5.0f, y + 2.0f, x + 21.0f, y + 7.0f, color);
+    draw_icon_line(x + 21.0f, y + 7.0f, x + 21.0f, y + 24.0f, color);
+    draw_icon_line(x + 21.0f, y + 24.0f, x + 5.0f, y + 19.0f, color);
+    draw_icon_line(x + 5.0f, y + 19.0f, x + 27.0f, y + 31.0f, color);
+    draw_icon_line(x + 27.0f, y + 31.0f, x + 38.0f, y + 26.0f, color);
+    draw_icon_line(x + 38.0f, y + 26.0f, x + 38.0f, y + 22.0f, color);
+    draw_icon_line(x + 38.0f, y + 22.0f, x + 27.0f, y + 18.0f, color);
+    draw_icon_line(x + 27.0f, y + 18.0f, x + 16.0f, y + 22.0f, color);
+}
+
+static int game_is_ps3(const ps3scale_game_t *game)
+{
+    if (!game) return 0;
+    return game->kind == PS3SCALE_GAME_PS3_FOLDER ||
+           game->kind == PS3SCALE_GAME_PS3_HDD ||
+           game->kind == PS3SCALE_GAME_PS3_ISO;
+}
+
+static int game_is_ps2(const ps3scale_game_t *game)
+{
+    if (!game) return 0;
+    return game->kind == PS3SCALE_GAME_PS2_CLASSIC ||
+           game->kind == PS3SCALE_GAME_PS2_HDD ||
+           game->kind == PS3SCALE_GAME_PS2_ISO;
+}
+
+static void favorite_identity(const ps3scale_game_t *game,
+                              char *out, size_t capacity)
+{
+    uLong hash;
+    if (!out || capacity == 0) return;
+    out[0] = '\0';
+    if (!game) return;
+    if (game->title_id[0]) {
+        snprintf(out, capacity, "T:%s", game->title_id);
+    } else if (game->disc_id[0]) {
+        snprintf(out, capacity, "D:%s", game->disc_id);
+    } else {
+        hash = crc32(0L, Z_NULL, 0);
+        hash = crc32(hash, (const Bytef *)game->path,
+                     (uInt)strlen(game->path));
+        snprintf(out, capacity, "P:%08lX", (unsigned long)hash);
+    }
+}
+
+static int favorite_key_index(const char *key)
+{
+    size_t i;
+    for (i = 0; i < g_favorite_count; i++)
+        if (strcmp(g_favorite_ids[i], key) == 0)
+            return (int)i;
+    return -1;
+}
+
+static int game_is_favorite(const ps3scale_game_t *game)
+{
+    char key[32];
+    if (!game) return 0;
+    favorite_identity(game, key, sizeof(key));
+    return key[0] && favorite_key_index(key) >= 0;
+}
+
+static void load_favorites(void)
+{
+    FILE *fp = fopen(PS3SCALE_FAVORITES_PATH, "r");
+    char line[64];
+    g_favorite_count = 0;
+    if (!fp) return;
+    while (g_favorite_count < 256 && fgets(line, sizeof(line), fp)) {
+        size_t n = strlen(line);
+        while (n > 0 && (line[n - 1] == '\n' || line[n - 1] == '\r'))
+            line[--n] = '\0';
+        if (n > 0 && favorite_key_index(line) < 0) {
+            snprintf(g_favorite_ids[g_favorite_count],
+                     sizeof(g_favorite_ids[g_favorite_count]), "%s", line);
+            g_favorite_count++;
+        }
+    }
+    fclose(fp);
+}
+
+static int save_favorites(void)
+{
+    FILE *fp = fopen(PS3SCALE_FAVORITES_PATH, "w");
+    size_t i;
+    if (!fp) return -1;
+    for (i = 0; i < g_favorite_count; i++)
+        fprintf(fp, "%s\n", g_favorite_ids[i]);
+    return fclose(fp) == 0 ? 0 : -1;
+}
+
+static void toggle_favorite(const ps3scale_game_t *game)
+{
+    char key[32];
+    int index;
+    if (!game) return;
+    favorite_identity(game, key, sizeof(key));
+    if (!key[0]) return;
+    index = favorite_key_index(key);
+    if (index >= 0) {
+        if ((size_t)index + 1 < g_favorite_count)
+            memmove(g_favorite_ids[index], g_favorite_ids[index + 1],
+                    (g_favorite_count - (size_t)index - 1) *
+                    sizeof(g_favorite_ids[0]));
+        g_favorite_count--;
+        snprintf(g_scan_message, sizeof(g_scan_message),
+                 "REMOVED FROM FAVORITES.");
+    } else if (g_favorite_count < 256) {
+        snprintf(g_favorite_ids[g_favorite_count],
+                 sizeof(g_favorite_ids[g_favorite_count]), "%s", key);
+        g_favorite_count++;
+        snprintf(g_scan_message, sizeof(g_scan_message),
+                 "ADDED TO FAVORITES.");
+    } else {
+        snprintf(g_scan_message, sizeof(g_scan_message),
+                 "FAVORITES LIST IS FULL.");
+        return;
+    }
+    if (save_favorites() != 0)
+        snprintf(g_scan_message, sizeof(g_scan_message),
+                 "FAVORITE SAVE FAILED.");
+}
+
+static int game_matches_filter(const ps3scale_game_t *game, int filter)
+{
+    if (!game) return 0;
+    if (filter == LIBRARY_ALL || filter == LIBRARY_RECENT) return 1;
+    if (filter == LIBRARY_PS3) return game_is_ps3(game);
+    if (filter == LIBRARY_PS2) return game_is_ps2(game);
+    if (filter == LIBRARY_FAVORITES) return game_is_favorite(game);
+    return 0;
+}
+
+static int text_contains_ci(const char *text, const char *query)
+{
+    size_t i, j;
+    if (!query || !query[0]) return 1;
+    if (!text) return 0;
+
+    for (i = 0; text[i]; i++) {
+        for (j = 0; query[j]; j++) {
+            if (!text[i + j]) break;
+            if (tolower((unsigned char)text[i + j]) !=
+                tolower((unsigned char)query[j]))
+                break;
+        }
+        if (!query[j]) return 1;
+    }
+    return 0;
+}
+
+static int game_matches_library(const ps3scale_game_t *game)
+{
+    return game_matches_filter(game, g_library) &&
+           text_contains_ci(game->title, g_search);
+}
+
+static size_t library_count(int library)
+{
+    size_t i, count = 0;
+    if (library == LIBRARY_RECENT) {
+        for (i = 0; i < g_recent_count; i++) {
+            const ps3scale_game_t *game =
+                &g_games.items[g_recent_indices[i]];
+            if (text_contains_ci(game->title, g_search)) count++;
+        }
+        return count;
+    }
+    for (i = 0; i < g_games.count; i++) {
+        if (game_matches_filter(&g_games.items[i], library) &&
+            text_contains_ci(g_games.items[i].title, g_search))
+            count++;
+    }
+    return count;
+}
+
+static size_t library_total_count(int library)
+{
+    size_t i, count = 0;
+    if (library == LIBRARY_ALL) return g_games.count;
+    if (library == LIBRARY_RECENT) return g_recent_count;
+    for (i = 0; i < g_games.count; i++)
+        if (game_matches_filter(&g_games.items[i], library)) count++;
+    return count;
+}
+
+static const ps3scale_game_t *library_game_at(size_t visible_index)
+{
+    size_t i, current = 0;
+    if (g_library == LIBRARY_RECENT) {
+        for (i = 0; i < g_recent_count; i++) {
+            const ps3scale_game_t *game =
+                &g_games.items[g_recent_indices[i]];
+            if (!text_contains_ci(game->title, g_search)) continue;
+            if (current++ == visible_index) return game;
+        }
+        return NULL;
+    }
+    for (i = 0; i < g_games.count; i++) {
+        if (!game_matches_library(&g_games.items[i])) continue;
+        if (current++ == visible_index) return &g_games.items[i];
+    }
+    return NULL;
+}
+
+static void rebuild_recent_indices(void)
+{
+    size_t i, j;
+    g_recent_count = g_games.count;
+    for (i = 0; i < g_recent_count; i++) {
+        struct stat st;
+        g_recent_indices[i] = (int)i;
+        g_recent_mtimes[i] = 0;
+        if (stat(g_games.items[i].path, &st) == 0)
+            g_recent_mtimes[i] = st.st_mtime;
+    }
+    for (i = 1; i < g_recent_count; i++) {
+        int index = g_recent_indices[i];
+        time_t modified = g_recent_mtimes[i];
+        j = i;
+        while (j > 0 && g_recent_mtimes[j - 1] < modified) {
+            g_recent_indices[j] = g_recent_indices[j - 1];
+            g_recent_mtimes[j] = g_recent_mtimes[j - 1];
+            j--;
+        }
+        g_recent_indices[j] = index;
+        g_recent_mtimes[j] = modified;
+    }
+}
+
+
+
+static const ps3scale_game_t *selected_game(void)
+{
+    size_t count = library_count(g_library);
+    if (count == 0) return NULL;
+    if (g_selected < 0 || (size_t)g_selected >= count) return NULL;
+    return library_game_at((size_t)g_selected);
+}
+
+static void clamp_selection(void)
+{
+    size_t count = library_count(g_library);
+    if (count == 0) g_selected = 0;
+    else if (g_selected >= (int)count) g_selected = (int)count - 1;
+}
+
+static int image_file_is_safe(const char *path, unsigned long max_bytes)
+{
+    struct stat st;
+
+    if (!path || !path[0] || stat(path, &st) != 0 ||
+        !S_ISREG(st.st_mode) || st.st_size <= 0 ||
+        (unsigned long)st.st_size > max_bytes)
+        return 0;
+    return 1;
+}
+
+static void clear_scan_cover_cache(void)
+{
+    size_t i;
+    for (i = 0; i < PS3SCALE_SCAN_GRID_COUNT; i++) {
+        if (g_scan_cover_textures[i]) {
+            ya2d_freeTexture(g_scan_cover_textures[i]);
+            g_scan_cover_textures[i] = NULL;
+        }
+        g_scan_cover_paths[i][0] = '\0';
+    }
+    g_scan_cover_page = -1;
+    g_scan_cover_library = -1;
+}
+
+static void update_scan_cover_cache(void)
+{
+    size_t i;
+    size_t start = ((size_t)(g_selected < 0 ? 0 : g_selected) /
+                    PS3SCALE_SCAN_GRID_COUNT) * PS3SCALE_SCAN_GRID_COUNT;
+    if (g_scan_cover_page != (int)start ||
+        g_scan_cover_library != g_library) {
+        clear_scan_cover_cache();
+        g_scan_cover_page = (int)start;
+        g_scan_cover_library = g_library;
+    }
+    for (i = 0; i < PS3SCALE_SCAN_GRID_COUNT; i++) {
+        const ps3scale_game_t *game = library_game_at(start + i);
+        const char *cover = (game && game->cover_path[0]) ?
+                            game->cover_path : "";
+        if (strcmp(cover, g_scan_cover_paths[i]) == 0) continue;
+        if (g_scan_cover_textures[i]) {
+            ya2d_freeTexture(g_scan_cover_textures[i]);
+            g_scan_cover_textures[i] = NULL;
+        }
+        snprintf(g_scan_cover_paths[i], sizeof(g_scan_cover_paths[i]),
+                 "%s", cover);
+        if (cover[0] && image_file_is_safe(cover, PS3SCALE_COVER_MAX_BYTES))
+            g_scan_cover_textures[i] = ya2d_loadPNGfromFile(cover);
+    }
+}
+
+static void update_selected_cover(void)
+{
+    const ps3scale_game_t *game;
+    const char *path;
+    if (g_screen == SCREEN_SCAN) {
+        update_scan_cover_cache();
+        return;
+    }
+    game = selected_game();
+    path = (game && game->cover_path[0]) ? game->cover_path : "";
+    if (strcmp(path, g_cover_path) == 0) return;
+    if (g_cover_texture) {
+        ya2d_freeTexture(g_cover_texture);
+        g_cover_texture = NULL;
+    }
+    g_cover_path[0] = '\0';
+    if (path[0] && image_file_is_safe(path, PS3SCALE_COVER_MAX_BYTES)) {
+        snprintf(g_cover_path, sizeof(g_cover_path), "%s", path);
+        g_cover_texture = ya2d_loadPNGfromFile(path);
+    }
+}
+
+typedef struct ps3scale_scene_point {
+    float x;
+    float y;
+    float z;
+} ps3scale_scene_point_t;
+
+typedef struct ps3scale_scene_face {
+    float depth;
+    float x[4];
+    float y[4];
+    u32 color;
+    u32 vertex_color[4];
+    u32 edge;
+} ps3scale_scene_face_t;
+
+#define PS3SCALE_STAIR_STEPS 32
+#define PS3SCALE_STAIR_LOOP_FRAMES 21600ul
+#define PS3SCALE_STAIR_FACE_MAX (PS3SCALE_STAIR_STEPS * 5)
+
+static ps3scale_scene_point_t g_scene_camera_position;
+static ps3scale_scene_point_t g_scene_camera_right;
+static ps3scale_scene_point_t g_scene_camera_up;
+static ps3scale_scene_point_t g_scene_camera_forward;
+
+static ps3scale_scene_point_t scene_world_point(float center_x,
+                                                 float center_y,
+                                                 float center_z,
+                                                 float radius,
+                                                 float angle,
+                                                 float y)
+{
+    ps3scale_scene_point_t point;
+    point.x = center_x + cosf(angle) * radius;
+    point.y = center_y + y;
+    point.z = center_z + sinf(angle) * radius;
+    return point;
+}
+
+/* Aim the software camera at the staircase while it follows a gentle,
+   continuous dolly path. The camera basis is orthonormal and frame-local. */
+static void scene_set_camera(float camera_x,
+                             float camera_y,
+                             float camera_z,
+                             float target_x,
+                             float target_y,
+                             float target_z)
+{
+    float dx = target_x - camera_x;
+    float dy = target_y - camera_y;
+    float dz = target_z - camera_z;
+    float horizontal = sqrtf(dx * dx + dz * dz);
+    float yaw = atan2f(dx, dz);
+    float pitch = atan2f(dy, horizontal);
+    float cos_pitch = cosf(pitch);
+    float sin_pitch = sinf(pitch);
+    float sin_yaw = sinf(yaw);
+    float cos_yaw = cosf(yaw);
+
+    g_scene_camera_position.x = camera_x;
+    g_scene_camera_position.y = camera_y;
+    g_scene_camera_position.z = camera_z;
+
+    g_scene_camera_forward.x = sin_yaw * cos_pitch;
+    g_scene_camera_forward.y = sin_pitch;
+    g_scene_camera_forward.z = cos_yaw * cos_pitch;
+
+    g_scene_camera_right.x = cos_yaw;
+    g_scene_camera_right.y = 0.0f;
+    g_scene_camera_right.z = -sin_yaw;
+
+    g_scene_camera_up.x = -sin_yaw * sin_pitch;
+    g_scene_camera_up.y = cos_pitch;
+    g_scene_camera_up.z = -cos_yaw * sin_pitch;
+}
+
+static ps3scale_scene_point_t scene_camera_space_point(
+    ps3scale_scene_point_t point)
+{
+    ps3scale_scene_point_t relative, camera;
+    relative.x = point.x - g_scene_camera_position.x;
+    relative.y = point.y - g_scene_camera_position.y;
+    relative.z = point.z - g_scene_camera_position.z;
+
+    camera.x = relative.x * g_scene_camera_right.x +
+               relative.y * g_scene_camera_right.y +
+               relative.z * g_scene_camera_right.z;
+    camera.y = relative.x * g_scene_camera_up.x +
+               relative.y * g_scene_camera_up.y +
+               relative.z * g_scene_camera_up.z;
+    camera.z = relative.x * g_scene_camera_forward.x +
+               relative.y * g_scene_camera_forward.y +
+               relative.z * g_scene_camera_forward.z;
+    return camera;
+}
+
+static void scene_project_camera_point(ps3scale_scene_point_t point,
+                                       float focal_length,
+                                       float *screen_x,
+                                       float *screen_y)
+{
+    float depth = point.z;
+    if (depth < 2.5f) depth = 2.5f;
+    *screen_x = 427.0f + point.x * focal_length / depth;
+    *screen_y = 256.0f - point.y * focal_length / depth;
+}
+
+static u32 scene_blend(u32 a, u32 b, float t);
+
+static void scene_push_face(ps3scale_scene_face_t *faces,
+                            size_t *face_count,
+                            const ps3scale_scene_point_t points[4],
+                            float focal_length,
+                            u32 color,
+                            u32 edge)
+{
+    ps3scale_scene_face_t *face;
+    ps3scale_scene_point_t camera_points[4];
+    float depth = 0.0f;
+    int i;
+    if (!faces || !face_count || *face_count >= PS3SCALE_STAIR_FACE_MAX)
+        return;
+
+    /* Drop faces crossing the near plane instead of stretching them. */
+    for (i = 0; i < 4; i++) {
+        camera_points[i] = scene_camera_space_point(points[i]);
+        if (camera_points[i].z <= 2.5f)
+            return;
+    }
+
+    face = &faces[(*face_count)++];
+    for (i = 0; i < 4; i++) {
+        depth += camera_points[i].z * 0.25f;
+        scene_project_camera_point(camera_points[i], focal_length,
+                                   &face->x[i], &face->y[i]);
+    }
+    face->depth = depth;
+    face->color = color;
+    face->edge = edge;
+    /* Pearl-like directional sheen at the front/outside corners plus
+       subtle depth haze. This is per-vertex shading (no expensive textures,
+       screen-space passes or per-frame allocations). */
+    for (i = 0; i < 4; i++) {
+        float haze = (camera_points[i].z - 25.0f) / 58.0f;
+        float reflection = (i == 1 || i == 2) ? 0.15f : 0.045f;
+        u32 shaded = scene_blend(color, 0xf7f4fcff, haze * 0.34f);
+        face->vertex_color[i] =
+            scene_blend(shaded, 0xffffffff, reflection);
+    }
+}
+
+static int compare_scene_face_depth(const void *left, const void *right)
+{
+    const ps3scale_scene_face_t *a = (const ps3scale_scene_face_t *)left;
+    const ps3scale_scene_face_t *b = (const ps3scale_scene_face_t *)right;
+    if (a->depth < b->depth) return 1;
+    if (a->depth > b->depth) return -1;
+    return 0;
+}
+
+static void draw_scene_faces(const ps3scale_scene_face_t *faces,
+                             size_t face_count)
+{
+    size_t i;
+    int j;
+    if (!faces || face_count == 0)
+        return;
+
+    /* Keep painter order but submit all tread surfaces in one quad batch. */
+    tiny3d_SetPolygon(TINY3D_QUADS);
+    for (i = 0; i < face_count; i++) {
+        for (j = 0; j < 4; j++) {
+            tiny3d_VertexPos(faces[i].x[j], faces[i].y[j], 65535.0f);
+            tiny3d_VertexColor(faces[i].vertex_color[j]);
+        }
+    }
+    tiny3d_End();
+
+    /* Batch every tread outline as line pairs instead of one draw per face. */
+    tiny3d_SetPolygon(TINY3D_LINES);
+    for (i = 0; i < face_count; i++) {
+        if (faces[i].edge == 0)
+            continue; /* No wireframe on shaded risers or undersides. */
+        for (j = 0; j < 4; j++) {
+            int next = (j + 1) & 3;
+            tiny3d_VertexPos(faces[i].x[j], faces[i].y[j], 65535.0f);
+            tiny3d_VertexColor(faces[i].edge);
+            tiny3d_VertexPos(faces[i].x[next], faces[i].y[next], 65535.0f);
+        }
+    }
+    tiny3d_End();
+}
+
+static u32 scene_blend(u32 a, u32 b, float t)
+{
+    int ar = (int)((a >> 24) & 255u), ag = (int)((a >> 16) & 255u);
+    int ab = (int)((a >> 8) & 255u);
+    int br = (int)((b >> 24) & 255u), bg = (int)((b >> 16) & 255u);
+    int bb = (int)((b >> 8) & 255u);
+    int r, g, blue;
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    r = ar + (int)((float)(br - ar) * t);
+    g = ag + (int)((float)(bg - ag) * t);
+    blue = ab + (int)((float)(bb - ab) * t);
+    return ((u32)r << 24) | ((u32)g << 16) | ((u32)blue << 8) | 0xffu;
+}
+
+static u32 ui_blend_color(u32 a, u32 b, float t)
+{
+    int alpha_a = (int)(a & 255u);
+    int alpha_b = (int)(b & 255u);
+    int alpha;
+
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    alpha = alpha_a + (int)((float)(alpha_b - alpha_a) * t);
+
+    /* scene_blend intentionally forces opaque scene colors; UI cards must
+       interpolate their alpha too so translucent shadows stay translucent. */
+    return (scene_blend(a, b, t) & 0xffffff00u) | (u32)alpha;
+}
+
+static void draw_scene_background(void)
+{
+    const float tau = 6.28318530718f;
+    unsigned long frame_in_loop =
+        g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES;
+    float phase = (float)frame_in_loop /
+                  (float)PS3SCALE_STAIR_LOOP_FRAMES * tau;
+    float daylight = 0.82f + 0.12f * cosf(phase);
+    float night = 1.0f - daylight;
+    float dusk = 1.0f - fabsf(daylight - 0.82f) / 0.12f;
+    u32 top, bottom, color;
+    int i, wave;
+
+    if (!g_animation_enabled) {
+        phase = 0.0f;
+        daylight = 0.86f;
+        night = 0.14f;
+        dusk = 0.0f;
+    }
+
+    top = scene_blend(0xe8e5f0ff, 0xfdfcffff, daylight);
+    bottom = scene_blend(0xd8d2e7ff, 0xf2eff9ff, daylight);
+    top = scene_blend(top, 0xe9defcff, dusk * 0.06f);
+    bottom = scene_blend(bottom, 0xe0d4f5ff, dusk * 0.08f);
+
+    /* Batch the 24 gradient strips into one RSX submission. */
+    tiny3d_SetPolygon(TINY3D_QUADS);
+    for (i = 0; i < 24; i++) {
+        float t = (float)i / 23.0f;
+        float y = (float)i * 22.0f;
+        color = ui_theme_color(scene_blend(top, bottom, t));
+        tiny3d_VertexPos(0.0f, y, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(854.0f, y, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(854.0f, y + 23.0f, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(0.0f, y + 23.0f, 65535.0f);
+        tiny3d_VertexColor(color);
+    }
+    tiny3d_End();
+
+    /* Light ribbons and particles retain the background depth without rings. */
+    /* All three light ribbons are submitted in one line batch. */
+    tiny3d_SetPolygon(TINY3D_LINES);
+    for (wave = 0; wave < 3; wave++) {
+        float previous_x = 0.0f;
+        float previous_y = 0.0f;
+        int segment;
+        for (segment = 0; segment <= 28; segment++) {
+            float x = (float)segment * (854.0f / 28.0f);
+            float y = 430.0f - (float)wave * 42.0f +
+                sinf(phase + x * 0.0065f + (float)wave * 0.85f) *
+                (8.0f + (float)wave * 2.0f);
+            if (segment > 0) {
+                color = ui_theme_color(
+                    scene_blend(0xc4b1f5ff, 0xffffffcc,
+                                daylight * 0.72f));
+                tiny3d_VertexPos(previous_x, previous_y, 65535.0f);
+                tiny3d_VertexColor(color);
+                tiny3d_VertexPos(x, y, 65535.0f);
+                tiny3d_VertexColor(color);
+            }
+            previous_x = x;
+            previous_y = y;
+        }
+    }
+    tiny3d_End();
+
+    /* Batch both particle layers into one quad submission. */
+    tiny3d_SetPolygon(TINY3D_QUADS);
+    for (i = 0; i < 22; i++) {
+        float x = (float)((i * 137 + 31) % 842);
+        float y = (float)((i * 83 + 19) % 470) +
+                  sinf(phase + (float)i * 0.73f) * 3.0f;
+        float pulse = 0.45f + 0.55f *
+                      sinf(phase * 2.0f + (float)i * 1.17f);
+        float size = (i % 5 == 0) ? 3.0f : 2.0f;
+        color = ui_theme_color(
+            scene_blend(0x9e8bcf00, 0xffffffff,
+                        pulse * daylight * 0.65f));
+        tiny3d_VertexPos(x, y, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(x + size, y, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(x + size, y + size, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(x, y + size, 65535.0f);
+        tiny3d_VertexColor(color);
+    }
+
+    for (i = 0; i < 14; i++) {
+        float x = (float)((i * 173 + 67) % 840);
+        float y = (float)((i * 97 + 33) % 300);
+        color = ui_theme_color(
+            scene_blend(0x66558a00, 0xf6edffcc, night * 0.82f));
+        tiny3d_VertexPos(x, y, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(x + 2.0f, y, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(x + 2.0f, y + 2.0f, 65535.0f);
+        tiny3d_VertexColor(color);
+        tiny3d_VertexPos(x, y + 2.0f, 65535.0f);
+        tiny3d_VertexColor(color);
+    }
+    tiny3d_End();
+    (void)dusk;
+}
+
+/* Add one camera-visible segment to an already-open Tiny3D line batch. */
+static void scene_emit_line_segment(ps3scale_scene_point_t a,
+                                    ps3scale_scene_point_t b,
+                                    float focal_length,
+                                    u32 color)
+{
+    ps3scale_scene_point_t camera_a = scene_camera_space_point(a);
+    ps3scale_scene_point_t camera_b = scene_camera_space_point(b);
+    float x1, y1, x2, y2;
+    if (camera_a.z <= 2.5f || camera_b.z <= 2.5f)
+        return;
+    scene_project_camera_point(camera_a, focal_length, &x1, &y1);
+    scene_project_camera_point(camera_b, focal_length, &x2, &y2);
+    tiny3d_VertexPos(x1, y1, 65535.0f);
+    tiny3d_VertexColor(color);
+    tiny3d_VertexPos(x2, y2, 65535.0f);
+}
+
+static void draw_home_ambient(void)
+{
+    ps3scale_scene_face_t faces[PS3SCALE_STAIR_FACE_MAX];
+    const float tau = 6.28318530718f;
+    const float center_x = 7.2f;
+    float center_y;
+    const float center_z = 34.0f;
+    const float inner_radius = 2.0f;
+    const float outer_radius = 14.0f;
+    const float angle_step = tau / 18.0f;
+    const float rise_per_tread = 0.72f;
+    const float focal_length = 780.0f;
+    unsigned long frame_in_loop =
+        g_frame_counter % PS3SCALE_STAIR_LOOP_FRAMES;
+    float phase = (float)frame_in_loop /
+                  (float)PS3SCALE_STAIR_LOOP_FRAMES * tau;
+    /* Advance continuously through one full spiral revolution. The camera
+       and the local geometry origin share the same vertical offset, so the
+       view returns to its exact starting pose at the loop boundary. */
+    float camera_steps = phase / tau * 18.0f;
+    float camera_y = camera_steps * rise_per_tread;
+    size_t face_count = 0, i;
+    int j;
+
+    center_y = camera_y;
+    scene_set_camera(0.0f, camera_y, 0.0f,
+                     center_x, camera_y, center_z);
+
+    /* One spiral staircase only; the scene background supplies no second flight. */
+
+    /* White/silver treads stream past the camera with no visible end. */
+    for (i = 0; i < PS3SCALE_STAIR_STEPS; i++) {
+        float angle = ((float)i + camera_steps) * angle_step;
+        float next_angle = angle + angle_step * 0.92f;
+        float y = ((float)i - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
+                  rise_per_tread;
+        ps3scale_scene_point_t top[4], riser[4], side[4];
+        ps3scale_scene_point_t pearl_lip[4], contact_shadow[4];
+        float light = 0.68f + 0.25f * cosf(angle + 0.42f);
+        u32 top_color = scene_blend(0xe3ddecff, 0xfffeffff, light);
+        u32 riser_color = scene_blend(0x988eafff, 0xc7bedaff, light);
+        u32 side_color = scene_blend(0xa99fbeff, 0xd5cde5ff, light);
+        u32 lip_color = scene_blend(0xded7efff, 0xfffeffff, light);
+        u32 contact_color = scene_blend(0x6f6788ff, 0xa39abfff, light);
+
+        top[0] = scene_world_point(center_x, center_y, center_z,
+                                   inner_radius, angle, y + 0.14f);
+        top[1] = scene_world_point(center_x, center_y, center_z,
+                                   outer_radius, angle, y + 0.14f);
+        top[2] = scene_world_point(center_x, center_y, center_z,
+                                   outer_radius, next_angle, y + 0.14f);
+        top[3] = scene_world_point(center_x, center_y, center_z,
+                                   inner_radius, next_angle, y + 0.14f);
+
+        riser[0] = scene_world_point(center_x, center_y, center_z,
+                                     outer_radius, angle, y - 0.20f);
+        riser[1] = scene_world_point(center_x, center_y, center_z,
+                                     outer_radius, next_angle, y - 0.20f);
+        /* End the riser at the underside of the bevel: coplanar faces
+           do not overlap, so the pearl highlight cannot flicker/vanish. */
+        riser[2] = scene_world_point(center_x, center_y, center_z,
+                                     outer_radius, next_angle, y + 0.025f);
+        riser[3] = scene_world_point(center_x, center_y, center_z,
+                                     outer_radius, angle, y + 0.025f);
+
+        side[0] = scene_world_point(center_x, center_y, center_z,
+                                    inner_radius, next_angle, y - 0.20f);
+        side[1] = riser[1];
+        side[2] = top[2];
+        side[3] = top[3];
+
+        /* Polished bevel on the visible outer tread edge. The thin darker
+           strip under it gives the steps real thickness and contact shadow
+           instead of a flat 2D paper staircase. */
+        pearl_lip[0] = top[1];
+        pearl_lip[1] = top[2];
+        pearl_lip[2] = scene_world_point(center_x, center_y, center_z,
+                                         outer_radius, next_angle, y + 0.025f);
+        pearl_lip[3] = scene_world_point(center_x, center_y, center_z,
+                                         outer_radius, angle, y + 0.025f);
+
+        contact_shadow[0] = riser[0];
+        contact_shadow[1] = riser[1];
+        contact_shadow[2] = scene_world_point(center_x, center_y, center_z,
+                                              outer_radius, next_angle, y - 0.29f);
+        contact_shadow[3] = scene_world_point(center_x, center_y, center_z,
+                                              outer_radius, angle, y - 0.29f);
+
+        scene_push_face(faces, &face_count, top, focal_length,
+                        top_color, 0); /* Bevel supplies the visible edge. */
+        scene_push_face(faces, &face_count, riser, focal_length,
+                        riser_color, 0);
+        scene_push_face(faces, &face_count, side, focal_length,
+                        side_color, 0);
+        scene_push_face(faces, &face_count, pearl_lip, focal_length,
+                        lip_color, 0xfaf6ffff);
+        scene_push_face(faces, &face_count, contact_shadow, focal_length,
+                        contact_color, 0);
+    }
+
+    /* Painter's order gives reliable depth without relying on RSX Z state. */
+    qsort(faces, face_count, sizeof(faces[0]), compare_scene_face_depth);
+    draw_scene_faces(faces, face_count);
+
+    /* Inner and outer spiral handrails are batched to keep frame cost low. */
+    tiny3d_SetPolygon(TINY3D_LINES);
+    for (j = 0; j < PS3SCALE_STAIR_STEPS * 6; j++) {
+        float t = (float)j / 6.0f;
+        float next_t = (float)(j + 1) / 6.0f;
+        float angle = (t + camera_steps) * angle_step;
+        float next_angle = (next_t + camera_steps) * angle_step;
+        float y = (t - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
+                  0.72f;
+        float next_y = (next_t - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
+                       0.72f;
+        ps3scale_scene_point_t outer_a, outer_b, inner_a, inner_b;
+        outer_a = scene_world_point(center_x, center_y, center_z,
+                                    outer_radius + 0.62f, angle, y + 1.15f);
+        outer_b = scene_world_point(center_x, center_y, center_z,
+                                    outer_radius + 0.62f, next_angle,
+                                    next_y + 1.15f);
+        inner_a = scene_world_point(center_x, center_y, center_z,
+                                    inner_radius + 0.42f, angle, y + 0.92f);
+        inner_b = scene_world_point(center_x, center_y, center_z,
+                                    inner_radius + 0.42f, next_angle,
+                                    next_y + 0.92f);
+        scene_emit_line_segment(outer_a, outer_b, focal_length,
+                                0xa18ad2ff);
+        scene_emit_line_segment(inner_a, inner_b, focal_length,
+                                0xcdbfe8cc);
+    }
+
+    /* Fine balusters and tread-edge glints complete the staircase silhouette. */
+    for (i = 0; i < PS3SCALE_STAIR_STEPS; i += 3) {
+        float angle = ((float)i + camera_steps) * angle_step;
+        float y = ((float)i - (float)(PS3SCALE_STAIR_STEPS - 1) * 0.5f) *
+                  0.72f;
+        ps3scale_scene_point_t base, rail, edge_a, edge_b;
+        base = scene_world_point(center_x, center_y, center_z,
+                                 outer_radius, angle, y + 0.16f);
+        rail = scene_world_point(center_x, center_y, center_z,
+                                 outer_radius + 0.62f, angle, y + 1.15f);
+        edge_a = scene_world_point(center_x, center_y, center_z,
+                                   outer_radius, angle, y + 0.14f);
+        edge_b = scene_world_point(center_x, center_y, center_z,
+                                   outer_radius, angle + angle_step * 0.92f,
+                                   y + 0.14f);
+        scene_emit_line_segment(base, rail, focal_length, 0xa894d3bb);
+        scene_emit_line_segment(edge_a, edge_b, focal_length, 0xe6def4e8);
+    }
+    tiny3d_End();
+}
+
+static void set_settings_message(const char *message)
+{
+    if (!message) message = "";
+    snprintf(g_settings_message, sizeof(g_settings_message), "%s", message);
+}
+
+static void set_details_message(const char *message)
+{
+    if (!message) message = "";
+    snprintf(g_details_message, sizeof(g_details_message), "%s", message);
+}
+
+
+#define PS3SCALE_PROFILE_CACHE_FORMAT "PS3SCALE_PROFILE_DATA_V1"
+
+static void load_catalog_cache(void)
+{
+    int count = ps3scale_catalog_load(PS3SCALE_CATALOG_CACHE_PATH, &g_catalog);
+    int community_count = ps3scale_community_index_load(
+        PS3SCALE_COMMUNITY_INDEX_CACHE_PATH, &g_community_index);
+
+    g_catalog_ready = (count > 0);
+    g_community_ready = (community_count > 0);
+
+    if (g_catalog_ready && g_community_ready) {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "LOCAL PROFILE + GITHUB INDEX READY");
+    } else if (g_catalog_ready) {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "LOCAL PROFILE DATABASE READY");
+    } else if (g_community_ready) {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "GITHUB COMMUNITY INDEX READY");
+    } else {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "NO VALID LOCAL DATABASE");
+    }
+    rebuild_online_results();
+}
+
+static int catalog_cache_is_stale(void)
+{
+    struct stat info;
+    time_t now = time(NULL);
+
+    if (stat(PS3SCALE_CATALOG_CACHE_PATH, &info) != 0)
+        return 1;
+    /* An unset console clock must not suppress the first online check. */
+    if (now < (time_t)1600000000)
+        return 1;
+    if (now <= info.st_mtime)
+        return 0;
+    return (now - info.st_mtime) >= PS3SCALE_CATALOG_SYNC_SECONDS;
+}
+
+static int community_index_cache_is_stale(void)
+{
+    struct stat info;
+    time_t now = time(NULL);
+
+    if (stat(PS3SCALE_COMMUNITY_INDEX_CACHE_PATH, &info) != 0)
+        return 1;
+    if (now < (time_t)1600000000)
+        return 1;
+    if (now <= info.st_mtime)
+        return 0;
+    return (now - info.st_mtime) >= PS3SCALE_CATALOG_SYNC_SECONDS;
+}
+
+static void catalog_sync_worker(void *arg)
+{
+    int result = 0;
+    (void)arg;
+    g_catalog_sync_result = 0;
+    g_catalog_sync_stage = 1;
+    g_catalog_sync_downloaded = 0;
+    g_catalog_sync_total = 0;
+    ps3scale_community_index_free(&g_downloaded_community_index);
+
+    if (ps3scale_online_download_progress(
+            PS3SCALE_CATALOG_URL, PS3SCALE_CATALOG_DOWNLOAD_PATH,
+            &g_catalog_sync_downloaded, &g_catalog_sync_total) == 0 &&
+        ps3scale_catalog_load(PS3SCALE_CATALOG_DOWNLOAD_PATH,
+                              &g_downloaded_catalog) > 0 &&
+        rename(PS3SCALE_CATALOG_DOWNLOAD_PATH,
+               PS3SCALE_CATALOG_CACHE_PATH) == 0) {
+        result |= 1;
+    } else {
+        unlink(PS3SCALE_CATALOG_DOWNLOAD_PATH);
+    }
+
+    g_catalog_sync_stage = 2;
+    g_catalog_sync_downloaded = 0;
+    g_catalog_sync_total = 0;
+    if (ps3scale_online_download_limited_progress(
+            PS3SCALE_COMMUNITY_INDEX_URL,
+            PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH,
+            PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT,
+            &g_catalog_sync_downloaded, &g_catalog_sync_total) == 0 &&
+        ps3scale_community_index_load(
+            PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH,
+            &g_downloaded_community_index) > 0 &&
+        rename(PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH,
+               PS3SCALE_COMMUNITY_INDEX_CACHE_PATH) == 0) {
+        result |= 2;
+    } else {
+        unlink(PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH);
+        ps3scale_community_index_free(&g_downloaded_community_index);
+    }
+
+    g_catalog_sync_result = result;
+    g_catalog_sync_stage = 0;
+
+    /* Publish completion before clearing running so UI actions never
+     * overlap the final network teardown window. */
+    g_catalog_sync_done = 1;
+    g_catalog_sync_running = 0;
+    g_network_task_running = 0;
+}
+
+static void start_catalog_sync_worker(int force)
+{
+    int rc;
+
+    if (g_network_task_running ||
+        g_catalog_sync_running || g_catalog_sync_done ||
+        g_game_launch_running || g_game_launch_done ||
+        g_profile_arm_running || g_profile_arm_done) {
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "DATABASE SYNC OR GAME START IS ALREADY RUNNING.");
+        return;
+    }
+    if (!force && !catalog_cache_is_stale() &&
+        !community_index_cache_is_stale())
+        return;
+
+    g_catalog_sync_done = 0;
+    g_catalog_sync_result = 0;
+    g_catalog_sync_stage = 1;
+    g_catalog_sync_downloaded = 0;
+    g_catalog_sync_total = 0;
+    g_catalog_sync_running = 1;
+    g_network_task_running = 1;
+    snprintf(g_catalog_status, sizeof(g_catalog_status),
+             "CONNECTING TO GITHUB DATABASE");
+    snprintf(g_online_message, sizeof(g_online_message),
+             "REFRESHING GITHUB PROFILE + COMMUNITY GAME INDEX...");
+    rc = sysThreadCreate(&g_catalog_thread, catalog_sync_worker, NULL,
+                         1500, 0x10000, THREAD_JOINABLE,
+                         "PS3 SCALE Online Database");
+    if (rc == 0) {
+        g_catalog_thread_started = 1;
+    } else {
+        g_catalog_sync_running = 0;
+        g_catalog_sync_done = 0;
+        g_catalog_sync_stage = 0;
+        g_catalog_sync_downloaded = 0;
+        g_catalog_sync_total = 0;
+        g_network_task_running = 0;
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "ONLINE THREAD COULD NOT START");
+    }
+}
+
+static void service_catalog_sync(void)
+{
+    int result;
+    if (!g_catalog_sync_done)
+        return;
+
+    if (g_catalog_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_catalog_thread, &thread_result);
+        g_catalog_thread_started = 0;
+    }
+
+    result = g_catalog_sync_result;
+    if (result & 1) {
+        g_catalog = g_downloaded_catalog;
+        g_catalog_ready = 1;
+    }
+    if (result & 2) {
+        ps3scale_community_index_free(&g_community_index);
+        g_community_index = g_downloaded_community_index;
+        memset(&g_downloaded_community_index, 0,
+               sizeof(g_downloaded_community_index));
+        g_community_ready = 1;
+    }
+
+    rebuild_online_results();
+    if (result == 3) {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "GITHUB PROFILE + GAME INDEX UPDATED");
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "GITHUB SEARCH INDEX UPDATED. GAME NAMES WERE RESCANNED.");
+    } else if (result == 1) {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "PROFILE DB UPDATED - GITHUB INDEX CACHED");
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "PROFILE DB UPDATED. USING LAST VALID GITHUB INDEX.");
+    } else if (result == 2) {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "GITHUB GAME INDEX UPDATED");
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "COMMUNITY FILE INDEX UPDATED. EXACT PROFILES ARE UNCHANGED.");
+    } else if (g_catalog_ready || g_community_ready) {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "UPDATE FAILED - USING LAST VALID CACHE");
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "UPDATE FAILED. LAST VALID LOCAL DATABASES ARE STILL AVAILABLE.");
+    } else {
+        snprintf(g_catalog_status, sizeof(g_catalog_status),
+                 "OFFLINE - NO VALID DATABASE");
+        snprintf(g_online_message, sizeof(g_online_message),
+                 "CONNECT THE PS3 TO THE INTERNET AND PRESS START TO RETRY.");
+    }
+    g_catalog_sync_done = 0;
+    g_catalog_sync_stage = 0;
+    g_catalog_sync_downloaded = 0;
+    g_catalog_sync_total = 0;
+}
+
+static const ps3scale_profile_t *profile_for_game(const ps3scale_game_t *game)
+{
+    if (!g_catalog_ready || !game || !game_is_ps3(game))
+        return NULL;
+    return ps3scale_catalog_match_game(&g_catalog, game);
+}
+
+static int profile_script_state_for_game(const ps3scale_game_t *game,
+                                         const ps3scale_profile_t *profile)
+{
+    if (!game || !game_is_ps3(game) || !game->title_id[0])
+        return 0;
+    if (profile && strcmp(profile->trust, "B_COMMUNITY") != 0)
+        return ps3scale_profile_script_state(game->title_id, game->app_ver, NULL);
+    return ps3scale_profile_script_state(
+        game->title_id, game->app_ver, profile ? profile->patches : NULL);
+}
+
+static const char *online_filter_label(void)
+{
+    switch (g_online_filter_mode) {
+    case ONLINE_FILTER_GRAPHICS_ANY: return "GRAPHICS + ANY REGION/VER";
+    case ONLINE_FILTER_ALL_EXACT: return "ALL FILES + EXACT REGION/VER";
+    case ONLINE_FILTER_ALL_ANY: return "ALL FILES + ANY REGION/VER";
+    default: return "GRAPHICS + EXACT REGION/VER";
+    }
+}
+
+static int online_filter_graphics_only(void)
+{
+    return g_online_filter_mode == ONLINE_FILTER_GRAPHICS_EXACT ||
+           g_online_filter_mode == ONLINE_FILTER_GRAPHICS_ANY;
+}
+
+static int online_filter_exact_only(void)
+{
+    return g_online_filter_mode == ONLINE_FILTER_GRAPHICS_EXACT ||
+           g_online_filter_mode == ONLINE_FILTER_ALL_EXACT;
+}
+
+static int online_result_matches_query(
+    const ps3scale_game_t *game,
+    const ps3scale_profile_t *profile,
+    const ps3scale_community_file_t *community)
+{
+    const char *query = g_online_query;
+    if (!query[0])
+        return 1;
+    if (game && (text_contains_ci(game->title, query) ||
+                 text_contains_ci(game->title_id, query)))
+        return 1;
+    if (profile && (text_contains_ci(profile->title, query) ||
+                    text_contains_ci(profile->effect, query) ||
+                    text_contains_ci(profile->title_id, query)))
+        return 1;
+    if (community && (text_contains_ci(community->title, query) ||
+                      text_contains_ci(community->title_id, query) ||
+                      text_contains_ci(community->path, query) ||
+                      text_contains_ci(community->repository, query) ||
+                      text_contains_ci(community->description, query) ||
+                      text_contains_ci(community->category, query)))
+        return 1;
+    return 0;
+}
+
+static void rebuild_online_results(void)
+{
+    size_t i, j, k;
+    int graphics_only = online_filter_graphics_only();
+    int exact_only = online_filter_exact_only();
+
+    g_online_result_count = 0;
+    g_online_profile_result_count = 0;
+    g_online_community_result_count = 0;
+    g_online_ps2_config_result_count = 0;
+    g_online_games_searched = 0;
+
+    for (i = 0; i < g_games.count; i++) {
+        const ps3scale_game_t *game = &g_games.items[i];
+        const ps3scale_profile_t *profile;
+        if (game_is_ps3(game)) {
+            g_online_games_searched++;
+            if (!g_catalog_ready)
+                continue;
+            profile = ps3scale_catalog_match_game(&g_catalog, game);
+            if (!profile || !online_result_matches_query(game, profile, NULL) ||
+                g_online_result_count >= PS3SCALE_MAX_ONLINE_RESULTS)
+                continue;
+            g_online_results[g_online_result_count].game_index = (unsigned short)i;
+            g_online_results[g_online_result_count].file_index = 0;
+            g_online_results[g_online_result_count].kind = ONLINE_RESULT_PROFILE;
+            g_online_result_count++;
+            g_online_profile_result_count++;
+        } else if (game->kind == PS3SCALE_GAME_PS2_ISO ||
+                   game->kind == PS3SCALE_GAME_PS2_CLASSIC) {
+            g_online_games_searched++;
+        }
+    }
+
+    if (g_community_ready && g_community_index.items) {
+        /* Installed-game matches are preferred; unmatched index entries remain browse-only. */
+        for (j = 0; j < g_community_index.count; j++) {
+            const ps3scale_community_file_t *file = &g_community_index.items[j];
+            int matched_installed_game = 0;
+            if (graphics_only && strcmp(file->category, "GRAPHICS_FPS") != 0)
+                continue;
+
+            for (i = 0; i < g_games.count; i++) {
+                const ps3scale_game_t *game = &g_games.items[i];
+                int matched;
+                if (!game_is_ps3(game))
+                    continue;
+                matched = exact_only ?
+                    ps3scale_community_file_matches_exact_game(file, game) :
+                    ps3scale_community_file_matches_game(file, game);
+                if (!matched || !online_result_matches_query(game, NULL, file))
+                    continue;
+
+                if (g_online_result_count < PS3SCALE_MAX_ONLINE_RESULTS) {
+                    g_online_results[g_online_result_count].game_index = (unsigned short)i;
+                    g_online_results[g_online_result_count].file_index = (unsigned short)j;
+                    g_online_results[g_online_result_count].kind = ONLINE_RESULT_COMMUNITY;
+                    g_online_result_count++;
+                    g_online_community_result_count++;
+                }
+                matched_installed_game = 1;
+                break;
+            }
+
+            if (!matched_installed_game && !exact_only &&
+                online_result_matches_query(NULL, NULL, file)) {
+                int duplicate = 0;
+                for (k = 0; k < g_online_result_count; k++) {
+                    if (g_online_results[k].kind == ONLINE_RESULT_COMMUNITY &&
+                        g_online_results[k].file_index == (unsigned short)j) {
+                        duplicate = 1;
+                        break;
+                    }
+                }
+                if (!duplicate &&
+                    g_online_result_count < PS3SCALE_MAX_ONLINE_RESULTS) {
+                    g_online_results[g_online_result_count].game_index = 0xffffu;
+                    g_online_results[g_online_result_count].file_index = (unsigned short)j;
+                    g_online_results[g_online_result_count].kind = ONLINE_RESULT_COMMUNITY;
+                    g_online_result_count++;
+                    g_online_community_result_count++;
+                }
+            }
+        }
+    }
+
+    /* PS2 configs are compatibility files, not graphics upgrades.
+       Show them only under ALL FILES, and only for an explicit search. */
+    if (!graphics_only && g_online_query[0] && g_ps2_config_db.items) {
+        for (j = 0; j < g_ps2_config_db.count; j++) {
+            const ps3scale_ps2_config_entry_t *entry = &g_ps2_config_db.items[j];
+            const ps3scale_ps2_config_entry_t *best;
+            const char *preferred;
+            int duplicate = 0;
+
+            if (!text_contains_ci(entry->title, g_online_query) &&
+                !text_contains_ci(entry->title_id, g_online_query))
+                continue;
+            if (strcmp(entry->type, "CUSTOM") != 0 &&
+                strcmp(entry->type, "NET") != 0 &&
+                strcmp(entry->type, "ENC") != 0)
+                continue;
+
+            preferred = strcmp(entry->type, "ENC") == 0 ?
+                        "ENC" : ps2_config_preferred_type();
+            best = ps3scale_ps2_config_db_find(
+                &g_ps2_config_db, entry->title_id, preferred);
+            if (best != entry)
+                continue;
+
+            for (k = 0; k < g_online_result_count; k++) {
+                if (g_online_results[k].kind == ONLINE_RESULT_PS2_CONFIG &&
+                    g_online_results[k].file_index == (unsigned short)j) {
+                    duplicate = 1;
+                    break;
+                }
+            }
+            if (duplicate ||
+                g_online_result_count >= PS3SCALE_MAX_ONLINE_RESULTS)
+                continue;
+
+            g_online_results[g_online_result_count].game_index = 0xffffu;
+            g_online_results[g_online_result_count].file_index = (unsigned short)j;
+            g_online_results[g_online_result_count].kind = ONLINE_RESULT_PS2_CONFIG;
+            g_online_result_count++;
+            g_online_ps2_config_result_count++;
+        }
+    }
+
+    if (g_online_result_count == 0)
+        g_online_selected = 0;
+    else if ((size_t)g_online_selected >= g_online_result_count)
+        g_online_selected = (int)g_online_result_count - 1;
+}
+
+
+static const ps3scale_game_t *online_result_at(
+    size_t target,
+    const ps3scale_profile_t **profile_out,
+    const ps3scale_community_file_t **community_out,
+    const ps3scale_ps2_config_entry_t **ps2_config_out)
+{
+    const online_result_t *result;
+    const ps3scale_game_t *game;
+
+    if (profile_out) *profile_out = NULL;
+    if (community_out) *community_out = NULL;
+    if (ps2_config_out) *ps2_config_out = NULL;
+    if (target >= g_online_result_count)
+        return NULL;
+
+    result = &g_online_results[target];
+    if (result->kind == ONLINE_RESULT_COMMUNITY) {
+        if (community_out &&
+            (size_t)result->file_index < g_community_index.count)
+            *community_out = &g_community_index.items[result->file_index];
+        if (result->game_index == 0xffffu)
+            return NULL;
+    } else if (result->kind == ONLINE_RESULT_PS2_CONFIG) {
+        if (ps2_config_out &&
+            (size_t)result->file_index < g_ps2_config_db.count)
+            *ps2_config_out = &g_ps2_config_db.items[result->file_index];
+        return NULL;
+    }
+
+    if ((size_t)result->game_index >= g_games.count)
+        return NULL;
+    game = &g_games.items[result->game_index];
+
+    if (result->kind == ONLINE_RESULT_PROFILE && profile_out)
+        *profile_out = profile_for_game(game);
+    return game;
+}
+
+
+static int ps2_config_ids_match(const char *left, const char *right)
+{
+    char a[PS3SCALE_PS2_CONFIG_ID_MAX];
+    char b[PS3SCALE_PS2_CONFIG_ID_MAX];
+    if (!left || !right)
+        return 0;
+    if (ps3scale_ps2_config_normalize_id(left, a, sizeof(a)) != 0 ||
+        ps3scale_ps2_config_normalize_id(right, b, sizeof(b)) != 0)
+        return strcmp(left, right) == 0;
+    return strcmp(a, b) == 0;
+}
+
+static void open_selected_online_match(void)
+{
+    const ps3scale_game_t *match;
+    const ps3scale_profile_t *profile = NULL;
+    const ps3scale_community_file_t *community = NULL;
+    const ps3scale_ps2_config_entry_t *ps2_config = NULL;
+    size_t i, count;
+
+    match = online_result_at((size_t)g_online_selected, &profile,
+                             &community, &ps2_config);
+    if (ps2_config) {
+        int found_local_game = 0;
+        g_library = LIBRARY_PS2;
+        g_search[0] = '\0';
+        g_selected = 0;
+        count = library_count(LIBRARY_PS2);
+        for (i = 0; i < count; i++) {
+            const ps3scale_game_t *candidate = library_game_at(i);
+            const char *candidate_id;
+            if (!candidate)
+                continue;
+            candidate_id = candidate->disc_id[0] ?
+                           candidate->disc_id : candidate->title_id;
+            if (ps2_config_ids_match(candidate_id, ps2_config->title_id)) {
+                g_selected = (int)i;
+                found_local_game = 1;
+                break;
+            }
+        }
+        if (found_local_game) {
+            g_profile_confirm_pending = 0;
+            g_config_preview = 0;
+            set_details_message("VERIFIED PS2 CONFIG FOUND. TRIANGLE TO DOWNLOAD.");
+            g_screen = SCREEN_DETAILS;
+        } else {
+            snprintf(g_online_message, sizeof(g_online_message),
+                     "PS2 CONFIG FOUND FOR %.32s. SCAN THE MATCHING PS2 GAME FIRST.",
+                     ps2_config->title);
+        }
+        return;
+    }
+
+    if (!match) {
+        if (community)
+            snprintf(g_online_message, sizeof(g_online_message),
+                     "GITHUB FILE FOUND FOR %.32s. LOCAL GAME NOT SCANNED.",
+                     community->title);
+        else
+            snprintf(g_online_message, sizeof(g_online_message),
+                     "NO GITHUB RESULT IS SELECTED.");
+        return;
+    }
+
+    g_library = LIBRARY_PS3;
+    g_search[0] = '\0';
+    g_selected = 0;
+    count = library_count(LIBRARY_PS3);
+    for (i = 0; i < count; i++) {
+        const ps3scale_game_t *candidate = library_game_at(i);
+        if (candidate &&
+            (candidate == match ||
+             (match->title_id[0] &&
+              strcmp(candidate->title_id, match->title_id) == 0) ||
+             strcmp(candidate->title, match->title) == 0)) {
+            g_selected = (int)i;
+            break;
+        }
+    }
+    g_profile_confirm_pending = 0;
+    if (profile)
+        set_details_message("EXACT GRAPHICS PROFILE FOUND. REVIEW BEFORE INSTALL.");
+    else if (community && profile_for_game(match))
+        set_details_message("EXACT GRAPHICS PROFILE AVAILABLE. REVIEW BEFORE INSTALL.");
+    else if (community && strcmp(community->category, "GRAPHICS_FPS") == 0)
+        set_details_message("FPS NCL REFERENCE ONLY. NO SAFE AUTO-APPLY PROFILE.");
+    else if (community)
+        set_details_message("COMMUNITY GAME CODE ONLY. NOT A GRAPHICS ENHANCEMENT.");
+    else
+        set_details_message("GAME FOUND IN GITHUB INDEX.");
+    g_screen = SCREEN_DETAILS;
+}
+
+
+static void profile_arm_worker(void *arg)
+{
+    ps3scale_game_t mounted;
+    int game_valid = 0;
+    (void)arg;
+
+    /* Re-read the exact Title ID + APP_VER away from the controller thread.
+       A full HDD scan is deliberately never performed on the UI stack. */
+    if (g_profile_arm_game_target.title_id[0] &&
+        g_profile_arm_game_target.app_ver[0]) {
+        if (g_profile_arm_game_target.kind == PS3SCALE_GAME_PS3_HDD)
+            game_valid = find_installed_game(&g_profile_arm_game_target);
+        else
+            game_valid = find_mounted_game(&g_profile_arm_game_target, &mounted);
+    }
+
+    if (!game_valid) {
+        g_profile_arm_result = -102;
+    } else if (ps3scale_webman_available() != 0) {
+        g_profile_arm_result = -100;
+    } else if (ps3scale_webman_ps3mapi_available() != 0) {
+        g_profile_arm_result = -101;
+    } else {
+        g_profile_arm_result =
+            ps3scale_profile_script_install(&g_profile_arm_target);
+    }
+
+    g_profile_arm_done = 1;
+    g_profile_arm_running = 0;
+    g_network_task_running = 0;
+}
+
+static int selected_game_matches_target(const ps3scale_game_t *target)
+{
+    const ps3scale_game_t *current = selected_game();
+    return target && g_screen == SCREEN_DETAILS && current &&
+           strcmp(current->title_id, target->title_id) == 0 &&
+           strcmp(current->app_ver, target->app_ver) == 0 &&
+           strcmp(current->path, target->path) == 0;
+}
+
+static int selected_game_matches_auto_launch_target(void)
+{
+    return selected_game_matches_target(&g_auto_launch_target);
+}
+
+static int selected_game_matches_game_launch_target(void)
+{
+    return selected_game_matches_target(&g_game_launch_target);
+}
+
+static void service_profile_arm(void)
+{
+    int result;
+    int auto_launch;
+    int cleanup_result;
+
+    if (!g_profile_arm_done)
+        return;
+
+    if (g_profile_arm_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_profile_arm_thread, &thread_result);
+        g_profile_arm_thread_started = 0;
+    }
+
+    result = g_profile_arm_result;
+    auto_launch = g_auto_launch_after_profile_arm;
+    g_auto_launch_after_profile_arm = 0;
+    g_profile_arm_done = 0;
+    g_profile_arm_running = 0;
+    g_details_cache_valid = 0;
+
+    if (result == 0 || result == 1) {
+        if (auto_launch) {
+            if (selected_game_matches_auto_launch_target()) {
+                set_details_message("PROFILE ARMED. STARTING GAME...");
+                start_selected_game();
+            } else {
+                (void)ps3scale_profile_script_remove(
+                    g_auto_launch_target.title_id);
+                set_details_message(
+                    "GAME SELECTION CHANGED. PROFILE REMOVED; NOT LAUNCHED.");
+            }
+        } else {
+            set_details_message("ONE-LAUNCH PROFILE ARMED. START THIS GAME.");
+        }
+    } else if (auto_launch &&
+               (result == -1 || result == -4 || result == -5 ||
+                result == -101 || result == -102)) {
+        /* A failed/unsafe enhancement must not prevent a normal launch when
+           webMAN can still start the selected title. Keep selection identity. */
+        if (selected_game_matches_auto_launch_target()) {
+            /* Remove only an owned leftover script. A foreign/unreadable script
+               blocks fallback rather than being launched or overwritten. */
+            cleanup_result = ps3scale_profile_script_remove(
+                g_auto_launch_target.title_id);
+            if (cleanup_result == -2) {
+                set_details_message(
+                    "USER WEBMAN SCRIPT EXISTS OR CANNOT BE VERIFIED. LAUNCH CANCELLED.");
+            } else {
+                g_force_unmodified_launch = 1;
+                set_details_message("PROFILE NOT APPLIED. STARTING GAME UNMODIFIED.");
+                start_selected_game();
+            }
+        } else {
+            set_details_message("GAME SELECTION CHANGED. NO GAME WAS STARTED.");
+        }
+    } else if (result == -100) {
+        set_details_message("WEBMAN MOD NOT RESPONDING. PROFILE NOT ARMED.");
+    } else if (result == -101) {
+        set_details_message("PS3MAPI NOT ACTIVE. PROFILE NOT ARMED.");
+    } else if (result == -102) {
+        set_details_message("EXACT GAME VERSION NOT FOUND. RESCAN OR MOUNT THE GAME.");
+    } else if (result == -2) {
+        set_details_message("A USER WEBMAN SCRIPT EXISTS. IT WAS NOT OVERWRITTEN.");
+    } else if (result == -3) {
+        set_details_message("MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY.");
+    } else {
+        set_details_message("PROFILE SCRIPT INSTALL FAILED. NO GAME FILES CHANGED.");
+    }
+}
+
+static void confirm_profile_install(void)
+{
+    const ps3scale_game_t *game = selected_game();
+    const ps3scale_profile_t *profile = profile_for_game(game);
+    int result;
+
+    if (!profile) {
+        set_details_message("NO EXACT ONLINE PROFILE FOR THIS GAME UPDATE.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+    if (strcmp(profile->trust, "B_COMMUNITY_MANUAL") == 0) {
+        set_details_message("MANUAL-ONLY PROFILE. ONE-LAUNCH APPLY IS NOT SUPPORTED.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+    if (strcmp(profile->trust, "B_COMMUNITY") != 0) {
+        set_details_message("PROFILE TRUST LEVEL DOES NOT ALLOW AUTO APPLY.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+    if (profile->patch_count != 1) {
+        set_details_message("MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+    if (g_network_task_running ||
+        g_catalog_sync_running || g_catalog_sync_done ||
+        g_game_launch_running || g_game_launch_done ||
+        g_profile_arm_running || g_profile_arm_done) {
+        set_details_message("WAIT FOR ONLINE DATABASE OR GAME ACTION TO FINISH.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+
+    if (!game || !game->title_id[0] || !game->app_ver[0]) {
+        set_details_message("GAME TITLE ID OR APP VERSION IS MISSING. RESCAN.");
+        g_profile_confirm_pending = 0;
+        return;
+    }
+    /* Copy both identities before the worker starts; it owns the disk scan. */
+    g_profile_arm_target = *profile;
+    g_profile_arm_game_target = *game;
+    g_profile_arm_result = -1;
+    g_profile_arm_done = 0;
+    g_profile_arm_running = 1;
+    g_network_task_running = 1;
+    g_profile_confirm_pending = 0;
+    set_details_message("CHECKING GAME VERSION, WEBMAN AND ARMING PROFILE.");
+
+    result = sysThreadCreate(&g_profile_arm_thread, profile_arm_worker, NULL,
+                             1500, 0x8000, THREAD_JOINABLE,
+                             "PS3 SCALE Profile Arm");
+    if (result == 0) {
+        g_profile_arm_thread_started = 1;
+    } else {
+        g_profile_arm_running = 0;
+        g_profile_arm_done = 0;
+        g_network_task_running = 0;
+        set_details_message("COULD NOT START PROFILE WORKER. NO PATCH WAS ARMED.");
+    }
+}
+
+static int find_mounted_game(const ps3scale_game_t *selected, ps3scale_game_t *mounted)
+{
+    size_t i;
+
+    if (!selected || !mounted || !selected->title_id[0])
+        return 0;
+
+    ps3scale_game_list_init(&g_validation_scan);
+    if (ps3scale_scan_device("/dev_bdvd", &g_validation_scan) <= 0)
+        return 0;
+
+    for (i = 0; i < g_validation_scan.count; i++) {
+        const ps3scale_game_t *candidate = &g_validation_scan.items[i];
+        if (strcmp(candidate->title_id, selected->title_id) != 0)
+            continue;
+        if (selected->app_ver[0] &&
+            (!candidate->app_ver[0] ||
+             strcmp(candidate->app_ver, selected->app_ver) != 0))
+            continue;
+        *mounted = *candidate;
+        return 1;
+    }
+    return 0;
+}
+
+static int find_installed_game(const ps3scale_game_t *selected)
+{
+    size_t i;
+
+    if (!selected || selected->kind != PS3SCALE_GAME_PS3_HDD ||
+        !selected->title_id[0] || !selected->app_ver[0])
+        return 0;
+
+    ps3scale_game_list_init(&g_validation_scan);
+    if (ps3scale_scan_device("/dev_hdd0", &g_validation_scan) <= 0)
+        return 0;
+
+    for (i = 0; i < g_validation_scan.count; i++) {
+        const ps3scale_game_t *candidate = &g_validation_scan.items[i];
+        if (candidate->kind != PS3SCALE_GAME_PS3_HDD)
+            continue;
+        if (strcmp(candidate->title_id, selected->title_id) != 0 ||
+            strcmp(candidate->app_ver, selected->app_ver) != 0 ||
+            strcmp(candidate->path, selected->path) != 0)
+            continue;
+        return 1;
+    }
+    return 0;
+}
+
+static void game_launch_worker(void *arg)
+{
+    ps3scale_game_t mounted;
+    int identity_valid = 1;
+    int cleanup_result;
+    (void)arg;
+
+    if (g_game_launch_profile_armed) {
+        identity_valid = g_game_launch_target.title_id[0] &&
+                         g_game_launch_target.app_ver[0];
+        if (identity_valid &&
+            g_game_launch_target.kind == PS3SCALE_GAME_PS3_HDD)
+            identity_valid = find_installed_game(&g_game_launch_target);
+        else if (identity_valid)
+            identity_valid = find_mounted_game(&g_game_launch_target, &mounted);
+
+        if (!identity_valid) {
+            /* Never run a profile against a different or unmounted revision. */
+            cleanup_result = ps3scale_profile_script_remove(
+                g_game_launch_target.title_id);
+            g_game_launch_result = cleanup_result == -2 ?
+                PS3SCALE_GAME_LAUNCH_ERROR_SCRIPT :
+                PS3SCALE_GAME_LAUNCH_ERROR_IDENTITY;
+            goto launch_finished;
+        }
+
+        if (ps3scale_webman_ps3mapi_available() != 0) {
+            /* A missing PS3MAPI endpoint must not block a normal launch.
+               Continue only if our own one-launch script is absent/removed. */
+            cleanup_result = ps3scale_profile_script_remove(
+                g_game_launch_target.title_id);
+            if (cleanup_result == -2) {
+                g_game_launch_result = PS3SCALE_GAME_LAUNCH_ERROR_SCRIPT;
+                goto launch_finished;
+            }
+            g_game_launch_profile_skipped = 1;
+        }
+    }
+    g_game_launch_result =
+        ps3scale_webman_start_game(&g_game_launch_target);
+
+launch_finished:
+    g_game_launch_done = 1;
+    g_game_launch_running = 0;
+    g_network_task_running = 0;
+}
+
+static void service_game_launch(void)
+{
+    if (!g_game_launch_done)
+        return;
+
+    if (g_game_launch_thread_started) {
+        u64 thread_result = 0;
+        (void)sysThreadJoin(g_game_launch_thread, &thread_result);
+        g_game_launch_thread_started = 0;
+    }
+
+    g_game_launch_done = 0;
+    g_game_launch_running = 0;
+
+    if (g_game_launch_result == 0) {
+        set_details_message(g_game_launch_profile_skipped ?
+            "PS3MAPI NOT ACTIVE. GAME STARTED WITHOUT PROFILE." :
+            "WEBMAN ACCEPTED START REQUEST.");
+        g_exit_requested = 1;
+    } else if (g_game_launch_result == PS3SCALE_GAME_LAUNCH_ERROR_IDENTITY) {
+        if (selected_game_matches_game_launch_target()) {
+            g_force_unmodified_launch = 1;
+            set_details_message("PROFILE REMOVED. STARTING GAME UNMODIFIED.");
+            start_selected_game();
+        } else {
+            set_details_message("GAME SELECTION CHANGED. PROFILE REMOVED; NOT LAUNCHED.");
+        }
+    } else if (g_game_launch_result == PS3SCALE_GAME_LAUNCH_ERROR_SCRIPT) {
+        set_details_message("PROFILE SCRIPT COULD NOT BE SAFELY REMOVED. GAME NOT STARTED.");
+    } else if (g_game_launch_result == -2) {
+        set_details_message("PS3MAPI NOT ACTIVE. PROFILE WAS NOT APPLIED.");
+    } else if (g_game_launch_result == PS3SCALE_WEBMAN_ERROR_NETWORK_INIT) {
+        set_details_message("PS3 NETWORK MODULES FAILED TO INITIALIZE.");
+    } else if (g_game_launch_result == PS3SCALE_WEBMAN_ERROR_SOCKET) {
+        set_details_message("PS3 NETWORK SOCKET COULD NOT BE OPENED.");
+    } else if (g_game_launch_result == PS3SCALE_WEBMAN_ERROR_CONNECT) {
+        set_details_message("WEBMAN MOD NOT RESPONDING ON LOCAL HTTP PORT 80.");
+    } else if (g_game_launch_result == PS3SCALE_WEBMAN_ERROR_SEND) {
+        set_details_message("WEBMAN LAUNCH REQUEST COULD NOT BE SENT.");
+    } else if (g_game_launch_result == PS3SCALE_WEBMAN_ERROR_RESPONSE) {
+        set_details_message("WEBMAN DID NOT RETURN AN HTTP RESPONSE.");
+    } else if (g_game_launch_result == PS3SCALE_WEBMAN_ERROR_HTTP_STATUS) {
+        set_details_message("WEBMAN REJECTED THE GAME TITLE OR PATH.");
+    } else if (g_game_launch_result == PS3SCALE_WEBMAN_ERROR_INVALID_REQUEST) {
+        set_details_message("GAME TITLE ID OR PATH IS INVALID. RESCAN.");
+    } else {
+        snprintf(g_details_message, sizeof(g_details_message),
+                 "WEBMAN START FAILED (ERROR %d).",
+                 (int)g_game_launch_result);
+    }
+}
+
+static void start_selected_game(void)
+{
+    const ps3scale_game_t *game = selected_game();
+    const ps3scale_profile_t *profile = NULL;
+    int script_state = 0;
+    int rc;
+    int cleanup_result;
+    int force_unmodified = g_force_unmodified_launch;
+    int is_ps2_iso = game && game->kind == PS3SCALE_GAME_PS2_ISO;
+
+    g_force_unmodified_launch = 0;
+
+    if (!game || (!game_is_ps3(game) && !is_ps2_iso)) {
+        set_details_message("PS2 CLASSICS MUST BE STARTED WITH THEIR COMPATIBLE LAUNCHER.");
+        return;
+    }
+    if (!is_ps2_iso && !game->title_id[0]) {
+        set_details_message("TITLE ID NOT AVAILABLE. RESCAN THE GAME.");
+        return;
+    }
+    if (force_unmodified && !is_ps2_iso) {
+        /* Final guard against a stale owned script or a newly-created user script. */
+        cleanup_result = ps3scale_profile_script_remove(game->title_id);
+        if (cleanup_result == -2) {
+            set_details_message(
+                "USER WEBMAN SCRIPT EXISTS OR CANNOT BE VERIFIED. LAUNCH CANCELLED.");
+            return;
+        }
+    }
+    if (g_network_task_running ||
+        g_game_launch_running || g_game_launch_done ||
+        g_profile_arm_running || g_profile_arm_done ||
+        g_ps2_config_download_running || g_ps2_config_download_done) {
+        set_details_message("WAIT FOR THE CURRENT GAME OR CONFIG TASK TO FINISH.");
+        return;
+    }
+    if (g_catalog_sync_running || g_catalog_sync_done) {
+        set_details_message("WAIT FOR ONLINE DATABASE SYNC TO FINISH BEFORE STARTING.");
+        return;
+    }
+
+    if (!is_ps2_iso && !force_unmodified) {
+        profile = profile_for_game(game);
+        script_state = profile_script_state_for_game(game, profile);
+        if (script_state == -2) {
+            set_details_message("STALE PROFILE SCRIPT. REMOVE IT BEFORE STARTING.");
+            return;
+        }
+        if (profile && script_state == -1) {
+            set_details_message("USER WEBMAN SCRIPT EXISTS. PROFILE NOT OVERWRITTEN.");
+            return;
+        }
+        if (profile && strcmp(profile->trust, "B_COMMUNITY") != 0) {
+            set_details_message("PROFILE IS NOT ELIGIBLE FOR AUTOMATIC APPLY.");
+            return;
+        }
+        if (profile && profile->patch_count != 1) {
+            set_details_message("MULTI-WRITE PROFILE DISABLED FOR AUTO APPLY SAFETY.");
+            return;
+        }
+
+        /* CROSS/START is explicit consent to arm an exact one-write profile
+           and launch only after the one-launch script has been installed. */
+        if (profile && script_state == 0) {
+            g_auto_launch_target = *game;
+            g_auto_launch_after_profile_arm = 1;
+            confirm_profile_install();
+            if (!g_profile_arm_running && !g_profile_arm_done)
+                g_auto_launch_after_profile_arm = 0;
+            return;
+        }
+
+        /* The launch worker revalidates the exact identity off the UI thread. */
+    }
+
+    g_game_launch_target = *game;
+    g_game_launch_profile_armed = !is_ps2_iso && (script_state == 1);
+    g_game_launch_profile_skipped = 0;
+    g_game_launch_result = -1;
+    g_game_launch_done = 0;
+    g_game_launch_running = 1;
+    g_network_task_running = 1;
+
+    if (is_ps2_iso)
+        set_details_message("MOUNTING PS2 ISO VIA WEBMAN. WAIT FOR THE RESPONSE.");
+    else if (script_state == 1)
+        set_details_message("STARTING GAME WITH ONE-LAUNCH PROFILE.");
+    else if (force_unmodified)
+        set_details_message("PROFILE NOT APPLIED. STARTING GAME UNMODIFIED.");
+    else if (profile)
+        set_details_message("PROFILE NOT ARMED. STARTING GAME UNMODIFIED.");
+    else
+        set_details_message("NO EXACT PROFILE. STARTING GAME UNMODIFIED.");
+
+    rc = sysThreadCreate(&g_game_launch_thread, game_launch_worker, NULL,
+                         1500, 0x8000, THREAD_JOINABLE,
+                         "PS3 SCALE Game Launch");
+    if (rc == 0) {
+        g_game_launch_thread_started = 1;
+    } else {
+        g_game_launch_running = 0;
+        g_game_launch_done = 0;
+        g_network_task_running = 0;
+        set_details_message("COULD NOT START GAME LAUNCH WORKER. APP IS READY.");
+    }
+}
+
+static void load_app_settings(void)
+{
+    FILE *fp = fopen(PS3SCALE_SETTINGS_PATH, "r");
+    char line[64];
+    int value, settings_version = 0;
+    if (!fp) return;
+    g_language = LANGUAGE_UNSET;
+    while (fgets(line, sizeof(line), fp)) {
+        if (sscanf(line, "settings_version=%d", &value) == 1)
+            settings_version = value;
+        else if (sscanf(line, "music=%d", &value) == 1)
+            g_music_enabled = value ? 1 : 0;
+        else if (sscanf(line, "volume=%d", &value) == 1)
+            set_background_music_volume(value);
+        else if (sscanf(line, "animation_v2=%d", &value) == 1)
+            g_animation_enabled = value ? 1 : 0;
+        else if (sscanf(line, "music_mode=%d", &value) == 1 &&
+                 value >= 0 && value <= 2)
+            g_music_mode = value;
+        else if (sscanf(line, "music_next=%d", &value) == 1 &&
+                 (value == 1 || value == 2))
+            g_music_next_track = value;
+        else if (sscanf(line, "music_fade_ms=%d", &value) == 1 &&
+                 (value == 500 || value == 1000 ||
+                  value == 1500 || value == 2000))
+            g_music_fade_ms = value;
+        else if (sscanf(line, "language=%d", &value) == 1 &&
+                 value >= LANGUAGE_ENGLISH && value <= LANGUAGE_SPANISH)
+            g_language = value;
+        else if (sscanf(line, "enhancement_persistent=%d", &value) == 1)
+            g_enhancement_persistent = value ? 1 : 0;
+    }
+    fclose(fp);
+
+    /* Alpha 0.21's old config could remain pinned to a single song. Migrate
+       once to the requested alternating two-track playlist. */
+    if (settings_version < 2) {
+        g_music_mode = 0;
+        g_music_next_track = 1;
+        g_music_start_track = 1;
+        g_music_fade_ms = 1000;
+    }
+    if (settings_version < 3)
+        g_enhancement_persistent = 0;
+}
+
+static int save_app_settings(void)
+{
+    FILE *fp = fopen(PS3SCALE_SETTINGS_PATH, "w");
+    if (!fp) {
+        set_settings_message("SETTINGS COULD NOT BE SAVED TO INTERNAL HDD.");
+        return -1;
+    }
+    fprintf(fp, "settings_version=3\n");
+    fprintf(fp, "music=%d\n", g_music_enabled ? 1 : 0);
+    fprintf(fp, "volume=%d\n", g_music_volume);
+    fprintf(fp, "animation_v2=%d\n", g_animation_enabled ? 1 : 0);
+    fprintf(fp, "music_mode=%d\n", g_music_mode);
+    fprintf(fp, "music_next=%d\n", g_music_next_track);
+    fprintf(fp, "music_fade_ms=%d\n", g_music_fade_ms);
+    fprintf(fp, "language=%d\n", g_language);
+    fprintf(fp, "enhancement_persistent=%d\n",
+            g_enhancement_persistent ? 1 : 0);
+    if (fclose(fp) != 0) {
+        set_settings_message("SETTINGS SAVE FAILED.");
+        return -1;
+    }
+    set_settings_message("SETTINGS SAVED TO INTERNAL HDD.");
+    return 0;
+}
+
+static int find_usb_update_package(char *found_path, size_t capacity)
+{
+    static const char *relative_paths[] = {
+        "PS3SCALE/update/ps3scale.gnpdrm.pkg",
+        "PS3SCALE/update/ps3scale.pkg",
+        "PS3SCALE/ps3scale.gnpdrm.pkg"
+    };
+    unsigned char expected[4] = { 0x7f, 'P', 'K', 'G' };
+    int device, item;
+    for (device = 0; device < 8; device++) {
+        char root[32];
+        snprintf(root, sizeof(root), "/dev_usb%03d", device);
+        for (item = 0; item < 3; item++) {
+            char candidate[PS3SCALE_PATH_MAX];
+            unsigned char magic[4];
+            FILE *fp;
+            if (snprintf(candidate, sizeof(candidate), "%s/%s",
+                         root, relative_paths[item]) >= (int)sizeof(candidate))
+                continue;
+            fp = fopen(candidate, "rb");
+            if (!fp) continue;
+            if (fread(magic, 1, sizeof(magic), fp) == sizeof(magic) &&
+                memcmp(magic, expected, sizeof(expected)) == 0) {
+                fclose(fp);
+                if (found_path && capacity > 0)
+                    snprintf(found_path, capacity, "%s", candidate);
+                return 1;
+            }
+            fclose(fp);
+        }
+    }
+    return 0;
+}
+
+static int file_exists_readonly(const char *path)
+{
+    FILE *fp;
+    if (!path || !path[0]) return 0;
+    fp = fopen(path, "rb");
+    if (!fp) return 0;
+    fclose(fp);
+    return 1;
+}
+
+static const char *ps2_config_preferred_type(void)
+{
+    if (g_hardware_info_valid &&
+        g_hardware_info.family == PS3SCALE_HARDWARE_FAT) {
+        if (strstr(g_hardware_info.model_series, "CECHC") ||
+            strstr(g_hardware_info.model_series, "CECHE"))
+            return "GX";
+        return "SOFT";
+    }
+    return "NET";
+}
+
+static const ps3scale_ps2_config_entry_t *ps2_config_for_game(
+    const ps3scale_game_t *game)
+{
+    const char *id;
+    if (!game || !g_ps2_config_db.items)
+        return NULL;
+
+    if (game->kind == PS3SCALE_GAME_PS2_ISO) {
+        id = game->disc_id;
+        if (!id[0])
+            return NULL;
+        return ps3scale_ps2_config_db_find(
+            &g_ps2_config_db, id, ps2_config_preferred_type());
+    }
+
+    if (game->kind == PS3SCALE_GAME_PS2_CLASSIC) {
+        id = game->disc_id[0] ? game->disc_id : game->title_id;
+        if (!id[0])
+            return NULL;
+        return ps3scale_ps2_config_db_find(&g_ps2_config_db, id, "ENC");
+    }
+    return NULL;
+}
+
+
+static int ps2_config_target_path(const ps3scale_game_t *game,
+                                  const ps3scale_ps2_config_entry_t *entry,
+                                  char *target, size_t capacity)
+{
+    int written;
+
+    if (!game || !target || !capacity)
+        return -1;
+    target[0] = '\0';
+
+    if (game->kind == PS3SCALE_GAME_PS2_ISO) {
+        if (!game->path[0])
+            return -1;
+        written = snprintf(target, capacity, "%s.CONFIG", game->path);
+    } else if (game->kind == PS3SCALE_GAME_PS2_CLASSIC) {
+        const char *id = entry && entry->title_id[0] ? entry->title_id :
+                         (game->title_id[0] ? game->title_id : game->disc_id);
+        size_t i;
+        if (!id || !id[0])
+            return -1;
+        for (i = 0; id[i]; i++)
+            if (!isalnum((unsigned char)id[i]))
+                return -1;
+        written = snprintf(target, capacity, "%s/%s.ENC",
+                           PS3SCALE_PS2_CLASSICS_CONFIG_DIR, id);
+    } else {
+        return -1;
+    }
+
+    return written < 0 || (size_t)written >= capacity ? -1 : 0;
+}
+
+static size_t ps2_config_type_limit(const char *type)
+{
+    return type && strcmp(type, "ENC") == 0 ?
+        PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT :
+        PS3SCALE_PS2_CONFIG_MAX_BYTES;
+}
+
+static size_t ps2_config_game_limit(const ps3scale_game_t *game,
+                                    const ps3scale_ps2_config_entry_t *entry)
+{
+    if ((game && game->kind == PS3SCALE_GAME_PS2_CLASSIC) ||
+        (entry && strcmp(entry->type, "ENC") == 0))
+        return PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT;
+    return PS3SCALE_PS2_CONFIG_MAX_BYTES;
+}
+
+static int ps2_config_store_paths(const ps3scale_game_t *game,
+                                  const ps3scale_ps2_config_entry_t *entry,
+                                  char *target, size_t target_capacity,
+                                  char *backup, size_t backup_capacity,
+                                  char *rollback, size_t rollback_capacity)
+{
+    const char *id;
+    if (ps2_config_target_path(game, entry, target, target_capacity) != 0)
+        return -1;
+    id = game->disc_id[0] ? game->disc_id :
+         (game->title_id[0] ? game->title_id :
+          (entry ? entry->title_id : ""));
+    return ps3scale_ps2_config_store_make_paths(
+        backup, backup_capacity, rollback, rollback_capacity,
+        PS3SCALE_PS2_CONFIG_BACKUP_DIR, id, target);
+}
+
+static int ensure_ps2_config_backup_directory(void)
+{
+    struct stat st;
+    if (stat(PS3SCALE_PS2_CONFIG_BACKUP_DIR, &st) == 0)
+        return S_ISDIR(st.st_mode) ? 0 : -1;
+    if (mkdir(PS3SCALE_PS2_CONFIG_BACKUP_DIR, 0777) == 0)
+        return 0;
+    return stat(PS3SCALE_PS2_CONFIG_BACKUP_DIR, &st) == 0 &&
+           S_ISDIR(st.st_mode) ? 0 : -1;
+}
+
+static void refresh_ps2_config_manager_state(void)
+{
+    const ps3scale_game_t *game = selected_game();
+    const ps3scale_ps2_config_entry_t *entry = ps2_config_for_game(game);
+    char target[PS3SCALE_PATH_MAX];
+
+    g_ps2_config_manager_target_exists = 0;
+    g_ps2_config_manager_backup_exists = 0;
+    g_ps2_config_manager_backup_matches = 0;
+    g_ps2_config_manager_rollback_exists = 0;
+    g_ps2_config_backup_path[0] = '\0';
+    g_ps2_config_rollback_path[0] = '\0';
+
+    if (ps2_config_store_paths(
+            game, entry, target, sizeof(target),
+            g_ps2_config_backup_path, sizeof(g_ps2_config_backup_path),
+            g_ps2_config_rollback_path,
+            sizeof(g_ps2_config_rollback_path)) != 0)
+        return;
+
+    g_ps2_config_manager_target_exists = file_exists_readonly(target);
+    g_ps2_config_manager_backup_exists =
+        file_exists_readonly(g_ps2_config_backup_path);
+    g_ps2_config_manager_rollback_exists =
+        file_exists_readonly(g_ps2_config_rollback_path);
+
+    if (g_ps2_config_manager_target_exists &&
+        g_ps2_config_manager_backup_exists) {
+        g_ps2_config_manager_backup_matches =
+            ps3scale_ps2_config_store_file_matches(
+                target, g_ps2_config_backup_path,
+                ps2_config_game_limit(game, entry)) == 1;
+    }
+}
+
+static void backup_selected_ps2_config(void)
+{
+    const ps3scale_game_t *game = selected_game();
+    const ps3scale_ps2_config_entry_t *entry = ps2_config_for_game(game);
+    char target[PS3SCALE_PATH_MAX];
+    int result;
+
+    if (ps2_config_store_paths(
+            game, entry, target, sizeof(target),
+            g_ps2_config_backup_path, sizeof(g_ps2_config_backup_path),
+            g_ps2_config_rollback_path,
+            sizeof(g_ps2_config_rollback_path)) != 0) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "NO VALID PS2 CONFIG TARGET FOR THIS TITLE.");
+        return;
+    }
+    if (!file_exists_readonly(target)) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "NO CURRENT CONFIG FILE TO BACK UP.");
+        return;
+    }
+    if (ensure_ps2_config_backup_directory() != 0) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "COULD NOT CREATE THE PS2 BACKUP DIRECTORY.");
+        return;
+    }
+
+    result = ps3scale_ps2_config_store_backup(
+        target, g_ps2_config_backup_path,
+        ps2_config_game_limit(game, entry));
+    if (result == PS3SCALE_PS2_STORE_OK ||
+        result == PS3SCALE_PS2_STORE_ALREADY_MATCHES)
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "ORIGINAL CONFIG BACKED UP. THE BACKUP IS PROTECTED.");
+    else if (result == PS3SCALE_PS2_STORE_ERR_CONFLICT)
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "BACKUP EXISTS WITH DIFFERENT DATA. IT WAS NOT OVERWRITTEN.");
+    else
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "BACKUP FAILED. THE CURRENT CONFIG WAS NOT CHANGED.");
+
+    refresh_ps2_config_manager_state();
+}
+
+static void restore_selected_ps2_config(void)
+{
+    const ps3scale_game_t *game = selected_game();
+    const ps3scale_ps2_config_entry_t *entry = ps2_config_for_game(game);
+    char target[PS3SCALE_PATH_MAX];
+    int result;
+
+    if (ps2_config_store_paths(
+            game, entry, target, sizeof(target),
+            g_ps2_config_backup_path, sizeof(g_ps2_config_backup_path),
+            g_ps2_config_rollback_path,
+            sizeof(g_ps2_config_rollback_path)) != 0) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "NO VALID PS2 CONFIG TARGET FOR THIS TITLE.");
+        return;
+    }
+    if (!file_exists_readonly(g_ps2_config_backup_path)) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "NO ORIGINAL BACKUP IS AVAILABLE.");
+        return;
+    }
+    if (ensure_ps2_config_backup_directory() != 0) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "COULD NOT ACCESS THE PS2 BACKUP DIRECTORY.");
+        return;
+    }
+
+    result = ps3scale_ps2_config_store_restore(
+        g_ps2_config_backup_path, target, g_ps2_config_rollback_path,
+        ps2_config_game_limit(game, entry));
+    if (result == PS3SCALE_PS2_STORE_OK)
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "ORIGINAL CONFIG RESTORED. PRE-RESTORE COPY IS PRESERVED.");
+    else if (result == PS3SCALE_PS2_STORE_ALREADY_MATCHES)
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "CURRENT CONFIG ALREADY MATCHES THE ORIGINAL BACKUP.");
+    else if (result == PS3SCALE_PS2_STORE_ERR_CONFLICT)
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "ROLLBACK FILE CONFLICT. NO CONFIG WAS REPLACED.");
+    else
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "RESTORE FAILED. THE BACKUP WAS LEFT UNCHANGED.");
+
+    refresh_ps2_config_manager_state();
+}
+
+static void ps2_config_download_worker(void *arg)
+{
+    unsigned char *data = NULL;
+    FILE *fp = NULL;
+    long file_size = 0;
+    int result = -1;
+    int store_result;
+
+    (void)arg;
+    if (ps3scale_online_download_limited_progress(
+            g_ps2_config_download_url,
+            g_ps2_config_download_temp_path,
+            PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT,
+            &g_ps2_config_downloaded, &g_ps2_config_download_total) == 0) {
+        fp = fopen(g_ps2_config_download_temp_path, "rb");
+        if (!fp) {
+            result = -3;
+        } else {
+            if (fseek(fp, 0, SEEK_END) == 0)
+                file_size = ftell(fp);
+            if (file_size <= 0 ||
+                (size_t)file_size > PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT ||
+                fseek(fp, 0, SEEK_SET) != 0) {
+                result = -3;
+            } else {
+                data = (unsigned char *)malloc((size_t)file_size);
+                if (!data ||
+                    fread(data, 1, (size_t)file_size, fp) != (size_t)file_size ||
+                    ferror(fp)) {
+                    result = -3;
+                } else if (ps3scale_ps2_config_validate_external(
+                               data, (size_t)file_size,
+                               g_ps2_config_download_type) != 0) {
+                    result = -4;
+                } else {
+                    fclose(fp);
+                    fp = NULL;
+                    store_result = ps3scale_ps2_config_store_install_download(
+                        g_ps2_config_download_temp_path,
+                        g_ps2_config_download_path,
+                        g_ps2_config_backup_path,
+                        g_ps2_config_rollback_path,
+                        ps2_config_type_limit(g_ps2_config_download_type),
+                        g_ps2_config_download_replace);
+                    if (store_result == PS3SCALE_PS2_STORE_OK)
+                        result = 0;
+                    else if (store_result == PS3SCALE_PS2_STORE_ERR_EXISTS)
+                        result = -2;
+                    else if (store_result ==
+                             PS3SCALE_PS2_STORE_ERR_BACKUP_REQUIRED)
+                        result = -6;
+                    else if (store_result ==
+                             PS3SCALE_PS2_STORE_ERR_CONFLICT)
+                        result = -7;
+                    else if (store_result ==
+                             PS3SCALE_PS2_STORE_ERR_TOO_LARGE)
+                        result = -4;
+                    else
+                        result = -5;
+                }
+            }
+            free(data);
+            data = NULL;
+            if (fp)
+                fclose(fp);
+            fp = NULL;
+        }
+    }
+
+    if (result != 0)
+        (void)unlink(g_ps2_config_download_temp_path);
+    g_ps2_config_download_result = result;
+    g_ps2_config_download_running = 0;
+    g_ps2_config_download_done = 1;
+    g_network_task_running = 0;
+}
+
 static void start_ps2_config_download(int allow_replace)
 {
     const ps3scale_game_t *game = selected_game();
@@ -359,7 +3515,6 @@ static void start_ps2_config_download(int allow_replace)
     char target[PS3SCALE_PATH_MAX];
     char temporary[PS3SCALE_PATH_MAX];
     int written;
-    size_t max_bytes;
 
     if (g_network_task_running ||
         g_ps2_config_download_running || g_ps2_config_download_done ||
@@ -406,7 +3561,6 @@ static void start_ps2_config_download(int allow_replace)
         return;
     }
 
-    max_bytes = ps2_config_type_limit(entry->type);
     if (stat(target, &st) == 0) {
         if (!allow_replace) {
             set_details_message("CONFIG ALREADY EXISTS. OPEN CONFIG MANAGER TO BACK UP FIRST.");
@@ -416,7 +3570,8 @@ static void start_ps2_config_download(int allow_replace)
             return;
         }
         if (ps3scale_ps2_config_store_file_matches(
-                target, g_ps2_config_backup_path, max_bytes) != 1) {
+                target, g_ps2_config_backup_path,
+                ps2_config_type_limit(entry->type)) != 1) {
             set_details_message("BACKUP MISSING OR CONFIG CHANGED. REPLACEMENT BLOCKED.");
             snprintf(g_ps2_config_manager_message,
                      sizeof(g_ps2_config_manager_message),
