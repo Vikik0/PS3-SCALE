@@ -22,6 +22,7 @@ from tools.ps3mapi.compare_runtime_strings import compare as compare_runtime_str
 from tools.ps3mapi.diff_runtime_elfs import compare as compare_runtime_elfs
 from tools.ps3mapi.scan_runtime_strings import scan as scan_runtime_strings
 from tools.ps3mapi.verify_tu116_dump import verify as verify_dump
+from tools.ps3mapi.verify_capture_metadata import verify_capture_metadata
 from tools.run_ghidra_ppu_inventory import _validate_opd_pair, generate_inventories
 
 DEFAULT_MAP = Path(__file__).with_name("SELF_MEMORY_MAP_TU116.json")
@@ -153,6 +154,8 @@ def analyze(
     map_file: Path = DEFAULT_MAP,
     campaign_log: Path | None = None,
     multiplayer_log: Path | None = None,
+    campaign_metadata: Path | None = None,
+    multiplayer_metadata: Path | None = None,
     analyze_headless: Path | None = None,
     ghidra_script_dir: Path | None = None,
     campaign_opd: tuple[int, int] | None = None,
@@ -185,12 +188,33 @@ def analyze(
         raise ValueError("Campaign and Multiplayer dump directories must be different")
     if (campaign_log is None) != (multiplayer_log is None):
         raise ValueError("provide both pad-probe logs or neither")
+    if (campaign_metadata is None) != (multiplayer_metadata is None):
+        raise ValueError("provide both capture metadata files or neither")
 
     if campaign_log is not None:
         campaign_log = Path(campaign_log)
         multiplayer_log = Path(multiplayer_log)
         _require_file(campaign_log, "Campaign Pad Probe log")
         _require_file(multiplayer_log, "Multiplayer Pad Probe log")
+
+    capture_metadata = {"status": "NOT_PROVIDED", "both_modes_validated": False}
+    if campaign_metadata is not None:
+        campaign_metadata = Path(campaign_metadata)
+        multiplayer_metadata = Path(multiplayer_metadata)
+        campaign_metadata_result = verify_capture_metadata(
+            campaign_metadata, "campaign", campaign_dumps, pad_log=campaign_log
+        )
+        multiplayer_metadata_result = verify_capture_metadata(
+            multiplayer_metadata, "multiplayer", multiplayer_dumps, pad_log=multiplayer_log
+        )
+        capture_metadata = {
+            "status": "PASS_CAPTURE_METADATA_PAIR",
+            "both_modes_validated": True,
+            "campaign": campaign_metadata_result,
+            "multiplayer": multiplayer_metadata_result,
+            "same_pid_is_allowed": True,
+            "process_name_is_mode_discriminator": False,
+        }
 
     if analyze_headless is not None:
         analyze_headless = Path(analyze_headless)
@@ -341,6 +365,9 @@ def analyze(
         if campaign_log is not None:
             input_hashes["campaign_pad_probe_log"] = sha256_file(campaign_log)
             input_hashes["multiplayer_pad_probe_log"] = sha256_file(multiplayer_log)
+        if campaign_metadata is not None:
+            input_hashes["campaign_capture_metadata"] = sha256_file(campaign_metadata)
+            input_hashes["multiplayer_capture_metadata"] = sha256_file(multiplayer_metadata)
 
         summary = {
             "status": status,
@@ -356,6 +383,7 @@ def analyze(
                 "multiplayer": multiplayer_verification.get("status"),
                 "both_passed": dump_checks_passed,
             },
+            "capture_metadata": capture_metadata,
             "pad_probe": {
                 "status": pad_comparison.get("status"),
                 "both_ports_visible_simultaneously_in_both_modes": pad_gate_passed,
@@ -415,6 +443,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--multiplayer-dumps", type=Path, required=True)
     parser.add_argument("--campaign-log", type=Path)
     parser.add_argument("--multiplayer-log", type=Path)
+    parser.add_argument("--campaign-metadata", type=Path)
+    parser.add_argument("--multiplayer-metadata", type=Path)
     parser.add_argument("--analyze-headless", type=Path)
     parser.add_argument("--ghidra-script-dir", type=Path)
     parser.add_argument("--campaign-opd-va")
@@ -442,6 +472,8 @@ def main(argv: list[str] | None = None) -> int:
             map_file=args.map_file,
             campaign_log=args.campaign_log,
             multiplayer_log=args.multiplayer_log,
+            campaign_metadata=args.campaign_metadata,
+            multiplayer_metadata=args.multiplayer_metadata,
             analyze_headless=args.analyze_headless,
             ghidra_script_dir=args.ghidra_script_dir,
             campaign_opd=campaign_opd,
