@@ -30,6 +30,43 @@ class GscPlayerStateOwnershipAuditTests(unittest.TestCase):
             self.assertEqual(finding["dvar_api_call_count"], 1)
             self.assertEqual(finding["ownership_pattern"], "MIXED_PER_PLAYER_ACTIONS_AND_LEVEL_SCOPE_STATE")
 
+    def test_reports_shared_mission_side_effects_separately_from_player_state(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "mission.gsc").write_text(
+                "critical_event()\\n{\\n"
+                "    level.player sethealth(0);\\n"
+                "    level.player.saved_weapon = \\"rifle\\";\\n"
+                "    level.mission_flag = 1;\\n"
+                "    level notify(\\"mission_event_done\\");\\n"
+                "    common_scripts\\\\utility::flag_set(\\"mission_done\\");\\n"
+                "    setsaveddvar(\\"ammoCounterHide\\", 1);\\n"
+                "    var_0 = maps\\\\_utility::spawn_anim_ent(\\"player_rig\\");\\n"
+                "    maps\\\\_utility::slowmo_end();\\n"
+                "    setphysicsgravitydir((0, -0.7, -0.1));\\n"
+                "    thread maps\\\\_utility::autosave_now_silent();\\n"
+                "    maps\\\\_utility::missionfailed();\\n"
+                "}\\n",
+                encoding="utf-8",
+            )
+            report = audit_mission("test", root, ["critical_event"])
+            finding = report["findings"][0]
+
+        self.assertEqual(finding["player_field_writes"]["saved_weapon"], 1)
+        self.assertEqual(finding["level_scope_field_writes"]["mission_flag"], 1)
+        self.assertEqual(finding["shared_side_effect_counts"]["mission_failure_calls"], 1)
+        self.assertEqual(finding["shared_side_effect_counts"]["autosave_calls"], 1)
+        self.assertEqual(finding["shared_side_effect_counts"]["slow_motion_calls"], 1)
+        self.assertEqual(finding["shared_side_effect_counts"]["world_physics_calls"], 1)
+        self.assertEqual(finding["shared_side_effect_counts"]["level_event_calls"], 1)
+        self.assertEqual(finding["shared_side_effect_counts"]["animation_rig_spawns"], 1)
+        self.assertEqual(
+            finding["event_ownership_pattern"],
+            "MISSION_WIDE_SINGLETON_SIDE_EFFECTS",
+        )
+        self.assertIn("MISSION_FAILURE_SIDE_EFFECT", finding["event_risk_flags"])
+        self.assertIn("GLOBAL_SLOW_MOTION_SIDE_EFFECT", finding["event_risk_flags"])
+
     def test_player_array_reference_is_marked_as_array_aware(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -72,6 +109,8 @@ class GscPlayerStateOwnershipAuditTests(unittest.TestCase):
             finding = report["findings"][0]
             self.assertEqual(finding["level_player_reference_count"], 0)
             self.assertEqual(finding["player_method_calls"], {})
+            self.assertEqual(finding["shared_side_effect_counts"]["mission_failure_calls"], 0)
+            self.assertEqual(finding["shared_side_effect_counts"]["autosave_calls"], 0)
 
     def test_missing_target_is_reported_without_guessing(self):
         with tempfile.TemporaryDirectory() as temp:
