@@ -1,0 +1,13 @@
+{
+  "name": "ghc_campaign_event_lock",
+  "game": "Call of Duty: Ghosts",
+  "engine": "IW6",
+  "platform": "PS3",
+  "compiler": "GSC Tool 1.6.2.364",
+  "compile_command": "gsc-tool --mode comp --game iw6 --system ps3 ghc_campaign_event_lock.gsc",
+  "source_sha256": "fcec9151fa50f44c2b2291f91ee91f65f5fa7201626e4a5862bc679e7eb23cf4",
+  "compiled_gscbin_sha256": "",
+  "compiled_gscbin_bytes": 0,
+  "status": "source added; CI compile, round-trip and bytecode hash pin pending",
+  "behavior": "Provides 16 mission-local event IDs, one active event per local player, one owner per shared event ID, owner-only release, optional shared completion, cancellation/abort without completion, and session-pair validation. Different event IDs can be owned concurrently by different players. No client creation, input polling or game-memory writes."
+}
