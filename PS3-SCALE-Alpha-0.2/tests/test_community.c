@@ -100,7 +100,7 @@ int main(void)
         ps3scale_community_file_t cross_region = index.items[0];
         strcpy(game.title_id, "BLES30464");
         strcpy(game.app_ver, "01.05");
-        strcpy(cross_region.path, "Skate 3 BLES30464 v01.05.ncl");
+        strcpy(cross_region.path, "Skate 3 BLUS30464 v01.05.ncl");
         if (ps3scale_community_file_matches_exact_game(&cross_region, &game))
             return 27;
     }
