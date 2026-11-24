@@ -758,7 +758,7 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
             write_inventory(campaign_path, campaign, fields=FIELDS + OPD_FIELDS)
             write_inventory(multiplayer_path, multiplayer, fields=FIELDS + OPD_FIELDS)
             result = compare(read_inventory(campaign_path), read_inventory(multiplayer_path))
-        comparison = result["matching_fingerprint_groups"][0]["toc_region_comparison"]
+        comparison = result["matched_fingerprints"][0]["toc_region_comparison"]
         self.assertEqual(comparison["status"], "MATCHED_REGION_SIGNATURES")
         self.assertEqual(
             result["summary"]["matching_fingerprint_groups_with_same_toc_region_signature"],
@@ -803,9 +803,14 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
                 "volatile": False,
             }],
         )
-        result = compare([campaign], [multiplayer])
+        with tempfile.TemporaryDirectory() as temp:
+            campaign_path = Path(temp) / "campaign.csv"
+            multiplayer_path = Path(temp) / "multiplayer.csv"
+            write_inventory(campaign_path, [campaign], fields=FIELDS + OPD_FIELDS)
+            write_inventory(multiplayer_path, [multiplayer], fields=FIELDS + OPD_FIELDS)
+            result = compare(read_inventory(campaign_path), read_inventory(multiplayer_path))
         self.assertEqual(
-            result["matching_fingerprint_groups"][0]["toc_region_comparison"]["status"],
+            result["matched_fingerprints"][0]["toc_region_comparison"]["status"],
             "DIFFERENT_REGION_SIGNATURES",
         )
 
@@ -818,7 +823,7 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
             write_inventory(multiplayer_path, [row("M", "0x9000", fingerprint)])
             result = compare(read_inventory(campaign_path), read_inventory(multiplayer_path))
         self.assertEqual(
-            result["matching_fingerprint_groups"][0]["toc_region_comparison"]["status"],
+            result["matched_fingerprints"][0]["toc_region_comparison"]["status"],
             "NOT_RECORDED",
         )
 
