@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "phase": 67,
+  "status": "VERIFIED_MISSION_GSC_ANALYSIS_GATE",
+  "changes": [
+    "gate all player-container source analysis on the three pinned mission FastFile identities",
+    "verify size, SHA-256, IWff0100 magic and big-endian version before and after analysis",
+    "skip GSC analysis when any FastFile identity fails",
+    "block final status if a FastFile changes during analysis",
+    "protect FastFile and GSC inputs from report-output collisions",
+    "emit one atomic report joining FastFile and source-tree provenance"
+  ],
+  "tests_added": 6,
+  "validation_boundary": "Verified input provenance plus static GSC analysis only; no live Campaign Player 2 behavior is proven."
+}
