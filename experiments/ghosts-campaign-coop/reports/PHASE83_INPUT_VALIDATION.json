@@ -13,16 +13,20 @@
     "independent_axis_activity_reported": true,
     "independent_trigger_activity_reported": true,
     "standalone_input_probe_comparison_json": true,
-    "comparison_json_emitted_when_logs_absent": true
+    "comparison_json_emitted_when_logs_absent": true,
+    "raw_stick_values_recomputed_against_normalized_axes": true,
+    "stick_deadzone": 20,
+    "button_independence_requires_exclusive_bits_on_both_ports": true
   },
   "tests": {
-    "github_actions_run": 1454,
-    "run_id": 45504097309,
-    "run_url": "https://github.com/Vikik0/PS3-SCALE/actions/runs/45504097309",
-    "server_tests": "465 PASS",
+    "github_actions_run": 1460,
+    "run_id": 45504502823,
+    "run_url": "https://github.com/Vikik0/PS3-SCALE/actions/runs/45504502823",
+    "server_tests": "467 PASS",
     "protocol_header": "PASS",
     "gsc_script_compile": "PASS",
-    "other_jobs": "pending at report creation"
+    "other_jobs": "worker-check, capture-metadata-intake, protocol-header, gsc-script-compile, ps3-prx-bootstrap: PASS",
+    "all_jobs": "6/6 SUCCESS"
   },
   "evidence_limits": [
     "All tests use synthetic logs and host mocks; no physical PS3 input logs have been captured.",
