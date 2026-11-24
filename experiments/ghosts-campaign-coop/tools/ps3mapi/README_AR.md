@@ -17,11 +17,15 @@
 
 1. تأكد أن Ghosts يعمل وأنك داخل Campaign فعلياً، وليس القائمة أو Multiplayer.
 2. فعّل PS3MAPI في إعدادات webMAN MOD.
-3. انسخ dump_campaign_tu116.bat إلى /dev_hdd0/tmp/.
+3. احصل على PID الحالي واسم العملية وسجّلهما:
+   - http://PS3_IP/ps3mapi.ps3?PROCESS+GETCURRENTPID
+   - http://PS3_IP/ps3mapi.ps3?PROCESS+GETNAME+PID_HERE
+   استبدل PID_HERE بالقيمة الفعلية، واحتفظ باسم العملية حرفياً مع وسم Campaign. هذا metadata تشخيصي فقط؛ لا نفترض أن الاسم يميز الوضعين تلقائياً.
+4. انسخ dump_campaign_tu116.bat إلى /dev_hdd0/tmp/.
 4. افتح المتصفح على الكمبيوتر واستخدم:
    http://PS3_IP/play.ps3/dev_hdd0/tmp/dump_campaign_tu116.bat
 5. انتظر إشعار انتهاء الالتقاط.
-6. انسخ الملفين التاليين إلى مجلد campaign_dumps على الكمبيوتر:
+7. انسخ الملفين التاليين إلى مجلد campaign_dumps على الكمبيوتر:
    - GHOSTS_TU116_CAMPAIGN_SEG0.bin
    - GHOSTS_TU116_CAMPAIGN_SEG1.bin
 
@@ -30,7 +34,8 @@
 ## 2. التقاط Multiplayer
 
 1. ادخل إلى Multiplayer Offline مع بقاء نفس نسخة BLUS31270 وTU 1.16.
-2. انسخ dump_multiplayer_tu116.bat إلى /dev_hdd0/tmp/.
+2. احصل على PID الحالي واسم العملية باستخدام PROCESS GETCURRENTPID وPROCESS GETNAME كما في Campaign، وسجّل الاسم حرفياً مع وسم Multiplayer. الاسم حقل تشخيصي وليس auto-detection.
+3. انسخ dump_multiplayer_tu116.bat إلى /dev_hdd0/tmp/.
 3. افتح:
    http://PS3_IP/play.ps3/dev_hdd0/tmp/dump_multiplayer_tu116.bat
 4. انسخ:
