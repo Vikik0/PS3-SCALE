@@ -119,6 +119,40 @@ static void test_both_observations_must_belong_to_the_same_engine_frame(void) {
     assert(ghc_local_player_gate_validate(players, &result) == GHC_LOCAL_GATE_OBSERVATION_FRAME_MISMATCH);
 }
 
+static void test_boolean_observation_flags_must_be_canonical(void) {
+    GhcLocalPlayerObservation players[2];
+    GhcLocalPlayerGateResult result;
+
+    make_ready_pair(players);
+    players[1].split_screen_active = 2u;
+    assert(ghc_local_player_gate_validate(players, &result) == GHC_LOCAL_GATE_INVALID_BOOLEAN_FLAG);
+
+    make_ready_pair(players);
+    players[1].is_split_screen_player = 2u;
+    assert(ghc_local_player_gate_validate(players, &result) == GHC_LOCAL_GATE_INVALID_BOOLEAN_FLAG);
+
+    make_ready_pair(players);
+    players[1].input_connected = 2u;
+    assert(ghc_local_player_gate_validate(players, &result) == GHC_LOCAL_GATE_INVALID_BOOLEAN_FLAG);
+
+    make_ready_pair(players);
+    players[1].input_frame_valid = 2u;
+    assert(ghc_local_player_gate_validate(players, &result) == GHC_LOCAL_GATE_INVALID_BOOLEAN_FLAG);
+
+    make_ready_pair(players);
+    players[1].client_id_valid = 2u;
+    assert(ghc_local_player_gate_validate(players, &result) == GHC_LOCAL_GATE_INVALID_BOOLEAN_FLAG);
+
+    make_ready_pair(players);
+    players[1].entity_id_valid = 2u;
+    assert(ghc_local_player_gate_validate(players, &result) == GHC_LOCAL_GATE_INVALID_BOOLEAN_FLAG);
+
+    make_ready_pair(players);
+    players[1].local_client_num_valid = 2u;
+    assert(ghc_local_player_gate_validate(players, &result) == GHC_LOCAL_GATE_INVALID_BOOLEAN_FLAG);
+    assert(result.failing_slot == 1u);
+}
+
 static void test_story_identity_must_be_preserved(void) {
     GhcLocalPlayerObservation players[2];
     GhcLocalPlayerGateResult result;
@@ -236,6 +270,7 @@ int main(void) {
     test_both_controller_inputs_must_be_connected();
     test_both_players_need_a_valid_fresh_input_frame();
     test_both_observations_must_belong_to_the_same_engine_frame();
+    test_boolean_observation_flags_must_be_canonical();
     test_story_identity_must_be_preserved();
     test_local_client_numbers_must_be_valid_and_unique_without_aliasing_controller_ports();
     test_client_and_entity_ids_must_be_valid_and_unique();
