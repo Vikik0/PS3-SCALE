@@ -73,3 +73,6 @@ PS3 SCALE loads the PS3 NET and NETCTL modules, initializes the network control 
 - The NCL installer accepts only text files tagged `GRAPHICS_FPS`; it does not install arbitrary binaries, EBOOT replacements, PKG files or general `.txt` downloads.
 - No universal upscaler, frame generation or guaranteed 60 FPS is provided.
 - A future binary patch installer would need cryptographic hashes, source/license metadata, backups, restore and rollback support before it could be enabled.
+
+
+Community NCL install matching is stricter than discovery matching. A fuzzy title or same-region suggestion can be shown for discovery, but installation requires exact APP_VER and the actual Title ID in the indexed identity/path. If the index supplies a Title ID, it must equal the scanned Title ID. Region labels are derived from the same shared prefix map used by Game Details; mismatched regional IDs are rejected.
