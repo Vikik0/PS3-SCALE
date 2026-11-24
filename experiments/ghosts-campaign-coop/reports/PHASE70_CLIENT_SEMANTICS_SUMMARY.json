@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "phase": 70,
+  "status": "CLIENT_SCOPED_RENDERING_AND_FOV_AUDIT",
+  "changes": [
+    "trace showonclient/hideonclient receivers and client selectors",
+    "map playerpiggyback indexes to player-specific FOV DVAR names",
+    "trace setsaveddvar use of self.sniper_degy",
+    "trace favoriteenemy comparison against playengineeffects",
+    "hash source trees before and after scanning"
+  ],
+  "actual_uploaded_input_result": {
+    "mission": "carrier",
+    "client_visibility_calls": 5,
+    "showonclient_calls": 1,
+    "hideonclient_calls": 4,
+    "level_player_hide_selectors": 2,
+    "playengineeffects_hide_selectors": 2,
+    "fov_bindings": [
+      {
+        "array_index": 0,
+        "dvar": "cg_playerFovScale0",
+        "file": "decompiled_gsc/1031.gsc",
+        "line": 208
+      },
+      {
+        "array_index": 1,
+        "dvar": "cg_playerFovScale1",
+        "file": "decompiled_gsc/1031.gsc",
+        "line": 211
+      }
+    ],
+    "sniper_degy_setsaveddvar_calls": 2,
+    "favoriteenemy_playengineeffects_comparisons": 1,
+    "client_fontstring_calls_in_monitorscavengerpickup": 1
+  },
+  "tests_added": 4,
+  "validation_boundary": "Per-client rendering and FOV clues only; the native identity/initializer of level.playengineeffects remains unproven."
+}
