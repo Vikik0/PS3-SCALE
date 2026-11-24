@@ -25,7 +25,8 @@ OPD_RESOLUTION_FIELDS = [
     "opd_exact_entry_descriptor_count",
     "opd_containing_function_descriptor_count",
 ]
-OPD_FIELDS = OPD_BASE_FIELDS + OPD_RESOLUTION_FIELDS
+OPD_REGION_FIELDS = ["opd_toc_region_evidence"]
+OPD_FIELDS = OPD_BASE_FIELDS + OPD_RESOLUTION_FIELDS + OPD_REGION_FIELDS
 
 
 def write_inventory(path: Path, rows, fields=FIELDS):
@@ -38,7 +39,7 @@ def write_inventory(path: Path, rows, fields=FIELDS):
 def row(
     name, entry, fingerprint, calls="", symbols=None, entries=None,
     opd_addresses=None, opd_mappings=None, opd_count=None,
-    opd_exact_count=None, opd_containing_count=0,
+    opd_exact_count=None, opd_containing_count=0, opd_regions=None,
 ):
     result = {
         "program": "Ghosts",
@@ -63,6 +64,20 @@ def row(
             opd_count if opd_exact_count is None else opd_exact_count
         )
         result["opd_containing_function_descriptor_count"] = opd_containing_count
+        if opd_regions is None:
+            opd_regions = []
+            for mapping in (opd_mappings or "").split(";"):
+                if not mapping:
+                    continue
+                address, status = mapping.split(":", 1)
+                opd_regions.append({
+                    "toc": address,
+                    "status": status,
+                    "block_name": ".got" if status == "MAPPED" else "",
+                    "permissions": "rw-" if status == "MAPPED" else "",
+                    "block_offset": "0x00000000" if status == "MAPPED" else "",
+                })
+        result["opd_toc_region_evidence"] = json.dumps(opd_regions)
     return result
 
 
@@ -524,6 +539,79 @@ class ComparePpuFunctionInventoriesTests(unittest.TestCase):
                 _opd_toc_evidence(parsed[0])["code_pointer_resolution"]["status"],
                 "NOT_RECORDED",
             )
+
+
+    def test_reads_toc_memory_block_permissions_and_relative_offset(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "toc-region.csv"
+            write_inventory(path, [
+                row(
+                    "SV_InitLocalClient", "0x9000", "a" * 64,
+                    opd_addresses="ram:00002000",
+                    opd_mappings="0x00003020:MAPPED",
+                    opd_count=1,
+                    opd_exact_count=1,
+                    opd_regions=[{
+                        "toc": "0x00003020",
+                        "status": "MAPPED",
+                        "block_name": ".got",
+                        "permissions": "rw-",
+                        "block_offset": "0x00000020",
+                    }],
+                )
+            ], fields=FIELDS + OPD_FIELDS)
+            parsed = read_inventory(path)
+            result = compare([], parsed)
+            evidence = result["priority_multiplayer_only"][0]["opd_toc_evidence"]
+            self.assertEqual(evidence["toc_region_evidence"][0]["block_name"], ".got")
+            self.assertEqual(evidence["toc_region_evidence"][0]["permissions"], "rw-")
+            self.assertEqual(evidence["toc_region_evidence"][0]["block_offset"], "0x00000020")
+            self.assertEqual(
+                result["summary"]["priority_multiplayer_only_candidates_with_writable_toc_block"],
+                1,
+            )
+
+    def test_rejects_toc_region_status_that_disagrees_with_mapping(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "bad-toc-region.csv"
+            write_inventory(path, [
+                row(
+                    "FUN_bad", "0x1000", "a" * 64,
+                    opd_addresses="ram:00002000",
+                    opd_mappings="0x00003000:MAPPED",
+                    opd_count=1,
+                    opd_regions=[{
+                        "toc": "0x00003000",
+                        "status": "UNMAPPED",
+                        "block_name": "",
+                        "permissions": "",
+                        "block_offset": "",
+                    }],
+                )
+            ], fields=FIELDS + OPD_FIELDS)
+            with self.assertRaisesRegex(InventoryError, "regions do not match"):
+                read_inventory(path)
+
+    def test_rejects_mapped_toc_region_without_valid_memory_permissions(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "bad-toc-permissions.csv"
+            write_inventory(path, [
+                row(
+                    "FUN_bad", "0x1000", "a" * 64,
+                    opd_addresses="ram:00002000",
+                    opd_mappings="0x00003000:MAPPED",
+                    opd_count=1,
+                    opd_regions=[{
+                        "toc": "0x00003000",
+                        "status": "MAPPED",
+                        "block_name": ".got",
+                        "permissions": "read-write",
+                        "block_offset": "0x00000000",
+                    }],
+                )
+            ], fields=FIELDS + OPD_FIELDS)
+            with self.assertRaisesRegex(InventoryError, "lacks block permissions"):
+                read_inventory(path)
 
 if __name__ == "__main__":
     unittest.main()

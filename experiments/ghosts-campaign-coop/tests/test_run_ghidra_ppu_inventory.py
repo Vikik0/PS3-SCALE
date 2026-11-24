@@ -36,6 +36,7 @@ CSV_FIELDS = [
     "opd_descriptor_count",
     "opd_exact_entry_descriptor_count",
     "opd_containing_function_descriptor_count",
+    "opd_toc_region_evidence",
 ]
 
 
@@ -78,6 +79,13 @@ class RunGhidraPpuInventoryTests(unittest.TestCase):
                 "opd_descriptor_count": "1" if opd else "0",
                 "opd_exact_entry_descriptor_count": "1" if opd else "0",
                 "opd_containing_function_descriptor_count": "0",
+                "opd_toc_region_evidence": json.dumps([{
+                    "toc": "0x00003000",
+                    "status": "UNMAPPED",
+                    "block_name": "",
+                    "permissions": "",
+                    "block_offset": "",
+                }] if opd else []),
             })
 
     def _write_xrefs(self, path, program):
