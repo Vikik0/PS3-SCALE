@@ -54,6 +54,7 @@ int main(void)
     const char *path = "/tmp/ps3scale_community_test.tsv";
     const char *hash_path = "/tmp/ps3scale_git_blob_test.ncl";
     ps3scale_community_index_t index;
+    char large_blob[101];
     ps3scale_game_t game;
 
     memset(&index, 0, sizeof(index));
@@ -67,6 +68,16 @@ int main(void)
     if (ps3scale_community_verify_git_blob_sha1(
             hash_path, 6, "ce013625030ba8dba906f756967f9e9ca394464a") != 0)
         return 32;
+    memset(large_blob, 'a', 100);
+    large_blob[100] = '\0';
+    if (write_index(hash_path, large_blob) != 0)
+        return 33;
+    if (ps3scale_community_verify_git_blob_sha1(
+            hash_path, 100, "d690765445339443e88fd770dad129c38e3521ff") != 1)
+        return 34;
+    if (ps3scale_community_verify_git_blob_sha1(
+            hash_path, 99, "d690765445339443e88fd770dad129c38e3521ff") != -1)
+        return 35;
     unlink(hash_path);
     if (write_index(path, valid) != 0)
         return 1;
