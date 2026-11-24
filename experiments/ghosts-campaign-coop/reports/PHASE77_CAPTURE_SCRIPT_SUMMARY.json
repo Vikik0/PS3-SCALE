@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "phase": 77,
+  "status": "PS3MAPI_CAPTURE_SAVE_FAIL_CLOSED",
+  "changes": [
+    "verify Campaign SEG0 exists after rename",
+    "verify Campaign SEG1 exists after rename",
+    "verify Multiplayer SEG0 exists after rename",
+    "verify Multiplayer SEG1 exists after rename",
+    "abort before DUMP_DONE if any final segment file is missing",
+    "add regression coverage for rename-check-completion ordering",
+    "document that DUMP_DONE is not a content-integrity proof"
+  ],
+  "unchanged": {
+    "title_id": "BLUS31270",
+    "title_update": "1.16",
+    "campaign_pt_load_addresses": ["0x10000", "0x7E0000"],
+    "multiplayer_pt_load_addresses": ["0x10000", "0xA60000"],
+    "memory_write_commands_added": false
+  },
+  "validation_boundary": "Source-level and CI tests only. No PS3MAPI hardware capture, live runtime ELF, or Campaign Player 2 is claimed."
+}
