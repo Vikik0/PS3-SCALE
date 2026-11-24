@@ -144,3 +144,11 @@ Phases 72–75 harden the native local-player readiness gate. Phase 72 added exp
 - ZIP integrity and all seven internal SHA-256 entries pass. Phase 76 and Phase 77 targeted suites each pass 5/5 locally.
 - The ZIP is a local handoff artifact, not committed to the repository and not a playable mod. No runtime capture has been received.
 - Report: reports/PHASE78_REPORT_AR.md; summary: reports/PHASE78_CAPTURE_KIT_SUMMARY.json.
+
+
+### Phase 79 — PS3MAPI process provenance
+
+- Added instructions to record PROCESS GETCURRENTPID and PROCESS GETNAME for each manually selected mode, plus a capture metadata template.
+- Process name is diagnostic metadata only; the workflow does not assume it automatically distinguishes Campaign from Multiplayer.
+- PS3MAPI script suite: 6/6 local tests pass. No memory-write command or executable address changed.
+- Report: reports/PHASE79_REPORT_AR.md; summary: reports/PHASE79_CAPTURE_METADATA_SUMMARY.json.
