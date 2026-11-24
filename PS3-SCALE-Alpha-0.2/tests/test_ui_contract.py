@@ -609,7 +609,7 @@ assert "if (triangle && !old_triangle)" in online_input
 assert "open_online_search_keyboard" in online_input
 assert "open_selected_online_match();" in online_input
 assert "ONLINE_FILTER_MODE_COUNT" in online_input
-assert "feature/online-graphics-database" in src
+assert "design/splash-transitions-ui-v6" in src
 
 online_source = source_path.with_name("online_catalog.c").read_text(encoding="utf-8")
 assert "CURLOPT_SSL_VERIFYPEER, 1L" in online_source
