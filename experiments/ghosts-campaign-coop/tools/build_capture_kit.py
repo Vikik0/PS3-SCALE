@@ -174,6 +174,7 @@ def build_capture_kit(
             "compare_pad_probe_logs.py",
             "compare_pad_input_probe_logs.py",
             "verify_capture_kit.py",
+            "verify_mission_event_lock_map.py",
         ):
             source = project_root / "tools" / filename
             if not source.is_file():
@@ -194,6 +195,11 @@ def build_capture_kit(
             "PHASE84_MISSION_EVENT_OWNERSHIP.json",
             "PHASE85_EVENT_LOCK_API.json",
             "PHASE86_CAPTURE_KIT_VALIDATION.json",
+            "PHASE87_REPORT_AR.md",
+            "PHASE87_CAPTURE_KIT_CI.json",
+            "PHASE88_REPORT_AR.md",
+            "PHASE88_EVENT_LOCK_PLAN.json",
+            "PHASE88_MISSION_EVENT_LOCK_MAP.json",
         ):
             source = project_root / "reports" / filename
             if source.is_file():
@@ -217,7 +223,7 @@ Do not copy files to the console unless the validator prints PASS.
 - Campaign and Multiplayer probe mode files.
 - PS3MAPI memory-dump scripts and TU1.16 runtime analyzers.
 - Experimental GSC source and GSCBIN under Experimental_GSC_Not_Installed only.
-- Phase 84–86 reports and MANIFEST.json with per-file SHA-256 checksums.
+- Phase 84–88 reports, event-lock map and MANIFEST.json with per-file SHA-256 checksums.
 
 ## Recommended offline test
 
