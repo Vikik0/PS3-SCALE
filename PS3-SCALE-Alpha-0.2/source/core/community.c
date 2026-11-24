@@ -10,7 +10,7 @@
 #include <strings.h>
 
 #define COMMUNITY_LINE_MAX 1024
-#define COMMUNITY_FILE_MAX_BYTES (1024ul * 1024ul)
+#define COMMUNITY_FILE_MAX_BYTES (4ul * 1024ul * 1024ul)
 
 static int copy_field(char *destination, size_t capacity,
                       const char *source, int allow_empty)
