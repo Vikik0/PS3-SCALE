@@ -155,3 +155,13 @@ Phases 72–75 harden the native local-player readiness gate. Phase 72 added exp
 
 
 The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload files + manifest (9 ZIP entries); SHA-256 11d8efcce114a5c422c3ac9f57eca774acdf011e9b4d6d886db3afbf190fac08). It includes the PROCESS GETNAME metadata step and capture template. The binary remains a local handoff artifact; no original game files are included.
+
+
+### Phase 80 — strict capture metadata intake
+
+- Added `tools/ps3mapi/verify_capture_metadata.py` to parse the operator's per-mode metadata with a strict key schema, reject duplicate/unknown/missing fields, validate BLUS31270/TU 1.16, the selected mode, local timestamp format, positive PID, and a non-empty bounded process name.
+- The verifier binds the declared SEG and Pad Probe filenames to the expected Campaign/Multiplayer names and checks that the actual SEG files exist in the corresponding dump directory. When a log is supplied, its basename must match the metadata.
+- Integrated paired `--campaign-metadata` / `--multiplayer-metadata` options into `analyze_tu116_runtime_capture.py`. A single metadata file is rejected; validated metadata hashes and recorded process details are included in `capture_summary.json`.
+- Same PID or same process name across the two captures is allowed. PROCESS GETNAME remains diagnostic metadata, not mode detection or proof that a PID belonged to the selected mode.
+- Added direct validator and analyzer integration tests. This remains host-side intake validation; no physical PS3 runtime capture or Campaign Player 2 is claimed.
+- Report: `reports/PHASE80_REPORT_AR.md`; summary: `reports/PHASE80_CAPTURE_METADATA_VALIDATION.json`.
