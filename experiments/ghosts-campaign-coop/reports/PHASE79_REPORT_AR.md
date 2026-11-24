@@ -24,3 +24,13 @@ Campaign وMultiplayer يشتركان في Title ID وهو BLUS31270. لذلك �
 ## الحدود
 
 لا توجد بعد سجلات فعلية أو dumps من الجهاز. هذه المرحلة تحسن provenance للالتقاط فقط؛ لا تنشئ Local Client ولا تثبت Player 2.
+
+
+## حزمة التسليم
+
+أُعيد تجميع الحزمة بعد إضافة PROCESS GETNAME ونموذج metadata:
+- الملف: Ghosts_TU116_Capture_Kit_Phase79.zip
+- عدد الملفات: 8
+- الحجم: 43,441 bytes
+- SHA-256: cb7fe7720e62cc7043201db0c935e22067ce32aa4c53401c7413f51570ae7184
+- ZIP integrity: PASS
