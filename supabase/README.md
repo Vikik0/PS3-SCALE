@@ -4,8 +4,8 @@ This backend is isolated from every other Supabase project. It must be deployed 
 
 ## Architecture
 
-- The PS3 app writes each report to its own local outbox file before attempting any network request.
-- The outbox uses a stable UUID request ID. Retrying the same report cannot create a duplicate database row or GitHub issue.
+- The PS3 app writes each report as an atomic JSON file under its own UUID in the local outbox before attempting any network request.
+- The outbox uses a stable UUID request ID. Pending reports survive app restarts and can be retried from Help & Support; retrying the same report cannot create a duplicate database row or GitHub issue.
 - The app sends only report kind, title, details, model, firmware, platform, app version and request ID.
 - The public Edge Function validates the payload, enforces a 12 KiB request limit and a maximum of 100 title characters / 2,000 detail characters.
 - An HMAC-SHA-256 hash of the Cloudflare-provided client IP, keyed with the server-side Supabase secret, is used for an atomic limit of 8 reports per UTC day. Raw IP addresses are never stored.
@@ -55,7 +55,7 @@ The token stays in Supabase Edge Function secrets and is never embedded in the P
 
 - No PSN ID, console ID, account token, raw IP address, or unique console identifier is sent by the app.
 - The app does not send any report until the local atomic outbox write succeeds.
-- Outbox files are stored separately under `/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox/`; a retry reuses the same request ID.
+- Pending JSON files are stored separately under `/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox/`; the Help & Support screen can retry them after a restart using the same request ID.
 - Public callers cannot read reports or rate-limit rows. The Edge Function uses a server-side secret key supplied by the Supabase runtime.
 - The database function that increments the daily counter is atomic and executable only by `service_role`.
 - The endpoint returns only a receipt ID and optional GitHub issue URL, never the stored report body.
