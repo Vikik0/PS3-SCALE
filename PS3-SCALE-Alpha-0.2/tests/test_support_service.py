@@ -74,5 +74,5 @@ assert "NEW Supabase project" in readme
 assert "Do not link this folder to any existing" in readme
 assert "PS3SCALE_SUPPORT_RATE_LIMIT_SALT" in readme
 assert "PS3SCALE_GITHUB_TOKEN" in readme
-assert "If it is omitted" in readme
+assert "If no token is configured" in readme
 print("PS3 SCALE support service security contract: PASS")
