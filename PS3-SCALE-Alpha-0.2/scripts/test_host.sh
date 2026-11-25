@@ -58,6 +58,13 @@ cc -std=c99 -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror \
 
 cc -std=c99 -Wall -Wextra -Werror \
   -I"$ROOT/include" \
+  "$ROOT/source/core/support_payload.c" \
+  "$ROOT/tests/test_support_payload.c" \
+  -o "$OUT/test_support_payload"
+"$OUT/test_support_payload"
+
+cc -std=c99 -Wall -Wextra -Werror \
+  -I"$ROOT/include" \
   "$ROOT/source/core/locale.c" \
   "$ROOT/tests/test_locale.c" \
   -o "$OUT/test_locale"
@@ -107,4 +114,5 @@ cc -std=c99 -Wall -Wextra -Werror \
 python3 "$ROOT/tests/test_ui_contract.py" "$ROOT/source/ps3/main.c"
 python3 "$ROOT/tests/test_launch_responsiveness.py" "$ROOT/source/ps3/main.c"
 python3 "$ROOT/tests/test_online_download_progress.py" "$ROOT"
+python3 "$ROOT/tests/test_support_service.py" "$ROOT"
 python3 "$ROOT/tests/test_theme_bundle.py" "$ROOT"
