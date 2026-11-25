@@ -2139,6 +2139,8 @@ static int community_index_cache_is_stale(void)
 static void catalog_sync_worker(void *arg)
 {
     int result = 0;
+    int profile_downloaded = 0;
+    int community_index_downloaded = 0;
     (void)arg;
     g_catalog_sync_result = 0;
     g_catalog_sync_stage = 1;
@@ -2148,15 +2150,18 @@ static void catalog_sync_worker(void *arg)
 
     if (ps3scale_online_download_progress(
             PS3SCALE_CATALOG_URL, PS3SCALE_CATALOG_DOWNLOAD_PATH,
-            &g_catalog_sync_downloaded, &g_catalog_sync_total) == 0 &&
-        ps3scale_catalog_load(PS3SCALE_CATALOG_DOWNLOAD_PATH,
-                              &g_downloaded_catalog) > 0 &&
-        rename(PS3SCALE_CATALOG_DOWNLOAD_PATH,
-               PS3SCALE_CATALOG_CACHE_PATH) == 0) {
-        result |= 1;
-    } else {
-        unlink(PS3SCALE_CATALOG_DOWNLOAD_PATH);
+            &g_catalog_sync_downloaded, &g_catalog_sync_total) == 0) {
+        profile_downloaded = 1;
+        if (ps3scale_catalog_load(PS3SCALE_CATALOG_DOWNLOAD_PATH,
+                                  &g_downloaded_catalog) > 0 &&
+            rename(PS3SCALE_CATALOG_DOWNLOAD_PATH,
+                   PS3SCALE_CATALOG_CACHE_PATH) == 0) {
+            result |= 1;
+            profile_downloaded = 0;
+        }
     }
+    if (profile_downloaded)
+        (void)unlink(PS3SCALE_CATALOG_DOWNLOAD_PATH);
 
     g_catalog_sync_stage = 2;
     g_catalog_sync_downloaded = 0;
@@ -2165,15 +2170,19 @@ static void catalog_sync_worker(void *arg)
             PS3SCALE_COMMUNITY_INDEX_URL,
             PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH,
             PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT,
-            &g_catalog_sync_downloaded, &g_catalog_sync_total) == 0 &&
-        ps3scale_community_index_load(
-            PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH,
-            &g_downloaded_community_index) > 0 &&
-        rename(PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH,
-               PS3SCALE_COMMUNITY_INDEX_CACHE_PATH) == 0) {
-        result |= 2;
-    } else {
-        unlink(PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH);
+            &g_catalog_sync_downloaded, &g_catalog_sync_total) == 0) {
+        community_index_downloaded = 1;
+        if (ps3scale_community_index_load(
+                PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH,
+                &g_downloaded_community_index) > 0 &&
+            rename(PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH,
+                   PS3SCALE_COMMUNITY_INDEX_CACHE_PATH) == 0) {
+            result |= 2;
+            community_index_downloaded = 0;
+        }
+    }
+    if (community_index_downloaded) {
+        (void)unlink(PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_PATH);
         ps3scale_community_index_free(&g_downloaded_community_index);
     }
 
@@ -3268,6 +3277,7 @@ static void ps2_config_download_worker(void *arg)
     size_t max_bytes;
     int install_result;
     int result = -1;
+    int downloaded = 0;
 
     (void)arg;
     if (ps3scale_online_download_limited_progress(
@@ -3275,6 +3285,7 @@ static void ps2_config_download_worker(void *arg)
             g_ps2_config_download_temp_path,
             PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT,
             &g_ps2_config_downloaded, &g_ps2_config_download_total) == 0) {
+        downloaded = 1;
         fp = fopen(g_ps2_config_download_temp_path, "rb");
         if (!fp) {
             result = -3;
@@ -3314,7 +3325,7 @@ static void ps2_config_download_worker(void *arg)
         }
     }
 
-    if (result != 0)
+    if (result != 0 && downloaded)
         (void)unlink(g_ps2_config_download_temp_path);
     g_ps2_config_download_result = result;
     g_ps2_config_download_running = 0;
@@ -3501,6 +3512,7 @@ static void community_download_worker(void *arg)
     size_t got = 0;
     long file_size = -1;
     int result = -1;
+    int downloaded = 0;
     struct stat st;
     (void)arg;
 
@@ -3509,6 +3521,7 @@ static void community_download_worker(void *arg)
             g_community_download_temp_path,
             PS3SCALE_COMMUNITY_INDEX_DOWNLOAD_LIMIT,
             &g_community_downloaded, &g_community_download_total) == 0) {
+        downloaded = 1;
         fp = fopen(g_community_download_temp_path, "rb");
         if (!fp) {
             result = -3;
@@ -3574,7 +3587,7 @@ static void community_download_worker(void *arg)
         }
     }
 
-    if (result != 0)
+    if (result != 0 && downloaded)
         (void)unlink(g_community_download_temp_path);
     g_community_download_result = result;
     g_community_download_running = 0;
