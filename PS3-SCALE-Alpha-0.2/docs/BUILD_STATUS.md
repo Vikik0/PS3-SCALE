@@ -1,12 +1,26 @@
-# Build status — PS3 SCALE Alpha 0.32
+# Build status — PS3 SCALE Alpha 0.33
 
 ## Current development head
 
 - Branch: `design/splash-transitions-ui-v6`
 - Pull request: Draft PR #16, targeting `design/settings-support-ui-v5`
-- Application version shown in the UI: `ALPHA 0.32`
-- Package metadata: `APP_VER=00.32`, `VERSION=00.32`
+- Application version shown in the UI: `ALPHA 0.33`
+- Package metadata: `APP_VER=00.33`, `VERSION=00.33`
 - Package title ID: `PS3SCALE1`
+
+## Alpha 0.33 — durable support outbox and retry queue
+
+- Application/package version: `ALPHA 0.33` / `00.33`.
+- Added a portable support JSON builder with strict UUIDv4 validation, 100-character title and 2,000-character details limits, JSON escaping and UTF-8 support.
+- Reports are saved atomically as one JSON file per request under the local support outbox.
+- Pending reports survive app restarts and can be retried from Help & Support; the queue checks UUID/file-name matching and rejects oversized/corrupt payloads.
+- Retry requests reuse the original UUID; the Edge Function performs idempotent inserts and atomic HMAC-based rate limiting (8 reports per UTC day).
+- Supabase reports and rate-limit tables have RLS enabled, public/authenticated access revoked, and service-role-only database grants.
+- Supabase JS SDK is pinned to `2.119.2`; the Deno lockfile is committed and the Edge Function is type-checked in CI.
+- The PS3 app includes only the public publishable-key placeholder; secret keys remain server-side.
+- Supabase project creation/deployment is pending confirmation of the VIKIK organization. The URL and publishable key remain placeholders, so live report submission is intentionally disabled.
+- Final Alpha 0.33 host, Deno and PS3 package CI: pending.
+- Physical PS3 validation of offline queue recovery and online submission remains pending.
 
 ## Alpha 0.32 — atomic persistence and download hardening
 
