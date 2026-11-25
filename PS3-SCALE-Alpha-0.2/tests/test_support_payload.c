@@ -27,10 +27,10 @@ int main(void)
         "4.91 HEN", "CEX", "ALPHA 0.32") == 0);
     assert(strcmp(json, expected) == 0);
 
-    memset(title, 'T', sizeof(title) - 1);
-    title[sizeof(title) - 1] = '\0';
-    memset(details, 'D', sizeof(details) - 1);
-    details[sizeof(details) - 1] = '\0';
+    memset(title, 'T', sizeof(title) - 2);
+    title[sizeof(title) - 2] = '\0';
+    memset(details, 'D', sizeof(details) - 2);
+    details[sizeof(details) - 2] = '\0';
     assert(ps3scale_support_build_json(
         json, sizeof(json), VALID_ID, "feedback", title, details,
         "UNKNOWN", "UNKNOWN", "UNKNOWN", "ALPHA 0.32") == 0);
