@@ -51,3 +51,14 @@
 ## حدود المرحلة
 
 هذه مراجعة static للمصادر المفكوكة. لم تتغير ملفات المهمات الأصلية، ولم يُبنَ أو يُحقن FastFile، ولم يُجرَ اختبار PS3 فعلي.
+
+## نتائج CI وحزمة التسليم
+
+- GitHub Actions run [#1535](https://github.com/Vikik0/PS3-SCALE/actions/runs/45590863539): **7/7 jobs successful**.
+- **508 اختباراً** ناجحاً.
+- تم بناء الحزمة تلقائياً والتحقق منها قبل رفعها.
+- Artifact ID: `15011056497`.
+- حجم الحزمة الداخلية: **523,270 bytes**.
+- التحقق: **55/55 ملفاً**، وملفا GSC manifest، وتقرير Activator Audit.
+- SHA-256 للحزمة الداخلية: `853c3958d9601b7e63b6d7ef5d0fb2e42b6c5fb6f4cb878792d70c5fc655a702`.
+- رابط الـartifact: https://github.com/Vikik0/PS3-SCALE/actions/runs/45590863539/artifacts/15011056497
