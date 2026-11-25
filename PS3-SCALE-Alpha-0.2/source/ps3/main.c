@@ -6008,7 +6008,7 @@ static void generate_support_request_id(void)
                    tail & 0xffffffffffffull);
 }
 
-static int build_support_json(void)
+static int build_support_json_to(char *destination, size_t capacity)
 {
     char model[81];
     char firmware[41];
@@ -6028,10 +6028,15 @@ static int build_support_json(void)
     }
 
     return ps3scale_support_build_json(
-        g_support_json, sizeof(g_support_json), g_support_request_id,
+        destination, capacity, g_support_request_id,
         g_support_is_feedback ? "feedback" : "issue",
         g_support_title, g_support_details, model, firmware, platform,
         PS3SCALE_APP_VERSION);
+}
+
+static int build_support_json(void)
+{
+    return build_support_json_to(g_support_json, sizeof(g_support_json));
 }
 
 static void support_submit_worker(void *arg)
@@ -6145,10 +6150,12 @@ static int save_support_report(void)
 {
     char report_path[512];
     char report_contents[4096];
+    char validation_json[8192];
     char model[81];
     char firmware[41];
     char platform[81];
     int length;
+    int path_length;
     long timestamp;
 
     if (g_support_report_saved) {
@@ -6167,7 +6174,7 @@ static int save_support_report(void)
     }
 
     generate_support_request_id();
-    if (build_support_json() != 0) {
+    if (build_support_json_to(validation_json, sizeof(validation_json)) != 0) {
         g_support_request_id[0] = '\0';
         snprintf(g_support_status, sizeof(g_support_status),
                  "REPORT TOO LONG OR INVALID.");
@@ -6203,13 +6210,15 @@ static int save_support_report(void)
         g_support_is_feedback ? "FEEDBACK" : "ISSUE",
         timestamp, g_support_title, g_support_details,
         model, firmware, platform, PS3SCALE_APP_VERSION);
+    path_length = snprintf(report_path, sizeof(report_path), "%s/%s.txt",
+                             PS3SCALE_SUPPORT_OUTBOX_DIR,
+                             g_support_request_id);
     if (length < 0 || (size_t)length >= sizeof(report_contents) ||
-        mkdir(PS3SCALE_SUPPORT_DIR, 0777) != 0 && access(PS3SCALE_SUPPORT_DIR, F_OK) != 0 ||
-        mkdir(PS3SCALE_SUPPORT_OUTBOX_DIR, 0777) != 0 &&
-            access(PS3SCALE_SUPPORT_OUTBOX_DIR, F_OK) != 0 ||
-        snprintf(report_path, sizeof(report_path), "%s/%s.txt",
-                 PS3SCALE_SUPPORT_OUTBOX_DIR, g_support_request_id) < 0 ||
-        strlen(report_path) >= sizeof(report_path) ||
+        (mkdir(PS3SCALE_SUPPORT_DIR, 0777) != 0 &&
+         access(PS3SCALE_SUPPORT_DIR, F_OK) != 0) ||
+        (mkdir(PS3SCALE_SUPPORT_OUTBOX_DIR, 0777) != 0 &&
+         access(PS3SCALE_SUPPORT_OUTBOX_DIR, F_OK) != 0) ||
+        path_length < 0 || (size_t)path_length >= sizeof(report_path) ||
         ps3scale_atomic_file_write(report_path, report_contents,
                                    (size_t)length) != 0) {
         g_support_request_id[0] = '\0';
