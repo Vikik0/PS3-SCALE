@@ -43,7 +43,7 @@ body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#343
 .menu-screen{width:100%;max-width:460px;padding:18px;border:4px solid var(--gold);background:linear-gradient(145deg,#111a18dd,#10151ddd);box-shadow:0 8px 18px #0008}
 .menu-list{display:flex;flex-direction:column;gap:3px}
 .menu-option{width:100%;min-height:48px;border:0;background:transparent;color:#ffc536;font:1000 clamp(19px,3vw,27px)/1.1 Impact,"Arial Black",sans-serif;letter-spacing:.06em;text-align:center;text-shadow:2px 2px 0 #8d2411,-1px -1px 0 #fff05a;padding:7px 8px;cursor:pointer}
-.menu-option:hover,.menu-option:focus-visible{outline:2px solid var(--gold);background:#f0d92b22;color:#fff06b;transform:translateX(2px)}
+.menu-option:hover,.menu-option:focus-visible,.menu-option.selected,.action-button:focus-visible,.action-button.selected,.small-button:focus-visible,.small-button.selected{outline:2px solid var(--gold);background:#f0d92b22;color:#fff06b;transform:translateX(2px)}
 .group{padding:5px 0 8px;border-bottom:3px solid var(--gold);margin-bottom:6px}
 .group:last-of-type{border-bottom:0}
 .group-label{font:1000 14px Impact,"Arial Black",sans-serif;letter-spacing:.12em;color:#ffcf2e;margin:0 0 2px 8px;text-shadow:1px 1px #8d2411}
@@ -87,7 +87,7 @@ body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#343
     <div class="health"><span id="healthDot" class="dot"></span><span id="healthText">CHECKING</span><span>· NO PSN</span></div>
   </header>
 
-  <main class="stage">
+  <main id="gameStage" class="stage">
     <div class="stage-title" id="screenTitle">SELECT GAME TYPE</div>
     <div class="stage-body">
       <div class="art" aria-hidden="true">
@@ -122,7 +122,7 @@ body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#343
             <button class="menu-option" onclick="anyBattle()">ANY BATTLE</button>
             <button class="menu-option" onclick="focusCode()">BATTLE BY CODE</button>
             <div class="code-row"><input id="joinCode" maxlength="6" placeholder="ABC234" autocomplete="off" aria-label="Six-character battle code"><button id="joinBtn" class="small-button" onclick="joinRoom()">JOIN</button></div>
-            <div id="joinHint" class="muted" style="font-size:11px;text-align:center">Enter the six-character code from your friend.</div>
+            <div id="joinHint" class="muted" role="status" aria-live="polite" style="font-size:11px;text-align:center">Enter the six-character code from your friend.</div>
           </div>
           <div class="group">
             <div class="group-label">CREATE</div>
@@ -147,7 +147,7 @@ body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#343
           <div class="notice">Four-seat room lobby only. It does not connect to crashbash.app or start a shared game session.</div>
           <button class="small-button" onclick="showScreen('main')">BACK TO MENU</button>
         </section>
-        <div id="modeNotice" class="notice" hidden></div>
+        <div id="modeNotice" class="notice" role="alert" aria-live="polite" hidden></div>
       </div>
     </div>
     <div class="stage-footer"><span>MOVE: ARROWS / WASD · SELECT: ENTER / SPACE</span><span class="muted">ROOM LOBBY ONLY · NO CRASHBASH.APP GAMEPLAY</span><span>BACK: ESC</span></div>
@@ -164,7 +164,7 @@ body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#343
       <button class="action-button" onclick="refreshRoom()">REFRESH</button>
       <button class="action-button" onclick="leaveRoom()">LEAVE ROOM</button>
     </div>
-    <div id="roomNotice" class="notice warnbox">Waiting for players. This is a room lobby, not a shared game session.</div>
+    <div id="roomNotice" class="notice warnbox" role="status" aria-live="polite">Waiting for players. This is a room lobby, not a shared game session.</div>
   </section>
 
   <section class="panel rooms-panel" id="publicRoomsPanel" hidden>
@@ -180,6 +180,10 @@ const $=id=>document.getElementById(id);
 const screenIds={main:"mainMenu",battle:"battleMenu",options:"optionsMenu"};
 function setHealth(ok,text){$("healthDot").className="dot"+(ok?" ok":"");$("healthText").textContent=text;}
 function activeMenuButtons(){
+  if(state.screen==="room"){
+    const root=$("roomView");
+    return root?[...root.querySelectorAll("button")].filter(button=>!button.disabled):[];
+  }
   const root=$(screenIds[state.screen]);
   return root?[...root.querySelectorAll("button.menu-option,button.small-button")].filter(button=>!button.disabled):[];
 }
@@ -193,6 +197,8 @@ function focusMenu(index=0){
 function showScreen(screen){
   if(!screenIds[screen])return;
   state.screen=screen;
+  $("gameStage").hidden=false;
+  $("roomView").classList.remove("active");
   Object.entries(screenIds).forEach(([key,id])=>$(id).hidden=key!==screen);
   $("modeNotice").hidden=true;
   $("screenTitle").textContent=screen==="main"?"SELECT GAME TYPE":screen==="battle"?"CREATE OR JOIN A BATTLE":"OPTIONS";
@@ -200,9 +206,21 @@ function showScreen(screen){
   if(screen==="battle")loadRooms();
   setTimeout(()=>focusMenu(0),0);
 }
+function showRoomScreen(){
+  state.screen="room";
+  $("gameStage").hidden=true;
+  $("publicRoomsPanel").hidden=true;
+  $("roomView").classList.add("active");
+  setTimeout(()=>focusMenu(0),0);
+}
+function showNotice(message,warning=false){
+  const notice=$("modeNotice");
+  notice.hidden=false;
+  notice.className="notice"+(warning?" warnbox":"");
+  notice.textContent=message;
+}
 function showUnavailable(mode){
-  $("modeNotice").hidden=false;
-  $("modeNotice").textContent=mode+" is not part of this lobby build. The PS3 package runs the original disc through PCSX-ReARMed; this browser page currently manages rooms only.";
+  showNotice(mode+" is not part of this lobby build. The PS3 package runs the original disc through PCSX-ReARMed; this browser page currently manages rooms only.");
 }
 function focusCode(){ $("joinCode").focus(); }
 function backScreen(){
@@ -247,7 +265,7 @@ function createPrivateRoom(){$("privateRoom").checked=true;createRoom();}
 async function createRoom(){
   $("publicBtn").disabled=true;$("privateBtn").disabled=true;
   try{const data=await api("/api/rooms","POST",{action:"create",displayName:displayName(),isPrivate:$("privateRoom").checked},false);enterRoom(data);}
-  catch(e){showUnavailable(e.message);}
+  catch(e){showNotice("Could not create battle: "+e.message,true);}
   finally{$("publicBtn").disabled=false;$("privateBtn").disabled=false;}
 }
 async function anyBattle(){
@@ -287,7 +305,7 @@ async function enterRoom(data){
   sessionStorage.setItem("cb_token",state.token);
   sessionStorage.setItem("cb_code",state.code);
   sessionStorage.setItem("cb_player_id",state.player.id);
-  $("roomView").classList.add("active");$("roomTitle").textContent=state.code;
+  showRoomScreen();$("roomTitle").textContent=state.code;
   $("roomNotice").textContent="Room created. Waiting for up to three more players. Game-session transport is not connected.";
   $("roomView").scrollIntoView({behavior:"smooth",block:"center"});
   await refreshRoom();
@@ -330,14 +348,14 @@ function renderRoom(){
   }
   const matchStarted=Boolean(room.gameStarted);
   if(matchStarted){
-    $("roomNotice").textContent="Match started. READY is locked. Use Crash Bash Online to join the game.";
+    $("roomNotice").textContent="Match started. This browser page only tracks the room; launch Crash Bash Online on your PS3 to join the game.";
     $("roomNotice").className="notice";
     $("readyBtn").textContent="MATCH STARTED";
     $("readyBtn").disabled=true;
     return;
   }
   const allReady=room.players.length>=2&&room.players.every(p=>p.ready);
-  $("roomNotice").textContent=allReady?"All players are ready. Open Crash Bash Online and use Netplay to start the match.":room.players.length>1?"Players joined. Mark ready when prepared.":"Waiting for at least two players.";
+  $("roomNotice").textContent=allReady?"Room is READY. Start the match from the Crash Bash Online app on your PS3; this browser lobby does not run gameplay.":room.players.length>1?"Players joined. Mark ready when prepared.":"Waiting for at least two players.";
   $("roomNotice").className="notice"+(allReady?"":" warnbox");
   $("readyBtn").disabled=false;
   $("readyBtn").textContent=state.ready?"CANCEL READY":"I'M READY";
@@ -411,7 +429,7 @@ async function loadRooms(){
   const playerId=sessionStorage.getItem("cb_player_id");
   if(token&&code){
     state.token=token;state.code=code;state.player={id:playerId||"",name:displayName()};
-    $("roomView").classList.add("active");$("roomTitle").textContent=code;
+    showRoomScreen();$("roomTitle").textContent=code;
     const restored=await refreshRoom();
     if(restored&&state.token)startRoomTimers(3000);
   }else if(token||code||playerId){
