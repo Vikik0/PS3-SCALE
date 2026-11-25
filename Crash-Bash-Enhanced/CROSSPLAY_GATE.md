@@ -10,6 +10,8 @@ The PS3 package in this repository is a different architecture: RetroArch with P
 
 The public site documentation does not publish a third-party client API, SDK, room wire protocol, or supported console integration. Its Terms also say not to script the game or copy its data. We must not reverse-engineer, automate, scrape, or impersonate its private client.
 
+Use [CROSSPLAY_OWNER_REQUEST.md](CROSSPLAY_OWNER_REQUEST.md) as the written permission and technical-interface request.
+
 ## What is needed from the site owner
 
 Before implementing a PS3-to-browser client, obtain written permission and a supported technical interface covering:
