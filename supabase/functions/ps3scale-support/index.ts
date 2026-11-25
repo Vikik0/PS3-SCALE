@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -79,8 +79,19 @@ Deno.serve(async (request) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const secretKeysJson = Deno.env.get("SUPABASE_SECRET_KEYS");
   const rateLimitSalt = Deno.env.get("PS3SCALE_SUPPORT_RATE_LIMIT_SALT");
+  let serviceRoleKey: string | undefined;
+  try {
+    const secretKeys = JSON.parse(secretKeysJson ?? "{}") as
+      Record<string, unknown>;
+    const defaultSecret = secretKeys.default;
+    if (typeof defaultSecret === "string" && defaultSecret.length > 0) {
+      serviceRoleKey = defaultSecret;
+    }
+  } catch {
+    serviceRoleKey = undefined;
+  }
   if (!supabaseUrl || !serviceRoleKey || !rateLimitSalt ||
       rateLimitSalt.length < 32) {
     return reply(503, { ok: false, error: "support_service_not_configured" });
