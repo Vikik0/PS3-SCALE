@@ -38,6 +38,6 @@ test("browser room status distinguishes lobby presence from PS3 gameplay", () =>
 
 test("create-room failures are shown as errors rather than unavailable game modes", () => {
   assert.match(script, /function showNotice\(message,warning=false\)/);
-  assert.match(script, /catch\(e\)\{showNotice\("Could not create battle: "\+e\.message,true\)\}/);
+  assert.match(script, /catch\(e\)\{showNotice\("Could not create battle: "\+e\.message,true\);\}/);
   assert.match(html, /id="modeNotice"[^>]*role="alert"[^>]*aria-live="polite"/);
 });
