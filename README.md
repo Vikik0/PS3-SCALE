@@ -1,47 +1,100 @@
 # PS3 SCALE
 
-PS3 SCALE is a PS3 homebrew application for managing PS3/PS2 game libraries and title-specific enhancement profiles.
+PS3 SCALE is a PS3 homebrew application for managing PS3/PS2 game libraries and title-specific enhancement workflows. It is designed around read-only game discovery, exact title/version matching, reversible PS2 CONFIG operations, and guarded webMAN/PS3MAPI integration.
 
-## Current status — Alpha 0.2
+## Current development snapshot
 
-The main branch has a successful embedded-theme build. The development branch **feature/online-graphics-database** adds:
+- Application: **Alpha 0.32**
+- Package metadata: `APP_VER=00.32`, `VERSION=00.32`
+- Package ID: `PS3SCALE1`
+- Development branch: `design/splash-transitions-ui-v6`
+- Review: [Draft PR #16](https://github.com/Vikik0/PS3-SCALE/pull/16)
 
-- A 40-entry starter catalogue of community-reported PS3 profiles.
-- HTTPS catalogue synchronization with certificate verification, a download-size cap and validated cache replacement.
-- Exact Title ID + APP_VER matching.
-- A guarded, one-launch webMAN MOD script for single-write profiles, requiring explicit confirmation.
-- Exact-address/original-byte checks, Title ID + APP_VER fingerprinting, full script-body integrity verification, stale-script handling and self-removal after the launch attempt.
-- Multi-write profiles remain disabled for automatic application.
+The branch has automated host tests and a PS3 ELF/SELF/PKG build. A successful CI build is not a substitute for a physical-console smoke test; hardware behavior remains explicitly unverified until tested on a real PS3.
 
-**Safety status:** the catalogue entries are community-reported, not independently verified on the user's PS3. The webMAN batch path cannot report a verified post-write memory value, so PS3 SCALE does not show a success popup. The patch changes the running game's memory only; original game files remain unchanged. Exiting the game clears the process-memory change.
+## Current features
 
-The feature branch passed host tests and the PS3 package build in [Run #178](https://github.com/Vikik0/PS3-SCALE/actions/runs/42532501388). Its GNPDRM PKG is available in the run's Artifacts. The branch is still [Draft PR #6](https://github.com/Vikik0/PS3-SCALE/pull/6) and has not yet received a physical-console smoke test. There is no universal AI upscaler or frame generation.
+### Game library
+- Scans installed PS3 titles, PS3 folders/ISOs, PS2 Classics and supported PS2 ISO formats.
+- Reads PARAM.SFO and ISO metadata for Title ID, APP_VER and disc serial information.
+- Provides separate PS3/PS2 views, search, sorting, favorites, recents and game details.
+- Scanning is read-only; original game folders, EBOOT files and ISO images are not modified.
 
-## Latest verified main build
+### Online catalogue and community NCL files
+- HTTPS catalogue refresh with certificate verification, response-size limits and validated cache replacement.
+- Exact Title ID, inferred region and APP_VER matching for profile eligibility.
+- Community NCL installation is limited to reviewed `GRAPHICS_FPS` entries and Artemis USERLIST paths.
+- Download verification checks indexed byte size and GitHub Git-blob SHA-1 before installation.
+- Temporary/permanent NCL storage modes are available.
+- NCL files are not executed or automatically applied by PS3 SCALE; users review and select them in Artemis.
 
-[GitHub Actions Run #162 — successful](https://github.com/Vikik0/PS3-SCALE/actions/runs/42524757054)
+### FPS profiles and game launch
+- One-launch webMAN profile scripts are restricted to eligible single-write community profiles.
+- The app revalidates game identity/version and checks the expected original bytes before attempting a write.
+- Multi-write/manual-only profiles are not automatically applied.
+- If safe profile arming is unavailable, the app can fall back to an unmodified webMAN launch when the selected game identity is still valid.
+- Foreign webMAN scripts are not overwritten or removed.
 
-This build is from main and **does not yet include** the online graphics-profile branch. The feature-branch CI result is available in Run #178. Use that run's GNPDRM PKG for a first hardware smoke test; it is not yet hardware-validated.
+### PS2 CONFIG Manager
+- Builds a restricted in-memory CONFIG preview.
+- Supports verified backup, restore, guarded replacement and rollback for supported PS2 ISO sidecars and PS2 Classics CONFIG files.
+- Backup/restore operations are bounded and byte-verified.
+- Existing backups and rollback files are not silently overwritten.
+- The original ISO, EBOOT and installed game files remain read-only.
 
-## Build and install
+### Interface and settings
+- Controller-operated UI with English, Arabic and Spanish layouts.
+- Background workers for scanning and network operations.
+- Two-track music controls, volume, animation, language and enhancement-storage preferences.
+- Companion launch shortcuts for Apollo Save Tool and Artemis PS3.
+- Real Before/After screenshots are shown only when a genuine exact Title ID + APP_VER pair is available.
 
-See the workflow run above, open **Artifacts**, and download the finalized PS3 package artifact. Use **ps3scale.gnpdrm.pkg** for installation on a compatible CFW/HEN console.
+### Persistence and download safety — Alpha 0.32
+- Settings and favorites are saved through unique exclusive temporary files, fsync and atomic rename.
+- One-launch webMAN scripts refuse existing temporary files and symlink paths.
+- HTTPS downloads use unique O_EXCL temporary names; stale files do not block future attempts.
+- Failed downloads do not delete pre-existing destination files.
+- Host regression tests cover atomic writes, symlink safety and download-failure cleanup.
+
+## Safety and known limitations
+
+- Community profiles and NCL files are not independently hardware-verified on every PS3 model.
+- Git-blob SHA-1 is an integrity check, not a cryptographic signature. Signed catalogue/update manifests remain future work.
+- There is no universal AI upscaler, frame generation, or guaranteed 60 FPS.
+- Genuine Before/After screenshot pairs are not bundled for every title; the app does not substitute concept art for missing captures.
+- The online support-report endpoint is intentionally disabled until a separate PS3 SCALE Supabase project is deployed and configured. Reports can still be saved to the console's local outbox. Existing unrelated Supabase projects must not be reused.
+- Physical PS3 validation is still required for installation, UI navigation, music, webMAN/PS3MAPI behavior, Artemis NCL loading, PS2 CONFIG behavior and real game stability.
+
+## Build and test
+
+Build environment: PS3DEV / PSL1GHT / Tiny3D and the dependencies listed in the Makefile.
+
+```sh
+export PS3DEV=/usr/local/ps3dev
+export PSL1GHT=$PS3DEV
+export PATH=$PATH:$PS3DEV/bin:$PS3DEV/ppu/bin:$PS3DEV/spu/bin
+make clean
+make pkg
+```
+
+Run host-side regression tests:
+
+```sh
+make host-test
+# or
+./scripts/test_host.sh
+```
+
+For installation, download the latest successful **GNPDRM PKG** artifact from [GitHub Actions](https://github.com/Vikik0/PS3-SCALE/actions). Test on a compatible CFW/HEN console before treating any hardware-dependent feature as complete.
 
 ## Documentation
 
-- [Arabic setup and install notes](PS3-SCALE-Alpha-0.2/README_AR.md)
+- [Arabic setup and feature guide](PS3-SCALE-Alpha-0.2/README_AR.md)
 - [UI flow](PS3-SCALE-Alpha-0.2/docs/UI_FLOW.md)
 - [Game enhancement lifecycle](PS3-SCALE-Alpha-0.2/docs/GAME_ENHANCEMENT_WORKFLOW.md)
-- [Online profile catalogue](PS3-SCALE-Alpha-0.2/docs/ONLINE_DATABASE.md)
-- [Patch trust policy](PS3-SCALE-Alpha-0.2/docs/PATCH_TRUST_POLICY.md)
-- [Optional webMAN MOD / PS3MAPI integration](PS3-SCALE-Alpha-0.2/docs/WEBMAN_MAPI_INTEGRATION.md)
-- [Startup theme audio](PS3-SCALE-Alpha-0.2/docs/AUDIO_THEME.md)
+- [Online database and NCL safety](PS3-SCALE-Alpha-0.2/docs/ONLINE_DATABASE.md)
+- [PS2 CONFIG engine](PS3-SCALE-Alpha-0.2/docs/PS2_ENGINE.md)
+- [Device test matrix](PS3-SCALE-Alpha-0.2/docs/TEST_MATRIX.md)
 - [Roadmap](PS3-SCALE-Alpha-0.2/docs/ROADMAP.md)
 - [Build status](PS3-SCALE-Alpha-0.2/docs/BUILD_STATUS.md)
-- [Graphics engine feasibility](PS3-SCALE-Alpha-0.2/docs/GRAPHICS_ENGINE_REALITY.md)
-- [PS2 CONFIG route](PS3-SCALE-Alpha-0.2/docs/PS2_ENGINE.md)
-- [Developer research notes](PS3-SCALE-Alpha-0.2/docs/RESEARCH_NOTES.md)
-
-## Hardware target
-
-Primary target: PS3 Slim, CFW 4.92. The exact CECH model, CEX/DEX type and Cobra version are not yet confirmed for the user's console. FAT and Super Slim compatibility remains a broader project target and must be checked on real hardware.
+- [Dedicated support backend setup](supabase/README.md)
