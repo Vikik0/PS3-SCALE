@@ -52,7 +52,7 @@ jobs:
       - name: Upload Arabic bitmap preview
         uses: actions/upload-artifact@v7
         with:
-          name: PS3-SCALE-Alpha-0.31-arabic-font-preview
+          name: PS3-SCALE-Alpha-0.32-arabic-font-preview
           if-no-files-found: error
           path: PS3-SCALE-Alpha-0.2/build-host/arabic-font-preview.png
 
@@ -156,7 +156,7 @@ jobs:
       - name: Upload PS3 build artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: PS3-SCALE-Alpha-0.31-build-with-embedded-theme
+          name: PS3-SCALE-Alpha-0.32-build-with-embedded-theme
           if-no-files-found: error
           path: |
             PS3-SCALE-Alpha-0.2/ps3scale.elf
