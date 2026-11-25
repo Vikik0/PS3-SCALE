@@ -16,14 +16,14 @@
 - Catalog, community NCL and PS2 CONFIG workers only remove destination files that the current worker successfully downloaded. Network failures no longer delete pre-existing destination files.
 - Added host tests for atomic settings/favorites writes, symlink-safe replacement, profile temp-file preservation and download-failure cleanup.
 - Updated package version, Arabic guide, root README, online database documentation and CI artifact names to Alpha 0.32.
-- GitHub Actions run #757: **PASS** — all host-side tests and the PS3 ELF/SELF/standard PKG/GNPDRM PKG build and package validation passed.
-- Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/45717007329
-- Artifact: `PS3-SCALE-Alpha-0.32-build-with-embedded-theme` (25,350,639 bytes).
+- GitHub Actions run #759 (final Alpha 0.32 head): **PASS** — all host-side tests and the PS3 ELF/SELF/standard PKG/GNPDRM PKG build and package validation passed.
+- Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/45717383555
+- Artifact: `PS3-SCALE-Alpha-0.32-build-with-embedded-theme` (25,350,641 bytes).
 - ELF: 3,588,222 bytes — SHA-256 `8dded3874cea40e74abffb0df815e2cce78fcb362994aeee97d62ac36817c397`.
-- SELF: 788,144 bytes — SHA-256 `cf17a1c27040db90f0c0a9da7c90c7578fca8ab60ccdbb1d60a3af4836224d26`.
-- Standard PKG: 11,720,160 bytes — SHA-256 `de49a9f86532605fc5e96b4a8d5c6fa7291745567a087b5d3043564cb26b2e38`.
-- GNPDRM PKG: 11,720,160 bytes — SHA-256 `3265051f8a2ffe293d52a852605b6e5530d556bf047d8e87fbc87a0e2ffd9737`.
-- Artifact ZIP SHA-256: `88189970f28ac871353a6938cb108c0c68ab5a83fe6327d42d2edd5520f7891b`.
+- SELF: 788,144 bytes — SHA-256 `dfdfd83444c402698f729877d9fa9b02f614489c65cb9e7c11ac36331480af86`.
+- Standard PKG: 11,720,160 bytes — SHA-256 `a39eea4e8a9bc0c1d610fcaf3fa8680da0cf84e653d84f381ed0d59495f223cf`.
+- GNPDRM PKG: 11,720,160 bytes — SHA-256 `a57e7f9ba22bb8b82779a72fd2995efb9ebc9518d2b6a1f9be7985923cfafd1a`.
+- Artifact ZIP SHA-256: `fbeb685881385298ca357b651698691a8f9b686716db723fc4e214c8993d9dba`.
 - Physical PS3 Slim / CFW testing remains pending.
 - Online support submission remains local-outbox only until a dedicated PS3 SCALE Supabase project is deployed and configured.
 
