@@ -205,6 +205,8 @@ def validate_capture(data: dict[str, Any], required_stable_samples: int = 5) -> 
     return {
         "status": "PASS_STRUCTURAL_CAPTURE_VALIDATION" if stable else "INCOMPLETE_PAIR_OBSERVATION_DATA",
         "capture_id": data["capture_id"],
+        "evidence_source": data["evidence_source"],
+        "evidence_authenticity": "NOT_AUTHENTICATED_BY_THIS_TOOL",
         "title_id": data["title_id"],
         "title_update": data["title_update"],
         "mode": data["mode"],

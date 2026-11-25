@@ -58,6 +58,8 @@ class CampaignPlayerPairCaptureTests(unittest.TestCase):
         self.assertTrue(result["independent_camera_hud_fields_consistent"])
         self.assertEqual(result["best_stable_run"], 5)
         self.assertFalse(result["auto_rebind_cycle_observed_in_supplied_data"])
+        self.assertEqual(result["evidence_authenticity"], "NOT_AUTHENTICATED_BY_THIS_TOOL")
+        self.assertEqual(result["evidence_source"], "synthetic-unit-test")
 
     def test_disconnect_then_five_stable_samples_proves_rebind_cycle(self):
         data = valid_capture()
@@ -65,15 +67,15 @@ class CampaignPlayerPairCaptureTests(unittest.TestCase):
             observation(i * 250 + 250) for i in range(5)
         ]
         result = validate_capture(data)
-        self.assertTrue(result["stable_pair_proven"])
-        self.assertTrue(result["auto_rebind_cycle_proven"])
+        self.assertTrue(result["stable_pair_observation_validated"])
+        self.assertTrue(result["auto_rebind_cycle_observed_in_supplied_data"])
 
     def test_four_stable_samples_are_incomplete(self):
         data = valid_capture()
         data["observations"] = data["observations"][:4]
         result = validate_capture(data)
-        self.assertEqual(result["status"], "INCOMPLETE_NATIVE_PLAYER_PAIR_EVIDENCE")
-        self.assertFalse(result["stable_pair_proven"])
+        self.assertEqual(result["status"], "INCOMPLETE_PAIR_OBSERVATION_DATA")
+        self.assertFalse(result["stable_pair_observation_validated"])
 
     def test_unstable_entity_identity_does_not_accumulate_stable_samples(self):
         data = valid_capture()
@@ -81,7 +83,7 @@ class CampaignPlayerPairCaptureTests(unittest.TestCase):
         data["observations"][2]["players"][1]["camera_owner_entity_id"] = "entity-replaced"
         data["observations"][2]["players"][1]["hud_owner_entity_id"] = "entity-replaced"
         result = validate_capture(data)
-        self.assertFalse(result["stable_pair_proven"])
+        self.assertFalse(result["stable_pair_observation_validated"])
 
     def test_wrong_title_id_is_rejected(self):
         data = valid_capture()
@@ -111,44 +113,44 @@ class CampaignPlayerPairCaptureTests(unittest.TestCase):
         data = valid_capture()
         data["observations"][1]["player_array_count"] = 3
         result = validate_capture(data)
-        self.assertFalse(result["stable_pair_proven"])
+        self.assertFalse(result["stable_pair_observation_validated"])
         self.assertIn("player_array_count_mismatch", [x["reason"] for x in result["rejected_observations"]])
 
     def test_duplicate_local_client_index_is_rejected(self):
         data = valid_capture()
         data["observations"][0]["players"][1]["local_client_index"] = 0
         result = validate_capture(data)
-        self.assertFalse(result["stable_pair_proven"])
+        self.assertFalse(result["stable_pair_observation_validated"])
 
     def test_duplicate_controller_port_is_rejected(self):
         data = valid_capture()
         data["observations"][0]["players"][1]["controller_port"] = 0
         result = validate_capture(data)
-        self.assertFalse(result["stable_pair_proven"])
+        self.assertFalse(result["stable_pair_observation_validated"])
 
     def test_duplicate_player_state_pointer_is_rejected(self):
         data = valid_capture()
         data["observations"][0]["players"][1]["player_state_address"] = data["observations"][0]["players"][0]["player_state_address"]
         result = validate_capture(data)
-        self.assertFalse(result["stable_pair_proven"])
+        self.assertFalse(result["stable_pair_observation_validated"])
 
     def test_swapped_campaign_aliases_are_rejected(self):
         data = valid_capture()
         data["observations"][0]["level_player_entity_id"] = "entity-1"
         result = validate_capture(data)
-        self.assertFalse(result["stable_pair_proven"])
+        self.assertFalse(result["stable_pair_observation_validated"])
 
     def test_camera_owner_mismatch_is_rejected(self):
         data = valid_capture()
         data["observations"][0]["players"][0]["camera_owner_entity_id"] = "entity-1"
         result = validate_capture(data)
-        self.assertFalse(result["stable_pair_proven"])
+        self.assertFalse(result["stable_pair_observation_validated"])
 
     def test_non_boolean_flags_are_rejected(self):
         data = valid_capture()
         data["observations"][0]["players"][0]["is_primary"] = 1
         result = validate_capture(data)
-        self.assertFalse(result["stable_pair_proven"])
+        self.assertFalse(result["stable_pair_observation_validated"])
 
     def test_invalid_required_sample_count_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "required_stable_samples"):
