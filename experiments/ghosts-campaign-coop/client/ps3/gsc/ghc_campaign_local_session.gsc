@@ -106,8 +106,19 @@ ghc_campaign_start_session_monitor()
         && level.ghc_campaign_session_monitor_active )
         return 1;
 
+    level.ghc_campaign_session_monitor_stop = 0;
     level.ghc_campaign_session_monitor_active = 1;
     thread ghc_campaign_watch_native_session();
+    return 1;
+}
+
+ghc_campaign_stop_session_monitor()
+{
+    if ( !isdefined( level.ghc_campaign_session_monitor_active )
+        || !level.ghc_campaign_session_monitor_active )
+        return 0;
+
+    level.ghc_campaign_session_monitor_stop = 1;
     return 1;
 }
 
@@ -124,21 +135,43 @@ ghc_campaign_watch_native_session()
 {
     var_0 = 0;
 
-    while ( isdefined( level.ghc_campaign_session_ready )
-        && level.ghc_campaign_session_ready )
+    while ( !isdefined( level.ghc_campaign_session_monitor_stop )
+        || !level.ghc_campaign_session_monitor_stop )
     {
-        if ( ghc_campaign_native_pair_is_current()
-            && level.player == level.ghc_campaign_player_0
-            && level.playengineeffects == level.ghc_campaign_player_1 )
-            var_0 = 0;
+        if ( isdefined( level.ghc_campaign_session_ready )
+            && level.ghc_campaign_session_ready )
+        {
+            if ( ghc_campaign_native_pair_is_current()
+                && level.player == level.ghc_campaign_player_0
+                && level.playengineeffects == level.ghc_campaign_player_1 )
+                var_0 = 0;
+            else
+            {
+                var_0++;
+
+                if ( var_0 >= 8 )
+                {
+                    ghc_campaign_invalidate_local_session();
+                    var_0 = 0;
+                }
+            }
+        }
         else
         {
-            var_0++;
+            /*
+             * Keep the watcher alive after invalidation. Rebind only when
+             * the engine exposes a fresh player array and split-screen is
+             * active; the bind helper still validates both native identities.
+             */
+            var_1 = getentarray( "player", "classname" );
 
-            if ( var_0 >= 8 )
+            if ( isdefined( var_1 ) )
+                level.playerpiggyback = var_1;
+
+            if ( issplitscreen() && isdefined( var_1 ) && var_1.size >= 2 )
             {
-                ghc_campaign_invalidate_local_session();
-                break;
+                if ( ghc_campaign_bind_native_local_pair() )
+                    var_0 = 0;
             }
         }
 
@@ -146,6 +179,7 @@ ghc_campaign_watch_native_session()
     }
 
     level.ghc_campaign_session_monitor_active = undefined;
+    level.ghc_campaign_session_monitor_stop = undefined;
 }
 
 ghc_campaign_bind_native_local_pair()

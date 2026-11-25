@@ -320,6 +320,7 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         start = function_body(self.source, "ghc_campaign_start_session_monitor")
         self.assertGreaterEqual(main.count("ghc_campaign_start_session_monitor()"), 3)
         self.assertIn("level.ghc_campaign_session_monitor_active", start)
+        self.assertIn("level.ghc_campaign_session_monitor_stop = 0", start)
         self.assertIn("thread ghc_campaign_watch_native_session()", start)
         self.assertIn("return 1", start)
 
@@ -328,7 +329,7 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertIn("ghc_campaign_native_pair_is_current()", body)
         self.assertIn("level.player == level.ghc_campaign_player_0", body)
         self.assertIn("level.playengineeffects == level.ghc_campaign_player_1", body)
-        self.assertIn("while ( isdefined( level.ghc_campaign_session_ready )", body)
+        self.assertIn("while ( !isdefined( level.ghc_campaign_session_monitor_stop )", body)
 
     def test_session_monitor_requires_two_seconds_of_consecutive_failures(self):
         body = function_body(self.source, "ghc_campaign_watch_native_session")
@@ -336,15 +337,32 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertIn("wait 0.25", body)
         self.assertIn("ghc_campaign_invalidate_local_session()", body)
 
-    def test_session_monitor_resets_failure_count_after_valid_pair_returns(self):
+    def test_session_monitor_resets_failure_count_and_cleans_up_after_explicit_stop(self):
         body = function_body(self.source, "ghc_campaign_watch_native_session")
+        stop = function_body(self.source, "ghc_campaign_stop_session_monitor")
         self.assertIn("var_0 = 0", body)
         self.assertIn("level.ghc_campaign_session_monitor_active = undefined", body)
+        self.assertIn("level.ghc_campaign_session_monitor_stop = undefined", body)
+        self.assertIn("level.ghc_campaign_session_monitor_stop = 1", stop)
 
-    def test_session_monitor_does_not_create_or_rebind_players(self):
+    def test_session_monitor_rebinds_only_engine_created_native_players(self):
         body = function_body(self.source, "ghc_campaign_watch_native_session").lower()
-        for token in ("spawnplayer(", "cloneplayer(", "playercmd_spawn", "playercmd_cloneplayer", "ghc_campaign_bind_native_local_pair("):
+        for token in ("spawnplayer(", "cloneplayer(", "playercmd_spawn", "playercmd_cloneplayer"):
             self.assertNotIn(token, body)
+        self.assertIn('getentarray( "player", "classname" )', body)
+        self.assertIn("level.playerpiggyback = var_1", body)
+        self.assertIn("ghc_campaign_bind_native_local_pair()", body)
+        self.assertIn("var_1.size >= 2", body)
+
+    def test_session_monitor_survives_invalidation_and_waits_for_rebind(self):
+        body = function_body(self.source, "ghc_campaign_watch_native_session")
+        self.assertIn("ghc_campaign_invalidate_local_session()", body)
+        self.assertIn("ghc_campaign_bind_native_local_pair()", body)
+        self.assertNotIn("break", body)
+        self.assertLess(
+            body.index("ghc_campaign_invalidate_local_session()"),
+            body.index('getentarray( "player", "classname" )'),
+        )
 
 
 if __name__ == "__main__":
