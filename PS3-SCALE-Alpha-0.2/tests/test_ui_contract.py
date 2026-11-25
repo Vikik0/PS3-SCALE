@@ -887,10 +887,18 @@ assert "ALPHA 0.21" not in src
 assert "CFW 4.92" not in src
 assert "PS3SCALE_APP_VERSION" in section("static void draw_splash(void)",
                                          "static void draw_boot(void)")
-support_json = section("static int build_support_json(void)",
+support_json = section("static int build_support_json_to(",
                        "static void support_submit_worker(void *arg)")
-assert r'\"app_version\":\"%s\"' in support_json
+assert "ps3scale_support_build_json(" in support_json
 assert "PS3SCALE_APP_VERSION" in support_json
+assert "PS3SCALE_SUPPORT_DETAILS_MAX + 1" in src
+assert "PS3SCALE_SUPPORT_TITLE_MAX + 1" in src
+assert "g_search[PS3SCALE_SUPPORT_DETAILS_MAX + 1]" in src
+assert "g_search_backup[PS3SCALE_SUPPORT_DETAILS_MAX + 1]" in src
+assert "PS3SCALE_SUPPORT_DETAILS_MAX" in section(
+    "static void keyboard_append", "static void keyboard_backspace")
+assert "copy_text_tail_preview" in src
+assert "REQUEST ID: %s" in src
 assert '"APP VERSION: %s\\n"' in src
 assert "generate_support_request_id();" in src
 about_ui = section("static void draw_about(void)",
@@ -1004,7 +1012,7 @@ assert "0xcaff39ff" not in keyboard_ui
 assert "0x0d1722ff" not in keyboard_ui
 assert "Type to search the online database" in keyboard_ui
 support_form_ui = section("static void draw_support_form(void)",
-                          "static int support_json_escape")
+                          "static void generate_support_request_id")
 assert "selected ? 0x875be8ff : 0x514b69ff" in support_form_ui
 assert "g_support_title[0] ? 0x29243fff : 0x77718fff" in support_form_ui
 assert "g_support_details[0] ? 0x29243fff : 0x77718fff" in support_form_ui
