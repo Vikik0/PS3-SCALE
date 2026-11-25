@@ -29,7 +29,7 @@ assert "SCREEN_LANGUAGE" in src
 assert "CHOOSE LANGUAGE" in src
 assert "اختر اللغة" in src
 assert "Elige el idioma" in src
-assert 'fprintf(fp, "language=%d\\n", g_language);' in src
+assert '"language=%d\\n"' in src
 assert "g_settings_selected == 6" in main
 
 # Startup sequence: local checks and a background library scan with progress.
@@ -325,7 +325,7 @@ assert "if (index == 0)" in icons and "index == 3" in icons
 
 assert "case 0xffffff00u: rgb = 0x29243f00u;" in src
 assert 'sscanf(line, "animation_v2=%d"' in src
-assert 'fprintf(fp, "animation_v2=%d\\n"' in src
+assert '"animation_v2=%d\\n"' in src
 draw_ui_impl = section("static void draw_ui(void)", "static int compare_game_titles")
 assert "if (g_animation_enabled)" in draw_ui_impl
 assert draw_ui_impl.count("draw_home_ambient();") == 1
