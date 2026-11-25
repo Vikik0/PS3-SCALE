@@ -108,8 +108,8 @@ jobs:
           test -s "$PACKAGED_RUNTIME/licenses/RetroArch-GPL-3.0.txt"
           SOURCE_FILES="$(find "$SOURCE_RUNTIME" -type f | wc -l)"
           PACKAGED_FILES="$(find "$PACKAGED_RUNTIME" -type f | wc -l)"
-SOURCE_BYTES="$(find "$SOURCE_RUNTIME" -type f -printf '%s\n' | awk '{ total += $1 } END { print total + 0 }')"
-PACKAGED_BYTES="$(find "$PACKAGED_RUNTIME" -type f -printf '%s\n' | awk '{ total += $1 } END { print total + 0 }')"
+          SOURCE_BYTES="$(find "$SOURCE_RUNTIME" -type f -printf '%s\n' | awk '{ total += $1 } END { print total + 0 }')"
+          PACKAGED_BYTES="$(find "$PACKAGED_RUNTIME" -type f -printf '%s\n' | awk '{ total += $1 } END { print total + 0 }')"
           test "$PACKAGED_FILES" = "$SOURCE_FILES"
           test "$PACKAGED_BYTES" = "$SOURCE_BYTES"
           test "$PACKAGED_FILES" -le 512
@@ -121,9 +121,9 @@ PACKAGED_BYTES="$(find "$PACKAGED_RUNTIME" -type f -printf '%s\n' | awk '{ total
           set -eu
           PKG="Crash-Bash-Enhanced/crashbash.pkg"
           test -s "$PKG"
-          MAGIC="$(od -An -tx1 -N4 "$PKG" | tr -d ' \\n')"
-          REVISION="$(od -An -tx1 -j4 -N2 "$PKG" | tr -d ' \\n')"
-          printf 'Native lobby PKG magic=%s revision=%s\\n' "$MAGIC" "$REVISION"
+          MAGIC="$(od -An -tx1 -N4 "$PKG" | tr -d ' \n')"
+          REVISION="$(od -An -tx1 -j4 -N2 "$PKG" | tr -d ' \n')"
+          printf 'Native lobby PKG magic=%s revision=%s\n' "$MAGIC" "$REVISION"
           test "$MAGIC" = "7f504b47"
           test "$REVISION" = "8000"
           PKG_ITEM_COUNT="$(python3 - "$PKG" <<'PY'
@@ -158,7 +158,7 @@ PACKAGED_BYTES="$(find "$PACKAGED_RUNTIME" -type f -printf '%s\n' | awk '{ total
           Installable packages: one PKG only
           Game disc image and BIOS: not included; provide your own legal BIN/CUE dump and optional BIOS
           EOF
-          printf 'PKG SIZE: %s bytes\\n' "$(stat -c %s "$PKG")" >> BUILD-MANIFEST.txt
+          printf 'PKG SIZE: %s bytes\n' "$(stat -c %s "$PKG")" >> BUILD-MANIFEST.txt
       - name: Upload single unified PS3 PKG
         uses: actions/upload-artifact@v4
         with:
@@ -204,8 +204,8 @@ PACKAGED_BYTES="$(find "$PACKAGED_RUNTIME" -type f -printf '%s\n' | awk '{ total
         run: |
           cd Crash-Bash-Enhanced/build-artifacts
           sha256sum -c Crash-Bash-Online-PS3.pkg.sha256
-          MAGIC="$(od -An -tx1 -N4 Crash-Bash-Online-PS3.pkg | tr -d ' \\n')"
-          REVISION="$(od -An -tx1 -j4 -N2 Crash-Bash-Online-PS3.pkg | tr -d ' \\n')"
+          MAGIC="$(od -An -tx1 -N4 Crash-Bash-Online-PS3.pkg | tr -d ' \n')"
+          REVISION="$(od -An -tx1 -j4 -N2 Crash-Bash-Online-PS3.pkg | tr -d ' \n')"
           test "$MAGIC" = "7f504b47"
           test "$REVISION" = "8000"
       - name: Upload embedded RetroArch runtime for unified packaging
