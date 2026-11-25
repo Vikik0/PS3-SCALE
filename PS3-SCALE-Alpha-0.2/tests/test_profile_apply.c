@@ -64,6 +64,8 @@ int main(void)
     cleanup();
     if (mkdir(TEST_ROOT, 0777) != 0 && errno != EEXIST)
         return 1;
+    if (mkdir(TEST_SCRIPT_DIR, 0777) != 0 && errno != EEXIST)
+        return 1;
 
     memset(&profile, 0, sizeof(profile));
     strcpy(profile.title_id, "BLUS30464");
