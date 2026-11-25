@@ -21,12 +21,12 @@ int main(void)
         "\"model\":\"CECH-25xx\","
         "\"firmware\":\"4.91 HEN\","
         "\"platform\":\"CEX\","
-        "\"app_version\":\"ALPHA 0.32\"}";
+        "\"app_version\":\"ALPHA 0.33\"}";
 
     assert(ps3scale_support_build_json(
         json, sizeof(json), VALID_ID, "issue", "Crash \"A\"",
         "line 1\nline 2 \\ path\tمرحبا", "CECH-25xx",
-        "4.91 HEN", "CEX", "ALPHA 0.32") == 0);
+        "4.91 HEN", "CEX", "ALPHA 0.33") == 0);
     assert(strcmp(json, expected) == 0);
 
     memset(title, 'T', sizeof(title) - 2);
@@ -35,7 +35,7 @@ int main(void)
     details[sizeof(details) - 2] = '\0';
     assert(ps3scale_support_build_json(
         json, sizeof(json), VALID_ID, "feedback", title, details,
-        "UNKNOWN", "UNKNOWN", "UNKNOWN", "ALPHA 0.32") == 0);
+        "UNKNOWN", "UNKNOWN", "UNKNOWN", "ALPHA 0.33") == 0);
     assert(strlen(json) < sizeof(json));
     assert(strstr(json, "\"kind\":\"feedback\"") != NULL);
     assert(strstr(json, details) != NULL);
