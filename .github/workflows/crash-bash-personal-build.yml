@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       runtime_run_id:
-        description: "Successful PS3 RetroArch-stage workflow run ID"
+        description: "Successful PS3 RetroArch-stage workflow run ID with an unexpired runtime artifact"
         required: true
-        default: "45504202354"
+        default: "45716916236"
         type: string
 
 permissions:
@@ -67,6 +67,43 @@ jobs:
             -outform DER "$CERT"
           openssl cms -cmsout -print -inform DER -in /tmp/cb-preflight.cms >/dev/null
 
+      - name: Validate the selected RetroArch runtime build and artifact
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUNTIME_RUN_ID: ${{ inputs.runtime_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RUNTIME_RUN_ID" =~ ^[0-9]+$ ]]
+          curl --fail --silent --show-error --location \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$RUNTIME_RUN_ID" \
+            --output /tmp/cb-runtime-run.json
+          curl --fail --silent --show-error --location \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$RUNTIME_RUN_ID/artifacts" \
+            --output /tmp/cb-runtime-artifacts.json
+          python3 - <<'PY'
+          import json
+          with open("/tmp/cb-runtime-run.json", encoding="utf-8") as stream:
+              run = json.load(stream)
+          if run.get("head_branch") != "crash-bash-enhanced":
+              raise SystemExit("Runtime artifact must come from crash-bash-enhanced.")
+          if run.get("path") != ".github/workflows/crash-bash-build.yml":
+              raise SystemExit("Selected run is not the PS3 build workflow.")
+          if run.get("status") != "completed" or run.get("conclusion") != "success":
+              raise SystemExit("Selected PS3 runtime build has not completed successfully.")
+          with open("/tmp/cb-runtime-artifacts.json", encoding="utf-8") as stream:
+              artifacts = json.load(stream)
+          valid = [item for item in artifacts.get("artifacts", [])
+                   if item.get("name") == "Crash-Bash-RetroArch-Stage" and not item.get("expired")]
+          if not valid:
+              raise SystemExit("Selected run has no unexpired Crash-Bash-RetroArch-Stage artifact.")
+          print("Verified successful PS3 runtime build and unexpired RetroArch artifact.")
+          PY
+
       - name: Download and validate the private BIN/CUE archive
         shell: bash
         env:
@@ -74,7 +111,19 @@ jobs:
         run: |
           set -euo pipefail
           echo "::add-mask::$DISC_ARCHIVE_URL"
-          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+          python3 - "$DISC_ARCHIVE_URL" <<'PY'
+          import sys
+          from urllib.parse import urlparse
+          parsed = urlparse(sys.argv[1])
+          host = (parsed.hostname or "").lower()
+          if parsed.scheme != "https" or not (
+              host == "dropbox.com" or host.endswith(".dropbox.com") or
+              host.endswith(".dropboxusercontent.com")
+          ):
+              raise SystemExit("Use an HTTPS Dropbox temporary download URL for the private disc archive.")
+          PY
+          curl --fail --silent --show-error --location --max-redirs 3 \
+            --proto '=https' --proto-redir '=https' \
             --connect-timeout 30 --max-time 900 --max-filesize 536870912 \
             "$DISC_ARCHIVE_URL" --output /tmp/crash-bash-disc.zip
           test -s /tmp/crash-bash-disc.zip
