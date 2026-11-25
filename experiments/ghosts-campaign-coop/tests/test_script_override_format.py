@@ -8,7 +8,7 @@ PRX = PROJECT / "client" / "ps3" / "prx"
 
 
 def function_body(source: str, name: str) -> str:
-    match = re.search(rf"(?m)^[ \t]*{re.escape(name)}\s*\([^)]*\)\s*\{{", source)
+    match = re.search(rf"(?m)^[ \t]*[A-Za-z_][A-Za-z0-9_ \t\*]*\b{re.escape(name)}\s*\([^)]*\)\s*\{{", source)
     if match is None:
         raise AssertionError(f"function definition not found: {name}")
     opening = source.index("{", match.start())
@@ -37,6 +37,7 @@ class ScriptOverrideFormatIntegrationTests(unittest.TestCase):
         self.assertIn("blob_info.hash32", reload_body)
         self.assertNotIn("read_le32", self.loader)
         self.assertNotIn("fnv1a32", self.loader)
+        self.assertNotIn("GHC_GSC_WRAPPER_HEADER", self.loader)
 
     def test_parser_checks_capacity_before_segment_arithmetic(self):
         body = function_body(self.parser, "ghc_script_override_inspect_blob")

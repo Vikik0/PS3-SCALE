@@ -1,4 +1,4 @@
-#include "client/ps3/prx/script_override_format.h"
+#include "../client/ps3/prx/script_override_format.h"
 
 #include <assert.h>
 #include <stdio.h>
