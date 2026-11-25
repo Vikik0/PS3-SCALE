@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <dirent.h>
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
@@ -101,9 +102,12 @@ static char g_support_details[PS3SCALE_SUPPORT_DETAILS_MAX + 1] = "";
 static char g_support_status[128] = "LOCAL OUTBOX READY.";
 static char g_support_request_id[PS3SCALE_SUPPORT_REQUEST_ID_LENGTH + 1] = "";
 static char g_support_sending_request_id[PS3SCALE_SUPPORT_REQUEST_ID_LENGTH + 1] = "";
+static char g_support_pending_path[512] = "";
+static char g_support_sending_path[512] = "";
 static unsigned long g_support_request_sequence = 0;
 static int g_support_report_saved = 0;
 static int g_support_send_success = 0;
+static int g_support_json_ready = 0;
 static sys_ppu_thread_t g_support_thread;
 static volatile int g_support_send_running = 0;
 static volatile int g_support_send_done = 0;
@@ -6086,15 +6090,20 @@ static void start_support_send(void)
                  "LOCAL SAVE OK; NETWORK BUSY. PRESS CROSS TO RETRY.");
         return;
     }
-    if (build_support_json() != 0) {
-        snprintf(g_support_status, sizeof(g_support_status),
-                 "LOCAL SAVE OK; REPORT FORMAT INVALID.");
-        return;
+    if (!g_support_json_ready) {
+        if (build_support_json() != 0) {
+            snprintf(g_support_status, sizeof(g_support_status),
+                     "LOCAL SAVE OK; REPORT FORMAT INVALID.");
+            return;
+        }
+        g_support_json_ready = 1;
     }
 
     (void)snprintf(g_support_sending_request_id,
                    sizeof(g_support_sending_request_id), "%s",
                    g_support_request_id);
+    (void)snprintf(g_support_sending_path, sizeof(g_support_sending_path),
+                   "%s", g_support_pending_path);
     g_support_send_done = 0;
     g_support_send_result = -1;
     g_support_send_http_status = 0;
@@ -6128,10 +6137,19 @@ static void service_support_send(void)
     }
     is_current_report =
         strcmp(g_support_sending_request_id, g_support_request_id) == 0;
-    if (is_current_report && g_support_send_result == 0) {
-        g_support_send_success = 1;
-        snprintf(g_support_status, sizeof(g_support_status),
-                 "REPORT SENT ONLINE.");
+    if (g_support_send_result == 0) {
+        if (g_support_sending_path[0])
+            (void)unlink(g_support_sending_path);
+        if (is_current_report) {
+            g_support_send_success = 1;
+            g_support_json_ready = 0;
+            g_support_pending_path[0] = '\0';
+            snprintf(g_support_status, sizeof(g_support_status),
+                     "REPORT SENT ONLINE.");
+        } else {
+            snprintf(g_support_status, sizeof(g_support_status),
+                     "PENDING REPORT SENT ONLINE.");
+        }
     } else if (is_current_report && g_support_send_http_status == 429) {
         snprintf(g_support_status, sizeof(g_support_status),
                  "SERVER LIMIT REACHED; TRY TOMORROW.");
@@ -6144,21 +6162,117 @@ static void service_support_send(void)
     } else if (is_current_report) {
         snprintf(g_support_status, sizeof(g_support_status),
                  "LOCAL SAVE OK; SEND FAILED. PRESS CROSS TO RETRY.");
+    } else {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "PENDING REPORT FAILED; TRY AGAIN LATER.");
     }
+    g_support_sending_path[0] = '\0';
     g_support_send_done = 0;
+}
+
+static int retry_pending_support_report(void)
+{
+    DIR *directory;
+    struct dirent *entry;
+    char selected_name[64] = "";
+    char report_path[512];
+    char request_id[PS3SCALE_SUPPORT_REQUEST_ID_LENGTH + 1];
+    FILE *file;
+    size_t bytes;
+    int path_length;
+    const char *marker;
+
+    if (g_support_thread_started || g_support_send_running ||
+        g_network_task_running || g_catalog_sync_running ||
+        g_catalog_thread_started || g_game_launch_running ||
+        g_game_launch_thread_started || g_profile_arm_running ||
+        g_profile_arm_thread_started) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "NETWORK BUSY; TRY PENDING REPORTS AGAIN.");
+        return -1;
+    }
+
+    directory = opendir(PS3SCALE_SUPPORT_OUTBOX_DIR);
+    if (!directory) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "NO PENDING REPORTS.");
+        return -1;
+    }
+    while ((entry = readdir(directory)) != NULL) {
+        size_t name_length = strlen(entry->d_name);
+        if (name_length != PS3SCALE_SUPPORT_REQUEST_ID_LENGTH + 5u ||
+            strcmp(entry->d_name + PS3SCALE_SUPPORT_REQUEST_ID_LENGTH,
+                   ".json") != 0)
+            continue;
+        memcpy(request_id, entry->d_name,
+               PS3SCALE_SUPPORT_REQUEST_ID_LENGTH);
+        request_id[PS3SCALE_SUPPORT_REQUEST_ID_LENGTH] = '\0';
+        if (!ps3scale_support_request_id_valid(request_id))
+            continue;
+        if (!selected_name[0] || strcmp(entry->d_name, selected_name) < 0)
+            (void)snprintf(selected_name, sizeof(selected_name), "%s",
+                           entry->d_name);
+    }
+    (void)closedir(directory);
+
+    if (!selected_name[0]) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "NO PENDING REPORTS.");
+        return -1;
+    }
+
+    memcpy(request_id, selected_name, PS3SCALE_SUPPORT_REQUEST_ID_LENGTH);
+    request_id[PS3SCALE_SUPPORT_REQUEST_ID_LENGTH] = '\0';
+    path_length = snprintf(report_path, sizeof(report_path), "%s/%s",
+                           PS3SCALE_SUPPORT_OUTBOX_DIR, selected_name);
+    if (path_length < 0 || (size_t)path_length >= sizeof(report_path)) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "PENDING REPORT PATH INVALID.");
+        return -1;
+    }
+
+    file = fopen(report_path, "rb");
+    if (!file) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "PENDING REPORT COULD NOT BE OPENED.");
+        return -1;
+    }
+    bytes = fread(g_support_json, 1, sizeof(g_support_json) - 1, file);
+    if (ferror(file) || fgetc(file) != EOF || fclose(file) != 0) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "PENDING REPORT IS TOO LARGE OR DAMAGED.");
+        return -1;
+    }
+    g_support_json[bytes] = '\0';
+    marker = strstr(g_support_json, "\"request_id\":\"");
+    if (!marker) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "PENDING REPORT IS NOT VALID JSON.");
+        return -1;
+    }
+    marker += strlen("\"request_id\":\"");
+    if (strncmp(marker, request_id, PS3SCALE_SUPPORT_REQUEST_ID_LENGTH) != 0 ||
+        marker[PS3SCALE_SUPPORT_REQUEST_ID_LENGTH] != '"') {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "PENDING REPORT ID DOES NOT MATCH FILE.");
+        return -1;
+    }
+
+    (void)snprintf(g_support_request_id, sizeof(g_support_request_id), "%s",
+                   request_id);
+    (void)snprintf(g_support_pending_path, sizeof(g_support_pending_path), "%s",
+                   report_path);
+    g_support_report_saved = 1;
+    g_support_send_success = 0;
+    g_support_json_ready = 1;
+    start_support_send();
+    return 0;
 }
 
 static int save_support_report(void)
 {
-    char report_path[512];
-    char report_contents[4096];
     char validation_json[8192];
-    char model[81];
-    char firmware[41];
-    char platform[81];
-    int length;
     int path_length;
-    long timestamp;
 
     if (g_support_report_saved) {
         if (g_support_send_success) {
@@ -6183,53 +6297,27 @@ static int save_support_report(void)
         return -1;
     }
 
-    if (g_hardware_info_valid) {
-        (void)snprintf(model, sizeof(model), "%s",
-                       g_hardware_info.model_series);
-        (void)snprintf(firmware, sizeof(firmware), "%s",
-                       g_hardware_info.firmware_version);
-        (void)snprintf(platform, sizeof(platform), "%s",
-                       g_hardware_info.platform_id);
-    } else {
-        (void)snprintf(model, sizeof(model), "UNKNOWN");
-        (void)snprintf(firmware, sizeof(firmware), "UNKNOWN");
-        (void)snprintf(platform, sizeof(platform), "UNKNOWN");
-    }
-
-    timestamp = (long)time(NULL);
-    length = snprintf(report_contents, sizeof(report_contents),
-        "PS3 SCALE SUPPORT REPORT\n"
-        "REQUEST ID: %s\n"
-        "TYPE: %s\n"
-        "CREATED: %ld\n"
-        "TITLE: %s\n"
-        "DETAILS:\n%s\n"
-        "MODEL: %s\n"
-        "FIRMWARE: %s\n"
-        "PLATFORM: %s\n"
-        "APP VERSION: %s\n",
-        g_support_request_id,
-        g_support_is_feedback ? "FEEDBACK" : "ISSUE",
-        timestamp, g_support_title, g_support_details,
-        model, firmware, platform, PS3SCALE_APP_VERSION);
-    path_length = snprintf(report_path, sizeof(report_path), "%s/%s.txt",
-                             PS3SCALE_SUPPORT_OUTBOX_DIR,
-                             g_support_request_id);
-    if (length < 0 || (size_t)length >= sizeof(report_contents) ||
-        (mkdir(PS3SCALE_SUPPORT_DIR, 0777) != 0 &&
+    path_length = snprintf(g_support_pending_path,
+                           sizeof(g_support_pending_path), "%s/%s.json",
+                           PS3SCALE_SUPPORT_OUTBOX_DIR,
+                           g_support_request_id);
+    if ((mkdir(PS3SCALE_SUPPORT_DIR, 0777) != 0 &&
          access(PS3SCALE_SUPPORT_DIR, F_OK) != 0) ||
         (mkdir(PS3SCALE_SUPPORT_OUTBOX_DIR, 0777) != 0 &&
          access(PS3SCALE_SUPPORT_OUTBOX_DIR, F_OK) != 0) ||
-        path_length < 0 || (size_t)path_length >= sizeof(report_path) ||
-        ps3scale_atomic_file_write(report_path, report_contents,
-                                   (size_t)length) != 0) {
+        path_length < 0 ||
+        (size_t)path_length >= sizeof(g_support_pending_path) ||
+        ps3scale_atomic_file_write(g_support_pending_path, validation_json,
+                                   strlen(validation_json)) != 0) {
         g_support_request_id[0] = '\0';
+        g_support_pending_path[0] = '\0';
         snprintf(g_support_status, sizeof(g_support_status),
                  "REPORT SAVE FAILED; PREVIOUS REPORTS KEPT.");
         return -1;
     }
 
     g_support_report_saved = 1;
+    g_support_json_ready = 0;
     snprintf(g_support_status, sizeof(g_support_status),
              "SAVED LOCALLY; SENDING IF ONLINE.");
     start_support_send();
