@@ -866,7 +866,12 @@ assert "actions/setup-python@v5" not in index_workflow
 # Keep the visible app, support payload and local report on one version.
 assert '#define PS3SCALE_APP_VERSION "ALPHA 0.31"' in src
 assert '#define SETTINGS_COUNT 10' in src
-assert 'fprintf(fp, "settings_version=3\\n");' in src
+assert '#include "ps3scale/atomic_file.h"' in src
+assert '"settings_version=3\\n"' in src
+assert "ps3scale_atomic_file_write(PS3SCALE_SETTINGS_PATH" in src
+assert "ps3scale_atomic_file_write(PS3SCALE_FAVORITES_PATH" in src
+assert 'fopen(PS3SCALE_SETTINGS_PATH, "w")' not in src
+assert 'fopen(PS3SCALE_FAVORITES_PATH, "w")' not in src
 assert 'enhancement_persistent=%d' in src
 assert 'g_settings_selected == 9' in src
 assert 'g_online_first_opened = 0' in src
