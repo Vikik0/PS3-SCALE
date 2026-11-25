@@ -5,6 +5,7 @@
 #include "ps3scale/online.h"
 
 #include <sys/time.h>
+#include <time.h>
 #include <curl/curl.h>
 #include <net/net.h>
 #include <net/netctl.h>
@@ -20,6 +21,8 @@
 #define PS3SCALE_DOWNLOAD_LIMIT (64L * 1024L)
 #define PS3SCALE_DOWNLOAD_HARD_LIMIT (2L * 1024L * 1024L)
 #define PS3SCALE_USER_AGENT "PS3SCALE/0.3"
+
+static unsigned long g_download_temp_sequence;
 
 typedef struct download_context {
     FILE *file;
@@ -132,11 +135,12 @@ int ps3scale_online_download_limited_progress(
     int temporary_fd = -1;
     int temporary_created = 0;
     int result = -1;
+    unsigned int attempt;
 
     if (!url || strncmp(url, "https://", 8) != 0 ||
         !destination || !destination[0] ||
         !max_bytes || max_bytes > (size_t)PS3SCALE_DOWNLOAD_HARD_LIMIT ||
-        strlen(destination) + 6 >= sizeof(temporary_path))
+        strlen(destination) + 64 >= sizeof(temporary_path))
         return -1;
 
     if (network_modules_ready() != 0)
@@ -147,8 +151,22 @@ int ps3scale_online_download_limited_progress(
         return -1;
     }
 
-    snprintf(temporary_path, sizeof(temporary_path), "%s.part", destination);
-    temporary_fd = open(temporary_path, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    for (attempt = 0; attempt < 16u; attempt++) {
+        unsigned long sequence = ++g_download_temp_sequence;
+        int path_length = snprintf(temporary_path, sizeof(temporary_path),
+                                   "%s.part.%ld.%lu.%lu",
+                                   destination, (long)getpid(),
+                                   (unsigned long)time(NULL), sequence);
+        if (path_length < 0 ||
+            (size_t)path_length >= sizeof(temporary_path))
+            goto cleanup;
+        temporary_fd = open(temporary_path,
+                            O_WRONLY | O_CREAT | O_EXCL, 0600);
+        if (temporary_fd >= 0)
+            break;
+        if (errno != EEXIST)
+            goto cleanup;
+    }
     if (temporary_fd < 0)
         goto cleanup;
     temporary_created = 1;
