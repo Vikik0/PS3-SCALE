@@ -47,6 +47,7 @@ assert "cb_online_get_room(" not in heartbeat.group(1), (
 )
 
 print("Native lobby polling and expired-session recovery checks passed.")
+# Regression coverage for host discovery states and reconnect recovery.
 # Netplay discovery must give actionable recovery messages for each server state.
 assert 'strcmp(endpoint.state, "waiting_for_host_start") == 0' in source
 assert 'strcmp(endpoint.state, "host_password_required") == 0' in source
