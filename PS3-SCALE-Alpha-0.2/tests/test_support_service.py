@@ -61,7 +61,7 @@ assert "duplicate: true" in edge
 assert "duplicate: false" in edge
 
 # No public report reads, raw IP storage, or service secrets in the PS3 binary.
-assert "x-forwarded-for" not in edge.lower().replace("x-forwarded-for", "")
+assert '.get("x-forwarded-for")' not in edge.lower()
 assert "ip_hash: ipHash" in edge
 assert "clientIp" in edge and "ipHash" in edge
 assert "SUPABASE_SERVICE_ROLE_KEY" not in main
