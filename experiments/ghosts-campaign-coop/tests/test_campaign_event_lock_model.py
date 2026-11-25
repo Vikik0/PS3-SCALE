@@ -54,7 +54,7 @@ class CampaignEventLockModelTests(unittest.TestCase):
             "ghc_campaign_event_lock_reset",
         ):
             with self.subTest(function=name):
-                function_body(cls.gsc, name)
+                function_body(self.gsc, name)
 
     def test_gsc_table_is_sized_for_sixteen_events_and_two_local_players(self):
         init = function_body(self.gsc, "ghc_campaign_event_lock_init")
