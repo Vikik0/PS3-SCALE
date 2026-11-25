@@ -5933,7 +5933,9 @@ static void draw_help(void)
     draw_soft_button(598.0f, 362.0f, 168.0f, 42.0f,
                      actions[2], g_help_selected == 2);
     set_ui_font_size(6, 9);
-    draw_text(38.0f, 414.0f,
+    draw_text(38.0f, 414.0f, 0x77718fff,
+              "Community files are saved as data only; they are never auto-executed.");
+    draw_text(38.0f, 430.0f,
               g_support_send_success ? 0x2c9f8eff : 0x77718fff,
               g_support_status);
     set_ui_font_size(7, 11);
