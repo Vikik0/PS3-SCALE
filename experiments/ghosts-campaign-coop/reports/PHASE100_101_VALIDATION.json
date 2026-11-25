@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "project": "Ghosts Campaign Co-op PS3",
+  "phases": [
+    {
+      "phase": 100,
+      "ci_run": 1581,
+      "ci_run_id": 45721984971,
+      "ci": "7/7 PASS",
+      "python_tests": "537/537",
+      "event_lock_c_tests": "21/21",
+      "source_sha256": "39a3c89234401710f1a367618a9b6a7f74469de26e4a586542d5ba21213ee51e",
+      "gscbin_sha256": "53d9acfd9af3d1f46643677b3ae80558a2e1a937fa49dddac18d5a3a9e6d7d4e",
+      "gscbin_bytes": 3962,
+      "capture_kit": {
+        "files": "57/57",
+        "bytes": 537428,
+        "sha256": "7d2163b3232a6c169a56bf3239de05e1dc80f830378e4a459b3507ffd821cd52",
+        "artifact_id": 15072377465
+      }
+    },
+    {
+      "phase": 101,
+      "ci_run": 1583,
+      "ci_run_id": 45722241399,
+      "ci": "7/7 PASS",
+      "python_tests": "538/538",
+      "event_lock_c_tests": "21/21",
+      "gsc_wrapper_parser_c_tests": "10/10",
+      "gsc_wrapper_loader_c_tests": "12/12",
+      "source_sha256": "8acdcca9de55a7a962e9d631af96f581aa1d7531367ec8341795319756bbff10",
+      "gscbin_sha256": "9ad7958049df3ad173a86d5b1703405bca7ac5c8fa496b07bcdb3244325d8735",
+      "gscbin_bytes": 3972,
+      "capture_kit": {
+        "files": "57/57",
+        "bytes": 537563,
+        "sha256": "287e179f42e0fc41368f08fe7cefab4ccfa4af6ea6f762b20ef36fd6957c6ba3",
+        "artifact_id": 15072508057
+      }
+    }
+  ],
+  "runtime_boundary": {
+    "native_second_local_client_proven": false,
+    "reconnect_observed_on_ps3": false,
+    "original_shared_interactions_ready": "0/4",
+    "original_mission_gsc_modified": false,
+    "fastfile_rebuilt_or_injected": false,
+    "physical_ps3_campaign_runtime_tested": false
+  }
+}

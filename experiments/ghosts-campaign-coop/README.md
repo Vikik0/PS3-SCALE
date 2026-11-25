@@ -349,3 +349,16 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - CI [#1578](https://github.com/Vikik0/PS3-SCALE/actions/runs/45721292708): **7/7 successful**, **536 Python tests**, **10/10 parser tests**, **12/12 loader tests**. Capture kit: 57/57 files, 537,208 bytes; artifact `15072062945`.
 
 **Native/runtime gate remains unchanged:** the second Campaign Local Client and trigger activator semantics are not proven on the target PS3. The original shared mission interactions remain **0/4 ready**. No original mission GSC or FastFile was modified, and no physical Campaign co-op result is claimed.
+
+
+### Phase 100 — automatic native-pair rebind after disconnect
+
+- The guarded session watcher now survives invalidation, polls the fresh engine player array every 250 ms, and rebinds only after strict primary/secondary validation. It never creates or clones a player. Added an explicit stop flag.
+- CI [#1581](https://github.com/Vikik0/PS3-SCALE/actions/runs/45721984971): **7/7 successful**, **537 Python tests**, **21/21 Event Lock C tests**. Capture kit: 57/57 files, 537,428 bytes; artifact `15072377465`.
+
+### Phase 101 — recovery watcher on initial bind failure
+
+- `main()` now starts the recovery watcher even when no fresh player array exists or the first native-pair bind fails. A pair that appears later can be bound without another manual `main()` call.
+- CI [#1583](https://github.com/Vikik0/PS3-SCALE/actions/runs/45722241399): **7/7 successful**, **538 Python tests**, **21/21 Event Lock C tests**, **10/10 parser C tests**, **12/12 loader C tests**. Capture kit: 57/57 files, 537,563 bytes; artifact `15072508057`.
+
+**Runtime gate remains:** reconnect behavior has not been observed on the target PS3. The second native Campaign Local Client and the original four shared interactions remain unproven (**0/4 ready**).
