@@ -682,7 +682,11 @@ assert "support_submit_worker" in src
 assert "service_support_send();" in main
 assert "LOCAL SAVE OK; ONLINE OFF." in src
 assert "PS3SCALE_SUPPORT_OUTBOX_DIR" in src
-assert "ps3scale_atomic_file_write(report_path, report_contents" in src
+assert "ps3scale_atomic_file_write(g_support_pending_path, validation_json" in src
+assert "g_support_json_ready" in src
+assert "ps3scale_support_request_id_valid" in src
+assert "opendir(PS3SCALE_SUPPORT_OUTBOX_DIR)" in src
+assert '"%s/%s.json"' in src
 assert "g_support_report_saved" in src
 assert "g_support_send_success" in src
 assert "g_support_sending_request_id" in src
