@@ -9,8 +9,8 @@
 int main(void)
 {
     char json[8192];
-    char title[PS3SCALE_SUPPORT_TITLE_MAX + 1];
-    char details[PS3SCALE_SUPPORT_DETAILS_MAX + 1];
+    char title[PS3SCALE_SUPPORT_TITLE_MAX + 2];
+    char details[PS3SCALE_SUPPORT_DETAILS_MAX + 2];
     const char *expected =
         "{\"request_id\":\"" VALID_ID "\","
         "\"kind\":\"issue\","
@@ -39,7 +39,7 @@ int main(void)
     assert(strstr(json, details) != NULL);
 
     title[PS3SCALE_SUPPORT_TITLE_MAX] = 'T';
-    title[PS3SCALE_SUPPORT_TITLE_MAX + 0] = '\0';
+    title[PS3SCALE_SUPPORT_TITLE_MAX + 1] = '\0';
     assert(ps3scale_support_build_json(
         json, sizeof(json), VALID_ID, "issue", title, "details",
         "model", "firmware", "platform", "version") == -1);
@@ -47,7 +47,7 @@ int main(void)
     memset(details, 'D', sizeof(details) - 1);
     details[sizeof(details) - 1] = '\0';
     details[PS3SCALE_SUPPORT_DETAILS_MAX] = 'D';
-    details[PS3SCALE_SUPPORT_DETAILS_MAX + 0] = '\0';
+    details[PS3SCALE_SUPPORT_DETAILS_MAX + 1] = '\0';
     assert(ps3scale_support_build_json(
         json, sizeof(json), VALID_ID, "issue", "title", details,
         "model", "firmware", "platform", "version") == -1);
