@@ -65,8 +65,10 @@ assert '.get("x-forwarded-for")' not in edge.lower()
 assert "ip_hash: ipHash" in edge
 assert "clientIp" in edge and "ipHash" in edge
 assert "SUPABASE_SERVICE_ROLE_KEY" not in main
+assert "SUPABASE_SECRET_KEYS" in edge
 assert "PS3SCALE_GITHUB_TOKEN" not in main
 assert "PS3SCALE_SUPPORT_URL" in main
+assert "npm:@supabase/supabase-js@2.119.2" in (root / "supabase/functions/ps3scale-support/deno.json").read_text(encoding="utf-8")
 assert "verify_jwt = false" in config
 
 # Deployment is explicitly isolated and the GitHub token remains optional.
