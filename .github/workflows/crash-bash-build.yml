@@ -115,7 +115,7 @@ PACKAGED_BYTES="$(find "$PACKAGED_RUNTIME" -type f -printf '%s\n' | awk '{ total
           test "$PACKAGED_FILES" -le 512
           test "$PACKAGED_BYTES" -le 33554432
           diff -qr "$SOURCE_RUNTIME" "$PACKAGED_RUNTIME"
-          printf 'Embedded runtime verified: %s files, %s bytes\\n' "$PACKAGED_FILES" "$PACKAGED_BYTES"
+          printf 'Embedded runtime verified: %s files, %s bytes\n' "$PACKAGED_FILES" "$PACKAGED_BYTES"
       - name: Verify and checksum native lobby PKG
         run: |
           set -eu
@@ -130,16 +130,16 @@ PACKAGED_BYTES="$(find "$PACKAGED_RUNTIME" -type f -printf '%s\n' | awk '{ total
           import struct, sys
           with open(sys.argv[1], "rb") as stream:
               header = stream.read(0x20)
-          if header[:4] != b"\\x7fPKG":
+          if header[:4] != b"\x7fPKG":
               raise SystemExit("Finalized PKG has invalid magic.")
           print(struct.unpack_from(">I", header, 0x14)[0])
           PY
           )"
-          VERIFIED_ITEM_COUNT="$(sed -n 's/^PKG item count: \\([0-9][0-9]*\\) \\/ 1024$/\\1/p' Crash-Bash-Enhanced/build/PKG-CONTENTS.txt)"
+          VERIFIED_ITEM_COUNT="$(sed -n 's/^PKG item count: \([0-9][0-9]*\) \/ 1024$/\1/p' Crash-Bash-Enhanced/build/PKG-CONTENTS.txt)"
           test "$PKG_ITEM_COUNT" = "$VERIFIED_ITEM_COUNT"
           test "$PKG_ITEM_COUNT" -lt 1024
           PACKAGED_FILES="$(find Crash-Bash-Enhanced/build/pkg/USRDIR/retroarch -type f | wc -l)"
-          PACKAGED_BYTES="$(find Crash-Bash-Enhanced/build/pkg/USRDIR/retroarch -type f -printf '%s\\n' | awk '{ total += $1 } END { print total + 0 }')"
+          PACKAGED_BYTES="$(find Crash-Bash-Enhanced/build/pkg/USRDIR/retroarch -type f -printf '%s\n' | awk '{ total += $1 } END { print total + 0 }')"
           mkdir -p Crash-Bash-Enhanced/build-artifacts
           cp "$PKG" Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-Unified-PS3.pkg
           cp Crash-Bash-Enhanced/build/PKG-CONTENTS.txt Crash-Bash-Enhanced/build-artifacts/PKG-CONTENTS.txt
