@@ -7,6 +7,9 @@
 #define PS3SCALE_SUPPORT_DETAILS_MAX 2000u
 #define PS3SCALE_SUPPORT_REQUEST_ID_LENGTH 36u
 
+/* Validate the version-4 UUID used to make support retries idempotent. */
+int ps3scale_support_request_id_valid(const char *request_id);
+
 /*
  * Build a bounded JSON report payload. Strings are escaped as JSON, the
  * request ID must be a UUID, and user text is capped to the server limits.
