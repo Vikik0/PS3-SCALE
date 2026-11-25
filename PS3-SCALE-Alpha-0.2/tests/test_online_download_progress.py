@@ -25,6 +25,24 @@ main_source = (root / "source/ps3/main.c").read_text(encoding="utf-8")
 assert "ps3scale_online_download_limited_progress(" in main_source
 assert "&g_community_downloaded, &g_community_download_total" in main_source
 assert "&g_ps2_config_downloaded, &g_ps2_config_download_total" in main_source
+community_worker = main_source.split(
+    "static void community_download_worker(void *arg)", 1
+)[1].split("static void start_community_file_download", 1)[0]
+ps2_worker = main_source.split(
+    "static void ps2_config_download_worker(void *arg)", 1
+)[1].split("static void start_ps2_config_download", 1)[0]
+catalog_worker = main_source.split(
+    "static void catalog_sync_worker(void *arg)", 1
+)[1].split("static void start_catalog_sync_worker", 1)[0]
+assert "int downloaded = 0;" in community_worker
+assert "if (result != 0 && downloaded)" in community_worker
+assert "int downloaded = 0;" in ps2_worker
+assert "if (result != 0 && downloaded)" in ps2_worker
+assert "int profile_downloaded = 0;" in catalog_worker
+assert "int community_index_downloaded = 0;" in catalog_worker
+assert "if (profile_downloaded)" in catalog_worker
+assert "if (community_index_downloaded)" in catalog_worker
+
 assert "return ps3scale_online_download_progress(url, destination, NULL, NULL);" in source
 assert '#include <fcntl.h>' in source
 assert 'open(temporary_path, O_WRONLY | O_CREAT | O_EXCL, 0600)' in source
