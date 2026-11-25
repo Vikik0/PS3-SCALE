@@ -434,6 +434,125 @@ def validate_report(data: dict, *, require_reference_hashes: bool = True) -> lis
     return errors
 
 
+def validate_dependency_graph(data: dict) -> list[str]:
+    errors = []
+    if data.get("schema_version") != 1 or data.get("phase") != 90:
+        errors.append("dependency graph schema_version/phase must be 1/90")
+    if data.get("status") != "REFRACTOR_DEPENDENCIES_MAPPED_PATCHES_BLOCKED_PENDING_NATIVE_PLAYER":
+        errors.append("dependency graph must preserve the native-player patch gate")
+    if not re.fullmatch(r"[0-9a-f]{64}", data.get("input_archive_sha256", "")):
+        errors.append("dependency graph input archive SHA-256 is invalid")
+
+    hashes = data.get("source_hashes")
+    if not isinstance(hashes, dict) or set(hashes) != set(EXPECTED_SOURCE_HASHES):
+        errors.append("dependency graph must pin all five trigger/helper source files")
+    else:
+        for name, expected in EXPECTED_SOURCE_HASHES.items():
+            if hashes[name].get("sha256") != expected:
+                errors.append(f"dependency graph source hash mismatch: {name}")
+
+    nodes = data.get("nodes")
+    if not isinstance(nodes, list) or not nodes:
+        errors.append("dependency graph must contain function nodes")
+        nodes = []
+    node_ids = [item.get("id") for item in nodes if isinstance(item, dict)]
+    if len(node_ids) != len(nodes) or len(set(node_ids)) != len(node_ids):
+        errors.append("dependency graph node IDs must be unique and every node must be an object")
+    node_id_set = set(node_ids)
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        if node.get("source") not in EXPECTED_SOURCE_HASHES:
+            errors.append(f"dependency graph node has an unknown source: {node.get('id')}")
+        if not isinstance(node.get("line"), int) or node["line"] < 1:
+            errors.append(f"dependency graph node has an invalid line: {node.get('id')}")
+        if not isinstance(node.get("level_player_references"), int) or node["level_player_references"] < 0:
+            errors.append(f"dependency graph node has an invalid player-reference count: {node.get('id')}")
+
+    chains = data.get("chains")
+    expected_chains = {
+        "black_ice_flarestack": (0, "Black Ice"),
+        "carrier_rope_cut": (1, "Carrier"),
+        "cornered_weapon_hide": (2, "Cornered"),
+        "cornered_virus_upload": (3, "Cornered"),
+    }
+    if not isinstance(chains, list) or len(chains) != 4:
+        errors.append("dependency graph must contain exactly four shared-interaction chains")
+        chains = []
+    seen_chains = set()
+    chain_edge_count = 0
+    for chain in chains:
+        if not isinstance(chain, dict):
+            errors.append("dependency graph chain entries must be objects")
+            continue
+        chain_id = chain.get("id")
+        if chain_id in seen_chains:
+            errors.append(f"duplicate dependency chain: {chain_id}")
+        seen_chains.add(chain_id)
+        expected = expected_chains.get(chain_id)
+        if expected is None or chain.get("event_lock_id") != expected[0] or chain.get("mission") != expected[1]:
+            errors.append(f"dependency chain mission/Event ID mismatch: {chain_id}")
+        chain_nodes = chain.get("node_ids")
+        if not isinstance(chain_nodes, list) or not chain_nodes:
+            errors.append(f"dependency chain has no node IDs: {chain_id}")
+            chain_nodes = []
+        if any(node_id not in node_id_set for node_id in chain_nodes):
+            errors.append(f"dependency chain references a missing function node: {chain_id}")
+        chain_edges = chain.get("edges")
+        if not isinstance(chain_edges, list):
+            errors.append(f"dependency chain edges must be a list: {chain_id}")
+            chain_edges = []
+        chain_edge_count += len(chain_edges)
+        for edge in chain_edges:
+            if not isinstance(edge, dict):
+                errors.append(f"dependency chain contains a malformed edge: {chain_id}")
+                continue
+            if edge.get("from") not in chain_nodes or edge.get("to") not in chain_nodes:
+                errors.append(f"dependency edge escapes its chain: {chain_id}")
+            if not isinstance(edge.get("line"), int) or edge["line"] < 1:
+                errors.append(f"dependency edge has an invalid source line: {chain_id}")
+            if not isinstance(edge.get("arguments"), list):
+                errors.append(f"dependency edge arguments must be a list: {chain_id}")
+    if seen_chains != set(expected_chains):
+        errors.append("dependency graph chain IDs must be exactly 0..3 map")
+    summary = data.get("summary", {})
+    if summary.get("chains") != 4 or summary.get("nodes") != len(nodes):
+        errors.append("dependency graph summary chain/node counts are inconsistent")
+    if summary.get("edges") != summary.get("unique_edges") or summary.get("chain_edge_references") != chain_edge_count:
+        errors.append("dependency graph summary edge counts are inconsistent")
+    if summary.get("shared_interactions") != 4 or summary.get("mission_coordinators_single_shot") != 5:
+        errors.append("dependency graph summary must preserve four interactions and five coordinators")
+
+    carrier = data.get("carrier_entity_contract", {})
+    if "map struct" not in carrier.get("ranktable_var_0", "").lower():
+        errors.append("Carrier ranktable var_0 must remain the map struct")
+    if "rope entity" not in carrier.get("cut_the_rope_self", "").lower():
+        errors.append("Carrier cut_the_rope self must remain the rope entity")
+    if "map struct" not in carrier.get("cut_the_rope_var_0", "").lower():
+        errors.append("Carrier cut_the_rope var_0 must remain the map struct")
+    if set(carrier.get("do_not_conflate", [])) != {"self rope entity", "var_0 map struct/animation target", "player entity"}:
+        errors.append("Carrier entity contract must keep self, var_0 and player separate")
+
+    helper_warning = data.get("shared_helper_warning", {})
+    if helper_warning.get("black_ice_util_waittill_trigger_callers") != 3:
+        errors.append("Black Ice shared trigger helper caller count must remain pinned at three")
+    if helper_warning.get("player_scripted_anim_util_waittill_trigger_callers") != 15:
+        errors.append("player scripted animation helper caller count must remain pinned at fifteen")
+    if "do not globally rewrite" not in helper_warning.get("rule", "").lower():
+        errors.append("shared generic trigger helpers must not be globally rewritten")
+
+    coordinators = data.get("mission_coordinator_rules")
+    if not isinstance(coordinators, list) or len(coordinators) != 5:
+        errors.append("dependency graph must preserve five mission coordinator rules")
+    elif any(item.get("event_lock_id") is not None or item.get("policy") != "MISSION_COORDINATOR_ONLY" for item in coordinators):
+        errors.append("mission coordinator rules must remain single-shot without player Event Lock IDs")
+
+    if "do not patch the original handlers yet" not in data.get("decision", "").lower():
+        errors.append("dependency graph must not claim original handlers are patched")
+    return errors
+
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path, required=True, help="path to Ghosts_Campaign_Missions_Phase31.zip")
