@@ -59,6 +59,7 @@ Invoke-CBuildRun "ghc-websocket" @("client/ps3/ghc_websocket.c", "tests/websocke
 Invoke-CBuildRun "mission-rules" @("client/ps3/mission_rules.c", "tests/mission_rules_test.c")
 Invoke-CBuildRun "local-input" @("client/ps3/local_input.c", "tests/local_input_test.c")
 Invoke-CBuildRun "local-player-gate" @("client/ps3/local_player_gate.c", "tests/local_player_gate_test.c")
+Invoke-CBuildRun "campaign-event-lock-model" @("tests/campaign_event_lock_model.c", "tests/campaign_event_lock_model_test.c")
 Invoke-CBuildRun "ghc-lobby-json" @("client/ps3/ghc_lobby_json.c", "tests/lobby_json_test.c")
 Invoke-CBuildRun "ghc-stun" @("client/ps3/ghc_stun.c", "tests/stun_test.c")
 Invoke-CBuildRun "ghc-game-protocol" @("client/ps3/ghc_game_protocol.c", "tests/game_protocol_test.c")
