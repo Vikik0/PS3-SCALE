@@ -30,6 +30,7 @@ int ps3scale_online_download_progress(
 /* Sends a small JSON report over HTTPS with certificate verification. */
 int ps3scale_online_post_json(
     const char *url,
+    const char *publishable_api_key,
     const char *json,
     size_t json_size,
     long *response_code);
