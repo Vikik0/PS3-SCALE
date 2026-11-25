@@ -292,3 +292,15 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - Inner ZIP SHA-256: `76ca5d4daa7eae63ea54ca08ef6543a451909d945362d7b4e4558f8052199499`.
 - Report: `reports/PHASE91_REPORT_AR.md`; contract: `docs/phase91-event-lock-contract.md`; JSON: `reports/PHASE91_EVENT_LOCK_MODEL.json`.
 - **Native gate unchanged:** 0/4 shared mission interactions are ready for wiring until the original trigger path supplies a validated activator and the exact TU 1.16 native second Local Client is proven. No original mission GSC was patched, no FastFile was rebuilt/injected, and no physical PS3 Campaign co-op is claimed.
+
+
+### Phase 92 — player-aware trigger adapter fixture
+
+- Added a compile-only GSC fixture for a dedicated trigger adapter. It captures the actual `activator` from the supplied trigger entity, validates the native pair again after the wait, verifies that the activator is one of the registered local players, and acquires the Event Lock for that exact entity.
+- Added explicit-player release/abort wrappers and six Python source-contract tests. The fixture never substitutes `level.player` and does not rewrite the generic trigger helpers used by unrelated mission call sites.
+- GSC Tool 1.6.2 compile/decompile/recompile passed with byte-for-byte output. Local bridge stubs exist only to compile the isolated fixture; they are not part of the PS3 payload.
+- CI run [#1561](https://github.com/Vikik0/PS3-SCALE/actions/runs/45716590387): **7/7 jobs successful**, **528 Python tests passed**, **21/21 event-lock C cases passed**, PS3 bootstrap/probes and capture-kit verification successful.
+- Capture-kit artifact ID: `15070815301`; inner ZIP: **535,224 bytes**, **57/57 files verified**.
+- Inner ZIP SHA-256: `89acce060f71686385b160709cda6ac47d5e44dac04999ab205c79645a15a196`.
+- Report: `reports/PHASE92_REPORT_AR.md`; contract: `docs/phase92-player-aware-trigger-fixture.md`; JSON: `reports/PHASE92_TRIGGER_ADAPTER.json`.
+- **Runtime gate unchanged:** compile success does not prove trigger activator semantics on retail IW6/PS3. The original mission readiness remains **0/4**; no original GSC was changed, no FastFile was rebuilt/injected, and no physical Campaign co-op is claimed.

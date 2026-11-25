@@ -1,0 +1,45 @@
+{
+  "phase": 92,
+  "title": "Player-aware trigger adapter fixture",
+  "status": "COMPILE_TESTED_RUNTIME_NOT_VERIFIED",
+  "fixture": "tests/fixtures/ghc_campaign_trigger_adapter.gsc",
+  "installed_in_ps3_payload": false,
+  "original_mission_handlers_modified": false,
+  "flow": [
+    "validate trigger, session readiness and event ID",
+    "validate native primary/secondary pair before wait",
+    "wait on the supplied trigger entity and capture activator",
+    "revalidate the native pair after wait",
+    "confirm activator belongs to the registered pair",
+    "acquire the event lock for that activator",
+    "return the actual activator only after lock acquisition"
+  ],
+  "safeguards": [
+    "never substitutes level.player",
+    "never rewrites generic waittill_trigger helpers",
+    "explicit-player release and abort wrappers",
+    "compile-only local stubs are not a PS3 payload"
+  ],
+  "verification": {
+    "python_trigger_fixture_tests": "6/6 PASS",
+    "python_suite": "528/528 PASS",
+    "event_lock_c_model": "21/21 PASS",
+    "gsc_tool_compile_decompile_recompile": "PASS",
+    "github_actions_run": 1561,
+    "github_actions_run_id": 45716590387,
+    "github_actions_conclusion": "success",
+    "jobs": "7/7 PASS",
+    "ps3_cex_bootstrap": "PASS",
+    "controller_probes": "PASS",
+    "capture_kit_files_verified": "57/57",
+    "capture_kit_inner_zip_bytes": 535224,
+    "capture_kit_inner_zip_sha256": "89acce060f71686385b160709cda6ac47d5e44dac04999ab205c79645a15a196",
+    "capture_kit_artifact_id": 15070815301
+  },
+  "remaining_gate": {
+    "shared_interactions_ready": "0/4",
+    "native_second_local_client": "not proven",
+    "trigger_activator_runtime_semantics": "not proven",
+    "next_step": "verify native Local Client and trigger activator semantics on the exact TU 1.16 PS3 runtime before changing an original mission handler"
+  }
+}
