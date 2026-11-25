@@ -27,6 +27,7 @@
 #include "ps3scale/ps2_config.h"
 #include "ps3scale/ps2_config_db.h"
 #include "ps3scale/ps2_config_store.h"
+#include "ps3scale/atomic_file.h"
 #include "ps3scale/locale.h"
 #include "ps3scale/hardware_info.h"
 #include "ps3scale/catalog.h"
@@ -1319,12 +1320,19 @@ static void load_favorites(void)
 
 static int save_favorites(void)
 {
-    FILE *fp = fopen(PS3SCALE_FAVORITES_PATH, "w");
+    char contents[256u * 33u];
+    size_t used = 0;
     size_t i;
-    if (!fp) return -1;
-    for (i = 0; i < g_favorite_count; i++)
-        fprintf(fp, "%s\n", g_favorite_ids[i]);
-    return fclose(fp) == 0 ? 0 : -1;
+
+    for (i = 0; i < g_favorite_count; i++) {
+        int written = snprintf(contents + used, sizeof(contents) - used,
+                               "%s\n", g_favorite_ids[i]);
+        if (written < 0 || (size_t)written >= sizeof(contents) - used)
+            return -1;
+        used += (size_t)written;
+    }
+    return ps3scale_atomic_file_write(PS3SCALE_FAVORITES_PATH,
+                                      contents, used);
 }
 
 static void toggle_favorite(const ps3scale_game_t *game)
@@ -3106,23 +3114,30 @@ static void load_app_settings(void)
 
 static int save_app_settings(void)
 {
-    FILE *fp = fopen(PS3SCALE_SETTINGS_PATH, "w");
-    if (!fp) {
-        set_settings_message("SETTINGS COULD NOT BE SAVED TO INTERNAL HDD.");
-        return -1;
-    }
-    fprintf(fp, "settings_version=3\n");
-    fprintf(fp, "music=%d\n", g_music_enabled ? 1 : 0);
-    fprintf(fp, "volume=%d\n", g_music_volume);
-    fprintf(fp, "animation_v2=%d\n", g_animation_enabled ? 1 : 0);
-    fprintf(fp, "music_mode=%d\n", g_music_mode);
-    fprintf(fp, "music_next=%d\n", g_music_next_track);
-    fprintf(fp, "music_fade_ms=%d\n", g_music_fade_ms);
-    fprintf(fp, "language=%d\n", g_language);
-    fprintf(fp, "enhancement_persistent=%d\n",
-            g_enhancement_persistent ? 1 : 0);
-    if (fclose(fp) != 0) {
-        set_settings_message("SETTINGS SAVE FAILED.");
+    char contents[512];
+    int length = snprintf(contents, sizeof(contents),
+        "settings_version=3\n"
+        "music=%d\n"
+        "volume=%d\n"
+        "animation_v2=%d\n"
+        "music_mode=%d\n"
+        "music_next=%d\n"
+        "music_fade_ms=%d\n"
+        "language=%d\n"
+        "enhancement_persistent=%d\n",
+        g_music_enabled ? 1 : 0,
+        g_music_volume,
+        g_animation_enabled ? 1 : 0,
+        g_music_mode,
+        g_music_next_track,
+        g_music_fade_ms,
+        g_language,
+        g_enhancement_persistent ? 1 : 0);
+
+    if (length < 0 || (size_t)length >= sizeof(contents) ||
+        ps3scale_atomic_file_write(PS3SCALE_SETTINGS_PATH, contents,
+                                   (size_t)length) != 0) {
+        set_settings_message("SETTINGS SAVE FAILED. PREVIOUS SETTINGS KEPT.");
         return -1;
     }
     set_settings_message("SETTINGS SAVED TO INTERNAL HDD.");
