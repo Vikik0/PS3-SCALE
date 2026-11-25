@@ -25,6 +25,7 @@ from tools.ps3mapi.diff_runtime_elfs import compare as compare_runtime_elfs
 from tools.ps3mapi.scan_runtime_strings import scan as scan_runtime_strings
 from tools.ps3mapi.verify_tu116_dump import verify as verify_dump
 from tools.ps3mapi.verify_capture_metadata import verify_capture_metadata
+from tools.ps3mapi.validate_campaign_player_pair_capture import validate_capture as validate_campaign_player_pair_capture
 from tools.run_ghidra_ppu_inventory import _validate_opd_pair, generate_inventories
 
 DEFAULT_MAP = Path(__file__).with_name("SELF_MEMORY_MAP_TU116.json")
@@ -40,6 +41,7 @@ OUTPUT_NAMES = (
     "runtime_binary_comparison.json",
     "pad_probe_comparison.json",
     "input_probe_comparison.json",
+    "campaign_player_pair_validation.json",
     "capture_summary.json",
 )
 GHIDRA_OUTPUT_MAP = {
@@ -161,6 +163,7 @@ def analyze(
     multiplayer_metadata: Path | None = None,
     campaign_input_log: Path | None = None,
     multiplayer_input_log: Path | None = None,
+    campaign_player_capture: Path | None = None,
     analyze_headless: Path | None = None,
     ghidra_script_dir: Path | None = None,
     campaign_opd: tuple[int, int] | None = None,
@@ -170,7 +173,7 @@ def analyze(
     """Verify both captures, reconstruct analysis ELFs, and compare evidence.
 
     The function never patches, decrypts, uploads, or modifies game files.
-    The base ten outputs are always staged; six PPU outputs are added when Ghidra
+    All base outputs are always staged; six PPU outputs are added when Ghidra
     is enabled. Existing outputs are replaced only after every requested step
     succeeds, and are restored if the promotion fails.
     """
@@ -209,6 +212,19 @@ def analyze(
         multiplayer_input_log = Path(multiplayer_input_log)
         _require_file(campaign_input_log, "Campaign DualShock Input Probe log")
         _require_file(multiplayer_input_log, "Multiplayer DualShock Input Probe log")
+
+    player_pair_validation = {
+        "status": "NOT_PROVIDED",
+        "evidence_authenticity": "NOT_AUTHENTICATED_BY_THIS_TOOL",
+        "stable_pair_observation_validated": False,
+        "auto_rebind_cycle_observed_in_supplied_data": False,
+    }
+    if campaign_player_capture is not None:
+        campaign_player_capture = Path(campaign_player_capture)
+        _require_file(campaign_player_capture, "Campaign native player-pair capture")
+        player_pair_data = json.loads(campaign_player_capture.read_text(encoding="utf-8"))
+        player_pair_validation = validate_campaign_player_pair_capture(player_pair_data)
+        player_pair_validation["input_sha256"] = sha256_file(campaign_player_capture)
 
     capture_metadata = {"status": "NOT_PROVIDED", "both_modes_validated": False}
     if campaign_metadata is not None:
@@ -387,6 +403,7 @@ def analyze(
         write_json(outputs["runtime_binary_comparison.json"], binary_comparison)
         write_json(outputs["pad_probe_comparison.json"], pad_comparison)
         write_json(outputs["input_probe_comparison.json"], input_probe_comparison)
+        write_json(outputs["campaign_player_pair_validation.json"], player_pair_validation)
 
         input_hashes = {
             "campaign_default_self": sha256_file(campaign_self),
@@ -401,6 +418,8 @@ def analyze(
         if campaign_input_log is not None:
             input_hashes["campaign_pad_input_probe_log"] = sha256_file(campaign_input_log)
             input_hashes["multiplayer_pad_input_probe_log"] = sha256_file(multiplayer_input_log)
+        if campaign_player_capture is not None:
+            input_hashes["campaign_player_pair_capture"] = sha256_file(campaign_player_capture)
 
         summary = {
             "status": status,
@@ -437,6 +456,7 @@ def analyze(
                 ),
             },
             "input_probe_comparison": input_probe_comparison,
+            "player_pair_capture_validation": player_pair_validation,
             "pad_probe": {
                 "status": pad_comparison.get("status"),
                 "both_ports_visible_simultaneously_in_both_modes": pad_gate_passed,
@@ -456,9 +476,12 @@ def analyze(
                 "native_campaign_local_client_creation": False,
                 "controller_to_player_two_mapping": False,
                 "independent_camera_and_hud": False,
+                "structural_capture_status": player_pair_validation.get("status"),
+                "capture_source_authenticated": False,
                 "reason": (
                     "These require verified runtime call-path and player-state evidence. "
-                    "Pad visibility, strings, or changed binary blocks are not sufficient."
+                    "Pad visibility, strings, or changed binary blocks are not sufficient. "
+                    "A structurally valid JSON pair capture is still unauthenticated and does not upgrade this gate."
                 ),
             },
             "input_sha256": input_hashes,
@@ -500,6 +523,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--multiplayer-metadata", type=Path)
     parser.add_argument("--campaign-input-log", type=Path)
     parser.add_argument("--multiplayer-input-log", type=Path)
+    parser.add_argument("--campaign-player-capture", type=Path)
     parser.add_argument("--analyze-headless", type=Path)
     parser.add_argument("--ghidra-script-dir", type=Path)
     parser.add_argument("--campaign-opd-va")
@@ -531,6 +555,7 @@ def main(argv: list[str] | None = None) -> int:
             multiplayer_metadata=args.multiplayer_metadata,
             campaign_input_log=args.campaign_input_log,
             multiplayer_input_log=args.multiplayer_input_log,
+            campaign_player_capture=args.campaign_player_capture,
             analyze_headless=args.analyze_headless,
             ghidra_script_dir=args.ghidra_script_dir,
             campaign_opd=campaign_opd,

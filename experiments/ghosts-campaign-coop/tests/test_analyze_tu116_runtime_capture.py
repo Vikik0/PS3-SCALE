@@ -92,6 +92,47 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
         path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         return path
 
+    def write_player_pair_capture(self, name="campaign_player_pair_capture.json"):
+        def player(index, primary):
+            entity = f"entity-{index}"
+            base = 0x10000 + index * 0x1000
+            return {
+                "entity_id": entity,
+                "local_client_index": index,
+                "controller_port": index,
+                "is_splitscreen_player": True,
+                "is_primary": primary,
+                "gentity_address": f"0x{base:08x}",
+                "gclient_address": f"0x{base + 0x100:08x}",
+                "player_state_address": f"0x{base + 0x200:08x}",
+                "camera_state_address": f"0x{base + 0x300:08x}",
+                "hud_state_address": f"0x{base + 0x400:08x}",
+                "camera_owner_entity_id": entity,
+                "hud_owner_entity_id": entity,
+            }
+
+        observations = []
+        for sample in range(5):
+            observations.append({
+                "timestamp_ms": sample * 250,
+                "split_screen": True,
+                "player_array_count": 2,
+                "players": [player(0, True), player(1, False)],
+                "level_player_entity_id": "entity-0",
+                "playengineeffects_entity_id": "entity-1",
+            })
+        path = self.root / name
+        path.write_text(json.dumps({
+            "schema_version": 1,
+            "capture_id": "synthetic-analyzer-test",
+            "title_id": "BLUS31270",
+            "title_update": "01.16",
+            "mode": "CAMPAIGN",
+            "evidence_source": "synthetic-unit-test",
+            "observations": observations,
+        }, indent=2), encoding="utf-8")
+        return path
+
     def write_input_log(self, name, mode):
         path = self.root / name
         lines = [
@@ -169,6 +210,43 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
             (self.output_dir / "input_probe_comparison.json").read_text(encoding="utf-8")
         )
         self.assertEqual(input_comparison["status"], "NOT_PROVIDED")
+
+    def test_player_pair_capture_is_included_but_does_not_upgrade_runtime_gate(self):
+        capture = self.write_player_pair_capture()
+        result = self.run_analyzer(campaign_player_capture=capture)
+
+        validation = result["player_pair_capture_validation"]
+        self.assertEqual(validation["status"], "PASS_STRUCTURAL_CAPTURE_VALIDATION")
+        self.assertEqual(validation["evidence_authenticity"], "NOT_AUTHENTICATED_BY_THIS_TOOL")
+        self.assertEqual(validation["evidence_source"], "synthetic-unit-test")
+        self.assertTrue(validation["stable_pair_observation_validated"])
+        self.assertEqual(validation["input_sha256"], analyzer.sha256_file(capture))
+        self.assertEqual(result["player_two_gate"]["status"], "NOT_PROVEN")
+        self.assertFalse(result["player_two_gate"]["native_campaign_local_client_creation"])
+        self.assertEqual(
+            result["player_two_gate"]["structural_capture_status"],
+            "PASS_STRUCTURAL_CAPTURE_VALIDATION",
+        )
+        saved = json.loads(
+            (self.output_dir / "campaign_player_pair_validation.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(saved["status"], "PASS_STRUCTURAL_CAPTURE_VALIDATION")
+
+    def test_missing_player_pair_capture_is_reported_without_upgrading_gate(self):
+        result = self.run_analyzer()
+        self.assertEqual(result["player_pair_capture_validation"]["status"], "NOT_PROVIDED")
+        self.assertEqual(result["player_two_gate"]["status"], "NOT_PROVEN")
+        self.assertFalse(result["player_two_gate"]["capture_source_authenticated"])
+
+    def test_wrong_player_pair_capture_profile_is_rejected_before_dump_analysis(self):
+        capture = self.write_player_pair_capture()
+        data = json.loads(capture.read_text(encoding="utf-8"))
+        data["title_id"] = "BLUS00000"
+        capture.write_text(json.dumps(data), encoding="utf-8")
+        with patch.object(analyzer, "verify_dump") as verify:
+            with self.assertRaisesRegex(ValueError, "title_id"):
+                self.run_analyzer(campaign_player_capture=capture)
+            verify.assert_not_called()
 
     def test_metadata_pair_is_bound_to_the_exact_mode_files_and_hashes(self):
         campaign_log = self.root / "ghosts_campaign_pad_probe.log"
