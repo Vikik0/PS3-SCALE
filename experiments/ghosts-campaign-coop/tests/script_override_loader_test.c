@@ -1,3 +1,4 @@
+#include "cell/fs/cell_fs_file_api.h"
 #include "../client/ps3/prx/script_override.h"
 
 #include <assert.h>
