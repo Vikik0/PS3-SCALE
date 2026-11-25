@@ -109,7 +109,7 @@ jobs:
           SOURCE_FILES="$(find "$SOURCE_RUNTIME" -type f | wc -l)"
           PACKAGED_FILES="$(find "$PACKAGED_RUNTIME" -type f | wc -l)"
           SOURCE_BYTES="$(find "$SOURCE_RUNTIME" -type f -printf '%s\\n' | awk '{ total += $1 } END { print total + 0 }')"
-          PACKAGED_BYTES="$(find "$PACKAGED_RUNTIME" -type f -printf '%s\\n' | awk '{ total += $1 } END { print total + 0 }')
+          PACKAGED_BYTES="$(find "$PACKAGED_RUNTIME" -type f -printf '%s\n' | awk '{ total += $1 } END { print total + 0 }')"
           test "$PACKAGED_FILES" = "$SOURCE_FILES"
           test "$PACKAGED_BYTES" = "$SOURCE_BYTES"
           diff -qr "$SOURCE_RUNTIME" "$PACKAGED_RUNTIME"
