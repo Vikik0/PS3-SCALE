@@ -45,7 +45,11 @@ assert "if (community_index_downloaded)" in catalog_worker
 
 assert "return ps3scale_online_download_progress(url, destination, NULL, NULL);" in source
 assert '#include <fcntl.h>' in source
-assert 'open(temporary_path, O_WRONLY | O_CREAT | O_EXCL, 0600)' in source
+assert 'open(temporary_path,' in source
+assert 'O_WRONLY | O_CREAT | O_EXCL, 0600' in source
+assert '"%s.part.%ld.%lu.%lu"' in source
+assert 'g_download_temp_sequence' in source
+assert 'errno != EEXIST' in source
 assert 'temporary_created = 1;' in source
 assert 'if (result != 0 && temporary_created)' in source
 assert 'unlink(temporary_path);\\n    file = fopen' not in source
