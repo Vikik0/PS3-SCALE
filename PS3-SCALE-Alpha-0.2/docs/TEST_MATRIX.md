@@ -1,4 +1,4 @@
-# Device test matrix — Alpha 0.32
+# Device test matrix — Alpha 0.33
 
 Primary device (user-reported):
 - Family: PS3 Slim
@@ -142,3 +142,22 @@ Physical PS3 checks still required:
 - Add/remove favorites, exit and relaunch; verify the list is intact.
 - Interrupt a network refresh, retry it, and confirm the previous valid cache remains usable.
 - Repeat a PS2 CONFIG backup/restore and one verified NCL install on the target console.
+
+
+## Support outbox and retry — Alpha 0.33
+
+Host CI verifies:
+- UUIDv4 request ID validation and stable JSON payload generation.
+- JSON escaping for quotes, backslashes, tabs, newlines and UTF-8 Arabic text.
+- Exact maximum title (100) and details (2,000) bounds plus over-limit rejection.
+- Atomic JSON outbox writes with a unique filename per request.
+- Pending queue discovery, request ID/file-name matching and bounded file reads.
+- Help & Support exposes a Retry Pending action; successful server responses remove only the sent pending file.
+- The public support endpoint validates input, enforces idempotency and uses atomic HMAC-based daily rate limiting.
+- RLS and explicit grants prevent public/authenticated reads of support reports.
+
+Physical PS3 checks still required:
+- Create a support report while offline, exit/relaunch, reconnect, and retry from Help & Support.
+- Confirm a successful send removes the matching pending JSON file and does not resend it.
+- Confirm a failed send leaves the pending JSON file intact.
+- Confirm the endpoint returns a rate-limit message after the daily quota is reached.
