@@ -14,19 +14,22 @@ This backend is isolated from every other Supabase project. It must be deployed 
 
 ## Create and deploy
 
+The current Supabase CLI v3 defaults database commands to the local stack. Always pass `--remote=<project-ref>` for hosted database operations and `--yes` for unattended hosted changes; never rely on a local default when applying production migrations.
+
+
 1. Create a **new Supabase project** named `ps3scale-support` in the VIKIK organization. Do not reuse `Vikik-Winter-Fit`, `BRKNDA-Workspace`, or any other existing project.
 2. Prefer the Frankfurt region (`eu-central-1`) for Jordan/Europe access.
-3. Install the Supabase CLI and authenticate:
+3. Install the current Supabase CLI (v3) and authenticate:
    ```sh
    supabase login
    ```
 4. From the repository root, link only the newly created project:
    ```sh
-   supabase link --project-ref <NEW_PROJECT_REF>
+   supabase link <NEW_PROJECT_REF>
    ```
 5. Apply the isolated database migration:
    ```sh
-   supabase db push
+   supabase db push --remote=<NEW_PROJECT_REF> --yes
    ```
 6. Generate a strong random salt of at least 32 characters and configure it as a server-side secret:
    ```sh
@@ -34,7 +37,7 @@ This backend is isolated from every other Supabase project. It must be deployed 
    ```
 7. Deploy the public, rate-limited Edge Function (it validates its own payload and uses only server-side credentials):
    ```sh
-   supabase functions deploy ps3scale-support --no-verify-jwt
+   supabase functions deploy ps3scale-support --yes
    ```
 8. The function URL is:
    ```
@@ -57,7 +60,7 @@ The token stays in Supabase Edge Function secrets and is never embedded in the P
 - No PSN ID, console ID, account token, raw IP address, or unique console identifier is sent by the app.
 - The app does not send any report until the local atomic outbox write succeeds.
 - Outbox files are stored separately under `/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox/`; a retry reuses the same request ID.
-- Public callers cannot read reports or rate-limit rows. The Edge Function uses a server-side service-role key supplied by the Supabase runtime.
+- Public callers cannot read reports or rate-limit rows. The Edge Function uses a server-side secret key supplied by the Supabase runtime.
 - The database function that increments the daily counter is atomic and executable only by `service_role`.
 - The endpoint returns only a receipt ID and optional GitHub issue URL, never the stored report body.
 - GitHub mirroring is opt-in because it sends report text to a second service.
