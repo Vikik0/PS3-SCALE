@@ -50,7 +50,7 @@ jobs:
         run: |
           bash -n Crash-Bash-Enhanced/scripts/build_online_pkg_clean.sh
           bash -n Crash-Bash-Enhanced/scripts/build_personal_pkg.sh
-          python3 -m py_compile Crash-Bash-Enhanced/scripts/stage_game_disc.py
+          python3 -m py_compile Crash-Bash-Enhanced/scripts/stage_game_disc.py Crash-Bash-Enhanced/scripts/verify_pkg_contents.py
       - name: Validate PS3 package metadata
         run: python3 Crash-Bash-Enhanced/scripts/test_package_metadata.py
       - name: Run protocol tests
@@ -108,10 +108,12 @@ jobs:
           test -s "$PACKAGED_RUNTIME/licenses/RetroArch-GPL-3.0.txt"
           SOURCE_FILES="$(find "$SOURCE_RUNTIME" -type f | wc -l)"
           PACKAGED_FILES="$(find "$PACKAGED_RUNTIME" -type f | wc -l)"
-          SOURCE_BYTES="$(find "$SOURCE_RUNTIME" -type f -printf '%s\\n' | awk '{ total += $1 } END { print total + 0 }')"
-          PACKAGED_BYTES="$(find "$PACKAGED_RUNTIME" -type f -printf '%s\n' | awk '{ total += $1 } END { print total + 0 }')"
+SOURCE_BYTES="$(find "$SOURCE_RUNTIME" -type f -printf '%s\n' | awk '{ total += $1 } END { print total + 0 }')"
+PACKAGED_BYTES="$(find "$PACKAGED_RUNTIME" -type f -printf '%s\n' | awk '{ total += $1 } END { print total + 0 }')"
           test "$PACKAGED_FILES" = "$SOURCE_FILES"
           test "$PACKAGED_BYTES" = "$SOURCE_BYTES"
+          test "$PACKAGED_FILES" -le 512
+          test "$PACKAGED_BYTES" -le 33554432
           diff -qr "$SOURCE_RUNTIME" "$PACKAGED_RUNTIME"
           printf 'Embedded runtime verified: %s files, %s bytes\\n' "$PACKAGED_FILES" "$PACKAGED_BYTES"
       - name: Verify and checksum native lobby PKG
@@ -124,8 +126,23 @@ jobs:
           printf 'Native lobby PKG magic=%s revision=%s\\n' "$MAGIC" "$REVISION"
           test "$MAGIC" = "7f504b47"
           test "$REVISION" = "8000"
+          PKG_ITEM_COUNT="$(python3 - "$PKG" <<'PY'
+          import struct, sys
+          with open(sys.argv[1], "rb") as stream:
+              header = stream.read(0x20)
+          if header[:4] != b"\\x7fPKG":
+              raise SystemExit("Finalized PKG has invalid magic.")
+          print(struct.unpack_from(">I", header, 0x14)[0])
+          PY
+          )"
+          VERIFIED_ITEM_COUNT="$(sed -n 's/^PKG item count: \\([0-9][0-9]*\\) \\/ 1024$/\\1/p' Crash-Bash-Enhanced/build/PKG-CONTENTS.txt)"
+          test "$PKG_ITEM_COUNT" = "$VERIFIED_ITEM_COUNT"
+          test "$PKG_ITEM_COUNT" -lt 1024
+          PACKAGED_FILES="$(find Crash-Bash-Enhanced/build/pkg/USRDIR/retroarch -type f | wc -l)"
+          PACKAGED_BYTES="$(find Crash-Bash-Enhanced/build/pkg/USRDIR/retroarch -type f -printf '%s\\n' | awk '{ total += $1 } END { print total + 0 }')"
           mkdir -p Crash-Bash-Enhanced/build-artifacts
           cp "$PKG" Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-Unified-PS3.pkg
+          cp Crash-Bash-Enhanced/build/PKG-CONTENTS.txt Crash-Bash-Enhanced/build-artifacts/PKG-CONTENTS.txt
           cd Crash-Bash-Enhanced/build-artifacts
           sha256sum Crash-Bash-Online-Unified-PS3.pkg > Crash-Bash-Online-Unified-PS3.pkg.sha256
           sha256sum -c Crash-Bash-Online-Unified-PS3.pkg.sha256
@@ -136,6 +153,7 @@ jobs:
           Embedded runtime: RetroArch + PCSX-ReARMed (USRDIR/retroarch/)
           Embedded runtime files: $PACKAGED_FILES
           Embedded runtime bytes: $PACKAGED_BYTES
+          PKG item count: $PKG_ITEM_COUNT / 1024
           Online synchronization: RetroArch Netplay with lockstep and Madrid relay defaults
           Installable packages: one PKG only
           Game disc image and BIOS: not included; provide your own legal BIN/CUE dump and optional BIOS
@@ -151,6 +169,7 @@ jobs:
             Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-Unified-PS3.pkg
             Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-Unified-PS3.pkg.sha256
             Crash-Bash-Enhanced/build-artifacts/BUILD-MANIFEST.txt
+            Crash-Bash-Enhanced/build-artifacts/PKG-CONTENTS.txt
 
   online-package-build:
     name: Build Crash Bash Online PS3 package (RetroArch Netplay + PCSX-ReARMed)

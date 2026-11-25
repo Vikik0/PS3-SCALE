@@ -38,4 +38,6 @@ cc -std=c11 -Wall -Wextra -Werror -I"$ROOT/include" "$ROOT/source/disc_fingerpri
 python3 "$ROOT/tests/test_extract_disc.py"
 python3 "$ROOT/tests/test_stage_game_disc.py"
 python3 "$ROOT/tests/test_online_menu_source.py"
+python3 -m py_compile "$ROOT/scripts/verify_pkg_contents.py"
+python3 "$ROOT/tests/test_pkg_contents.py"
 echo "Host protocol, JSON, archive, netcode, UDP peer, disc browser, disc fingerprint, game launch args, disc extractor, BIN/CUE staging and native lobby tests passed."

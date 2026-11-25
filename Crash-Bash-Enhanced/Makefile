@@ -44,6 +44,7 @@ $(BUILD):
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 pkg: ca-bundle $(BUILD)
 	@$(MAKE) --no-print-directory $(OUTPUT).pkg
+	@python3 "$(CURDIR)/scripts/verify_pkg_contents.py" "$(OUTPUT).pkg" "$(BUILDDIR)/pkg" "$(BUILDDIR)/PKG-CONTENTS.txt"
 	@command -v package_finalize >/dev/null
 	@package_finalize "$(OUTPUT).pkg"
 else

@@ -92,7 +92,7 @@ echo "== Fetch official RetroArch menu assets"
 git clone --depth 1 --filter=blob:none --no-checkout "https://github.com/libretro/retroarch-assets.git" "$ASSETS"
 git -C "$ASSETS" fetch --depth 1 origin "$ASSETS_COMMIT"
 git -C "$ASSETS" sparse-checkout init --cone
-git -C "$ASSETS" sparse-checkout set fonts rgui xmb ozone wallpapers
+git -C "$ASSETS" sparse-checkout set fonts rgui
 git -C "$ASSETS" checkout --detach "$ASSETS_COMMIT"
 
 python3 - "$RA" "$APP_ID" "$CONTENT_ID" "$APP_TITLE" <<'PY'

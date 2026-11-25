@@ -83,11 +83,26 @@ test -s "$PACKAGED_RUNTIME/info/pcsx_rearmed_libretro.info"
 test -s "$PACKAGED_RUNTIME/licenses/RetroArch-GPL-3.0.txt"
 SOURCE_FILES="$(find "$SOURCE_RUNTIME" -type f | wc -l)"
 PACKAGED_FILES="$(find "$PACKAGED_RUNTIME" -type f | wc -l)"
-SOURCE_BYTES="$(find "$SOURCE_RUNTIME" -type f -printf '%s\\n' | awk '{ total += $1 } END { print total + 0 }')"
-PACKAGED_BYTES="$(find "$PACKAGED_RUNTIME" -type f -printf '%s\\n' | awk '{ total += $1 } END { print total + 0 }')"
+SOURCE_BYTES="$(find "$SOURCE_RUNTIME" -type f -printf '%s\n' | awk '{ total += $1 } END { print total + 0 }')"
+PACKAGED_BYTES="$(find "$PACKAGED_RUNTIME" -type f -printf '%s\n' | awk '{ total += $1 } END { print total + 0 }')"
 test "$PACKAGED_FILES" = "$SOURCE_FILES"
 test "$PACKAGED_BYTES" = "$SOURCE_BYTES"
+test "$PACKAGED_FILES" -le 512
+test "$PACKAGED_BYTES" -le 33554432
 diff -qr "$SOURCE_RUNTIME" "$PACKAGED_RUNTIME"
+test -s "$ROOT/build/PKG-CONTENTS.txt"
+PKG_ITEM_COUNT="$(python3 - "$ROOT/crashbash.pkg" <<'PY'
+import struct, sys
+with open(sys.argv[1], "rb") as stream:
+    header = stream.read(0x20)
+if header[:4] != b"\\x7fPKG":
+    raise SystemExit("Finalized personal PKG has invalid magic.")
+print(struct.unpack_from(">I", header, 0x14)[0])
+PY
+)"
+VERIFIED_ITEM_COUNT="$(sed -n 's/^PKG item count: \\([0-9][0-9]*\\) \\/ 1024$/\\1/p' "$ROOT/build/PKG-CONTENTS.txt")"
+test "$PKG_ITEM_COUNT" = "$VERIFIED_ITEM_COUNT"
+test "$PKG_ITEM_COUNT" -lt 1024
 test -s "$ROOT/build/pkg/USRDIR/PSXISO/DISC-MANIFEST.txt"
 test -n "$(find "$ROOT/build/pkg/USRDIR/PSXISO" -maxdepth 1 -type f -iname '*.cue' -print -quit)"
 test -n "$(find "$ROOT/build/pkg/USRDIR/PSXISO" -maxdepth 1 -type f -iname '*.bin' -print -quit)"
@@ -119,6 +134,7 @@ cp "$ROOT/crashbash.pkg" "$OUT"
     echo "Embedded game path: USRDIR/PSXISO/"
     echo "Embedded RetroArch runtime files: $PACKAGED_FILES"
     echo "Embedded RetroArch runtime bytes: $PACKAGED_BYTES"
+    echo "PKG item count: $PKG_ITEM_COUNT / 1024"
     cat "$DISC_DEST/DISC-MANIFEST.txt"
     echo "PlayStation BIOS: not included; use your own BIOS or HLE consistently"
     echo "Public CI upload: disabled; this personal package is kept local"
