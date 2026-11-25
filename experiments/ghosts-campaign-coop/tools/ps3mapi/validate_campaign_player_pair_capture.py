@@ -203,7 +203,7 @@ def validate_capture(data: dict[str, Any], required_stable_samples: int = 5) -> 
     stable = best_run >= required_stable_samples
     reconnect = reconnect_run >= required_stable_samples
     return {
-        "status": "PASS_NATIVE_PLAYER_PAIR_CAPTURE" if stable else "INCOMPLETE_NATIVE_PLAYER_PAIR_EVIDENCE",
+        "status": "PASS_STRUCTURAL_CAPTURE_VALIDATION" if stable else "INCOMPLETE_PAIR_OBSERVATION_DATA",
         "capture_id": data["capture_id"],
         "title_id": data["title_id"],
         "title_update": data["title_update"],
@@ -211,12 +211,12 @@ def validate_capture(data: dict[str, Any], required_stable_samples: int = 5) -> 
         "observation_count": len(observations),
         "required_stable_samples": required_stable_samples,
         "best_stable_run": best_run,
-        "stable_pair_proven": stable,
-        "auto_rebind_cycle_proven": reconnect,
-        "native_local_clients_proven": stable,
-        "controller_to_player_mapping_proven": stable,
-        "independent_camera_hud_ownership_proven": stable,
-        "campaign_alias_mapping_proven": stable,
+        "stable_pair_observation_validated": stable,
+        "auto_rebind_cycle_observed_in_supplied_data": reconnect,
+        "native_local_client_fields_consistent": stable,
+        "controller_to_player_mapping_fields_consistent": stable,
+        "independent_camera_hud_fields_consistent": stable,
+        "campaign_alias_fields_consistent": stable,
         "best_pair_signature": best_signature,
         "rejected_observations": rejected,
         "limitations": [
@@ -239,7 +239,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0 if result["stable_pair_proven"] else 1
+    return 0 if result["stable_pair_observation_validated"] else 1
 
 
 if __name__ == "__main__":

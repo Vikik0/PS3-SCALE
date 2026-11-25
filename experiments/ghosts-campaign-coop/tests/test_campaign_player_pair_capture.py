@@ -51,13 +51,13 @@ def valid_capture() -> dict:
 class CampaignPlayerPairCaptureTests(unittest.TestCase):
     def test_five_stable_samples_prove_native_pair_contract(self):
         result = validate_capture(valid_capture())
-        self.assertEqual(result["status"], "PASS_NATIVE_PLAYER_PAIR_CAPTURE")
-        self.assertTrue(result["stable_pair_proven"])
-        self.assertTrue(result["native_local_clients_proven"])
-        self.assertTrue(result["controller_to_player_mapping_proven"])
-        self.assertTrue(result["independent_camera_hud_ownership_proven"])
+        self.assertEqual(result["status"], "PASS_STRUCTURAL_CAPTURE_VALIDATION")
+        self.assertTrue(result["stable_pair_observation_validated"])
+        self.assertTrue(result["native_local_client_fields_consistent"])
+        self.assertTrue(result["controller_to_player_mapping_fields_consistent"])
+        self.assertTrue(result["independent_camera_hud_fields_consistent"])
         self.assertEqual(result["best_stable_run"], 5)
-        self.assertFalse(result["auto_rebind_cycle_proven"])
+        self.assertFalse(result["auto_rebind_cycle_observed_in_supplied_data"])
 
     def test_disconnect_then_five_stable_samples_proves_rebind_cycle(self):
         data = valid_capture()

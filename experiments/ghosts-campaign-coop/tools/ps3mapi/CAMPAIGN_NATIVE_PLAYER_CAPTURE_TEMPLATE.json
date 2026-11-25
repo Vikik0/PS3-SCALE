@@ -44,5 +44,5 @@
       ]
     }
   ],
-  "notes": "Template only. Replace every placeholder with measured values from a real BLUS31270 TU 1.16 Campaign runtime capture. Do not invent or infer addresses."
+  "notes": "Template only. Replace every placeholder with measured values from a real BLUS31270 TU 1.16 Campaign runtime capture. Do not invent or infer addresses. The validator checks structure but cannot authenticate provenance."
 }
