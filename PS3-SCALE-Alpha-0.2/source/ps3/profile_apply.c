@@ -2,6 +2,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -347,23 +348,31 @@ int ps3scale_profile_script_install(const ps3scale_profile_t *profile)
         (int)sizeof(temporary_path))
         return -4;
 
-    file = fopen(temporary_path, "wb");
-    if (!file)
-        return -5;
+    {
+        int fd = open(temporary_path, O_WRONLY | O_CREAT | O_EXCL, 0600);
+        if (fd < 0)
+            return -5;
+        file = fdopen(fd, "wb");
+        if (!file) {
+            (void)close(fd);
+            (void)unlink(temporary_path);
+            return -5;
+        }
+    }
 
     script_length = strlen(script);
     if (fwrite(script, 1, script_length, file) != script_length) {
         (void)fclose(file);
-        unlink(temporary_path);
+        (void)unlink(temporary_path);
         return -5;
     }
     if (fclose(file) != 0) {
-        unlink(temporary_path);
+        (void)unlink(temporary_path);
         return -5;
     }
 
     if (rename(temporary_path, path) != 0) {
-        unlink(temporary_path);
+        (void)unlink(temporary_path);
         return -5;
     }
     return 0;
