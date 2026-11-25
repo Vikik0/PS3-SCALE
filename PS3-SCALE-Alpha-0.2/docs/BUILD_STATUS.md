@@ -19,7 +19,14 @@
 - Supabase JS SDK is pinned to `2.119.2`; the Deno lockfile is committed and the Edge Function is type-checked in CI.
 - The PS3 app includes only the public publishable-key placeholder; secret keys remain server-side.
 - Supabase project creation/deployment is pending confirmation of the VIKIK organization. The URL and publishable key remain placeholders, so live report submission is intentionally disabled.
-- Final Alpha 0.33 host, Deno and PS3 package CI: pending.
+- GitHub Actions run #865: **PASS** — Host-side tests, support Edge Function Deno type-check, and PS3 ELF/SELF/standard PKG/GNPDRM PKG build and package validation all passed.
+- Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/45721932380
+- Artifact: `PS3-SCALE-Alpha-0.33-build-with-embedded-theme` (25,365,212 bytes).
+- ELF: 3,589,154 bytes — SHA-256 `2c5a1609bad87d9f40f381760227f497e4d43b3e18ca7cf74b7a5aaeee3fad56`.
+- SELF: 791,552 bytes — SHA-256 `c53f091170905dd13dbac1014c46f8a3d4ee0c89ef2524023bd9cbd7e4ebf320`.
+- Standard PKG: 11,723,616 bytes — SHA-256 `187ae63837a4fdb49d8b3a01ae6c1c77859c8cf96904ed0333f6dea41f595469`.
+- GNPDRM PKG: 11,723,616 bytes — SHA-256 `5cbd6d9ec6f2243a5d81b8273bbb6c3319453e5ec346115c80ca78e2d3f03916`.
+- Artifact ZIP SHA-256: `045ca215ed5a8935a2a2ac8028a45c63ee6d126f6d72553ceac95549ce5f3593`.
 - Physical PS3 validation of offline queue recovery and online submission remains pending.
 
 ## Alpha 0.32 — atomic persistence and download hardening
