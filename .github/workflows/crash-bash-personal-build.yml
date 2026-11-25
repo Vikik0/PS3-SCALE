@@ -8,7 +8,7 @@ on:
       runtime_run_id:
         description: "Successful PS3 RetroArch-stage workflow run ID"
         required: true
-        default: "45256122232"
+        default: "45504202354"
         type: string
 
 permissions:
@@ -35,7 +35,7 @@ jobs:
       - name: Validate and mask the private download URL
         shell: bash
         env:
-          DISC_ARCHIVE_URL: ${{ secrets.CRASH_BASH_DISC_URL }}
+          DISC_ARCHIVE_URL: ${{ secrets.CRASH_BASH_DISC_ARCHIVE_URL }}
         run: |
           set -euo pipefail
           test -n "$DISC_ARCHIVE_URL"
@@ -70,7 +70,7 @@ jobs:
       - name: Download and validate the private BIN/CUE archive
         shell: bash
         env:
-          DISC_ARCHIVE_URL: ${{ secrets.CRASH_BASH_DISC_URL }}
+          DISC_ARCHIVE_URL: ${{ secrets.CRASH_BASH_DISC_ARCHIVE_URL }}
         run: |
           set -euo pipefail
           echo "::add-mask::$DISC_ARCHIVE_URL"
