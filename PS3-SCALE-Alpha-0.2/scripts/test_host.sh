@@ -49,6 +49,13 @@ cc -std=c99 -D_XOPEN_SOURCE=700 -DPS3SCALE_HOST_TEST=1 -Wall -Wextra -Werror \
   -o "$OUT/test_ps2_config_store"
 "$OUT/test_ps2_config_store"
 
+cc -std=c99 -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror \
+  -I"$ROOT/include" \
+  "$ROOT/source/core/atomic_file.c" \
+  "$ROOT/tests/test_atomic_file.c" \
+  -o "$OUT/test_atomic_file"
+"$OUT/test_atomic_file"
+
 cc -std=c99 -Wall -Wextra -Werror \
   -I"$ROOT/include" \
   "$ROOT/source/core/locale.c" \
