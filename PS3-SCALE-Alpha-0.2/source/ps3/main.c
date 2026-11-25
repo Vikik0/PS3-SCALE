@@ -5886,7 +5886,9 @@ static void draw_help(void)
         "Save NCL / TXT data.",
         "Launch when ready."
     };
-    static const char *actions[2] = { "Report an Issue", "Send Feedback" };
+    static const char *actions[3] = {
+        "Report an Issue", "Send Feedback", "Retry Pending"
+    };
     int i;
 
     draw_page_header("Help & Support", "A quick guide to the main PS3 SCALE features");
@@ -5924,13 +5926,16 @@ static void draw_help(void)
     draw_text(38.0f, 346.0f, 0x29243fff, "Support & Contact");
     set_ui_font_size(7, 11);
     draw_text(38.0f, 376.0f, 0x514b69ff, "support@ps3scale.app");
-    draw_soft_button(252.0f, 362.0f, 220.0f, 42.0f,
-                     actions[1], g_help_selected == 1);
-    draw_soft_button(486.0f, 362.0f, 220.0f, 42.0f,
+    draw_soft_button(242.0f, 362.0f, 168.0f, 42.0f,
                      actions[0], g_help_selected == 0);
+    draw_soft_button(420.0f, 362.0f, 168.0f, 42.0f,
+                     actions[1], g_help_selected == 1);
+    draw_soft_button(598.0f, 362.0f, 168.0f, 42.0f,
+                     actions[2], g_help_selected == 2);
     set_ui_font_size(6, 9);
-    draw_text(38.0f, 414.0f, 0x77718fff,
-              "Community files are saved as data only; they are never auto-executed.");
+    draw_text(38.0f, 414.0f,
+              g_support_send_success ? 0x2c9f8eff : 0x77718fff,
+              g_support_status);
     set_ui_font_size(7, 11);
     draw_text(24.0f, PS3SCALE_UI_FOOTER_SINGLE_Y, 0x77718fff,
               "UP / DOWN: CHOOSE SUPPORT ACTION   |   CROSS: OPEN   |   CIRCLE: BACK");
@@ -6921,20 +6926,27 @@ int main(int argc, char *argv[])
             if (circle && !old_circle)
                 g_exit_requested = 1;
         } else if (g_screen == SCREEN_HELP) {
-            if (up && !old_up) g_help_selected = 0;
-            if (down && !old_down) g_help_selected = 1;
+            if (up && !old_up)
+                g_help_selected = (g_help_selected + 2) % 3;
+            if (down && !old_down)
+                g_help_selected = (g_help_selected + 1) % 3;
             if (cross && !old_cross) {
-                g_support_is_feedback = (g_help_selected == 1);
-                g_support_selected = 0;
-                g_support_title[0] = '\0';
-                g_support_details[0] = '\0';
-                g_support_request_id[0] = '\0';
-                g_support_sending_request_id[0] = '\0';
-                g_support_report_saved = 0;
-                g_support_send_success = 0;
-                snprintf(g_support_status, sizeof(g_support_status),
-                         "ENTER TITLE + DETAILS.");
-                g_screen = SCREEN_SUPPORT_FORM;
+                if (g_help_selected == 2) {
+                    (void)retry_pending_support_report();
+                } else {
+                    g_support_is_feedback = (g_help_selected == 1);
+                    g_support_selected = 0;
+                    g_support_title[0] = '\0';
+                    g_support_details[0] = '\0';
+                    g_support_request_id[0] = '\0';
+                    g_support_pending_path[0] = '\0';
+                    g_support_report_saved = 0;
+                    g_support_send_success = 0;
+                    g_support_json_ready = 0;
+                    snprintf(g_support_status, sizeof(g_support_status),
+                             "ENTER TITLE + DETAILS.");
+                    g_screen = SCREEN_SUPPORT_FORM;
+                }
             }
             if (circle && !old_circle)
                 g_screen = SCREEN_HOME;
