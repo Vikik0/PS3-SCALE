@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "phase": 102,
+  "title": "Guard main against concurrent session recovery monitor",
+  "ci_run": 1586,
+  "ci_run_id": 45722748409,
+  "ci": "7/7 PASS",
+  "python_tests": "539/539",
+  "event_lock_c_tests": "21/21",
+  "gsc_wrapper_parser_c_tests": "10/10",
+  "gsc_wrapper_loader_c_tests": "12/12",
+  "source_sha256": "4935a5e09c166246364cd36e7108d325ded57c41aa6f1668ff797bcae34b9ce2",
+  "gscbin_sha256": "25a22968eefc3e6b4dba6a9b5c8aa435f42cf2423577dd935e81e5a702dc2e6f",
+  "gscbin_bytes": 4010,
+  "capture_kit": {
+    "files": "57/57",
+    "bytes": 537728,
+    "sha256": "d8c1cf5831beae8532976732c09c1620d0ab30680402d77b0a09d8421b838f3f",
+    "artifact_id": 15073380575
+  },
+  "runtime_boundary": {
+    "native_second_local_client_proven": false,
+    "reconnect_observed_on_ps3": false,
+    "original_shared_interactions_ready": "0/4",
+    "original_mission_gsc_modified": false,
+    "fastfile_rebuilt_or_injected": false,
+    "physical_ps3_campaign_runtime_tested": false
+  }
+}

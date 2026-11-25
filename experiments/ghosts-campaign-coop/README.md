@@ -362,3 +362,11 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - CI [#1583](https://github.com/Vikik0/PS3-SCALE/actions/runs/45722241399): **7/7 successful**, **538 Python tests**, **21/21 Event Lock C tests**, **10/10 parser C tests**, **12/12 loader C tests**. Capture kit: 57/57 files, 537,563 bytes; artifact `15072508057`.
 
 **Runtime gate remains:** reconnect behavior has not been observed on the target PS3. The second native Campaign Local Client and the original four shared interactions remain unproven (**0/4 ready**).
+
+
+### Phase 102 — prevent competing main/recovery monitor loops
+
+- `main()` now returns without clearing aliases or starting another bind loop when the guarded recovery monitor is already active and not stopping.
+- CI [#1586](https://github.com/Vikik0/PS3-SCALE/actions/runs/45722748409): **7/7 successful**, **539 Python tests**, **21/21 Event Lock C tests**, **10/10 parser tests**, **12/12 loader tests**. Capture kit: 57/57 files, 537,728 bytes; artifact `15073380575`.
+
+**Runtime gate unchanged:** the second native Campaign Local Client and reconnect behavior remain unproven on the target PS3; the four original shared interactions remain **0/4 ready**.
