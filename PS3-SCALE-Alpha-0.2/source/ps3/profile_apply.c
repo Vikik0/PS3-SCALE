@@ -1,3 +1,7 @@
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700
+#endif
+
 #include "ps3scale/profile_apply.h"
 
 #include <ctype.h>
