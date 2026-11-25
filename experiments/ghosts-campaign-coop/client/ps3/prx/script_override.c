@@ -114,5 +114,5 @@ uint64_t ghc_script_override_stack_address(void)
 uint64_t ghc_script_override_bytecode_address(void)
 {
     return (g_status == GHC_SCRIPT_OVERRIDE_READY)
-        ? (uint64_t)(uintptr_t)&g_gscbin[GHC_GSC_WRAPPER_HEADER + g_comp_len] : 0u;
+        ? (uint64_t)(uintptr_t)&g_gscbin[GHC_SCRIPT_OVERRIDE_GSC_HEADER_SIZE + g_comp_len] : 0u;
 }
