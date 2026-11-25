@@ -1134,6 +1134,7 @@ test("host can roll back the room lock when RetroArch fails to launch", async ()
 });
 
 
+// Regression coverage: an expired launch reservation must never unlock active Netplay.
 test("a host can only cancel the launch lock inside the recovery window", async () => {
   const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
