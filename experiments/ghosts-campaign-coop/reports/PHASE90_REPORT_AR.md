@@ -54,3 +54,14 @@
 
 ## حدود المرحلة
 هذه خريطة static dependency/call-site. لم تتغير ملفات GSC الأصلية، ولم يُبنَ أو يُحقن FastFile، ولا يوجد ادعاء باختبار PS3 فعلي.
+
+## نتائج البناء والتحقق
+
+- GitHub Actions run [#1554](https://github.com/Vikik0/PS3-SCALE/actions/runs/45593854111): **7/7 jobs successful**.
+- **513 اختباراً** ناجحاً.
+- تم بناء حزمة Capture Kit والتحقق منها آلياً.
+- Artifact ID: `15011738053`.
+- الحزمة الداخلية: **534,872 bytes**.
+- التحقق: **57/57 ملفاً**؛ ملفا GSC manifests، تقرير activator audit وخريطة refactor graph.
+- SHA-256 للحزمة الداخلية: `d854b621df9e4ae12a1e96cc3c46bce78928ae4c6d7c7c1eceed67f06b3857af`.
+- رابط الـartifact: https://github.com/Vikik0/PS3-SCALE/actions/runs/45593854111/artifacts/15011738053
