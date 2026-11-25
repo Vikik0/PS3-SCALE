@@ -119,6 +119,29 @@ def _validate_event_activator_audit(root: Path) -> list[str]:
 
 
 
+
+def _validate_event_refactor_graph(root: Path) -> list[str]:
+    report_path = root / "Reports" / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json"
+    tool_path = root / "Tools" / "mission_event_activator_audit.py"
+    if not report_path.exists() and not tool_path.exists():
+        return []
+    if not report_path.is_file() or not tool_path.is_file():
+        return ["mission event refactor graph and validator must both be present"]
+
+    try:
+        data = json.loads(report_path.read_text(encoding="utf-8"))
+        spec = importlib.util.spec_from_file_location("ghosts_event_refactor_graph", tool_path)
+        if spec is None or spec.loader is None:
+            return ["unable to load mission event refactor graph validator"]
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        errors = module.validate_dependency_graph(data)
+    except (OSError, json.JSONDecodeError, AttributeError, TypeError, ValueError) as exc:
+        return [f"mission event refactor graph validation failed to run: {exc}"]
+    return [f"mission event refactor graph: {error}" for error in errors]
+
+
+
 def validate_package(root: Path) -> tuple[list[str], dict]:
     root = Path(root).resolve()
     manifest_path = root / "MANIFEST.json"
@@ -179,6 +202,7 @@ def validate_package(root: Path) -> tuple[list[str], dict]:
         errors.extend(_validate_gsc_manifest(root, name))
     errors.extend(_validate_event_lock_map(root))
     errors.extend(_validate_event_activator_audit(root))
+    errors.extend(_validate_event_refactor_graph(root))
 
     summary = {
         "package": manifest.get("package"),
@@ -187,6 +211,8 @@ def validate_package(root: Path) -> tuple[list[str], dict]:
         "files_verified": verified,
         "gsc_manifests_verified": 2,
         "event_activator_audit_verified": (root / "Reports" / "PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json").is_file()
+        and (root / "Tools" / "mission_event_activator_audit.py").is_file(),
+        "event_refactor_graph_verified": (root / "Reports" / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json").is_file()
         and (root / "Tools" / "mission_event_activator_audit.py").is_file(),
     }
     return errors, summary
