@@ -62,6 +62,14 @@ def write_package(root: Path):
         source_root / "reports" / "PHASE88_MISSION_EVENT_LOCK_MAP.json",
         root / "Reports" / "PHASE88_MISSION_EVENT_LOCK_MAP.json",
     )
+    shutil.copy2(
+        source_root / "tools" / "mission_event_activator_audit.py",
+        root / "Tools" / "mission_event_activator_audit.py",
+    )
+    shutil.copy2(
+        source_root / "reports" / "PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json",
+        root / "Reports" / "PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json",
+    )
 
     files = {}
     for path in sorted(p for p in root.rglob("*") if p.is_file() and p.name != "MANIFEST.json"):
@@ -87,6 +95,7 @@ class CaptureKitVerifierTests(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertEqual(summary["files_declared"], summary["files_verified"])
         self.assertEqual(summary["gsc_manifests_verified"], 2)
+        self.assertTrue(summary["event_activator_audit_verified"])
 
     def test_invalid_mission_event_map_is_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -98,6 +107,20 @@ class CaptureKitVerifierTests(unittest.TestCase):
             map_path.write_text(json.dumps(event_map), encoding="utf-8")
             errors, _ = validate_package(root)
         self.assertTrue(any("mission event map: event_lock_id 0 reused" in error for error in errors))
+
+    def test_invalid_mission_event_activator_audit_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write_package(root)
+            report_path = root / "Reports" / "PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json"
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            report["shared_interactions"][0]["safe_to_wire_event_lock"] = True
+            report_path.write_text(json.dumps(report), encoding="utf-8")
+            errors, _ = validate_package(root)
+        self.assertTrue(any(
+            "mission event activator audit: all four current interactions must not claim an unsafe interaction is ready to wire" in error
+            for error in errors
+        ))
 
     def test_modified_file_is_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
