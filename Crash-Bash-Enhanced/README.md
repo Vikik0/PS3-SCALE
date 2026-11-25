@@ -59,7 +59,7 @@ The native Tiny3D lobby is the XMB entry point and is packaged together with Ret
 
 When using the integrated flow, players do not need to open **Netplay Host List** manually. The lobby API coordinates rooms and discovers the relay; RetroArch Netplay carries and synchronizes the game session. **OPEN CRASH BASH ONLINE** opens the embedded RetroArch menu for local play or manual Netplay.
 
-The v0.8.6 lobby API permits same-disc confirmation retries after a match starts while keeping disc changes locked. The package is configured to allow up to three remote clients (four participants including the host). This is a configured maximum, **not a claim that four-player performance has already passed hardware testing**. Start with a two-player LAN test; four-player and internet tests are still release gates.
+The v0.8.7 lobby API permits same-disc confirmation retries after a match starts while keeping disc changes locked. Host launch rollback is limited to a 30-second recovery window. The package is configured to allow up to three remote clients (four participants including the host). This is a configured maximum, **not a claim that four-player performance has already passed hardware testing**. Start with a two-player LAN test; four-player and internet tests are still release gates.
 
 Lockstep is enabled because the pinned PCSX-ReARMed core reports a `0x440000`-byte savestate. Lockstep keeps one shared state instead of a rollback state for every buffered frame. This reduces memory use, but every frame waits for player input, so network latency can appear as input delay or brief stalls.
 
