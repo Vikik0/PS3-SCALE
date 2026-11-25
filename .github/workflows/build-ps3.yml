@@ -73,7 +73,7 @@ jobs:
       - name: Type-check support Edge Function and resolve pinned dependencies
         run: |
           set -eu
-          deno check --lock=supabase/functions/ps3scale-support/deno.lock --lock-write supabase/functions/ps3scale-support/index.ts
+          deno check --lock=supabase/functions/ps3scale-support/deno.lock supabase/functions/ps3scale-support/index.ts
           test -s supabase/functions/ps3scale-support/deno.lock
 
       - name: Upload resolved Deno dependency lock
