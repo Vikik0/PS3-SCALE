@@ -699,7 +699,7 @@ repo_root = source_path.parents[3]
 support_function = (repo_root / "supabase/functions/ps3scale-support/index.ts").read_text(encoding="utf-8")
 support_sql = (repo_root / "supabase/migrations/202611100001_ps3scale_support.sql").read_text(encoding="utf-8")
 support_config = (repo_root / "supabase/config.toml").read_text(encoding="utf-8")
-assert "SUPABASE_SERVICE_ROLE_KEY" in support_function
+assert "SUPABASE_SECRET_KEYS" in support_function
 assert "PS3SCALE_GITHUB_TOKEN" in support_function
 assert "SUPABASE_SERVICE_ROLE_KEY" not in src
 assert "PS3SCALE_GITHUB_TOKEN" not in src
