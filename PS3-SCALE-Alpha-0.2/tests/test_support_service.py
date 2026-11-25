@@ -48,7 +48,8 @@ assert "invalid_report_kind" in edge
 assert "valid_request_id_required" in edge
 assert "request_id" in edge
 assert "title_and_details_required" in edge
-assert "rateLimitSalt.length < 32" in edge
+assert "hmacSha256Hex(serviceRoleKey, clientIp)" in edge
+assert '{ name: "HMAC", hash: "SHA-256" }' in edge
 assert 'request.headers.get("cf-connecting-ip")' in edge
 assert '.rpc(' in edge and '"consume_ps3scale_support_rate_limit"' in edge
 assert "{ p_ip_hash: ipHash, p_limit: 8 }" in edge
@@ -80,7 +81,7 @@ assert "supabase/.temp/" in gitignore
 assert "new Supabase project" in readme
 assert "isolated from every other Supabase project" in readme
 assert "Do not reuse" in readme
-assert "PS3SCALE_SUPPORT_RATE_LIMIT_SALT" in readme
+assert "HMAC-SHA-256" in readme
 assert "PS3SCALE_GITHUB_TOKEN" in readme
 assert "If no token is configured" in readme
 print("PS3 SCALE support service security contract: PASS")
