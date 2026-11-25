@@ -6,6 +6,7 @@
 
 #include <sys/time.h>
 #include <time.h>
+#include <errno.h>
 #include <curl/curl.h>
 #include <net/net.h>
 #include <net/netctl.h>
