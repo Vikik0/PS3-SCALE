@@ -77,8 +77,9 @@ assert "supabase/functions/.env" in gitignore
 assert "supabase/.temp/" in gitignore
 
 # Deployment is explicitly isolated and the GitHub token remains optional.
-assert "NEW Supabase project" in readme
-assert "Do not link this folder to any existing" in readme
+assert "new Supabase project" in readme
+assert "isolated from every other Supabase project" in readme
+assert "Do not reuse" in readme
 assert "PS3SCALE_SUPPORT_RATE_LIMIT_SALT" in readme
 assert "PS3SCALE_GITHUB_TOKEN" in readme
 assert "If no token is configured" in readme
