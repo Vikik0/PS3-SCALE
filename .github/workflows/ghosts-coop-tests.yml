@@ -244,6 +244,11 @@ jobs:
         run: |
           cc -std=c11 -O2 -Wall -Wextra -Werror -Itests/fixtures/ps3_sdk client/ps3/prx/script_override.c client/ps3/prx/script_override_format.c tests/script_override_loader_test.c -o /tmp/gsc-wrapper-loader-test
           /tmp/gsc-wrapper-loader-test
+      - name: Build and run Campaign session-monitor state model tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror tests/campaign_session_monitor_model.c tests/campaign_session_monitor_model_test.c -o /tmp/campaign-session-monitor-test
+          /tmp/campaign-session-monitor-test
       - name: Build and run the host-only Ghosts runtime contract simulator
         working-directory: experiments/ghosts-campaign-coop
         run: |
