@@ -225,6 +225,7 @@ assert "PS3 SLIM (CECH-25xx)" not in home
 assert "SCREEN_HELP" in src and "SCREEN_SUPPORT_FORM" in src
 help_ui = section("static void draw_help(void)", "static void draw_about(void)")
 assert "Report an Issue" in help_ui and "Send Feedback" in help_ui
+assert "Retry Pending" in help_ui
 assert "A quick guide to the main PS3 SCALE features" in help_ui
 assert "PS3SCALE_SUPPORT_OUTBOX_DIR" in src
 assert "SAVED LOCALLY; SENDING IF ONLINE." in src
@@ -905,7 +906,10 @@ assert "g_search_backup[PS3SCALE_SUPPORT_DETAILS_MAX + 1]" in src
 assert "PS3SCALE_SUPPORT_DETAILS_MAX" in section(
     "static void keyboard_append", "static void keyboard_backspace")
 assert "copy_text_tail_preview" in src
-assert "REQUEST ID: %s" in src
+assert '"%s/%s.json"' in src
+assert "retry_pending_support_report" in src
+assert "PENDING REPORT SENT ONLINE." in src
+assert "g_support_sending_path" in src
 assert '"APP VERSION: %s\\n"' in src
 assert "generate_support_request_id();" in src
 about_ui = section("static void draw_about(void)",
