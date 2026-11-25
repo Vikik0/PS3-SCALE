@@ -37,6 +37,7 @@ Do not change the core version, CUE/BIN content, region, BIOS file (or HLE choic
 13. For a controlled fault test, temporarily rename `USRDIR/retroarch` on one test console and confirm the lobby reports the missing embedded runtime rather than crashing; restore the folder after the test.
 14. After the host starts, return the client to the room screen and confirm it shows **MATCH STARTED**, not the pre-match READY prompt. Press START, choose the same CUE and retry the automatic join flow.
 15. Press CIRCLE during relay discovery to return to the room; verify the client can reopen the CUE picker without changing the already-started room lock.
+16. On a controlled host test, force RetroArch spawn to fail immediately and confirm the host can roll back the room lock within 30 seconds. Repeat after the 30-second window and confirm the started room stays locked; leave it and create a new room instead.
 
 Pass criteria: both players see the same room membership and Ready state; only the host can lock the room for launch; late joins are rejected; the client resolves the exact host entry, receives the relay endpoint only through its authenticated room token, and automatically joins. Started seats remain reserved for the match window. The missing-package path is handled cleanly. The Vercel companion does not carry game frames; actual synchronization is provided by RetroArch Netplay.
 
