@@ -115,6 +115,16 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertIn("ghc_campaign_drill_abort_slot( 1 )", body)
         self.assertIn("return 0", body)
 
+    def test_main_does_not_race_an_active_recovery_monitor(self):
+        body = function_body(self.source, "main")
+        monitor_guard = body.index("level.ghc_campaign_session_monitor_active")
+        clear_primary = body.index("level.ghc_campaign_player_0 = undefined")
+        retry_loop = body.index("for ( var_0 = 0; var_0 < 200; var_0++ )")
+        self.assertLess(monitor_guard, clear_primary)
+        self.assertLess(monitor_guard, retry_loop)
+        self.assertIn("level.ghc_campaign_session_monitor_stop", body)
+        self.assertIn("return 1", body[:clear_primary])
+
     def test_startup_retries_identity_binding_until_native_flags_are_ready(self):
         body = function_body(self.source, "main")
         self.assertIn("var_0 < 200", body)

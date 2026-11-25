@@ -13,6 +13,16 @@
 main()
 {
     /*
+     * If the guarded watcher is already active, it owns recovery/rebinding.
+     * Do not start a competing bounded bind loop or clear its live aliases.
+     */
+    if ( isdefined( level.ghc_campaign_session_monitor_active )
+        && level.ghc_campaign_session_monitor_active
+        && ( !isdefined( level.ghc_campaign_session_monitor_stop )
+            || !level.ghc_campaign_session_monitor_stop ) )
+        return 1;
+
+    /*
      * Idempotent only while the exact same native primary/secondary pair
      * is still alive. If a controller disconnects or the native pair is
      * replaced, fall through to cleanup and a bounded rebind.
