@@ -138,6 +138,19 @@ jobs:
           grep -q 'getweaponammoclip' decompiled/iw6/clockwork_stage56_toolchain.gsc
           gsc-tool --mode comp --game iw6 --system ps3 decompiled/iw6/clockwork_stage56_toolchain.gsc
           test -s compiled/iw6/clockwork_stage56_toolchain.gscbin
+      - name: Compile and round-trip standalone player-aware trigger adapter fixture
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cd tests/fixtures
+          gsc-tool --mode comp --game iw6 --system ps3 ghc_campaign_trigger_adapter.gsc
+          test -s compiled/iw6/ghc_campaign_trigger_adapter.gscbin
+          cp compiled/iw6/ghc_campaign_trigger_adapter.gscbin /tmp/ghosts-trigger-adapter-original.gscbin
+          gsc-tool --mode decomp --game iw6 --system ps3 compiled/iw6/ghc_campaign_trigger_adapter.gscbin
+          test -s decompiled/iw6/ghc_campaign_trigger_adapter.gsc
+          grep -q 'ghc_campaign_event_lock_acquire' decompiled/iw6/ghc_campaign_trigger_adapter.gsc
+          grep -q 'ghc_campaign_native_pair_is_current' decompiled/iw6/ghc_campaign_trigger_adapter.gsc
+          gsc-tool --mode comp --game iw6 --system ps3 decompiled/iw6/ghc_campaign_trigger_adapter.gsc
+          cmp /tmp/ghosts-trigger-adapter-original.gscbin compiled/iw6/ghc_campaign_trigger_adapter.gscbin
       - uses: actions/upload-artifact@v6
         with:
           name: ghosts-campaign-gsc-registry
