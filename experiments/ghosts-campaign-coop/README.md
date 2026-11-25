@@ -378,3 +378,12 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - CI [#1588](https://github.com/Vikik0/PS3-SCALE/actions/runs/45723183499): **7/7 successful**, **542 Python tests**, **21/21 Event Lock C**, **10/10 parser C**, **12/12 loader C**, **14/14 session-monitor C**. Capture kit: 57/57 files, 537,726 bytes; artifact `15072319880`.
 
 **Runtime gate remains:** this is a host state-machine model. It does not prove a second native Campaign Local Client or real reconnect on PS3.
+
+
+### Phase 104 — native Campaign player-pair capture validator
+
+- Added a JSON validator and template for measured Campaign observations. It checks exactly two distinct native player entities, local-client indices 0/1, controller ports 0/1, primary/secondary roles, gentity/gclient/player-state pointers, Camera/HUD ownership, Campaign aliases, five stable samples and an optional disconnect/rebind cycle.
+- The tool explicitly reports `evidence_authenticity: NOT_AUTHENTICATED_BY_THIS_TOOL`; it validates supplied structure and cannot authenticate that observations came from a real PS3.
+- CI [#1592](https://github.com/Vikik0/PS3-SCALE/actions/runs/45723923286): **7/7 successful**, **558 Python tests**, **21/21 Event Lock C**, **10/10 parser C**, **12/12 loader C**, **14/14 session-monitor C**. Capture kit: 57/57 files, 537,725 bytes; artifact `15072824482`.
+
+**Runtime gate unchanged:** no real Campaign player-pair capture has been received. The second native Local Client and all four original shared interactions remain unproven (**0/4 ready**).

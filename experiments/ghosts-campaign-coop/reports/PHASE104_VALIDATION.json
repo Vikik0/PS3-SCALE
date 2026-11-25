@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "phase": 104,
+  "title": "Native Campaign player-pair capture validator",
+  "ci_run": 1592,
+  "ci_run_id": 45723923286,
+  "ci": "7/7 PASS",
+  "python_tests": "558/558",
+  "event_lock_c_tests": "21/21",
+  "gsc_wrapper_parser_c_tests": "10/10",
+  "gsc_wrapper_loader_c_tests": "12/12",
+  "session_monitor_c_tests": "14/14",
+  "validator_tests": 16,
+  "validator_output_status": "PASS_STRUCTURAL_CAPTURE_VALIDATION",
+  "evidence_authenticity": "NOT_AUTHENTICATED_BY_THIS_TOOL",
+  "capture_kit": {
+    "files": "57/57",
+    "bytes": 537725,
+    "sha256": "7bf6595fdb0780bc442b130c403c7c3d7404659f14f11419b7246ad4bac1b02e",
+    "artifact_id": 15072824482
+  },
+  "runtime_boundary": {
+    "real_campaign_player_pair_capture_received": false,
+    "native_second_local_client_proven": false,
+    "reconnect_observed_on_ps3": false,
+    "original_shared_interactions_ready": "0/4",
+    "original_mission_gsc_modified": false,
+    "fastfile_rebuilt_or_injected": false,
+    "physical_ps3_campaign_runtime_tested": false
+  }
+}
