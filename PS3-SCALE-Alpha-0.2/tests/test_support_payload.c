@@ -9,6 +9,8 @@
 int main(void)
 {
     char json[8192];
+    assert(ps3scale_support_request_id_valid(VALID_ID) == 1);
+    assert(ps3scale_support_request_id_valid("not-a-uuid") == 0);
     char title[PS3SCALE_SUPPORT_TITLE_MAX + 2];
     char details[PS3SCALE_SUPPORT_DETAILS_MAX + 2];
     const char *expected =
