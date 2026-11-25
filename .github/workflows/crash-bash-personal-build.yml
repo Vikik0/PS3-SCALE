@@ -8,7 +8,7 @@ on:
       runtime_run_id:
         description: "Successful PS3 RetroArch-stage workflow run ID with an unexpired runtime artifact"
         required: true
-        default: "45716916236"
+        default: "45722810844"
         type: string
 
 permissions:
