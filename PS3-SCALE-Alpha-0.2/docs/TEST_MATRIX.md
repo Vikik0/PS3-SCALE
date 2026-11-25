@@ -1,4 +1,4 @@
-# Device test matrix — Alpha 0.31
+# Device test matrix — Alpha 0.32
 
 Primary device (user-reported):
 - Family: PS3 Slim
@@ -122,3 +122,23 @@ CI build and host tests are necessary but not sufficient. Actual RSX appearance,
 5. Change the expected size; confirm verification fails before install.
 6. Confirm the download worker deletes a hash-mismatched temporary NCL and does not create the Artemis destination file.
 7. Confirm the index builder exports the SHA from each GitHub tree blob entry.
+
+
+## Atomic persistence and download failure safety — Alpha 0.32
+
+Host CI verifies:
+1. Settings/favorites are replaced through a unique same-directory temporary file, fsync and atomic rename.
+2. A destination symlink is replaced as a link; its target file remains unchanged.
+3. Empty favorites data is saved as a valid zero-byte file.
+4. Invalid destinations fail without leaving temporary files behind.
+5. Profile script installation refuses an existing temporary symlink or regular file and preserves it byte-for-byte.
+6. A foreign webMAN script reached through a symlink is not overwritten or deleted.
+7. HTTPS download temporary files use unique PID/time/sequence names and O_EXCL.
+8. Failed catalog, community NCL and PS2 CONFIG downloads do not unlink pre-existing destination files.
+9. A downloaded file is removed only when the current worker created it and later validation fails.
+
+Physical PS3 checks still required:
+- Change music, volume, language, animation and enhancement-storage settings; exit and relaunch; verify every value persists.
+- Add/remove favorites, exit and relaunch; verify the list is intact.
+- Interrupt a network refresh, retry it, and confirm the previous valid cache remains usable.
+- Repeat a PS2 CONFIG backup/restore and one verified NCL install on the target console.
