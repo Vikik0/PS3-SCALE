@@ -124,9 +124,26 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
             body.index("if ( ghc_campaign_bind_native_local_pair() )"),
             body.index("wait 0.05"),
         )
-        self.assertIn("level.playerpiggyback = undefined", body)
-        self.assertIn("if ( ghc_campaign_bind_native_local_pair() )", body)
+        self.assertNotIn("level.playerpiggyback = undefined", body)
+        self.assertIn("level.ghc_campaign_session_status = 2", body)
+        self.assertIn("if ( !isdefined( var_1 ) )", body)
+        self.assertIn("level.playerpiggyback = var_1", body)
         self.assertIn("return 0", body)
+
+    def test_startup_preserves_original_player_array_and_never_binds_against_a_stale_snapshot(self):
+        body = function_body(self.source, "main")
+        self.assertNotIn("level.playerpiggyback = undefined", body)
+        final_refresh = body.rindex('getentarray( "player", "classname" )')
+        missing_guard = body.index("if ( !isdefined( var_1 ) )", final_refresh)
+        final_bind = body.index("if ( ghc_campaign_bind_native_local_pair() )", final_refresh)
+        self.assertLess(final_refresh, missing_guard)
+        self.assertLess(missing_guard, final_bind)
+        self.assertIn("level.ghc_campaign_session_status = 2", body[missing_guard:final_bind])
+        self.assertIn("return 0", body[missing_guard:final_bind])
+        self.assertLess(
+            body.index("level.playerpiggyback = var_1", final_refresh),
+            final_bind,
+        )
 
     def test_campaign_aliases_are_bound_only_after_exact_native_pair_validation(self):
         body = function_body(self.source, "ghc_campaign_bind_native_local_pair")

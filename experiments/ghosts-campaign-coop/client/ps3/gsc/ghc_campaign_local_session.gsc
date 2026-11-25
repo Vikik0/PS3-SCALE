@@ -53,7 +53,6 @@ main()
     level.ghc_campaign_session_status = 0;
     level.ghc_campaign_player_0 = undefined;
     level.ghc_campaign_player_1 = undefined;
-    level.playerpiggyback = undefined;
 
     /*
      * The second native entity can appear before its split-screen identity
@@ -80,8 +79,18 @@ main()
     }
 
     var_1 = getentarray( "player", "classname" );
-    if ( isdefined( var_1 ) )
-        level.playerpiggyback = var_1;
+    if ( !isdefined( var_1 ) )
+    {
+        /*
+         * Keep the last engine-owned player array available to original
+         * Campaign scripts, but never bind against it when the fresh query
+         * says no live player array exists.
+         */
+        level.ghc_campaign_session_status = 2;
+        return 0;
+    }
+
+    level.playerpiggyback = var_1;
 
     if ( ghc_campaign_bind_native_local_pair() )
     {
