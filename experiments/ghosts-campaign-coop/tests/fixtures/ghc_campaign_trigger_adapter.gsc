@@ -64,3 +64,39 @@ ghc_campaign_abort_owned_trigger( player )
 
     return ghc_campaign_event_lock_abort_player( player );
 }
+
+
+/*
+ * Local signatures used only so GSC Tool can compile this isolated fixture.
+ * The retail bridge owns the real implementations; these stubs are never
+ * copied into a PS3 payload or loaded beside the real bridge.
+ */
+ghc_campaign_native_pair_is_current()
+{
+    return 1;
+}
+
+ghc_campaign_invalidate_local_session()
+{
+    return 0;
+}
+
+ghc_campaign_event_lock_player_slot( player )
+{
+    return 0;
+}
+
+ghc_campaign_event_lock_acquire( player, event_id )
+{
+    return 1;
+}
+
+ghc_campaign_event_lock_release( player, event_id, completed )
+{
+    return 1;
+}
+
+ghc_campaign_event_lock_abort_player( player )
+{
+    return 1;
+}
