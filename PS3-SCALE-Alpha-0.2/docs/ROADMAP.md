@@ -1,5 +1,18 @@
 # PS3 SCALE roadmap
 
+## Alpha 0.33 — support reporting reliability
+
+- [x] Extend report title/details to the backend's 100 / 2,000 character limits.
+- [x] Add bounded JSON serialization with escaping and UUIDv4 request IDs.
+- [x] Persist each report atomically as a separate JSON outbox file.
+- [x] Add pending-report recovery and a Help & Support retry action after app restart.
+- [x] Make support retries idempotent and protect the endpoint with atomic HMAC-based daily rate limiting.
+- [x] Pin the Edge Function SDK and commit the Deno dependency lock.
+- [x] Add Deno type-check, host payload tests and support security contract tests.
+- [ ] Create the isolated Supabase project in the user-confirmed organization, apply migration and deploy Edge Function.
+- [ ] Configure the project URL and publishable key, then build and test the live reporting path.
+- [ ] Validate offline/online retry behavior on physical PS3 hardware.
+
 ## Alpha 0.32 — persistence and download safety
 
 - [x] Atomic settings and favorites writes using unique exclusive temp files, fsync and same-directory rename.
