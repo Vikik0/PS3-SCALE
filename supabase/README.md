@@ -8,7 +8,7 @@ This backend is isolated from every other Supabase project. It must be deployed 
 - The outbox uses a stable UUID request ID. Retrying the same report cannot create a duplicate database row or GitHub issue.
 - The app sends only report kind, title, details, model, firmware, platform, app version and request ID.
 - The public Edge Function validates the payload, enforces a 12 KiB request limit and a maximum of 100 title characters / 2,000 detail characters.
-- A salted SHA-256 hash of the Cloudflare-provided client IP is used for an atomic limit of 8 reports per UTC day. Raw IP addresses are never stored.
+- An HMAC-SHA-256 hash of the Cloudflare-provided client IP, keyed with the server-side Supabase secret, is used for an atomic limit of 8 reports per UTC day. Raw IP addresses are never stored.
 - Reports and rate-limit state have RLS enabled. Public and authenticated clients have no table access; only the Edge Function's server-side service role can access them.
 - A GitHub Issue integration is optional. It is disabled unless a fine-grained GitHub token is deliberately configured as a server-side secret. By default, reports stay in the dedicated Supabase database.
 
@@ -31,15 +31,11 @@ The current Supabase CLI v3 defaults database commands to the local stack. Alway
    ```sh
    supabase db push --remote=<NEW_PROJECT_REF> --yes
    ```
-6. Generate a strong random salt of at least 32 characters and configure it as a server-side secret:
-   ```sh
-   supabase secrets set PS3SCALE_SUPPORT_RATE_LIMIT_SALT=<LONG_RANDOM_VALUE>
-   ```
-7. Deploy the public, rate-limited Edge Function (it validates its own payload and uses only server-side credentials):
+6. Deploy the public, rate-limited Edge Function (it validates its own payload and uses only server-side credentials):
    ```sh
    supabase functions deploy ps3scale-support --yes
    ```
-8. The function URL is:
+7. The function URL is:
    ```
    https://<NEW_PROJECT_REF>.supabase.co/functions/v1/ps3scale-support
    ```
