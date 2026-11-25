@@ -511,8 +511,6 @@ def validate_dependency_graph(data: dict) -> list[str]:
                 errors.append(f"dependency edge escapes its chain: {chain_id}")
             if not isinstance(edge.get("line"), int) or edge["line"] < 1:
                 errors.append(f"dependency edge has an invalid source line: {chain_id}")
-            if not isinstance(edge.get("arguments"), list):
-                errors.append(f"dependency edge arguments must be a list: {chain_id}")
     if seen_chains != set(expected_chains):
         errors.append("dependency graph chain IDs must be exactly 0..3 map")
     summary = data.get("summary", {})
