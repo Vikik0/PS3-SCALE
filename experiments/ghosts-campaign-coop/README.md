@@ -279,3 +279,16 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - Capture-kit artifact ID: `15011738053`; inner ZIP: **534,872 bytes**, **57/57 files verified**, both GSC manifests and both mission-event audit reports verified.
 - Inner ZIP SHA-256: `d854b621df9e4ae12a1e96cc3c46bce78928ae4c6d7c7c1eceed67f06b3857af`.
 - **Implementation remains gated:** native Local Client 1 is not proven; no original mission GSC was modified and no FastFile was rebuilt/injected.
+
+
+### Phase 91 — portable event-lock contract model
+
+- Added a host-only C model of the existing GSC event-lock API: 16 event IDs, two player slots, one owner per event, and one active event per player.
+- The model checks owner-only release, completion versus cancellation, abort on player/session loss, stale-pair cleanup, idempotent initialization, completed-state preservation and explicit event reset.
+- Added an invariant checker for owner/active-slot consistency, **21 C test cases**, and eight Python source-contract tests against the actual GSC bridge and Phase 88 event-ID map.
+- The C model is test-only and is **not linked into the PS3 PRX**. The original mission GSC files and FastFiles remain unchanged.
+- CI run [#1558](https://github.com/Vikik0/PS3-SCALE/actions/runs/45715817740): **7/7 jobs successful**, **522 Python tests passed**, **21/21 event-lock C cases passed**. GSC Tool compile/decompile, PS3 CEX bootstrap and both read-only controller probes passed.
+- Capture-kit artifact ID: `15069646947`; inner ZIP: **535,221 bytes**, **57/57 files verified**.
+- Inner ZIP SHA-256: `76ca5d4daa7eae63ea54ca08ef6543a451909d945362d7b4e4558f8052199499`.
+- Report: `reports/PHASE91_REPORT_AR.md`; contract: `docs/phase91-event-lock-contract.md`; JSON: `reports/PHASE91_EVENT_LOCK_MODEL.json`.
+- **Native gate unchanged:** 0/4 shared mission interactions are ready for wiring until the original trigger path supplies a validated activator and the exact TU 1.16 native second Local Client is proven. No original mission GSC was patched, no FastFile was rebuilt/injected, and no physical PS3 Campaign co-op is claimed.

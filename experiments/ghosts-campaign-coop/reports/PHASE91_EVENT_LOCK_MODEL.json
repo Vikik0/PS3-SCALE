@@ -1,0 +1,53 @@
+{
+  "phase": 91,
+  "title": "Campaign event-lock contract model",
+  "status": "HOST_MODEL_CI_VERIFIED_RUNTIME_NOT_VERIFIED",
+  "scope": {
+    "model": "host-only C model",
+    "linked_into_ps3_prx": false,
+    "original_mission_gsc_modified": false,
+    "fastfile_rebuilt_or_injected": false,
+    "physical_ps3_runtime_verified": false
+  },
+  "contract": {
+    "event_id_count": 16,
+    "player_slot_count": 2,
+    "rules": [
+      "one owner per event",
+      "one active event per player",
+      "different events may be owned concurrently by different players",
+      "owner-only release",
+      "cancel and abort release without completion",
+      "completed state persists through active-lock cleanup and idempotent init",
+      "explicit reset is required before a completed event can be acquired again",
+      "stale native pair fails closed and clears active locks"
+    ],
+    "stable_phase_88_event_ids": {
+      "Black Ice:event_player_turns_key": 0,
+      "Carrier:cut_the_rope": 1,
+      "Cornered:gun_down_trigger_internal": 2,
+      "Cornered:upload_virus_enter": 3
+    }
+  },
+  "verification": {
+    "c_model_cases": "21/21 PASS",
+    "python_tests": "522/522 PASS",
+    "github_actions_run": 1558,
+    "github_actions_run_id": 45715817740,
+    "github_actions_conclusion": "success",
+    "jobs": "7/7 PASS",
+    "gsc_tool_compile_decompile": "PASS",
+    "ps3_cex_bootstrap": "PASS",
+    "campaign_multiplayer_pad_probe": "PASS",
+    "dualshock_input_probe": "PASS",
+    "capture_kit_files_verified": "57/57",
+    "capture_kit_inner_zip_bytes": 535221,
+    "capture_kit_inner_zip_sha256": "76ca5d4daa7eae63ea54ca08ef6543a451909d945362d7b4e4558f8052199499",
+    "capture_kit_artifact_id": 15069646947
+  },
+  "remaining_gate": {
+    "player_aware_shared_interactions": "0/4 ready",
+    "native_second_local_client": "not proven",
+    "next_step": "prepare a separate player-aware trigger adapter, then wait for exact TU 1.16 native/runtime evidence before changing original mission handlers"
+  }
+}
