@@ -26,4 +26,9 @@ assert "ps3scale_online_download_limited_progress(" in main_source
 assert "&g_community_downloaded, &g_community_download_total" in main_source
 assert "&g_ps2_config_downloaded, &g_ps2_config_download_total" in main_source
 assert "return ps3scale_online_download_progress(url, destination, NULL, NULL);" in source
+assert '#include <fcntl.h>' in source
+assert 'open(temporary_path, O_WRONLY | O_CREAT | O_EXCL, 0600)' in source
+assert 'temporary_created = 1;' in source
+assert 'if (result != 0 && temporary_created)' in source
+assert 'unlink(temporary_path);\\n    file = fopen' not in source
 print("Online download progress contract: PASS")
