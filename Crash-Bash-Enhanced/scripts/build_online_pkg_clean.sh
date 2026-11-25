@@ -216,11 +216,10 @@ wget -qO "$USRDIR/info/pcsx_rearmed_libretro.info" \
     "https://raw.githubusercontent.com/libretro/libretro-super/$LIBRETRO_SUPER_COMMIT/dist/info/pcsx_rearmed_libretro.info"
 grep -q 'savestate_features = "deterministic"' "$USRDIR/info/pcsx_rearmed_libretro.info"
 
+# This build pins menu_driver=rgui. Ship only RGUI and shared font assets;
+# XMB, Ozone and wallpaper libraries are unused and add hundreds of MiB.
 cp -a "$ASSETS/fonts" "$USRDIR/assets/"
 cp -a "$ASSETS/rgui" "$USRDIR/assets/"
-cp -a "$ASSETS/xmb" "$USRDIR/assets/"
-cp -a "$ASSETS/ozone" "$USRDIR/assets/"
-cp -a "$ASSETS/wallpapers" "$USRDIR/assets/"
 cp "$RA/COPYING" "$USRDIR/licenses/RetroArch-GPL-3.0.txt"
 cp "$PCSX/COPYING" "$USRDIR/licenses/PCSX-ReARMed-GPL-2.0.txt"
 cp "$ASSETS/COPYING" "$USRDIR/licenses/RetroArch-assets-CC-BY-4.0.txt"
