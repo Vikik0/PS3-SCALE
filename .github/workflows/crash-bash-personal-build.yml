@@ -198,7 +198,8 @@ jobs:
           test -s "$ENCRYPTED"
           openssl cms -cmsout -print -inform DER -in "$ENCRYPTED" >/dev/null
           sha256sum "$ENCRYPTED" > "$ENCRYPTED.sha256"
-          cp "Crash-Bash-Enhanced/build-artifacts/PERSONAL-BUILD-MANIFEST.txt" \
+          cp "Crash-Bash-Enhanced/build-artifacts/PERSONAL-BUILD-MANIFEST.txt
+            Crash-Bash-Enhanced/build-artifacts/PERSONAL-PKG-CONTENTS.txt" \
             /tmp/PERSONAL-BUILD-MANIFEST.txt
           rm -f "$PKG" "$PKG.sha256" /tmp/crash-bash-disc.zip Crash-Bash-Enhanced/crashbash.pkg
           rm -rf Crash-Bash-Enhanced/pkgfiles/USRDIR/PSXISO \
