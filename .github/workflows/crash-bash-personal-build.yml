@@ -173,11 +173,13 @@ jobs:
         run: |
           set -euo pipefail
           bash Crash-Bash-Enhanced/scripts/build_personal_pkg.sh
-          PKG="Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-Personal-PS3.pkg"
+          PKG="$GITHUB_WORKSPACE/Crash-Bash-Enhanced/build-artifacts/Crash-Bash-Online-Personal-PS3.pkg"
           test -s "$PKG"
           cd Crash-Bash-Enhanced/build-artifacts
           sha256sum -c Crash-Bash-Online-Personal-PS3.pkg.sha256
           test -s PERSONAL-BUILD-MANIFEST.txt
+          test -s PERSONAL-PKG-CONTENTS.txt
+          grep -q "PKG item count:" PERSONAL-BUILD-MANIFEST.txt
           grep -q "Installable packages: one PKG only" PERSONAL-BUILD-MANIFEST.txt
           grep -q "CUE: Crash Bash (USA).cue" PERSONAL-BUILD-MANIFEST.txt
           grep -q "TRACK: Crash Bash (USA).bin" PERSONAL-BUILD-MANIFEST.txt
@@ -200,9 +202,8 @@ jobs:
           test -s "$ENCRYPTED"
           openssl cms -cmsout -print -inform DER -in "$ENCRYPTED" >/dev/null
           sha256sum "$ENCRYPTED" > "$ENCRYPTED.sha256"
-          cp "Crash-Bash-Enhanced/build-artifacts/PERSONAL-BUILD-MANIFEST.txt
-            Crash-Bash-Enhanced/build-artifacts/PERSONAL-PKG-CONTENTS.txt" \
-            /tmp/PERSONAL-BUILD-MANIFEST.txt
+          cp "Crash-Bash-Enhanced/build-artifacts/PERSONAL-BUILD-MANIFEST.txt" /tmp/PERSONAL-BUILD-MANIFEST.txt
+          cp "Crash-Bash-Enhanced/build-artifacts/PERSONAL-PKG-CONTENTS.txt" /tmp/PERSONAL-PKG-CONTENTS.txt
           rm -f "$PKG" "$PKG.sha256" /tmp/crash-bash-disc.zip Crash-Bash-Enhanced/crashbash.pkg
           rm -rf Crash-Bash-Enhanced/pkgfiles/USRDIR/PSXISO \
             Crash-Bash-Enhanced/build/pkg Crash-Bash-Enhanced/game
@@ -215,6 +216,7 @@ jobs:
             /tmp/Crash-Bash-Online-Personal-PS3.pkg.cms
             /tmp/Crash-Bash-Online-Personal-PS3.pkg.cms.sha256
             /tmp/PERSONAL-BUILD-MANIFEST.txt
+            /tmp/PERSONAL-PKG-CONTENTS.txt
           if-no-files-found: error
           compression-level: 0
           retention-days: 1
