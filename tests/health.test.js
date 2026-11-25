@@ -18,7 +18,7 @@ test("health endpoint reports lobby readiness without claiming gameplay transpor
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.headers["Cache-Control"], "no-store");
-  assert.equal(response.body.version, "0.8.6");
+  assert.equal(response.body.version, "0.8.7");
   assert.equal(response.body.discConfirmationRequiresReady, true);
   assert.equal(response.body.startedMatchDiscRetry, "same-confirmed-fingerprint-only");
   assert.equal(response.body.membershipJoinReset, "all-active-ready-and-disc-confirmations");
@@ -39,6 +39,7 @@ test("health endpoint reports lobby readiness without claiming gameplay transpor
   assert.deepEqual(response.body.nativeLaunchModes, ["retroarch-host", "retroarch-auto-connect"]);
   assert.equal(response.body.automaticHostDiscovery, "retroarch-public-lobby-relay");
   assert.equal(response.body.roomLaunchLock, "host-started-netplay-session");
+  assert.equal(response.body.roomLaunchCancelWindowSeconds, 30);
   assert.equal(response.body.startedRoomSeatTtlMinutes, 30);
   assert.equal(response.body.psnRequired, false);
   assert.equal(response.body.maxPlayersPerRoom, 4);

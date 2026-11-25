@@ -5,7 +5,7 @@ module.exports = function handler(_req, res) {
   return res.status(200).json({
     ok: true,
     service: "Crash Bash Enhanced lobby",
-    version: "0.8.6",
+    version: "0.8.7",
     roomTtlMinutes: 30,
     playerTtlMinutes: 10,
     minimumReadyPlayers: 2,
@@ -26,6 +26,7 @@ module.exports = function handler(_req, res) {
     readyChangesAfterStart: "locked",
     automaticHostDiscovery: "retroarch-public-lobby-relay",
     roomLaunchLock: "host-started-netplay-session",
+    roomLaunchCancelWindowSeconds: 30,
     psnRequired: false,
     maxPlayersPerRoom: 4,
     storageConfigured: Boolean(process.env.BLOB_READ_WRITE_TOKEN),

@@ -1,6 +1,6 @@
 {
   "name": "crash-bash-enhanced-web",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "private": true,
   "description": "Crash Bash Enhanced online lobby and PS3 build tooling",
   "engines": {

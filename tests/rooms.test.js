@@ -1134,6 +1134,34 @@ test("host can roll back the room lock when RetroArch fails to launch", async ()
 });
 
 
+test("a host can only cancel the launch lock inside the recovery window", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "set_ready", ready: true }, host.body.token);
+  await call("POST", { action: "set_ready", ready: true }, guest.body.token);
+  await confirmMatchingDisc(host.body.token, guest.body.token);
+
+  const premature = await call("POST", { action: "game_start_cancel" }, host.body.token);
+  assert.equal(premature.statusCode, 409);
+  assert.match(premature.body.error, /no active launch lock/i);
+
+  const started = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(started.statusCode, 200);
+  const pathname = "cb-rooms/" + host.body.room.code + ".json";
+  const stored = JSON.parse(blobs.get(pathname).body);
+  assert.ok(stored.gameStartCancelUntil > Date.now());
+
+  stored.gameStartCancelUntil = Date.now() - 1;
+  blobs.set(pathname, { body: JSON.stringify(stored), etag: String(++etagSequence) });
+
+  const lateCancel = await call("POST", { action: "game_start_cancel" }, host.body.token);
+  assert.equal(lateCancel.statusCode, 409);
+  assert.match(lateCancel.body.error, /recovery window has expired/i);
+
+  const stillLocked = await call("GET", {}, guest.body.token, { code: host.body.room.code });
+  assert.equal(stillLocked.body.room.gameStarted, true);
+});
+
 test("a started Netplay match keeps its relay identity when the host seat expires", async () => {
   const host = await call("POST", { action: "create", displayName: "Host", isPrivate: true });
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
