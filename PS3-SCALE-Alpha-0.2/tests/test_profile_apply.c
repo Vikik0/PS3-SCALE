@@ -10,6 +10,8 @@
 #define TEST_ROOT "/tmp/ps3scale-profile-apply-test"
 #define TEST_SCRIPT_DIR TEST_ROOT "/wm_ingame"
 #define TEST_SCRIPT_PATH TEST_SCRIPT_DIR "/BLUS30464.bat"
+#define TEST_TEMP_PATH TEST_SCRIPT_PATH ".part"
+#define TEST_VICTIM_PATH TEST_ROOT "/user-owned-file.txt"
 
 static int write_text(const char *path, const char *value)
 {
@@ -43,7 +45,8 @@ static int read_text(const char *path, char *buffer, size_t capacity)
 static void cleanup(void)
 {
     (void)unlink(TEST_SCRIPT_PATH);
-    (void)unlink(TEST_SCRIPT_PATH ".part");
+    (void)unlink(TEST_TEMP_PATH);
+    (void)unlink(TEST_VICTIM_PATH);
     (void)rmdir(TEST_SCRIPT_DIR);
     (void)rmdir(TEST_ROOT);
 }
@@ -67,6 +70,21 @@ int main(void)
     strcpy(profile.patches, "94713A,06,00");
     strcpy(profile.source_url, "https://github.com/example/profiles");
     profile.patch_count = 1;
+
+    /* A pre-existing temporary symlink must not be followed or removed. */
+    assert(write_text(TEST_VICTIM_PATH, "USER DATA MUST SURVIVE\\n") == 0);
+    assert(symlink(TEST_VICTIM_PATH, TEST_TEMP_PATH) == 0);
+    assert(ps3scale_profile_script_install(&profile) == -5);
+    assert(read_text(TEST_VICTIM_PATH, script, sizeof(script)) == 0);
+    assert(strcmp(script, "USER DATA MUST SURVIVE\\n") == 0);
+    assert(unlink(TEST_TEMP_PATH) == 0);
+
+    /* An existing regular temporary file is also preserved. */
+    assert(write_text(TEST_TEMP_PATH, "PRE-EXISTING TEMP DATA\\n") == 0);
+    assert(ps3scale_profile_script_install(&profile) == -5);
+    assert(read_text(TEST_TEMP_PATH, script, sizeof(script)) == 0);
+    assert(strcmp(script, "PRE-EXISTING TEMP DATA\\n") == 0);
+    assert(unlink(TEST_TEMP_PATH) == 0);
 
     assert(ps3scale_profile_script_state(profile.title_id, profile.app_ver,
                                          profile.patches) == 0);
@@ -149,6 +167,16 @@ int main(void)
     assert(read_text(TEST_SCRIPT_PATH, script, sizeof(script)) == 0);
     assert(strcmp(script, "# USER WEBMAN SCRIPT\n") == 0);
 
+    /* A foreign script reached through a symlink is still user-owned. */
+    assert(unlink(TEST_SCRIPT_PATH) == 0);
+    assert(write_text(TEST_VICTIM_PATH, "# USER WEBMAN SCRIPT\n") == 0);
+    assert(symlink(TEST_VICTIM_PATH, TEST_SCRIPT_PATH) == 0);
+    assert(ps3scale_profile_script_state(profile.title_id, profile.app_ver,
+                                         profile.patches) == -1);
+    assert(ps3scale_profile_script_install(&profile) == -2);
+    assert(ps3scale_profile_script_remove(profile.title_id) == -2);
+    assert(read_text(TEST_VICTIM_PATH, script, sizeof(script)) == 0);
+    assert(strcmp(script, "# USER WEBMAN SCRIPT\n") == 0);
     assert(unlink(TEST_SCRIPT_PATH) == 0);
     strcpy(profile.trust, "B_COMMUNITY_MANUAL");
     assert(ps3scale_profile_script_install(&profile) == -1);
