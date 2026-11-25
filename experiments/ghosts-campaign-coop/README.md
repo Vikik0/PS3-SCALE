@@ -370,3 +370,11 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - CI [#1586](https://github.com/Vikik0/PS3-SCALE/actions/runs/45722748409): **7/7 successful**, **539 Python tests**, **21/21 Event Lock C tests**, **10/10 parser tests**, **12/12 loader tests**. Capture kit: 57/57 files, 537,728 bytes; artifact `15073380575`.
 
 **Runtime gate unchanged:** the second native Campaign Local Client and reconnect behavior remain unproven on the target PS3; the four original shared interactions remain **0/4 ready**.
+
+
+### Phase 103 — host model for Campaign session-monitor recovery
+
+- Added a portable C state-machine model for candidate/bound pair validation, the eight-failure invalidation threshold, active-lock release, completed-history preservation, reconnect/rebind, idempotent start and explicit stop. Three Python tests tie the GSC watcher to the model.
+- CI [#1588](https://github.com/Vikik0/PS3-SCALE/actions/runs/45723183499): **7/7 successful**, **542 Python tests**, **21/21 Event Lock C**, **10/10 parser C**, **12/12 loader C**, **14/14 session-monitor C**. Capture kit: 57/57 files, 537,726 bytes; artifact `15072319880`.
+
+**Runtime gate remains:** this is a host state-machine model. It does not prove a second native Campaign Local Client or real reconnect on PS3.

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "phase": 103,
+  "title": "Host model for Campaign session-monitor recovery",
+  "ci_run": 1588,
+  "ci_run_id": 45723183499,
+  "ci": "7/7 PASS",
+  "tests": {
+    "python": "542/542",
+    "event_lock_c": "21/21",
+    "gsc_wrapper_parser_c": "10/10",
+    "gsc_wrapper_loader_c": "12/12",
+    "campaign_session_monitor_c": "14/14"
+  },
+  "capture_kit": {
+    "files": "57/57",
+    "bytes": 537726,
+    "sha256": "51a0b7a87a81db67fb476206001915adb2ea6d93092a2dcc4dbb9c2f6cfdc47b",
+    "artifact_id": 15072319880
+  },
+  "runtime_boundary": {
+    "native_second_local_client_proven": false,
+    "reconnect_observed_on_ps3": false,
+    "original_shared_interactions_ready": "0/4",
+    "original_mission_gsc_modified": false,
+    "fastfile_rebuilt_or_injected": false,
+    "physical_ps3_campaign_runtime_tested": false
+  }
+}
