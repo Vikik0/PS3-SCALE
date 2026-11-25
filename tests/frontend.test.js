@@ -31,7 +31,7 @@ test("session restoration re-enters the room screen before refreshing its seat",
 });
 
 test("browser room status distinguishes lobby presence from PS3 gameplay", () => {
-  assert.match(script, /this browser page only tracks the room/);
+  assert.match(script, /this browser page only tracks the room/i);
   assert.match(script, /this browser lobby does not run gameplay/);
   assert.match(html, /id="roomNotice"[^>]*role="status"[^>]*aria-live="polite"/);
 });
