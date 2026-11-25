@@ -174,6 +174,7 @@ static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 #define PS3SCALE_SUPPORT_OUTBOX_DIR "/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox"
 /* Replace with the URL of the separate PS3 SCALE Supabase project after deployment. */
 #define PS3SCALE_SUPPORT_URL "https://YOUR_PROJECT.supabase.co/functions/v1/ps3scale-support"
+#define PS3SCALE_SUPPORT_API_KEY "YOUR_PUBLISHABLE_KEY"
 #define PS3SCALE_APP_VERSION "ALPHA 0.32"
 #define PS3SCALE_PS2_CONFIG_INDEX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/ps2_config_index.tsv"
 #define PS3SCALE_PS2_CLASSICS_CONFIG_DIR "/dev_hdd0/game/PS2CONFIG/USRDIR/CONFIG/ENC"
@@ -6044,8 +6045,8 @@ static void support_submit_worker(void *arg)
     long response_code = 0;
     (void)arg;
     g_support_send_result = ps3scale_online_post_json(
-        PS3SCALE_SUPPORT_URL, g_support_json, strlen(g_support_json),
-        &response_code);
+        PS3SCALE_SUPPORT_URL, PS3SCALE_SUPPORT_API_KEY,
+        g_support_json, strlen(g_support_json), &response_code);
     g_support_send_http_status = response_code;
     g_support_send_done = 1;
     g_support_send_running = 0;
@@ -6071,7 +6072,8 @@ static void start_support_send(void)
                  "ANOTHER REPORT IS SENDING.");
         return;
     }
-    if (strstr(PS3SCALE_SUPPORT_URL, "YOUR_PROJECT") != NULL) {
+    if (strstr(PS3SCALE_SUPPORT_URL, "YOUR_PROJECT") != NULL ||
+        strstr(PS3SCALE_SUPPORT_API_KEY, "YOUR_PUBLISHABLE_KEY") != NULL) {
         snprintf(g_support_status, sizeof(g_support_status),
                  "LOCAL SAVE OK; ONLINE OFF.");
         return;
