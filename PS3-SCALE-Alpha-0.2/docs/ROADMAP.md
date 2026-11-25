@@ -1,5 +1,16 @@
 # PS3 SCALE roadmap
 
+## Alpha 0.32 — persistence and download safety
+
+- [x] Atomic settings and favorites writes using unique exclusive temp files, fsync and same-directory rename.
+- [x] Protect one-launch webMAN script creation from existing temp files and symlink targets.
+- [x] Use unique O_EXCL HTTPS download temp paths so stale files do not block future refreshes.
+- [x] Preserve pre-existing catalog, community NCL and PS2 CONFIG destinations when a download fails.
+- [x] Add host regression tests for symlink handling, atomic persistence and download failure cleanup.
+- [ ] Validate settings, favorites, network refresh and PS2 CONFIG behavior on physical PS3 hardware.
+- [ ] Deploy the optional support-report endpoint only to a dedicated PS3 SCALE Supabase project with server-side secrets.
+
+
 ## Alpha 0.1 — safe library foundation
 
 - [x] PS3 PARAM.SFO parser.
