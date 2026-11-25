@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "capture_id": "REPLACE_WITH_UNIQUE_CAPTURE_ID",
+  "title_id": "BLUS31270",
+  "title_update": "01.16",
+  "mode": "CAMPAIGN",
+  "evidence_source": "RECORD_ACTUAL_PS3MAPI_OR_GSC_PROBE_SOURCE",
+  "observations": [
+    {
+      "timestamp_ms": 0,
+      "split_screen": true,
+      "player_array_count": 2,
+      "level_player_entity_id": "ENTITY_ID_OF_PRIMARY",
+      "playengineeffects_entity_id": "ENTITY_ID_OF_SECONDARY",
+      "players": [
+        {
+          "entity_id": "PRIMARY_ENTITY_ID",
+          "local_client_index": 0,
+          "controller_port": 0,
+          "is_splitscreen_player": true,
+          "is_primary": true,
+          "gentity_address": "0x00000000",
+          "gclient_address": "0x00000000",
+          "player_state_address": "0x00000000",
+          "camera_state_address": "0x00000000",
+          "hud_state_address": "0x00000000",
+          "camera_owner_entity_id": "PRIMARY_ENTITY_ID",
+          "hud_owner_entity_id": "PRIMARY_ENTITY_ID"
+        },
+        {
+          "entity_id": "SECONDARY_ENTITY_ID",
+          "local_client_index": 1,
+          "controller_port": 1,
+          "is_splitscreen_player": true,
+          "is_primary": false,
+          "gentity_address": "0x00000000",
+          "gclient_address": "0x00000000",
+          "player_state_address": "0x00000000",
+          "camera_state_address": "0x00000000",
+          "hud_state_address": "0x00000000",
+          "camera_owner_entity_id": "SECONDARY_ENTITY_ID",
+          "hud_owner_entity_id": "SECONDARY_ENTITY_ID"
+        }
+      ]
+    }
+  ],
+  "notes": "Template only. Replace every placeholder with measured values from a real BLUS31270 TU 1.16 Campaign runtime capture. Do not invent or infer addresses."
+}
