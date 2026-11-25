@@ -304,3 +304,15 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - Inner ZIP SHA-256: `89acce060f71686385b160709cda6ac47d5e44dac04999ab205c79645a15a196`.
 - Report: `reports/PHASE92_REPORT_AR.md`; contract: `docs/phase92-player-aware-trigger-fixture.md`; JSON: `reports/PHASE92_TRIGGER_ADAPTER.json`.
 - **Runtime gate unchanged:** compile success does not prove trigger activator semantics on retail IW6/PS3. The original mission readiness remains **0/4**; no original GSC was changed, no FastFile was rebuilt/injected, and no physical Campaign co-op is claimed.
+
+
+### Phase 93 — preserve the original Campaign player array
+
+- Fixed a session-invalidation hazard: `level.playerpiggyback` is an original Campaign player-entity array used by unrelated mission scripts, so the bridge must not clear it to `undefined`.
+- Invalidation now rebuilds the array from current player entities, preserves the previous primary if still present, otherwise falls back to the first live player, and clears only stale secondary/bridge aliases.
+- Added source-contract coverage for array preservation and invalidation ordering. Python suite: **529/529 passed**; event-lock C model: **21/21 passed**.
+- Updated bridge manifest pins: source SHA-256 `91beae5278cddaa23521aabdfec134e9323f8b28a7f610b470709a4236da4e8b`; compiled GSCBIN SHA-256 `e88a92b314928c36ee55fbbcba1593dd3e0a6ed7d719bf75de4743e750a72ad9`; **3,800 bytes**.
+- CI run [#1564](https://github.com/Vikik0/PS3-SCALE/actions/runs/45717668577): **7/7 jobs successful**, including GSC compile/decompile, PS3 CEX bootstrap, both read-only probes, and capture-kit packaging.
+- Capture-kit artifact ID: `15070258524`; inner ZIP: **535,522 bytes**, **57/57 files verified**; SHA-256 `a62b25f7b2c201d6f2714872d6c916df1650e68fcf83f20537dc6d16d96f59f1`.
+- Report: `reports/PHASE93_REPORT_AR.md`; contract: `docs/phase93-player-array-preservation.md`; JSON: `reports/PHASE93_PLAYER_ARRAY_PRESERVATION.json`.
+- **Native gate unchanged:** second Local Client and trigger activator semantics remain unproven on the target PS3 runtime; original shared interactions remain **0/4 ready**. No original mission handler or FastFile was modified.

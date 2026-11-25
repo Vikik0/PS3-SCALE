@@ -1,0 +1,37 @@
+{
+  "phase": 93,
+  "title": "Preserve original Campaign player array on session invalidation",
+  "status": "SOURCE_AND_CI_VERIFIED_RUNTIME_NOT_VERIFIED",
+  "issue": "The bridge cleared level.playerpiggyback to undefined on invalidation although it is an original Campaign player-entity array used by unrelated mission scripts.",
+  "fix": [
+    "rebuild level.playerpiggyback from getentarray(player, classname)",
+    "use an empty array if the engine returns no defined array",
+    "preserve the previous primary if it remains in the live entity array",
+    "otherwise fall back to the first defined live player",
+    "clear stale secondary and bridge-specific aliases only"
+  ],
+  "verification": {
+    "python_tests": "529/529 PASS",
+    "event_lock_c_cases": "21/21 PASS",
+    "gsc_tool_compile_decompile": "PASS",
+    "source_sha256": "91beae5278cddaa23521aabdfec134e9323f8b28a7f610b470709a4236da4e8b",
+    "compiled_gscbin_sha256": "e88a92b314928c36ee55fbbcba1593dd3e0a6ed7d719bf75de4743e750a72ad9",
+    "compiled_gscbin_bytes": 3800,
+    "github_actions_run": 1564,
+    "github_actions_run_id": 45717668577,
+    "github_actions_conclusion": "success",
+    "jobs": "7/7 PASS",
+    "capture_kit_files_verified": "57/57",
+    "capture_kit_inner_zip_bytes": 535522,
+    "capture_kit_inner_zip_sha256": "a62b25f7b2c201d6f2714872d6c916df1650e68fcf83f20537dc6d16d96f59f1",
+    "capture_kit_artifact_id": 15070258524
+  },
+  "remaining_gate": {
+    "native_second_local_client": "not proven",
+    "trigger_activator_runtime_semantics": "not proven",
+    "original_shared_interactions_ready": "0/4",
+    "original_mission_gsc_modified": false,
+    "fastfile_rebuilt_or_injected": false,
+    "physical_ps3_runtime_verified": false
+  }
+}
