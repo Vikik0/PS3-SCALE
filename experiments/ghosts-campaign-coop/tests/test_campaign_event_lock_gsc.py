@@ -74,6 +74,19 @@ class CampaignEventLockTests(unittest.TestCase):
         self.assertIn("level.ghc_campaign_event_lock_owner[event_id] = -1", body)
         self.assertIn("level.ghc_campaign_event_lock_active[var_0] = -1", body)
 
+    def test_release_rejects_undefined_or_non_boolean_completion_flags(self):
+        body = function_body(self.source, "ghc_campaign_event_lock_release")
+        guard = body.index("if ( !isdefined( completed )")
+        initialized = body.index("level.ghc_campaign_event_lock_initialized")
+        completion_write = body.index("level.ghc_campaign_event_lock_complete[event_id] = 1")
+        self.assertLess(guard, initialized)
+        self.assertLess(guard, completion_write)
+        self.assertIn("completed != 0 && completed != 1", body)
+        self.assertLess(
+            body.index("return 0", guard),
+            completion_write,
+        )
+
     def test_abort_releases_owner_without_marking_event_complete(self):
         abort = function_body(self.source, "ghc_campaign_event_lock_abort_slot")
         self.assertIn("level.ghc_campaign_event_lock_owner[var_0] != slot", abort)

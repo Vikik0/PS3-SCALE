@@ -711,6 +711,10 @@ ghc_campaign_event_lock_acquire( player, event_id )
 
 ghc_campaign_event_lock_release( player, event_id, completed )
 {
+    if ( !isdefined( completed )
+        || ( completed != 0 && completed != 1 ) )
+        return 0;
+
     if ( !isdefined( level.ghc_campaign_event_lock_initialized )
         || !level.ghc_campaign_event_lock_initialized )
         return 0;
