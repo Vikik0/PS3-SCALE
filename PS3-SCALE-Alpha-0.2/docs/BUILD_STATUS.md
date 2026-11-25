@@ -1,12 +1,24 @@
-# Build status — PS3 SCALE Alpha 0.31
+# Build status — PS3 SCALE Alpha 0.32
 
 ## Current development head
 
 - Branch: `design/splash-transitions-ui-v6`
 - Pull request: Draft PR #16, targeting `design/settings-support-ui-v5`
-- Application version shown in the UI: `ALPHA 0.31`
-- Package metadata: `APP_VER=00.31`, `VERSION=00.31`
+- Application version shown in the UI: `ALPHA 0.32`
+- Package metadata: `APP_VER=00.32`, `VERSION=00.32`
 - Package title ID: `PS3SCALE1`
+
+## Alpha 0.32 — atomic persistence and download hardening
+
+- Settings and favorites now use unique exclusive same-directory temporary files, full write loops, fsync and atomic rename. A failed save leaves the previous file intact.
+- One-launch webMAN script installation uses O_EXCL; pre-existing temporary files and symlink paths are preserved rather than followed or overwritten.
+- HTTPS downloads use unique PID/time/sequence temporary names with O_EXCL. A stale temporary file does not block later attempts.
+- Catalog, community NCL and PS2 CONFIG workers only remove destination files that the current worker successfully downloaded. Network failures no longer delete pre-existing destination files.
+- Added host tests for atomic settings/favorites writes, symlink-safe replacement, profile temp-file preservation and download-failure cleanup.
+- Updated package version, Arabic guide, root README, online database documentation and CI artifact names to Alpha 0.32.
+- Host and PS3 package CI for the final Alpha 0.32 head: pending latest run.
+- Physical PS3 Slim / CFW testing remains pending.
+- Online support submission remains local-outbox only until a dedicated PS3 SCALE Supabase project is deployed and configured.
 
 ## Alpha 0.31 — PS2 CONFIG Manager, region matching and verified community downloads
 
