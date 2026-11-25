@@ -239,6 +239,11 @@ jobs:
         run: |
           cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/prx/script_override_format.c tests/script_override_format_test.c -o /tmp/gsc-wrapper-format-test
           /tmp/gsc-wrapper-format-test
+      - name: Build and run mocked GSC wrapper file-loader tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror -Itests/fixtures/ps3_sdk client/ps3/prx/script_override.c client/ps3/prx/script_override_format.c tests/script_override_loader_test.c -o /tmp/gsc-wrapper-loader-test
+          /tmp/gsc-wrapper-loader-test
       - name: Build and run the host-only Ghosts runtime contract simulator
         working-directory: experiments/ghosts-campaign-coop
         run: |
