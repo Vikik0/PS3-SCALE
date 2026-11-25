@@ -275,4 +275,7 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - Mapped per-player handlers versus shared state for the flare-stack console, rope cut, weapon hide and virus upload. Five mission-coordinator events remain single-shot.
 - Added graph validation to the capture-kit verifier and four negative tests for escaped edges, entity confusion and coordinator-lock misuse.
 - Report: `reports/PHASE90_REPORT_AR.md`; graph: `reports/PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json`.
+- CI run [#1554](https://github.com/Vikik0/PS3-SCALE/actions/runs/45593854111): **7/7 jobs successful**, **513 tests passed**.
+- Capture-kit artifact ID: `15011738053`; inner ZIP: **534,872 bytes**, **57/57 files verified**, both GSC manifests and both mission-event audit reports verified.
+- Inner ZIP SHA-256: `d854b621df9e4ae12a1e96cc3c46bce78928ae4c6d7c7c1eceed67f06b3857af`.
 - **Implementation remains gated:** native Local Client 1 is not proven; no original mission GSC was modified and no FastFile was rebuilt/injected.
