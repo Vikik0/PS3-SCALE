@@ -234,6 +234,11 @@ jobs:
         run: |
           cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/ghc_game_protocol.c tests/game_protocol_test.c -o /tmp/ghc-game-protocol-test
           /tmp/ghc-game-protocol-test
+      - name: Build and run GSC wrapper parser tests
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror client/ps3/prx/script_override_format.c tests/script_override_format_test.c -o /tmp/gsc-wrapper-format-test
+          /tmp/gsc-wrapper-format-test
       - name: Build and run the host-only Ghosts runtime contract simulator
         working-directory: experiments/ghosts-campaign-coop
         run: |
