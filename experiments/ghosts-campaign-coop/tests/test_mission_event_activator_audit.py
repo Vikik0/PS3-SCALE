@@ -8,6 +8,7 @@ from tools.mission_event_activator_audit import (
     _mask_comments_and_strings,
     audit_archive,
     validate_report,
+    validate_dependency_graph,
 )
 
 
@@ -192,6 +193,32 @@ target()
         report["shared_interactions"][0]["safe_to_wire_event_lock"] = True
         errors = validate_report(report, require_reference_hashes=False)
         self.assertTrue(any("must not claim an unsafe interaction is ready to wire" in error for error in errors))
+
+    def test_phase90_dependency_graph_passes_source_and_edge_validation(self):
+        report_path = Path(__file__).resolve().parents[1] / "reports" / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json"
+        graph = json.loads(report_path.read_text(encoding="utf-8"))
+        self.assertEqual(validate_dependency_graph(graph), [])
+
+    def test_dependency_graph_rejects_edge_outside_its_chain(self):
+        report_path = Path(__file__).resolve().parents[1] / "reports" / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json"
+        graph = json.loads(report_path.read_text(encoding="utf-8"))
+        graph["chains"][0]["edges"][0]["to"] = "missing::node"
+        errors = validate_dependency_graph(graph)
+        self.assertTrue(any("dependency edge escapes its chain" in error for error in errors))
+
+    def test_dependency_graph_keeps_carrier_self_and_var0_separate(self):
+        report_path = Path(__file__).resolve().parents[1] / "reports" / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json"
+        graph = json.loads(report_path.read_text(encoding="utf-8"))
+        graph["carrier_entity_contract"]["cut_the_rope_var_0"] = "rope entity"
+        errors = validate_dependency_graph(graph)
+        self.assertTrue(any("var_0 must remain the map struct" in error for error in errors))
+
+    def test_dependency_graph_keeps_mission_coordinators_single_shot(self):
+        report_path = Path(__file__).resolve().parents[1] / "reports" / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json"
+        graph = json.loads(report_path.read_text(encoding="utf-8"))
+        graph["mission_coordinator_rules"][0]["event_lock_id"] = 0
+        errors = validate_dependency_graph(graph)
+        self.assertTrue(any("mission coordinator rules must remain single-shot" in error for error in errors))
 
     def test_report_rejects_player_lock_on_mission_coordinator(self):
         with tempfile.TemporaryDirectory() as temp:
