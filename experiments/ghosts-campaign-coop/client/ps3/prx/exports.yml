@@ -60,3 +60,33 @@ exports:
   - name: ghc_local_input_player_r2_pressure
     nid: '0x943e8f5b'
     signature: 'uint32_t ghc_local_input_player_r2_pressure(uint32_t player_slot);'
+  - name: ghc_script_override_reload
+    nid: '0xc0565cec'
+    signature: 'int32_t ghc_script_override_reload(void);'
+  - name: ghc_script_override_status
+    nid: '0xa671ac4f'
+    signature: 'uint32_t ghc_script_override_status(void);'
+  - name: ghc_script_override_comp_len
+    nid: '0x81c9916e'
+    signature: 'uint32_t ghc_script_override_comp_len(void);'
+  - name: ghc_script_override_stack_len
+    nid: '0x59a70f67'
+    signature: 'uint32_t ghc_script_override_stack_len(void);'
+  - name: ghc_script_override_bytecode_len
+    nid: '0xaec22a12'
+    signature: 'uint32_t ghc_script_override_bytecode_len(void);'
+  - name: ghc_script_override_total_len
+    nid: '0x94e3b8bd'
+    signature: 'uint32_t ghc_script_override_total_len(void);'
+  - name: ghc_script_override_hash32
+    nid: '0x6302c47c'
+    signature: 'uint32_t ghc_script_override_hash32(void);'
+  - name: ghc_script_override_blob_address
+    nid: '0x8b2e694d'
+    signature: 'uint64_t ghc_script_override_blob_address(void);'
+  - name: ghc_script_override_stack_address
+    nid: '0x44904b60'
+    signature: 'uint64_t ghc_script_override_stack_address(void);'
+  - name: ghc_script_override_bytecode_address
+    nid: '0x7403e8b1'
+    signature: 'uint64_t ghc_script_override_bytecode_address(void);'

@@ -17,6 +17,7 @@ The first playable target is local Campaign co-op on one PS3:
 - PS3 `sys_io` adapter for controller ports 0 and 1 using `cellPadGetInfo2` and `cellPadGetData`.
 - Portable per-frame tracker for pressed/released edges, normalized stick axes, trigger pressure and safe read-error handling.
 - Diagnostic PRX exports for raw input and per-frame input values.
+- Read-only GSC wrapper-loader diagnostics: status, segment lengths, total length, FNV-1a hash, and in-module blob/stack/bytecode addresses. These exports report the staged blob only; they do not install or execute a script override.
 
 The PRX does **not** call `cellPadInit` or `cellPadEnd`; the running game owns that subsystem lifecycle. It does not change the game's controller routing.
 
