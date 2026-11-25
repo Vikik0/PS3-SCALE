@@ -261,4 +261,7 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - Confirmed the five mission-coordinator events remain single-shot and have no player Event Lock ID.
 - Added `tools/mission_event_activator_audit.py`, eight tests, and a package-level validator for the pinned report.
 - Report: `reports/PHASE89_REPORT_AR.md`; JSON: `reports/PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json`.
+- CI run [#1535](https://github.com/Vikik0/PS3-SCALE/actions/runs/45590863539): **7/7 jobs successful**, **508 tests passed**.
+- Capture-kit artifact ID: `15011056497`; inner ZIP: **523,270 bytes**, **55/55 files verified**, both GSC manifests and the activator audit verified.
+- Inner ZIP SHA-256: `853c3958d9601b7e63b6d7ef5d0fb2e42b6c5fb6f4cb878792d70c5fc655a702`.
 - **Runtime gate remains:** no original mission GSC was changed, no FastFile was rebuilt/injected, and no physical PS3 runtime result is claimed.
