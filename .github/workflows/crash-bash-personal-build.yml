@@ -185,8 +185,8 @@ jobs:
           grep -q "TRACK: Crash Bash (USA).bin" PERSONAL-BUILD-MANIFEST.txt
           grep -q "SHA256: a1d6b967a2311f1444482f4af91dff2d75e083ed538419f25d57d77dd5a4d7fd" PERSONAL-BUILD-MANIFEST.txt
           grep -q "CUE SHA256: de7f3b62c2703f3a1ee76a5d10e5fb27cc386dea26b196807e5eec5e04a8fce9" PERSONAL-BUILD-MANIFEST.txt
-          printf "PKG SIZE: %s bytes\\n" "$(stat -c %s "$PKG")" >> PERSONAL-BUILD-MANIFEST.txt
-          printf "PKG SHA256: %s\\n" "$(sha256sum "$PKG" | cut -d " " -f1)" >> PERSONAL-BUILD-MANIFEST.txt
+          printf "PKG SIZE: %s bytes\n" "$(stat -c %s "$PKG")" >> PERSONAL-BUILD-MANIFEST.txt
+          printf "PKG SHA256: %s\n" "$(sha256sum "$PKG" | cut -d " " -f1)" >> PERSONAL-BUILD-MANIFEST.txt
 
       - name: Encrypt the personal PKG for private transfer
         shell: bash
