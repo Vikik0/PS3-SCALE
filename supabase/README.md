@@ -46,7 +46,7 @@ The current Supabase CLI v3 defaults database commands to the local stack. Alway
 Do not configure this by default. If the user later wants reports mirrored into GitHub Issues, create a fine-grained token restricted to issue creation in `Vikik0/PS3-SCALE`, then set:
 
 ```sh
-supabase secrets set PS3SCALE_GITHUB_TOKEN=<FINE_GRAINED_TOKEN> PS3SCALE_GITHUB_REPOSITORY=Vikik0/PS3-SCALE
+supabase secrets set PS3SCALE_GITHUB_TOKEN=<FINE_GRAINED_TOKEN> PS3SCALE_GITHUB_REPOSITORY=Vikik0/PS3-SCALE --yes
 ```
 
 The token stays in Supabase Edge Function secrets and is never embedded in the PS3 app. If no token is configured, reports are still stored in Supabase and no GitHub Issue is created.
