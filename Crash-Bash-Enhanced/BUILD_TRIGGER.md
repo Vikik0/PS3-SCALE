@@ -27,6 +27,8 @@ prototypes; they are not the gameplay path in this PKG.
 4. PS3 cross-build, SELF/SFO identity checks, PKG header validation and
    SHA-256 verification.
 
+The PS3 runtime is pinned to RetroArch's RGUI menu, so the package includes only shared fonts and RGUI assets; unused XMB, Ozone and wallpaper libraries are excluded. PSL1GHT's package tool has a 1,024-entry cap, and the Makefile now lists the unfinalized PKG and verifies every staged path and the item count before NPDRM finalization.
+
 The PS3 workflow builds in two stages: `Crash-Bash-RetroArch-Stage` contains the verified embedded runtime, and `Crash-Bash-Online-Unified-PS3-PKG` contains the single installable lobby + RetroArch PKG, checksum and manifest. The latter deliberately excludes the user's game image and BIOS.
 
 A green build is not a hardware certification. RetroArch's upstream Netplay FAQ
