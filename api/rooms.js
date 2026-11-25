@@ -495,7 +495,27 @@ module.exports = async function handler(req, res) {
         const active = prunePlayers(room, now);
         const currentPlayer = active.find((entry) => entry.id === claims.sub);
         if (!currentPlayer) return { write: false, status: 403, body: { error: "Your room seat has expired. Rejoin the room." } };
-        if (room.gameStartedAt) return { write: false, status: 409, body: { error: "The match has already started; disc selection is locked." } };
+        if (room.gameStartedAt) {
+          // A player may re-open the picker to recover a dropped client session,
+          // but the confirmed disc identity is immutable after the host starts.
+          if (currentPlayer.discFingerprint !== fingerprint) {
+            return { write: false, status: 409, body: {
+              error: "The match has already started; only the previously confirmed disc can be retried."
+            } };
+          }
+          currentPlayer.lastSeen = now;
+          room.updatedAt = now;
+          return {
+            status: 200,
+            body: {
+              ok: true,
+              alreadyConfirmed: true,
+              gameStarted: true,
+              playerCount: active.length,
+              ...discSelection(room, active)
+            }
+          };
+        }
         if (room.status !== "ready" || active.length < 2 ||
             active.length !== (room.players || []).length ||
             !active.every((entry) => entry.ready)) {

@@ -803,8 +803,29 @@ test("Netplay start requires every active player to confirm the same disc conten
   assert.equal(corrected.body.discMatch, true);
   const started = await call("POST", { action: "game_start" }, host.body.token);
   assert.equal(started.statusCode, 200);
-  const locked = await call("POST", { action: "set_disc", fingerprint: "0123456789ABCDEF" }, guest.body.token);
-  assert.equal(locked.statusCode, 409);
+
+  // Reopening the picker after a dropped client session may only re-confirm
+  // the exact disc that was accepted before the host locked the match.
+  const retry = await call("POST", {
+    action: "set_disc",
+    fingerprint: "0123456789ABCDEF"
+  }, guest.body.token);
+  assert.equal(retry.statusCode, 200);
+  assert.equal(retry.body.ok, true);
+  assert.equal(retry.body.alreadyConfirmed, true);
+  assert.equal(retry.body.gameStarted, true);
+  assert.equal(retry.body.discMatch, true);
+
+  const changed = await call("POST", {
+    action: "set_disc",
+    fingerprint: "FEDCBA9876543210"
+  }, guest.body.token);
+  assert.equal(changed.statusCode, 409);
+  assert.match(changed.body.error, /previously confirmed disc/i);
+
+  const persisted = await call("GET", {}, guest.body.token, { code: host.body.room.code });
+  assert.equal(persisted.body.room.players.find((player) => player.id === guest.body.player.id).discFingerprint,
+    "0123456789ABCDEF");
 });
 
 test("clearing a disc selection blocks launch until the player confirms again", async () => {

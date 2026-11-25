@@ -38,11 +38,9 @@ The BIOS/system folder remains under the installed app directory shown above.
 
 ## Online play
 
-1. All participating consoles install the same PKG.
-2. Select the embedded Crash Bash CUE from the package's `USRDIR/PSXISO/` folder on each console. The public CI package instead requires the same external CUE and byte-identical BIN track files.
-3. Use the same region, BIOS file (or all use HLE), core version and core options.
-4. The host opens RetroArch's Netplay menu and selects **Start Netplay Host**.
-5. Other players refresh the **Netplay Host List** and join the host.
+The supported PS3-to-PS3 path is the room-assisted launch flow below. The lobby coordinates READY, disc verification and host discovery; RetroArch Netplay carries the synchronized game session. Players do not need to open the Netplay Host List manually.
+
+All participating consoles must use the same package, Crash Bash region, byte-identical BIN/CUE content, BIOS/HLE choice, PCSX-ReARMed core version and core options. Start with two consoles on the same LAN before testing internet relay or four-player sessions.
 
 ### Automatic room-assisted launch (built into the same application)
 
@@ -56,11 +54,12 @@ The native Tiny3D lobby is the XMB entry point and is packaged together with Ret
    - Changing the selected CUE, rescanning the disc list or backing out of the picker clears that player's previous confirmation. Toggling READY off also clears it; everyone must confirm again before the host can start.
    - While a room is waiting, READY expires after 90 seconds without a heartbeat. Heartbeats only refresh the seat and never restore READY. A returning player must explicitly press READY again and confirm the disc again before launch.
 6. Each client then discovers the host's public RetroArch lobby entry and starts RetroArch with the authenticated relay endpoint and session ID.
+   - If a client returns to the room after a failed launch, it can reopen the picker and re-confirm the same CUE. The API accepts only that previously confirmed fingerprint; a different disc remains blocked.
 7. If the client returns to the room after the match starts, the room displays **MATCH STARTED**; press **START** and select the same CUE to retry joining.
 
 When using the integrated flow, players do not need to open **Netplay Host List** manually. The lobby API coordinates rooms and discovers the relay; RetroArch Netplay carries and synchronizes the game session. **OPEN CRASH BASH ONLINE** opens the embedded RetroArch menu for local play or manual Netplay.
 
-The package is configured to allow up to three remote clients (four participants including the host). This is a configured maximum, **not a claim that four-player performance has already passed hardware testing**. Start with a two-player LAN test; four-player and internet tests are still release gates.
+The v0.8.6 lobby API permits same-disc confirmation retries after a match starts while keeping disc changes locked. The package is configured to allow up to three remote clients (four participants including the host). This is a configured maximum, **not a claim that four-player performance has already passed hardware testing**. Start with a two-player LAN test; four-player and internet tests are still release gates.
 
 Lockstep is enabled because the pinned PCSX-ReARMed core reports a `0x440000`-byte savestate. Lockstep keeps one shared state instead of a rollback state for every buffered frame. This reduces memory use, but every frame waits for player input, so network latency can appear as input delay or brief stalls.
 

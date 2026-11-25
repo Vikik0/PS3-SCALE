@@ -5,7 +5,7 @@ module.exports = function handler(_req, res) {
   return res.status(200).json({
     ok: true,
     service: "Crash Bash Enhanced lobby",
-    version: "0.8.5",
+    version: "0.8.6",
     roomTtlMinutes: 30,
     playerTtlMinutes: 10,
     minimumReadyPlayers: 2,
@@ -17,6 +17,7 @@ module.exports = function handler(_req, res) {
     discFingerprintVerification: "fnv1a-64-content-and-track-layout",
     discConfirmationReset: "on-selection-change-or-unready-or-membership-change",
     discConfirmationRequiresReady: true,
+    startedMatchDiscRetry: "same-confirmed-fingerprint-only",
     membershipJoinReset: "all-active-ready-and-disc-confirmations",
     netplayHostValidation: "retroarch-only-relay-first-no-direct-downgrade",
     passwordProtectedHosts: "blocked-from-automatic-join",
