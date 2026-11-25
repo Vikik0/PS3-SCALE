@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "phase": 105,
+  "title": "Integrate Campaign player-pair validation into TU116 analyzer",
+  "ci_run": 1594,
+  "ci_run_id": 45724340069,
+  "ci": "7/7 PASS",
+  "python_tests": "561/561",
+  "event_lock_c_tests": "21/21",
+  "gsc_wrapper_parser_c_tests": "10/10",
+  "gsc_wrapper_loader_c_tests": "12/12",
+  "session_monitor_c_tests": "14/14",
+  "analyzer_changes": {
+    "optional_input": "--campaign-player-capture",
+    "atomic_output": "campaign_player_pair_validation.json",
+    "summary_hash_field": "input_sha256.campaign_player_pair_capture",
+    "player_two_gate_remains": "NOT_PROVEN",
+    "capture_source_authenticated": false
+  },
+  "capture_kit": {
+    "files": "57/57",
+    "bytes": 538042,
+    "sha256": "69ab6ec463a554ebb653cd18f6fe2da00ffad3b705485e24312088466cb85144",
+    "artifact_id": 15074350328
+  },
+  "runtime_boundary": {
+    "real_campaign_player_pair_capture_received": false,
+    "native_second_local_client_proven": false,
+    "original_shared_interactions_ready": "0/4",
+    "original_mission_gsc_modified": false,
+    "fastfile_rebuilt_or_injected": false,
+    "physical_ps3_campaign_runtime_tested": false
+  }
+}

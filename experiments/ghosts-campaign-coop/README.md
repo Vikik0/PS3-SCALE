@@ -387,3 +387,12 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - CI [#1592](https://github.com/Vikik0/PS3-SCALE/actions/runs/45723923286): **7/7 successful**, **558 Python tests**, **21/21 Event Lock C**, **10/10 parser C**, **12/12 loader C**, **14/14 session-monitor C**. Capture kit: 57/57 files, 537,725 bytes; artifact `15072824482`.
 
 **Runtime gate unchanged:** no real Campaign player-pair capture has been received. The second native Local Client and all four original shared interactions remain unproven (**0/4 ready**).
+
+
+### Phase 105 — integrate player-pair validation into TU 1.16 analysis
+
+- Added optional `--campaign-player-capture` input to the read-only Campaign/Multiplayer analyzer. It validates the profile before ELF work, writes `campaign_player_pair_validation.json` atomically, and hashes the input in `capture_summary.json`.
+- A structural PASS deliberately does **not** upgrade `player_two_gate`: it remains `NOT_PROVEN` and `capture_source_authenticated=false`.
+- CI [#1594](https://github.com/Vikik0/PS3-SCALE/actions/runs/45724340069): **7/7 successful**, **561 Python tests**, **21/21 Event Lock C**, **10/10 parser C**, **12/12 loader C**, **14/14 session-monitor C**. Capture kit: 57/57 files, 538,042 bytes; artifact `15074350328`.
+
+**Runtime gate unchanged:** no real Campaign player-pair capture has been supplied. Native Player 2 and the four original shared interactions remain unproven (**0/4 ready**).
