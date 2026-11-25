@@ -242,3 +242,23 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - SHA-256: 477f6b84992369b78972cff16f7b57ed4df3d8cf4b395ed1f934ce162f44ea35.
 - Report: reports/PHASE87_REPORT_AR.md; JSON: reports/PHASE87_CAPTURE_KIT_CI.json.
 - The package is a reproducible development/capture kit, not a playable co-op mod. Hardware and native Local Client validation remain outstanding.
+
+
+### Phase 88 — mission event lock ownership map
+
+- Mapped nine critical handlers across Black Ice, Carrier and Cornered to either four player-owned shared interactions (stable Event IDs 0–3) or five mission-coordinator-only events.
+- Shared interactions: Black Ice flare-stack console (0), Carrier rope cut (1), Cornered weapon hide (2), and Cornered virus upload (3).
+- Finale death, ascend choreography, Sparrow knockback/slow motion, victory landing/autosave and building collapse remain single-shot mission events; they must not be run once per player.
+- Added `tools/verify_mission_event_lock_map.py` and negative tests for duplicate/out-of-range IDs, wrong policy, missing handlers and missing lock API.
+- Report: `reports/PHASE88_REPORT_AR.md`; map: `reports/PHASE88_MISSION_EVENT_LOCK_MAP.json`.
+- **Status:** ownership map only. Original mission handlers are not wired; no FastFile injection or physical PS3 test is claimed.
+
+### Phase 89 — original trigger/activator lineage audit
+
+- Audited the actual user-supplied Phase 31 mission archive and pinned the source hashes for five trigger/helper GSC files.
+- Traced all four shared interactions to their call sites and trigger helpers. None currently propagates a validated player activator: Black Ice and Cornered helpers poll `level.player`; Carrier's `var_0` is the rope entity, not the player; Cornered upload handoffs use global flags.
+- Result: **0/4** shared interactions are safe to wire to Event Lock yet. Applying the lock around `level.player` would only serialize Logan and would not provide Player 2 support.
+- Confirmed the five mission-coordinator events remain single-shot and have no player Event Lock ID.
+- Added `tools/mission_event_activator_audit.py`, eight tests, and a package-level validator for the pinned report.
+- Report: `reports/PHASE89_REPORT_AR.md`; JSON: `reports/PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json`.
+- **Runtime gate remains:** no original mission GSC was changed, no FastFile was rebuilt/injected, and no physical PS3 runtime result is claimed.
