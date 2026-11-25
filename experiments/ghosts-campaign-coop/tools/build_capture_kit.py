@@ -175,6 +175,7 @@ def build_capture_kit(
             "compare_pad_input_probe_logs.py",
             "verify_capture_kit.py",
             "verify_mission_event_lock_map.py",
+            "mission_event_activator_audit.py",
         ):
             source = project_root / "tools" / filename
             if not source.is_file():
@@ -200,6 +201,8 @@ def build_capture_kit(
             "PHASE88_REPORT_AR.md",
             "PHASE88_EVENT_LOCK_PLAN.json",
             "PHASE88_MISSION_EVENT_LOCK_MAP.json",
+            "PHASE89_REPORT_AR.md",
+            "PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json",
         ):
             source = project_root / "reports" / filename
             if source.is_file():
@@ -221,13 +224,17 @@ The event-lock plan can also be checked explicitly:
 
     python Tools/verify_mission_event_lock_map.py --map Reports/PHASE88_MISSION_EVENT_LOCK_MAP.json --gsc Experimental_GSC_Not_Installed/ghc_campaign_local_session.gsc
 
+The mission trigger/activator audit report is pinned to the original source archive. To reproduce it, provide the original archive:
+
+    python Tools/mission_event_activator_audit.py --archive Ghosts_Campaign_Missions_Phase31.zip --json-out Reports/PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json
+
 ## Contents
 
 - PS3 CEX bootstrap PRX build and the two read-only controller probes.
 - Campaign and Multiplayer probe mode files.
 - PS3MAPI memory-dump scripts and TU1.16 runtime analyzers.
 - Experimental GSC source and GSCBIN under Experimental_GSC_Not_Installed only.
-- Phase 84–88 reports, event-lock map and MANIFEST.json with per-file SHA-256 checksums.
+- Phase 84–89 reports, event-lock map, activator-lineage audit and MANIFEST.json with per-file SHA-256 checksums.
 
 ## Recommended offline test
 
