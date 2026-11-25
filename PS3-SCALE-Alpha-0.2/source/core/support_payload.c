@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-static int valid_request_id(const char *value)
+int ps3scale_support_request_id_valid(const char *value)
 {
     size_t i;
 
@@ -107,7 +107,7 @@ int ps3scale_support_build_json(
         return -1;
     destination[0] = '\0';
 
-    if (!valid_request_id(request_id) ||
+    if (!ps3scale_support_request_id_valid(request_id) ||
         !kind || (strcmp(kind, "issue") != 0 &&
                   strcmp(kind, "feedback") != 0) ||
         !valid_text(title, PS3SCALE_SUPPORT_TITLE_MAX, 1) ||
