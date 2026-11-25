@@ -70,6 +70,10 @@ def write_package(root: Path):
         source_root / "reports" / "PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json",
         root / "Reports" / "PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json",
     )
+    shutil.copy2(
+        source_root / "reports" / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json",
+        root / "Reports" / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json",
+    )
 
     files = {}
     for path in sorted(p for p in root.rglob("*") if p.is_file() and p.name != "MANIFEST.json"):
@@ -96,6 +100,7 @@ class CaptureKitVerifierTests(unittest.TestCase):
         self.assertEqual(summary["files_declared"], summary["files_verified"])
         self.assertEqual(summary["gsc_manifests_verified"], 2)
         self.assertTrue(summary["event_activator_audit_verified"])
+        self.assertTrue(summary["event_refactor_graph_verified"])
 
     def test_invalid_mission_event_map_is_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -119,6 +124,20 @@ class CaptureKitVerifierTests(unittest.TestCase):
             errors, _ = validate_package(root)
         self.assertTrue(any(
             "mission event activator audit: all four current interactions must not claim an unsafe interaction is ready to wire" in error
+            for error in errors
+        ))
+
+    def test_invalid_mission_event_refactor_graph_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write_package(root)
+            graph_path = root / "Reports" / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json"
+            graph = json.loads(graph_path.read_text(encoding="utf-8"))
+            graph["carrier_entity_contract"]["cut_the_rope_var_0"] = "rope entity"
+            graph_path.write_text(json.dumps(graph), encoding="utf-8")
+            errors, _ = validate_package(root)
+        self.assertTrue(any(
+            "mission event refactor graph: Carrier cut_the_rope var_0 must remain the map struct" in error
             for error in errors
         ))
 
