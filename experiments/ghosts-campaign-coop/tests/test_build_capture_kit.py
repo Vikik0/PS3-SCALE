@@ -70,6 +70,14 @@ def make_project(root: Path):
         source_root / "reports" / "PHASE89_REPORT_AR.md",
         reports / "PHASE89_REPORT_AR.md",
     )
+    shutil.copy2(
+        source_root / "reports" / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json",
+        reports / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json",
+    )
+    shutil.copy2(
+        source_root / "reports" / "PHASE90_REPORT_AR.md",
+        reports / "PHASE90_REPORT_AR.md",
+    )
     gsc = root / "client" / "ps3" / "gsc"
     gsc.mkdir(parents=True)
     (gsc / "ghc_campaign_player_registry.gsc").write_text(
@@ -145,6 +153,7 @@ class CaptureKitBuilderTests(unittest.TestCase):
                 self.assertFalse(any(name.startswith("Ghosts_TU116_Development_Capture_Kit/PS3/") and name.endswith(".gscbin") for name in names))
                 self.assertTrue(any(name.endswith("/Tools/mission_event_activator_audit.py") for name in names))
                 self.assertTrue(any(name.endswith("/Reports/PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json") for name in names))
+                self.assertTrue(any(name.endswith("/Reports/PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json") for name in names))
 
     def test_missing_ci_artifact_payload_fails_closed(self):
         with tempfile.TemporaryDirectory() as temp:
