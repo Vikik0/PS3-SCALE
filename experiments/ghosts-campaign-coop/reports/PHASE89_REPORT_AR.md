@@ -17,7 +17,7 @@
 | الحدث | Event ID | دليل المشكلة |
 |---|---:|---|
 | Black Ice — event_player_turns_key | 0 | لا يستقبل لاعباً؛ helper يعتمد على `level.player` ولا يعيد activator |
-| Carrier — cut_the_rope | 1 | `var_0` هو كيان الحبل، بينما اللاعب الفعلي ما زال `level.player` |
+| Carrier — cut_the_rope | 1 | `var_0` هو map struct/animation target، و`self` هو كيان الحبل؛ ولا يوجد وسيط للاعب الفعلي |
 | Cornered — gun_down_trigger_internal | 2 | يبدأ من global flag، ولا يستقبل activator، ويحتوي 78 مرجعاً إلى `level.player` |
 | Cornered — upload_virus_enter | 3 | مسار الرفع يمر عبر flags عامة، ولا يمرر اللاعب بين دوال الدخول والخروج |
 
@@ -38,7 +38,7 @@
 
 ## قرار التنفيذ
 
-لم أضف أقفالاً إلى السكربتات الأصلية؛ لأن وضع القفل حول `level.player` سيحجز اللاعب الأساسي فقط، ولن يثبت ملكية اللاعب الثاني. يجب أولاً تمرير اللاعب الحقيقي من trigger إلى كل handler، مع فصل كيان الحبل عن اللاعب في Carrier، وفصل الحالة الخاصة بكل لاعب عن flags وdvars والأجهزة المشتركة.
+لم أضف أقفالاً إلى السكربتات الأصلية؛ لأن وضع القفل حول `level.player` سيحجز اللاعب الأساسي فقط، ولن يثبت ملكية اللاعب الثاني. يجب أولاً تمرير اللاعب الحقيقي من trigger إلى كل handler، مع فصل `self` (كيان الحبل) عن `var_0` (map struct/animation target) وعن وسيط اللاعب الجديد في Carrier، وفصل الحالة الخاصة بكل لاعب عن flags وdvars والأجهزة المشتركة.
 
 ## الخطوة التالية
 
