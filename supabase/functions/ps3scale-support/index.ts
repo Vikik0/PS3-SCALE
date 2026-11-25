@@ -20,12 +20,20 @@ function cleanText(value: unknown, maxLength: number): string | null {
   return text;
 }
 
-async function sha256Hex(value: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
+async function hmacSha256Hex(secret: string, value: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
     new TextEncoder().encode(value),
   );
-  return Array.from(new Uint8Array(digest))
+  return Array.from(new Uint8Array(signature))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
 }
@@ -80,7 +88,6 @@ Deno.serve(async (request) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const secretKeysJson = Deno.env.get("SUPABASE_SECRET_KEYS");
-  const rateLimitSalt = Deno.env.get("PS3SCALE_SUPPORT_RATE_LIMIT_SALT");
   let serviceRoleKey: string | undefined;
   try {
     const secretKeys = JSON.parse(secretKeysJson ?? "{}") as
@@ -92,15 +99,14 @@ Deno.serve(async (request) => {
   } catch {
     serviceRoleKey = undefined;
   }
-  if (!supabaseUrl || !serviceRoleKey || !rateLimitSalt ||
-      rateLimitSalt.length < 32) {
+  if (!supabaseUrl || !serviceRoleKey) {
     return reply(503, { ok: false, error: "support_service_not_configured" });
   }
 
   // Supabase's Cloudflare edge supplies this header. Do not trust a
   // caller-controlled X-Forwarded-For value for the rate-limit identity.
   const clientIp = request.headers.get("cf-connecting-ip") ?? "unknown";
-  const ipHash = await sha256Hex(`${rateLimitSalt}:${clientIp}`);
+  const ipHash = await hmacSha256Hex(serviceRoleKey, clientIp);
   const admin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
