@@ -101,7 +101,9 @@ jobs:
                    if item.get("name") == "Crash-Bash-RetroArch-Stage" and not item.get("expired")]
           if not valid:
               raise SystemExit("Selected run has no unexpired Crash-Bash-RetroArch-Stage artifact.")
-          print("Verified successful PS3 runtime build and unexpired RetroArch artifact.")
+          if valid[0].get("size_in_bytes", 0) > 64 * 1024 * 1024:
+              raise SystemExit("Selected runtime artifact is oversized; use the RGUI-trimmed build to stay below the PSL1GHT 1,024-entry PKG cap.")
+          print("Verified successful PS3 runtime build, unexpired artifact and trimmed RGUI payload.")
           PY
 
       - name: Download and validate the private BIN/CUE archive
