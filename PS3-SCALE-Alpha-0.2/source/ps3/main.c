@@ -6187,7 +6187,6 @@ static int retry_pending_support_report(void)
     FILE *file;
     size_t bytes;
     int path_length;
-    struct stat file_stat;
     const char *marker;
 
     if (g_support_thread_started || g_support_send_running ||
@@ -6218,8 +6217,7 @@ static int retry_pending_support_report(void)
         if (!ps3scale_support_request_id_valid(request_id))
             continue;
         if (!selected_name[0] || strcmp(entry->d_name, selected_name) < 0)
-            (void)snprintf(selected_name, sizeof(selected_name), "%s",
-                           entry->d_name);
+            memcpy(selected_name, entry->d_name, name_length + 1);
     }
     (void)closedir(directory);
 
@@ -6239,12 +6237,6 @@ static int retry_pending_support_report(void)
         return -1;
     }
 
-    if (lstat(report_path, &file_stat) != 0 ||
-        !S_ISREG(file_stat.st_mode)) {
-        snprintf(g_support_status, sizeof(g_support_status),
-                 "PENDING REPORT IS NOT A REGULAR FILE.");
-        return -1;
-    }
     file = fopen(report_path, "rb");
     if (!file) {
         snprintf(g_support_status, sizeof(g_support_status),
