@@ -316,3 +316,36 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - Capture-kit artifact ID: `15070258524`; inner ZIP: **535,522 bytes**, **57/57 files verified**; SHA-256 `a62b25f7b2c201d6f2714872d6c916df1650e68fcf83f20537dc6d16d96f59f1`.
 - Report: `reports/PHASE93_REPORT_AR.md`; contract: `docs/phase93-player-array-preservation.md`; JSON: `reports/PHASE93_PLAYER_ARRAY_PRESERVATION.json`.
 - **Native gate unchanged:** second Local Client and trigger activator semantics remain unproven on the target PS3 runtime; original shared interactions remain **0/4 ready**. No original mission handler or FastFile was modified.
+
+
+### Phase 94 — preserve the original player array during startup rebind
+
+- Removed the startup `level.playerpiggyback = undefined` reset. Final binding now requires a fresh engine player-array query; if it is absent, status 2 is returned and stale snapshots are not bound.
+- CI [#1567](https://github.com/Vikik0/PS3-SCALE/actions/runs/45719086601): **7/7 successful**, **530 Python tests passed**. Capture kit: 57/57 files, 535,722 bytes; artifact `15072135172`.
+
+### Phase 95 — strict Event Lock completion input
+
+- GSC release now rejects undefined completion values and accepts only numeric 0/1, matching the host C model.
+- CI [#1569](https://github.com/Vikik0/PS3-SCALE/actions/runs/45719357177): **7/7 successful**, **531 Python tests**, **21/21 Event Lock C cases**. Capture kit: 57/57 files, 535,838 bytes; artifact `15070344311`.
+
+### Phase 96 — PRX export/NID synchronization
+
+- Added all ten read-only GSC wrapper-loader diagnostics to `exports.yml`. Corrected their NIDs to the values computed by PS3DK `nidgen`; YAML and assembly now match exactly.
+- `nidgen` accepted **29/29 exports**. CI [#1571](https://github.com/Vikik0/PS3-SCALE/actions/runs/45719901826): **7/7 successful**, **533 Python tests**. Capture kit: 57/57 files, 536,522 bytes; artifact `15072500004`.
+
+### Phase 97 — portable GSC wrapper parser
+
+- Extracted wrapper parsing into a portable C module shared by PS3 file I/O and host tests. It checks magic, segment lengths, capacity, exact total size and FNV-1a.
+- CI [#1575](https://github.com/Vikik0/PS3-SCALE/actions/runs/45720639607): **7/7 successful**, **536 Python tests**, **10/10 parser C tests**. Capture kit: 57/57 files, 536,971 bytes; artifact `15072465712`.
+
+### Phase 98 — mocked PS3 GSC loader tests
+
+- Added a mock Cell FS API and tests against the actual PRX loader: success, open/read errors, oversized and exact-capacity files, invalid wrappers and reload reset.
+- CI [#1577](https://github.com/Vikik0/PS3-SCALE/actions/runs/45720980397): **7/7 successful**, **536 Python tests**, **10/10 parser tests**, **9/9 loader tests**. Capture kit: 57/57 files, 536,971 bytes; artifact `15071488495`.
+
+### Phase 99 — partial reads and close failures
+
+- The loader now accumulates short reads until EOF or capacity, probes for an extra byte, clears failed snapshots and reports `CLOSE_FAILED` when closing the file fails.
+- CI [#1578](https://github.com/Vikik0/PS3-SCALE/actions/runs/45721292708): **7/7 successful**, **536 Python tests**, **10/10 parser tests**, **12/12 loader tests**. Capture kit: 57/57 files, 537,208 bytes; artifact `15072062945`.
+
+**Native/runtime gate remains unchanged:** the second Campaign Local Client and trigger activator semantics are not proven on the target PS3. The original shared mission interactions remain **0/4 ready**. No original mission GSC or FastFile was modified, and no physical Campaign co-op result is claimed.

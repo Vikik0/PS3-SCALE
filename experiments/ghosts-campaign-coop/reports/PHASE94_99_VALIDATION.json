@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "project": "Ghosts Campaign Co-op PS3",
+  "phases": [
+    {
+      "phase": 94,
+      "ci_run": 1567,
+      "ci_run_id": 45719086601,
+      "ci": "7/7 PASS",
+      "python_tests": "530/530",
+      "capture_kit": {
+        "files": "57/57",
+        "bytes": 535722,
+        "sha256": "6501bd452029220d01e907c711d6128d51e7831643670538b551e78131da5288",
+        "artifact_id": 15072135172
+      },
+      "source_sha256": "8a2b05298a5925d398e1ae7e4752a482bcde4196a126311b0cec314788c6e1a6",
+      "gscbin_sha256": "9fc7dcc4dde75e159090c55fa7560c26f5c61e890db55c879ed474ead51cc724",
+      "gscbin_bytes": 3803
+    },
+    {
+      "phase": 95,
+      "ci_run": 1569,
+      "ci_run_id": 45719357177,
+      "ci": "7/7 PASS",
+      "python_tests": "531/531",
+      "event_lock_c_tests": "21/21",
+      "capture_kit": {
+        "files": "57/57",
+        "bytes": 535838,
+        "sha256": "80dc748e8e1b2cf3aabe2b126646ac3d1f32c1075a87e15e029cc6f2168a9c2a",
+        "artifact_id": 15070344311
+      },
+      "source_sha256": "42bcda255880184cc48bd7fd303fe99de9c01f546872fa797dee410d5f273fb0",
+      "gscbin_sha256": "5770976b355a13fa5259b67fe0490f6d4a415708cb112115d82d7c236d516d34",
+      "gscbin_bytes": 3828
+    },
+    {
+      "phase": 96,
+      "ci_run": 1571,
+      "ci_run_id": 45719901826,
+      "ci": "7/7 PASS",
+      "python_tests": "533/533",
+      "prx_exports": "29/29 nidgen verified",
+      "capture_kit": {
+        "files": "57/57",
+        "bytes": 536522,
+        "sha256": "0d62f02f98b2d24549f45cd1cc0ce062c5d4da022b535909787b1922720c73c7",
+        "artifact_id": 15072500004
+      }
+    },
+    {
+      "phase": 97,
+      "ci_run": 1575,
+      "ci_run_id": 45720639607,
+      "ci": "7/7 PASS",
+      "python_tests": "536/536",
+      "gsc_wrapper_parser_c_tests": "10/10",
+      "capture_kit": {
+        "files": "57/57",
+        "bytes": 536971,
+        "sha256": "064ae4675fa1ca22264a4efaba3e10f75d27bf10c281cc6b6051c0f89851d24b",
+        "artifact_id": 15072465712
+      },
+      "sample_gscbin_header": {
+        "comp_len": 740,
+        "stack_len": 6795,
+        "bytecode_len": 3072,
+        "total_bytes": 3828
+      }
+    },
+    {
+      "phase": 98,
+      "ci_run": 1577,
+      "ci_run_id": 45720980397,
+      "ci": "7/7 PASS",
+      "python_tests": "536/536",
+      "gsc_wrapper_parser_c_tests": "10/10",
+      "gsc_wrapper_loader_c_tests": "9/9",
+      "capture_kit": {
+        "files": "57/57",
+        "bytes": 536971,
+        "sha256": "064ae4675fa1ca22264a4efaba3e10f75d27bf10c281cc6b6051c0f89851d24b",
+        "artifact_id": 15071488495
+      }
+    },
+    {
+      "phase": 99,
+      "ci_run": 1578,
+      "ci_run_id": 45721292708,
+      "ci": "7/7 PASS",
+      "python_tests": "536/536",
+      "gsc_wrapper_parser_c_tests": "10/10",
+      "gsc_wrapper_loader_c_tests": "12/12",
+      "capture_kit": {
+        "files": "57/57",
+        "bytes": 537208,
+        "sha256": "280cfc42a141af788b8e129dc782a01e021f0b0520350228ed43336f535a48a4",
+        "artifact_id": 15072062945
+      }
+    }
+  ],
+  "runtime_boundary": {
+    "native_second_local_client_proven": false,
+    "trigger_activator_runtime_semantics_proven": false,
+    "original_shared_interactions_ready": "0/4",
+    "original_mission_gsc_modified": false,
+    "fastfile_rebuilt_or_injected": false,
+    "physical_ps3_campaign_runtime_tested": false
+  }
+}
