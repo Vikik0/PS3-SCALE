@@ -884,15 +884,31 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                         if (strcmp(endpoint.state, "disc_mismatch") == 0) {
                             netplay_waiting = 0;
                             snprintf(status, status_size, "Disc mismatch. Select the same CUE content as the other players.");
+                        } else if (strcmp(endpoint.state, "host_password_required") == 0) {
+                            netplay_waiting = 0;
+                            snprintf(status, status_size, "Host Netplay is password-protected. Disable the password, then press CROSS to retry.");
                         } else {
                             netplay_wait_attempts++;
                             if (netplay_wait_attempts >= NETPLAY_DISCOVERY_MAX_ATTEMPTS) {
                                 netplay_waiting = 0;
-                                snprintf(status, status_size, "Host was not found after 2 minutes. Check that the host started Netplay.");
+                                if (strcmp(endpoint.state, "waiting_for_disc_selection") == 0) {
+                                    snprintf(status, status_size, "Timed out waiting for every player to confirm the same disc.");
+                                } else if (strcmp(endpoint.state, "waiting_for_host_start") == 0) {
+                                    snprintf(status, status_size, "The host has not started Netplay yet. Ask the host to start the match.");
+                                } else if (strcmp(endpoint.state, "host_not_connectable") == 0) {
+                                    snprintf(status, status_size, "Host is not connectable. Check NAT, relay and host network settings.");
+                                } else {
+                                    snprintf(status, status_size, "Host did not appear in the RetroArch lobby. Check Netplay announcement and network.");
+                                }
                             } else if (strcmp(endpoint.state, "waiting_for_disc_selection") == 0) {
                                 snprintf(status, status_size, "Waiting for all players to confirm the same disc...");
+                            } else if (strcmp(endpoint.state, "waiting_for_host_start") == 0) {
+                                snprintf(status, status_size, "Disc confirmed. Waiting for the host to start Netplay...");
+                            } else if (strcmp(endpoint.state, "host_not_connectable") == 0) {
+                                snprintf(status, status_size, "Host is visible but not connectable. Checking relay... %d/%d",
+                                         netplay_wait_attempts, NETPLAY_DISCOVERY_MAX_ATTEMPTS);
                             } else {
-                                snprintf(status, status_size, "Waiting for host relay... attempt %d/%d",
+                                snprintf(status, status_size, "Waiting for host announcement... %d/%d",
                                          netplay_wait_attempts, NETPLAY_DISCOVERY_MAX_ATTEMPTS);
                             }
                         }
@@ -900,13 +916,17 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                         netplay_waiting = 0;
                         return_to_rooms(&session, &view, &ready, &screen, &poll_frames,
                                         rooms, &room_count, &selected, status, status_size);
+                    } else if (strstr(error, "Every active player must be READY") != NULL) {
+                        netplay_waiting = 0;
+                        screen = SCREEN_ROOM;
+                        snprintf(status, status_size, "Room is no longer READY. Every active player must press CROSS again.");
                     } else {
                         netplay_wait_attempts++;
                         snprintf(status, status_size, "Host lookup retry %d: %.90s",
                                  netplay_wait_attempts, error);
                         if (netplay_wait_attempts >= NETPLAY_DISCOVERY_MAX_ATTEMPTS) {
                             netplay_waiting = 0;
-                            snprintf(status, status_size, "Could not locate the host. Return to the room and try again.");
+                            snprintf(status, status_size, "Could not locate the host. Check the network and try again.");
                         }
                     }
                 }

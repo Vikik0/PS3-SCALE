@@ -47,6 +47,15 @@ assert "cb_online_get_room(" not in heartbeat.group(1), (
 )
 
 print("Native lobby polling and expired-session recovery checks passed.")
+# Netplay discovery must give actionable recovery messages for each server state.
+assert 'strcmp(endpoint.state, "waiting_for_host_start") == 0' in source
+assert 'strcmp(endpoint.state, "host_password_required") == 0' in source
+assert 'strcmp(endpoint.state, "host_not_connectable") == 0' in source
+assert "Host Netplay is password-protected" in source
+assert "Host is not connectable" in source
+assert "The host has not started Netplay yet" in source
+assert "Every active player must press CROSS again" in source
+
 
 main_source = (root / "source/main.c").read_text(encoding="utf-8")
 online_source = (root / "source/online.c").read_text(encoding="utf-8")
