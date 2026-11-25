@@ -96,8 +96,24 @@ jobs:
           make -C Crash-Bash-Enhanced pkg
           test -s Crash-Bash-Enhanced/crashbash.pkg
           test -s Crash-Bash-Enhanced/build/pkg/USRDIR/EBOOT.BIN
-          test -s Crash-Bash-Enhanced/build/pkg/USRDIR/retroarch/EBOOT.BIN
-          test -s Crash-Bash-Enhanced/build/pkg/USRDIR/retroarch/cores/pcsx_rearmed_libretro_psl1ght.SELF
+          SOURCE_RUNTIME="Crash-Bash-Enhanced/pkgfiles/USRDIR/retroarch"
+          PACKAGED_RUNTIME="Crash-Bash-Enhanced/build/pkg/USRDIR/retroarch"
+          test -s "$PACKAGED_RUNTIME/EBOOT.BIN"
+          test -s "$PACKAGED_RUNTIME/cores/pcsx_rearmed_libretro_psl1ght.SELF"
+          test -s "$PACKAGED_RUNTIME/assets/rgui"
+          test -s "$PACKAGED_RUNTIME/assets/xmb/automatic/png/bg.png"
+          test -s "$PACKAGED_RUNTIME/assets/fonts/mplus-1p-regular.ttf"
+          test -s "$PACKAGED_RUNTIME/assets/ozone/regular.ttf"
+          test -s "$PACKAGED_RUNTIME/info/pcsx_rearmed_libretro.info"
+          test -s "$PACKAGED_RUNTIME/licenses/RetroArch-GPL-3.0.txt"
+          SOURCE_FILES="$(find "$SOURCE_RUNTIME" -type f | wc -l)"
+          PACKAGED_FILES="$(find "$PACKAGED_RUNTIME" -type f | wc -l)"
+          SOURCE_BYTES="$(du -sb "$SOURCE_RUNTIME" | cut -f1)"
+          PACKAGED_BYTES="$(du -sb "$PACKAGED_RUNTIME" | cut -f1)"
+          test "$PACKAGED_FILES" = "$SOURCE_FILES"
+          test "$PACKAGED_BYTES" = "$SOURCE_BYTES"
+          diff -qr "$SOURCE_RUNTIME" "$PACKAGED_RUNTIME"
+          printf 'Embedded runtime verified: %s files, %s bytes\\n' "$PACKAGED_FILES" "$PACKAGED_BYTES"
       - name: Verify and checksum native lobby PKG
         run: |
           set -eu
@@ -118,10 +134,13 @@ jobs:
           Application ID: CBON00001
           XMB entry: native Tiny3D room lobby (root EBOOT.BIN)
           Embedded runtime: RetroArch + PCSX-ReARMed (USRDIR/retroarch/)
+          Embedded runtime files: $PACKAGED_FILES
+          Embedded runtime bytes: $PACKAGED_BYTES
           Online synchronization: RetroArch Netplay with lockstep and Madrid relay defaults
           Installable packages: one PKG only
           Game disc image and BIOS: not included; provide your own legal BIN/CUE dump and optional BIOS
           EOF
+          printf 'PKG SIZE: %s bytes\\n' "$(stat -c %s "$PKG")" >> BUILD-MANIFEST.txt
       - name: Upload single unified PS3 PKG
         uses: actions/upload-artifact@v4
         with:
