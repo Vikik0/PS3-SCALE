@@ -58,12 +58,18 @@ def main() -> int:
             "the package tool may have truncated the file table"
         )
 
-    listed = subprocess.run(
-        ["pkg", "-l", str(pkg_path)],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        listed = subprocess.run(
+            ["pkg", "-l", str(pkg_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except subprocess.TimeoutExpired:
+        return fail("pkg -l timed out after 120 seconds")
+    except subprocess.CalledProcessError as error:
+        return fail(f"pkg -l failed: {error.stderr.strip()}")
 
     actual_names = set()
     for line in listed.stdout.splitlines():

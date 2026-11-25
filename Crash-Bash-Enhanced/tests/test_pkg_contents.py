@@ -66,7 +66,7 @@ Listing: "test.pkg"
 +) overwrite, -) no overwrite
 
    raw data:+          4: ICON0.PNG
-   raw data:+          4: USRDIR/EBOOT.BIN
+  NPDRM SELF:+          4: USRDIR/EBOOT.BIN
   directory:+          0: USRDIR
 """
     run_case(3, valid_listing, True)
