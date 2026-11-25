@@ -1,4 +1,4 @@
-# Online enhancement catalogue — Alpha 0.23
+# Online enhancement catalogue — current implementation
 
 ## Data sources
 
