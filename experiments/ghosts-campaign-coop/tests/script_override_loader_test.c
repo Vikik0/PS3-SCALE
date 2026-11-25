@@ -15,6 +15,8 @@ static int32_t g_open_result;
 static int32_t g_fail_read_call;
 static int32_t g_read_calls;
 static int32_t g_close_calls;
+static uint64_t g_max_read_chunk;
+static int32_t g_close_result;
 
 static void reset_fs(void)
 {
@@ -25,6 +27,8 @@ static void reset_fs(void)
     g_fail_read_call = 0;
     g_read_calls = 0;
     g_close_calls = 0;
+    g_max_read_chunk = 0u;
+    g_close_result = CELL_FS_SUCCEEDED;
 }
 
 static void write_le32(uint8_t *out, uint32_t value)
@@ -87,6 +91,8 @@ int32_t cellFsRead(int fd, void *buffer, uint64_t bytes_to_read, uint64_t *bytes
 
     remaining = g_file_length - g_file_offset;
     count = bytes_to_read < remaining ? bytes_to_read : remaining;
+    if (g_max_read_chunk != 0u && count > g_max_read_chunk)
+        count = g_max_read_chunk;
     memcpy(buffer, &g_file[g_file_offset], (size_t)count);
     g_file_offset += count;
     *bytes_read = count;
@@ -97,7 +103,7 @@ int32_t cellFsClose(int fd)
 {
     assert(fd == TEST_FD);
     g_close_calls++;
-    return CELL_FS_SUCCEEDED;
+    return g_close_result;
 }
 
 static void assert_empty_state(void)
@@ -125,7 +131,37 @@ static void test_valid_file_loads_and_exposes_diagnostics(void)
     assert(ghc_script_override_blob_address() != 0u);
     assert(ghc_script_override_stack_address() != 0u);
     assert(ghc_script_override_bytecode_address() != 0u);
-    assert(g_read_calls == 1);
+    assert(g_read_calls == 2);
+    assert(g_close_calls == 1);
+}
+
+static void test_partial_reads_are_accumulated_until_eof(void)
+{
+    prepare_valid_blob();
+    g_max_read_chunk = 5u;
+    assert(ghc_script_override_reload() == GHC_SCRIPT_OVERRIDE_READY);
+    assert(ghc_script_override_total_len() == 23u);
+    assert(g_read_calls == 6);
+    assert(g_close_calls == 1);
+}
+
+static void test_partial_read_error_fails_closed(void)
+{
+    prepare_valid_blob();
+    g_max_read_chunk = 5u;
+    g_fail_read_call = 2;
+    assert(ghc_script_override_reload() == GHC_SCRIPT_OVERRIDE_READ_FAILED);
+    assert_empty_state();
+    assert(g_close_calls == 1);
+}
+
+static void test_close_failure_hides_the_staged_blob(void)
+{
+    prepare_valid_blob();
+    g_close_result = -88;
+    assert(ghc_script_override_reload() == GHC_SCRIPT_OVERRIDE_CLOSE_FAILED);
+    assert(ghc_script_override_status() == GHC_SCRIPT_OVERRIDE_CLOSE_FAILED);
+    assert_empty_state();
     assert(g_close_calls == 1);
 }
 
@@ -221,6 +257,9 @@ static void test_failed_reload_clears_previous_ready_snapshot(void)
 int main(void)
 {
     test_valid_file_loads_and_exposes_diagnostics();
+    test_partial_reads_are_accumulated_until_eof();
+    test_partial_read_error_fails_closed();
+    test_close_failure_hides_the_staged_blob();
     test_exact_capacity_file_performs_clean_eof_probe();
     test_open_failure_reports_status_and_keeps_blob_hidden();
     test_first_read_failure_closes_file_and_clears_state();
@@ -229,6 +268,6 @@ int main(void)
     test_bad_magic_is_rejected();
     test_bad_lengths_are_rejected();
     test_failed_reload_clears_previous_ready_snapshot();
-    puts("GSC wrapper loader tests: 9/9 PASS");
+    puts("GSC wrapper loader tests: 12/12 PASS");
     return 0;
 }

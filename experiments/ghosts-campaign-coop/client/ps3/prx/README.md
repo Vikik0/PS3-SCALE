@@ -19,7 +19,7 @@ The first playable target is local Campaign co-op on one PS3:
 - Diagnostic PRX exports for raw input and per-frame input values.
 - Read-only GSC wrapper-loader diagnostics: status, segment lengths, total length, FNV-1a hash, and in-module blob/stack/bytecode addresses. These exports report the staged blob only; they do not install or execute a script override.
 - Portable host-tested GSC wrapper parser with explicit magic, length, capacity, and FNV-1a validation. The PS3 file-I/O layer delegates to the same parser used by the host tests.
-- Host-mocked PS3 file-loader tests cover open/read failures, oversized files, exact-capacity files, invalid wrappers, status reset, and the exported diagnostics.
+- Host-mocked PS3 file-loader tests cover partial reads, open/read/close failures, oversized files, exact-capacity files, invalid wrappers, status reset, and the exported diagnostics.
 
 The PRX does **not** call `cellPadInit` or `cellPadEnd`; the running game owns that subsystem lifecycle. It does not change the game's controller routing.
 

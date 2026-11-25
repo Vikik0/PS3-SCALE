@@ -35,6 +35,7 @@ int32_t ghc_script_override_reload(void)
 {
     int fd = -1;
     uint64_t bytes_read = 0u;
+    uint64_t chunk_read = 0u;
     uint64_t extra_read = 0u;
     uint8_t extra_byte = 0u;
     GhcScriptOverrideBlobInfo blob_info;
@@ -50,27 +51,58 @@ int32_t ghc_script_override_reload(void)
         return (int32_t)g_status;
     }
 
-    result = cellFsRead(fd, g_gscbin, sizeof(g_gscbin), &bytes_read);
-    if (result != CELL_FS_SUCCEEDED) {
-        (void)cellFsClose(fd);
-        g_status = GHC_SCRIPT_OVERRIDE_READ_FAILED;
-        return (int32_t)g_status;
+    /*
+     * Cell FS may return a successful short read. Accumulate until EOF or
+     * until the fixed staging buffer is full; never parse a partial snapshot.
+     */
+    while (bytes_read < sizeof(g_gscbin)) {
+        uint64_t remaining = sizeof(g_gscbin) - bytes_read;
+        chunk_read = 0u;
+        result = cellFsRead(
+            fd,
+            &g_gscbin[(size_t)bytes_read],
+            remaining,
+            &chunk_read
+        );
+        if (result != CELL_FS_SUCCEEDED || chunk_read > remaining) {
+            result = cellFsClose(fd);
+            clear_blob();
+            g_status = result == CELL_FS_SUCCEEDED
+                ? GHC_SCRIPT_OVERRIDE_READ_FAILED
+                : GHC_SCRIPT_OVERRIDE_CLOSE_FAILED;
+            return (int32_t)g_status;
+        }
+        if (chunk_read == 0u)
+            break;
+        bytes_read += chunk_read;
     }
 
     if (bytes_read == sizeof(g_gscbin)) {
         result = cellFsRead(fd, &extra_byte, 1u, &extra_read);
         if (result != CELL_FS_SUCCEEDED) {
-            (void)cellFsClose(fd);
-            g_status = GHC_SCRIPT_OVERRIDE_READ_FAILED;
+            result = cellFsClose(fd);
+            clear_blob();
+            g_status = result == CELL_FS_SUCCEEDED
+                ? GHC_SCRIPT_OVERRIDE_READ_FAILED
+                : GHC_SCRIPT_OVERRIDE_CLOSE_FAILED;
             return (int32_t)g_status;
         }
         if (extra_read != 0u) {
-            (void)cellFsClose(fd);
-            g_status = GHC_SCRIPT_OVERRIDE_TOO_LARGE;
+            result = cellFsClose(fd);
+            clear_blob();
+            g_status = result == CELL_FS_SUCCEEDED
+                ? GHC_SCRIPT_OVERRIDE_TOO_LARGE
+                : GHC_SCRIPT_OVERRIDE_CLOSE_FAILED;
             return (int32_t)g_status;
         }
     }
-    (void)cellFsClose(fd);
+
+    result = cellFsClose(fd);
+    if (result != CELL_FS_SUCCEEDED) {
+        clear_blob();
+        g_status = GHC_SCRIPT_OVERRIDE_CLOSE_FAILED;
+        return (int32_t)g_status;
+    }
 
     validation = ghc_script_override_inspect_blob(
         g_gscbin,
