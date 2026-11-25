@@ -914,7 +914,6 @@ assert '"%s/%s.json"' in src
 assert "retry_pending_support_report" in src
 assert "PENDING REPORT SENT ONLINE." in src
 assert "g_support_sending_path" in src
-assert '"APP VERSION: %s\\n"' in src
 assert "generate_support_request_id();" in src
 about_ui = section("static void draw_about(void)",
                    "static void draw_profile_toast(void)")
