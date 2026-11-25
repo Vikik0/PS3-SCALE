@@ -4,7 +4,7 @@
   "private": true,
   "description": "Crash Bash Enhanced online lobby and PS3 build tooling",
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "scripts": {
     "test": "node --test"

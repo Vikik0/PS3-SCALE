@@ -571,9 +571,11 @@ module.exports = async function handler(req, res) {
             error: selection.discMismatch ? "Players selected different disc images." : "Every player must confirm the same disc image before starting.",
             state: selection.discMismatch ? "disc_mismatch" : "waiting_for_disc_selection", ...selection
           } };
-          if (!room.gameStartedAt) {
-            room.gameStartedAt = now;
-            room.gameStartCancelUntil = now + 30 * 1000;
+          if (!room.gameStartedAt) room.gameStartedAt = now;
+          if (!Number.isFinite(room.gameStartCancelUntil)) {
+            // Older active rooms may predate the explicit recovery-window field.
+            // Derive it from the original lock time without extending the window.
+            room.gameStartCancelUntil = room.gameStartedAt + 30 * 1000;
           }
           room.updatedAt = now;
           return { status: 200, body: { ok: true, gameStartedAt: room.gameStartedAt } };
@@ -586,7 +588,7 @@ module.exports = async function handler(req, res) {
         }
         if (!Number.isFinite(room.gameStartCancelUntil) || now > room.gameStartCancelUntil) {
           return { write: false, status: 409, body: {
-            error: "The launch recovery window has expired; the active match lock cannot be cancelled."
+            error: "The launch recovery window has expired; leave this room and create a new one."
           } };
         }
         delete room.gameStartedAt;

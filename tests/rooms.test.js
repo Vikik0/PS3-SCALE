@@ -1163,6 +1163,31 @@ test("a host can only cancel the launch lock inside the recovery window", async 
   assert.equal(stillLocked.body.room.gameStarted, true);
 });
 
+test("legacy started rooms derive a non-extended launch recovery window", async () => {
+  const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
+  const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
+  await call("POST", { action: "set_ready", ready: true }, host.body.token);
+  await call("POST", { action: "set_ready", ready: true }, guest.body.token);
+  await confirmMatchingDisc(host.body.token, guest.body.token);
+  const started = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(started.statusCode, 200);
+
+  const pathname = "cb-rooms/" + host.body.room.code + ".json";
+  const stored = JSON.parse(blobs.get(pathname).body);
+  stored.gameStartedAt = Date.now() - 10_000;
+  delete stored.gameStartCancelUntil;
+  blobs.set(pathname, { body: JSON.stringify(stored), etag: String(++etagSequence) });
+
+  const refreshed = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(refreshed.statusCode, 200);
+  const migrated = JSON.parse(blobs.get(pathname).body);
+  assert.equal(migrated.gameStartCancelUntil, migrated.gameStartedAt + 30_000);
+
+  const cancelled = await call("POST", { action: "game_start_cancel" }, host.body.token);
+  assert.equal(cancelled.statusCode, 200);
+  assert.equal(cancelled.body.gameStartCancelled, true);
+});
+
 test("a started Netplay match keeps its relay identity when the host seat expires", async () => {
   const host = await call("POST", { action: "create", displayName: "Host", isPrivate: true });
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
