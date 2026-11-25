@@ -95,12 +95,12 @@ PKG_ITEM_COUNT="$(python3 - "$ROOT/crashbash.pkg" <<'PY'
 import struct, sys
 with open(sys.argv[1], "rb") as stream:
     header = stream.read(0x20)
-if header[:4] != b"\\x7fPKG":
+if header[:4] != b"\x7fPKG":
     raise SystemExit("Finalized personal PKG has invalid magic.")
 print(struct.unpack_from(">I", header, 0x14)[0])
 PY
 )"
-VERIFIED_ITEM_COUNT="$(sed -n 's/^PKG item count: \\([0-9][0-9]*\\) \\/ 1024$/\\1/p' "$ROOT/build/PKG-CONTENTS.txt")"
+VERIFIED_ITEM_COUNT="$(sed -n 's/^PKG item count: \([0-9][0-9]*\) \/ 1024$/\1/p' "$ROOT/build/PKG-CONTENTS.txt")"
 test "$PKG_ITEM_COUNT" = "$VERIFIED_ITEM_COUNT"
 test "$PKG_ITEM_COUNT" -lt 1024
 test -s "$ROOT/build/pkg/USRDIR/PSXISO/DISC-MANIFEST.txt"
