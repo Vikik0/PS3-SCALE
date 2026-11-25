@@ -1,0 +1,280 @@
+{
+  "schema_version": 1,
+  "phase": 89,
+  "status": "ACTIVATOR_LINEAGE_AUDIT_BLOCKED_SAFE_MISSION_PATCH",
+  "input_archive": "Ghosts_Campaign_Missions_Phase31.zip",
+  "input_archive_sha256": "ca4c0fb46a12b6179b406bc6f7ee5e10729c66ac7a7d2664bf9c3d3cfa14a77a",
+  "source_hashes": {
+    "black_ice_flarestack.gsc": {
+      "archive_member": "Ghosts_Campaign_Missions_Phase31/missions/black_ice/decompiled_gsc/maps/black_ice_flarestack.gsc",
+      "observed_sha256": "87257aab8fa64715abc08636768a1c52a93ffc2a1d4c8e36b0a6e4878df8c11f",
+      "expected_sha256": "87257aab8fa64715abc08636768a1c52a93ffc2a1d4c8e36b0a6e4878df8c11f",
+      "matches": true
+    },
+    "black_ice_util.gsc": {
+      "archive_member": "Ghosts_Campaign_Missions_Phase31/missions/black_ice/decompiled_gsc/maps/black_ice_util.gsc",
+      "observed_sha256": "3de920d152d16b5c70673d322ce2f9d65e22fab5a88ba7a4c7dad3291828c355",
+      "expected_sha256": "3de920d152d16b5c70673d322ce2f9d65e22fab5a88ba7a4c7dad3291828c355",
+      "matches": true
+    },
+    "carrier_code_zodiac.gsc": {
+      "archive_member": "Ghosts_Campaign_Missions_Phase31/missions/carrier/decompiled_gsc/maps/carrier_code_zodiac.gsc",
+      "observed_sha256": "d7f7f2d9917dc2a7756cfa5ee1c4c9d7a9653b2427a4a5d61520017623feba7f",
+      "expected_sha256": "d7f7f2d9917dc2a7756cfa5ee1c4c9d7a9653b2427a4a5d61520017623feba7f",
+      "matches": true
+    },
+    "cornered_building_entry.gsc": {
+      "archive_member": "Ghosts_Campaign_Missions_Phase31/missions/cornered/decompiled_gsc/maps/cornered_building_entry.gsc",
+      "observed_sha256": "723471a1f7aa700b982ce5b7225decd2d2e274bd88206352c083dc119bab8214",
+      "expected_sha256": "723471a1f7aa700b982ce5b7225decd2d2e274bd88206352c083dc119bab8214",
+      "matches": true
+    },
+    "player_scripted_anim_util.gsc": {
+      "archive_member": "Ghosts_Campaign_Missions_Phase31/missions/cornered/decompiled_gsc/maps/player_scripted_anim_util.gsc",
+      "observed_sha256": "40886bdad63803469e7e54bfd565ebe8fea61aa8643d2a4ec9d4be385bb76b0e",
+      "expected_sha256": "40886bdad63803469e7e54bfd565ebe8fea61aa8643d2a4ec9d4be385bb76b0e",
+      "matches": true
+    }
+  },
+  "shared_interactions": [
+    {
+      "mission": "Black Ice",
+      "routine": "event_player_turns_key",
+      "event_lock_id": 0,
+      "source": "black_ice_flarestack.gsc",
+      "source_sha256": "87257aab8fa64715abc08636768a1c52a93ffc2a1d4c8e36b0a6e4878df8c11f",
+      "definition_line": 260,
+      "parameters": [],
+      "call_sites": [
+        {
+          "source": "Ghosts_Campaign_Missions_Phase31/missions/black_ice/decompiled_gsc/maps/black_ice_flarestack.gsc",
+          "line": 70,
+          "caller": "magicreloadwhenreachenemy",
+          "arguments": []
+        }
+      ],
+      "target_level_player_references": 17,
+      "target_captures_trigger_activator": false,
+      "helper": "waittill_trigger",
+      "helper_source": "black_ice_util.gsc",
+      "helper_parameters": [
+        "var_0",
+        "var_1",
+        "var_2",
+        "var_3",
+        "var_4",
+        "var_5",
+        "var_6"
+      ],
+      "helper_level_player_references": 13,
+      "helper_captures_trigger_activator": false,
+      "helper_has_player_parameter": false,
+      "helper_returns_activator": false,
+      "has_explicit_player_context": false,
+      "call_sites_pass_player_argument": false,
+      "target_is_player_scoped": false,
+      "helper_is_player_scoped": false,
+      "safe_to_wire_event_lock": false,
+      "status": "BLOCKED_ACTIVATOR_LINEAGE_MISSING",
+      "reason": "The console sequence calls a helper that polls level.player and returns no activator. The interaction routine has no player parameter.",
+      "required_refactor": "Add an activator-aware console trigger path, pass the validated player into the interaction routine, and keep flare-stack flags/animation timeline under one mission coordinator."
+    },
+    {
+      "mission": "Carrier",
+      "routine": "cut_the_rope",
+      "event_lock_id": 1,
+      "source": "carrier_code_zodiac.gsc",
+      "source_sha256": "d7f7f2d9917dc2a7756cfa5ee1c4c9d7a9653b2427a4a5d61520017623feba7f",
+      "definition_line": 1941,
+      "parameters": [
+        "var_0"
+      ],
+      "call_sites": [
+        {
+          "source": "Ghosts_Campaign_Missions_Phase31/missions/carrier/decompiled_gsc/maps/carrier_code_zodiac.gsc",
+          "line": 1856,
+          "caller": "run_corpse_cleanup",
+          "arguments": [
+            "var_0"
+          ]
+        }
+      ],
+      "target_level_player_references": 22,
+      "target_captures_trigger_activator": false,
+      "helper": "wait_for_capture",
+      "helper_source": "carrier_code_zodiac.gsc",
+      "helper_parameters": [
+        "var_0"
+      ],
+      "helper_level_player_references": 5,
+      "helper_captures_trigger_activator": false,
+      "helper_has_player_parameter": false,
+      "helper_returns_activator": false,
+      "has_explicit_player_context": false,
+      "call_sites_pass_player_argument": false,
+      "target_is_player_scoped": false,
+      "helper_is_player_scoped": false,
+      "safe_to_wire_event_lock": false,
+      "status": "BLOCKED_ACTIVATOR_LINEAGE_MISSING",
+      "reason": "wait_for_capture registers melee commands on level.player; cut_the_rope receives the rope entity as var_0 and uses level.player for all player actions.",
+      "required_refactor": "Pass a validated player separately from the rope entity through wait_for_capture, can_cut_rope, run_corpse_cleanup and cut_the_rope; keep self bound to the rope entity."
+    },
+    {
+      "mission": "Cornered",
+      "routine": "gun_down_trigger_internal",
+      "event_lock_id": 2,
+      "source": "cornered_building_entry.gsc",
+      "source_sha256": "723471a1f7aa700b982ce5b7225decd2d2e274bd88206352c083dc119bab8214",
+      "definition_line": 1346,
+      "parameters": [],
+      "call_sites": [
+        {
+          "source": "Ghosts_Campaign_Missions_Phase31/missions/cornered/decompiled_gsc/maps/cornered_building_entry.gsc",
+          "line": 1285,
+          "caller": "gun_down_trigger",
+          "arguments": []
+        }
+      ],
+      "target_level_player_references": 78,
+      "target_captures_trigger_activator": false,
+      "helper": "gun_down_trigger",
+      "helper_source": "cornered_building_entry.gsc",
+      "helper_parameters": [],
+      "helper_level_player_references": 40,
+      "helper_captures_trigger_activator": false,
+      "helper_has_player_parameter": false,
+      "helper_returns_activator": false,
+      "has_explicit_player_context": false,
+      "call_sites_pass_player_argument": false,
+      "target_is_player_scoped": false,
+      "helper_is_player_scoped": false,
+      "safe_to_wire_event_lock": false,
+      "status": "BLOCKED_ACTIVATOR_LINEAGE_MISSING",
+      "reason": "The handler is started by a global flag and has no activator parameter; weapon snapshots and weapon methods all reference level.player, while ammoCounterHide is a shared dvar.",
+      "required_refactor": "Capture the actual trigger player, pass it into gun_down_trigger_internal, move weapon snapshots to that player, and serialize the shared ammoCounterHide dvar through one coordinator."
+    },
+    {
+      "mission": "Cornered",
+      "routine": "upload_virus_enter",
+      "event_lock_id": 3,
+      "source": "cornered_building_entry.gsc",
+      "source_sha256": "723471a1f7aa700b982ce5b7225decd2d2e274bd88206352c083dc119bab8214",
+      "definition_line": 941,
+      "parameters": [],
+      "call_sites": [
+        {
+          "source": "Ghosts_Campaign_Missions_Phase31/missions/cornered/decompiled_gsc/maps/cornered_building_entry.gsc",
+          "line": 839,
+          "caller": "upload_progress",
+          "arguments": []
+        },
+        {
+          "source": "Ghosts_Campaign_Missions_Phase31/missions/cornered/decompiled_gsc/maps/cornered_building_entry.gsc",
+          "line": 853,
+          "caller": "upload_virus_exit",
+          "arguments": []
+        }
+      ],
+      "target_level_player_references": 44,
+      "target_captures_trigger_activator": false,
+      "helper": "waittill_trigger",
+      "helper_source": "player_scripted_anim_util.gsc",
+      "helper_parameters": [
+        "var_0",
+        "var_1",
+        "var_2",
+        "var_3",
+        "var_4",
+        "var_5"
+      ],
+      "helper_level_player_references": 3,
+      "helper_captures_trigger_activator": false,
+      "helper_has_player_parameter": false,
+      "helper_returns_activator": false,
+      "has_explicit_player_context": false,
+      "call_sites_pass_player_argument": false,
+      "target_is_player_scoped": false,
+      "helper_is_player_scoped": false,
+      "safe_to_wire_event_lock": false,
+      "status": "BLOCKED_ACTIVATOR_LINEAGE_MISSING",
+      "reason": "The upstream trigger helper polls level.player; upload progress/exit/enter handoffs use global flags and the upload handler has no player parameter.",
+      "required_refactor": "Propagate the validated activator through the upload trigger, upload_progress, upload_virus_exit and upload_virus_enter; retain one owner for the shared device, flags, dynamic DOF and allow-fire state."
+    }
+  ],
+  "mission_coordinators": [
+    {
+      "mission": "Black Ice",
+      "routine": "player_fail_finale_instakill",
+      "source": "Ghosts_Campaign_Missions_Phase31/missions/black_ice/decompiled_gsc/maps/black_ice_exfil.gsc",
+      "source_sha256": "c99e5b56fa18b5c191f7966e36b8cb2cc8ae2ba1aa828ae42c3d88a4bf7a738b",
+      "definition_line": 954,
+      "parameters": [],
+      "level_player_references": 26,
+      "event_lock_id": null,
+      "policy": "MISSION_COORDINATOR_ONLY",
+      "must_remain_single_shot": true
+    },
+    {
+      "mission": "Black Ice",
+      "routine": "ascend_logic",
+      "source": "Ghosts_Campaign_Missions_Phase31/missions/black_ice/decompiled_gsc/maps/black_ice_ascend.gsc",
+      "source_sha256": "7204bb1ec7c217f95a157765642c2953c0aa5a892d4b17f50cdd7a7367f945c0",
+      "definition_line": 271,
+      "parameters": [],
+      "level_player_references": 22,
+      "event_lock_id": null,
+      "policy": "MISSION_COORDINATOR_ONLY",
+      "must_remain_single_shot": true
+    },
+    {
+      "mission": "Carrier",
+      "routine": "knockback_hesh",
+      "source": "Ghosts_Campaign_Missions_Phase31/missions/carrier/decompiled_gsc/maps/carrier_sparrow_run.gsc",
+      "source_sha256": "0b08e9bbda9610aa5c6cbbe32feacef309fa8ded82e4cdc8a597a4afa931e500",
+      "definition_line": 157,
+      "parameters": [],
+      "level_player_references": 51,
+      "event_lock_id": null,
+      "policy": "MISSION_COORDINATOR_ONLY",
+      "must_remain_single_shot": true
+    },
+    {
+      "mission": "Carrier",
+      "routine": "victory_choppers_land",
+      "source": "Ghosts_Campaign_Missions_Phase31/missions/carrier/decompiled_gsc/maps/carrier_deck_victory.gsc",
+      "source_sha256": "d4d40f609a216aa0aa84c862a7a1532a1740b2aaf802bba142bdf63c23a495a",
+      "definition_line": 64,
+      "parameters": [],
+      "level_player_references": 20,
+      "event_lock_id": null,
+      "policy": "MISSION_COORDINATOR_ONLY",
+      "must_remain_single_shot": true
+    },
+    {
+      "mission": "Cornered",
+      "routine": "fall_player",
+      "source": "Ghosts_Campaign_Missions_Phase31/missions/cornered/decompiled_gsc/maps/cornered_destruct.gsc",
+      "source_sha256": "11619ed70e83f89ce4d2d3e61f73dc4f87a0557827e68dc3acc6ec5c6488bcb3",
+      "definition_line": 1374,
+      "parameters": [],
+      "level_player_references": 47,
+      "event_lock_id": null,
+      "policy": "MISSION_COORDINATOR_ONLY",
+      "must_remain_single_shot": true
+    }
+  ],
+  "summary": {
+    "shared_interactions": 4,
+    "safe_to_wire": 0,
+    "blocked_missing_activator_lineage": 4,
+    "mission_coordinators_single_shot": 5
+  },
+  "decision": "Do not insert Event Lock calls into original mission handlers until each trigger path propagates a validated native player entity. The current source paths are primary-player/global-flag driven; wiring a lock around level.player would serialize Player 1 only and falsely imply Player 2 support.",
+  "next_gate": "Capture native Local Client 1 plus per-player input on the actual TU1.16 runtime, then refactor each trigger to pass its real activator through every player-owned handler before adding acquire/release/abort.",
+  "limitations": [
+    "This is static analysis of the user-supplied decompiled GSC archive.",
+    "No original mission GSC source was modified by this audit.",
+    "No FastFile was rebuilt or injected.",
+    "No physical PS3 runtime evidence is included."
+  ]
+}
