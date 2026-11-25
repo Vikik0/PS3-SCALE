@@ -6263,7 +6263,8 @@ static int retry_pending_support_report(void)
         return -1;
     }
     marker += strlen("\"request_id\":\"");
-    if (strncmp(marker, request_id, PS3SCALE_SUPPORT_REQUEST_ID_LENGTH) != 0 ||
+    if (strlen(marker) < PS3SCALE_SUPPORT_REQUEST_ID_LENGTH + 1u ||
+        strncmp(marker, request_id, PS3SCALE_SUPPORT_REQUEST_ID_LENGTH) != 0 ||
         marker[PS3SCALE_SUPPORT_REQUEST_ID_LENGTH] != '"') {
         snprintf(g_support_status, sizeof(g_support_status),
                  "PENDING REPORT ID DOES NOT MATCH FILE.");
