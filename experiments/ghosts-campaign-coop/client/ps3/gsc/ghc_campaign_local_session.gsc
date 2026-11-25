@@ -238,17 +238,56 @@ ghc_campaign_bind_native_local_pair()
 
 ghc_campaign_clear_session_aliases()
 {
-    if ( isdefined( level.ghc_campaign_player_0 )
-        && level.ghc_campaign_player_0 issplitscreenplayer()
-        && level.ghc_campaign_player_0 issplitscreenplayerprimary() )
-        level.player = level.ghc_campaign_player_0;
+    /*
+     * playerpiggyback is an original Campaign player array, not a private
+     * co-op alias. Rebuild it from live player entities instead of clearing
+     * it, so unrelated mission scripts can continue to enumerate players
+     * after a secondary-client/session invalidation.
+     */
+    var_0 = getentarray( "player", "classname" );
+    if ( !isdefined( var_0 ) )
+        var_0 = [];
+
+    level.playerpiggyback = var_0;
+
+    var_1 = undefined;
+    var_2 = undefined;
+
+    if ( isdefined( level.ghc_campaign_player_0 ) )
+    {
+        for ( var_3 = 0; var_3 < var_0.size; var_3++ )
+        {
+            if ( isdefined( var_0[var_3] )
+                && var_0[var_3] == level.ghc_campaign_player_0 )
+            {
+                var_1 = var_0[var_3];
+                break;
+            }
+        }
+    }
+
+    if ( !isdefined( var_1 ) )
+    {
+        for ( var_3 = 0; var_3 < var_0.size; var_3++ )
+        {
+            if ( isdefined( var_0[var_3] ) )
+            {
+                var_2 = var_0[var_3];
+                break;
+            }
+        }
+    }
+
+    if ( isdefined( var_1 ) )
+        level.player = var_1;
+    else if ( isdefined( var_2 ) )
+        level.player = var_2;
     else
         level.player = undefined;
 
     level.playengineeffects = undefined;
     level.ghc_campaign_player_0 = undefined;
     level.ghc_campaign_player_1 = undefined;
-    level.playerpiggyback = undefined;
 }
 
 ghc_campaign_invalidate_local_session()

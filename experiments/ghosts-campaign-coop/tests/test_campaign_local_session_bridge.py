@@ -79,19 +79,33 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertIn("ghc_campaign_invalidate_local_session()", begin)
         self.assertIn("ghc_campaign_invalidate_local_session()", finish)
 
-    def test_stale_session_clears_secondary_alias_and_preserves_only_valid_primary(self):
+    def test_stale_session_rebuilds_original_player_array_and_preserves_primary_if_present(self):
         main = function_body(self.source, "main")
         clear = function_body(self.source, "ghc_campaign_clear_session_aliases")
         invalidate = function_body(self.source, "ghc_campaign_invalidate_local_session")
         self.assertIn("ghc_campaign_clear_session_aliases()", main)
-        self.assertIn("level.ghc_campaign_player_0 issplitscreenplayerprimary()", clear)
-        self.assertIn("level.player = level.ghc_campaign_player_0", clear)
+        self.assertIn('getentarray( "player", "classname" )', clear)
+        self.assertIn("if ( !isdefined( var_0 ) )", clear)
+        self.assertIn("var_0 = []", clear)
+        self.assertIn("level.playerpiggyback = var_0", clear)
+        self.assertIn("var_0[var_3] == level.ghc_campaign_player_0", clear)
+        self.assertIn("level.player = var_1", clear)
+        self.assertIn("level.player = var_2", clear)
         self.assertIn("level.player = undefined", clear)
         self.assertIn("level.playengineeffects = undefined", clear)
         self.assertIn("level.ghc_campaign_player_0 = undefined", clear)
         self.assertIn("level.ghc_campaign_player_1 = undefined", clear)
-        self.assertIn("level.playerpiggyback = undefined", clear)
+        self.assertNotIn("level.playerpiggyback = undefined", clear)
+        self.assertLess(clear.index("level.playerpiggyback = var_0"), clear.index("level.ghc_campaign_player_0 = undefined"))
         self.assertIn("ghc_campaign_clear_session_aliases()", invalidate)
+
+
+    def test_session_invalidation_keeps_the_original_player_array_available(self):
+        clear = function_body(self.source, "ghc_campaign_clear_session_aliases")
+        invalidate = function_body(self.source, "ghc_campaign_invalidate_local_session")
+        self.assertLess(clear.index("level.playerpiggyback = var_0"), clear.index("level.ghc_campaign_player_0 = undefined"))
+        self.assertLess(invalidate.index("ghc_campaign_clear_session_aliases()"), invalidate.index("level.ghc_campaign_session_ready = 0"))
+        self.assertNotIn("level.playerpiggyback = undefined", clear)
 
     def test_stale_pair_invalidation_clears_ready_and_releases_both_drill_locks(self):
         body = function_body(self.source, "ghc_campaign_invalidate_local_session")

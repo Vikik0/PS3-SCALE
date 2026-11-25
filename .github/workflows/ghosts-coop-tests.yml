@@ -85,13 +85,13 @@ jobs:
           binary = Path("compiled/iw6/ghc_campaign_local_session.gscbin").read_bytes()
           source_hash = hashlib.sha256(source).hexdigest()
           binary_hash = hashlib.sha256(binary).hexdigest()
+          print(f"Session bridge build observed: source_sha256={source_hash}, binary_sha256={binary_hash}, binary_bytes={len(binary)}")
           if manifest.get("source_sha256"):
               assert source_hash == manifest["source_sha256"], "session bridge source hash mismatch"
           if manifest.get("compiled_gscbin_sha256"):
               assert binary_hash == manifest["compiled_gscbin_sha256"], "session bridge bytecode hash mismatch"
           if manifest.get("compiled_gscbin_bytes"):
               assert len(binary) == manifest["compiled_gscbin_bytes"], "session bridge bytecode size mismatch"
-          print(f"Session bridge build observed: source_sha256={source_hash}, binary_sha256={binary_hash}, binary_bytes={len(binary)}")
           PY
       - name: Compile and round-trip Clockwork NVG player helper fixture
         working-directory: experiments/ghosts-campaign-coop
