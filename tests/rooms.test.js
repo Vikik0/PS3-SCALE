@@ -1163,6 +1163,7 @@ test("a host can only cancel the launch lock inside the recovery window", async 
   assert.equal(stillLocked.body.room.gameStarted, true);
 });
 
+// Backward-compatibility guard for rooms created before v0.8.7.
 test("legacy started rooms derive a non-extended launch recovery window", async () => {
   const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
