@@ -6151,7 +6151,7 @@ static void service_support_send(void)
             g_support_pending_path[0] = '\0';
             snprintf(g_support_status, sizeof(g_support_status),
                      "REPORT SENT ONLINE.");
-        } else {
+        } else if (g_screen == SCREEN_HELP) {
             snprintf(g_support_status, sizeof(g_support_status),
                      "PENDING REPORT SENT ONLINE.");
         }
@@ -6167,7 +6167,7 @@ static void service_support_send(void)
     } else if (is_current_report) {
         snprintf(g_support_status, sizeof(g_support_status),
                  "LOCAL SAVE OK; SEND FAILED. PRESS CROSS TO RETRY.");
-    } else {
+    } else if (g_screen == SCREEN_HELP) {
         snprintf(g_support_status, sizeof(g_support_status),
                  "PENDING REPORT FAILED; TRY AGAIN LATER.");
     }
@@ -6243,10 +6243,15 @@ static int retry_pending_support_report(void)
         return -1;
     }
     bytes = fread(g_support_json, 1, sizeof(g_support_json) - 1, file);
-    if (ferror(file) || fgetc(file) != EOF || fclose(file) != 0) {
-        snprintf(g_support_status, sizeof(g_support_status),
-                 "PENDING REPORT IS TOO LARGE OR DAMAGED.");
-        return -1;
+    {
+        int read_error = ferror(file);
+        int has_extra_data = fgetc(file) != EOF;
+        int close_error = fclose(file) != 0;
+        if (read_error || has_extra_data || close_error) {
+            snprintf(g_support_status, sizeof(g_support_status),
+                     "PENDING REPORT IS TOO LARGE OR DAMAGED.");
+            return -1;
+        }
     }
     g_support_json[bytes] = '\0';
     marker = strstr(g_support_json, "\"request_id\":\"");
@@ -6679,12 +6684,16 @@ static void keyboard_apply(void)
                 snprintf(g_support_title, sizeof(g_support_title), "%s", g_search);
                 g_support_report_saved = 0;
                 g_support_send_success = 0;
+                g_support_json_ready = 0;
+                g_support_pending_path[0] = '\0';
                 g_support_request_id[0] = '\0';
             }
         } else if (strcmp(g_support_details, g_search) != 0) {
             snprintf(g_support_details, sizeof(g_support_details), "%s", g_search);
             g_support_report_saved = 0;
             g_support_send_success = 0;
+            g_support_json_ready = 0;
+            g_support_pending_path[0] = '\0';
             g_support_request_id[0] = '\0';
         }
         snprintf(g_search, sizeof(g_search), "%s", g_search_backup);
