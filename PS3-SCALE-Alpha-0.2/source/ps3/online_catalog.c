@@ -6,6 +6,7 @@
 #include <net/netctl.h>
 #include <sysmodule/sysmodule.h>
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -124,6 +125,8 @@ int ps3scale_online_download_limited_progress(
     FILE *file = NULL;
     download_context_t download;
     char temporary_path[512];
+    int temporary_fd = -1;
+    int temporary_created = 0;
     int result = -1;
 
     if (!url || strncmp(url, "https://", 8) != 0 ||
@@ -141,10 +144,17 @@ int ps3scale_online_download_limited_progress(
     }
 
     snprintf(temporary_path, sizeof(temporary_path), "%s.part", destination);
-    unlink(temporary_path);
-    file = fopen(temporary_path, "wb");
-    if (!file)
+    temporary_fd = open(temporary_path, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    if (temporary_fd < 0)
         goto cleanup;
+    temporary_created = 1;
+    file = fdopen(temporary_fd, "wb");
+    if (!file) {
+        (void)close(temporary_fd);
+        temporary_fd = -1;
+        goto cleanup;
+    }
+    temporary_fd = -1;
     memset(&download, 0, sizeof(download));
     download.file = file;
     download.max_bytes = max_bytes;
@@ -196,17 +206,23 @@ cleanup:
             result = -1;
         file = NULL;
     }
+    if (temporary_fd >= 0) {
+        (void)close(temporary_fd);
+        temporary_fd = -1;
+    }
     if (curl)
         curl_easy_cleanup(curl);
     curl_global_cleanup();
     network_modules_shutdown();
 
     if (result == 0) {
-        if (rename(temporary_path, destination) != 0)
+        if (rename(temporary_path, destination) == 0)
+            temporary_created = 0;
+        else
             result = -1;
     }
-    if (result != 0)
-        unlink(temporary_path);
+    if (result != 0 && temporary_created)
+        (void)unlink(temporary_path);
 
     return result;
 }
