@@ -4,8 +4,8 @@ PS3 SCALE is a PS3 homebrew application for managing PS3/PS2 game libraries and 
 
 ## Current development snapshot
 
-- Application: **Alpha 0.32**
-- Package metadata: `APP_VER=00.32`, `VERSION=00.32`
+- Application: **Alpha 0.33**
+- Package metadata: `APP_VER=00.33`, `VERSION=00.33`
 - Package ID: `PS3SCALE1`
 - Development branch: `design/splash-transitions-ui-v6`
 - Review: [Draft PR #16](https://github.com/Vikik0/PS3-SCALE/pull/16)
@@ -49,7 +49,13 @@ The branch has automated host tests and a PS3 ELF/SELF/PKG build. A successful C
 - Companion launch shortcuts for Apollo Save Tool and Artemis PS3.
 - Real Before/After screenshots are shown only when a genuine exact Title ID + APP_VER pair is available.
 
-### Persistence and download safety — Alpha 0.32
+### Persistence and support reliability — Alpha 0.33
+- Support reports are saved as atomic JSON outbox files with stable UUIDs.
+- Pending reports survive app restarts and can be retried from Help & Support.
+- Server responses are mapped to retry guidance; successful sends remove only the matching pending file.
+- The dedicated Supabase migration and Edge Function are prepared, but live reporting stays disabled until the isolated project is created and its public key/URL are configured.
+
+### Persistence and download safety — Alpha 0.33
 - Settings and favorites are saved through unique exclusive temporary files, fsync and atomic rename.
 - One-launch webMAN scripts refuse existing temporary files and symlink paths.
 - HTTPS downloads use unique O_EXCL temporary names; stale files do not block future attempts.
