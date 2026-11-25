@@ -44,8 +44,8 @@ SHARED_INTERACTIONS = (
         "source": "carrier_code_zodiac.gsc",
         "helper_source": "carrier_code_zodiac.gsc",
         "helper": "wait_for_capture",
-        "reason": "wait_for_capture registers melee commands on level.player; cut_the_rope receives the rope entity as var_0 and uses level.player for all player actions.",
-        "required_refactor": "Pass a validated player separately from the rope entity through wait_for_capture, can_cut_rope, run_corpse_cleanup and cut_the_rope; keep self bound to the rope entity.",
+        "reason": "wait_for_capture registers melee commands on level.player; var_0 is the map struct/animation target, while self remains the rope entity. Neither value is the interacting player.",
+        "required_refactor": "Pass a validated player separately from the map struct through ranktable, shoot_rocket, run_corpse_cleanup, wait_for_capture, monitor_callbutton, can_cut_rope, enemy_too_close and cut_the_rope; preserve self as the rope entity and var_0 as the map struct/animation target.",
     },
     {
         "mission": "Cornered",
