@@ -130,6 +130,17 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertIn("level.playerpiggyback = var_1", body)
         self.assertIn("return 0", body)
 
+    def test_startup_failure_still_starts_the_native_pair_recovery_monitor(self):
+        body = function_body(self.source, "main")
+        missing_array = body.index("level.ghc_campaign_session_status = 2")
+        start_after_missing = body.index("ghc_campaign_start_session_monitor()", missing_array)
+        return_after_missing = body.index("return 0", missing_array)
+        self.assertLess(start_after_missing, return_after_missing)
+        last_bind = body.rindex("if ( ghc_campaign_bind_native_local_pair() )")
+        last_start = body.rindex("ghc_campaign_start_session_monitor()")
+        self.assertGreater(last_start, last_bind)
+        self.assertIn("ghc_campaign_watch_native_session()", self.source)
+
     def test_startup_preserves_original_player_array_and_never_binds_against_a_stale_snapshot(self):
         body = function_body(self.source, "main")
         self.assertNotIn("level.playerpiggyback = undefined", body)

@@ -87,6 +87,7 @@ main()
          * says no live player array exists.
          */
         level.ghc_campaign_session_status = 2;
+        ghc_campaign_start_session_monitor();
         return 0;
     }
 
@@ -98,6 +99,8 @@ main()
         return 1;
     }
 
+    /* Keep waiting for a native pair that may appear after initial startup. */
+    ghc_campaign_start_session_monitor();
     return 0;
 }
 ghc_campaign_start_session_monitor()
