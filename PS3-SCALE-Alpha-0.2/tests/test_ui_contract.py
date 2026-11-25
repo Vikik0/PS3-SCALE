@@ -673,6 +673,8 @@ print("PS3 SCALE UI contract tests: PASS")
 
 # Online support submission contract.
 assert "PS3SCALE_SUPPORT_URL" in src
+assert "PS3SCALE_SUPPORT_API_KEY" in src
+assert "YOUR_PUBLISHABLE_KEY" in src
 assert "ps3scale_online_post_json" in src
 assert "start_support_send();" in src
 assert "support_submit_worker" in src
@@ -690,6 +692,11 @@ assert "Save locally; send online if the service is configured" in support_form
 
 online_source = source_path.with_name("online_catalog.c").read_text(encoding="utf-8")
 assert "int ps3scale_online_post_json(" in online_source
+assert "const char *publishable_api_key" in online_source
+assert 'strncmp(publishable_api_key, "sb_publishable_", 15)' in online_source
+assert '"apikey: %s"' in online_source
+assert "CURLOPT_HTTPHEADER" in online_source
+assert "Authorization: Bearer" not in online_source
 assert "CURLOPT_POSTFIELDS" in online_source
 assert "CURLOPT_SSL_VERIFYPEER" in online_source
 assert "CURLOPT_SSL_VERIFYHOST" in online_source
