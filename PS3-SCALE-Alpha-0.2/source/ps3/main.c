@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <audio/audio.h>
 #include <sys/event_queue.h>
@@ -28,6 +29,7 @@
 #include "ps3scale/ps2_config_db.h"
 #include "ps3scale/ps2_config_store.h"
 #include "ps3scale/atomic_file.h"
+#include "ps3scale/support_payload.h"
 #include "ps3scale/locale.h"
 #include "ps3scale/hardware_info.h"
 #include "ps3scale/catalog.h"
@@ -94,15 +96,21 @@ static int g_help_selected = 0;
 static int g_support_selected = 0;
 static int g_support_is_feedback = 0;
 static int g_keyboard_support_mode = 0;
-static char g_support_title[64] = "";
-static char g_support_details[64] = "";
+static char g_support_title[PS3SCALE_SUPPORT_TITLE_MAX + 1] = "";
+static char g_support_details[PS3SCALE_SUPPORT_DETAILS_MAX + 1] = "";
 static char g_support_status[128] = "LOCAL OUTBOX READY.";
+static char g_support_request_id[PS3SCALE_SUPPORT_REQUEST_ID_LENGTH + 1] = "";
+static char g_support_sending_request_id[PS3SCALE_SUPPORT_REQUEST_ID_LENGTH + 1] = "";
+static unsigned long g_support_request_sequence = 0;
+static int g_support_report_saved = 0;
+static int g_support_send_success = 0;
 static sys_ppu_thread_t g_support_thread;
 static volatile int g_support_send_running = 0;
 static volatile int g_support_send_done = 0;
 static volatile int g_support_send_result = -1;
+static volatile long g_support_send_http_status = 0;
 static int g_support_thread_started = 0;
-static char g_support_json[1024];
+static char g_support_json[8192];
 static app_screen_t g_screen = SCREEN_HOME;
 static app_screen_t g_splash_next_screen = SCREEN_BOOT;
 static int g_splash_frames = 0;
@@ -140,7 +148,7 @@ static char g_community_download_temp_path[PS3SCALE_PATH_MAX];
 static int g_community_download_persistent = 0;
 static volatile unsigned long g_community_download_expected_size = 0;
 static char g_community_download_expected_sha1[41];
-static char g_search[64] = "";
+static char g_search[PS3SCALE_SUPPORT_DETAILS_MAX + 1] = "";
 static u32 *g_font_texture = NULL;
 static ya2d_Texture *g_cover_texture = NULL;
 static ya2d_Texture *g_preview_before_texture = NULL;
@@ -163,7 +171,7 @@ static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 #define PS3SCALE_ARTEMIS_R5_EBOOT_PATH "/dev_hdd0/game/ARTZ00001/USRDIR/EBOOT.BIN"
 #define PS3SCALE_TEMP_ENHANCEMENT_LIST_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/temp_enhancements.lst"
 #define PS3SCALE_SUPPORT_DIR "/dev_hdd0/game/PS3SCALE1/USRDIR/support"
-#define PS3SCALE_SUPPORT_OUTBOX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox.txt"
+#define PS3SCALE_SUPPORT_OUTBOX_DIR "/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox"
 /* Replace with the URL of the separate PS3 SCALE Supabase project after deployment. */
 #define PS3SCALE_SUPPORT_URL "https://YOUR_PROJECT.supabase.co/functions/v1/ps3scale-support"
 #define PS3SCALE_APP_VERSION "ALPHA 0.32"
@@ -236,7 +244,7 @@ enum {
 static int g_language = LANGUAGE_UNSET;
 static int g_language_choice = LANGUAGE_ENGLISH;
 static int g_keyboard_selected = 0;
-static char g_search_backup[64] = "";
+static char g_search_backup[PS3SCALE_SUPPORT_DETAILS_MAX + 1] = "";
 static int g_boot_stage = 0;
 static int g_boot_stage_frames = 0;
 static volatile int g_boot_scan_done = 0;
@@ -4244,9 +4252,37 @@ static void draw_boot(void)
     set_ui_font_size(14, 22);
 }
 
+static void copy_text_tail_preview(char *destination, size_t capacity,
+                                     const char *source)
+{
+    size_t length;
+    size_t start;
+
+    if (!destination || capacity == 0)
+        return;
+    destination[0] = '\0';
+    if (!source)
+        return;
+    length = strlen(source);
+    if (length < capacity) {
+        memcpy(destination, source, length + 1);
+        return;
+    }
+    start = length - (capacity - 4);
+    while (start < length &&
+           (((unsigned char)source[start] & 0xc0u) == 0x80u))
+        start++;
+    destination[0] = '.';
+    destination[1] = '.';
+    destination[2] = '.';
+    snprintf(destination + 3, capacity - 3, "%s", source + start);
+}
+
 static void draw_keyboard(void)
 {
     int i;
+    char search_preview[128];
+    copy_text_tail_preview(search_preview, sizeof(search_preview), g_search);
     const char *title = g_keyboard_support_mode ?
         (g_support_selected == 0 ? "REPORT TITLE" : "REPORT DETAILS") :
         g_keyboard_online_mode ? "SEARCH ONLINE DATABASE" : "SEARCH GAMES";
@@ -4266,7 +4302,8 @@ static void draw_keyboard(void)
     draw_rounded_rect(40.0f, 112.0f, 768.0f, 34.0f, 8.0f, 0xfaf8ffff);
     draw_rounded_outline(40.0f, 112.0f, 768.0f, 34.0f,
                          8.0f, 0xbba5f0ff);
-    draw_text(54.0f, 120.0f, 0x29243fff, g_search[0] ? g_search : " ");
+    draw_text(54.0f, 120.0f, 0x29243fff,
+              search_preview[0] ? search_preview : " ");
 
     for (i = 0; i < 40; i++) {
         int row = i / 10;
@@ -5898,10 +5935,14 @@ static void draw_help(void)
 static void draw_support_form(void)
 {
     int i;
+    char title_preview[96];
+    char details_preview[96];
     static const char *labels[3] = {
         "Report Title", "Problem Details", "Submit Report"
     };
 
+    copy_text_tail_preview(title_preview, sizeof(title_preview), g_support_title);
+    copy_text_tail_preview(details_preview, sizeof(details_preview), g_support_details);
     draw_page_header(g_support_is_feedback ? "Send Feedback" : "Report an Issue",
                      "Send a note from PS3 SCALE");
     draw_soft_card(24.0f, 96.0f, 806.0f, 330.0f, 0);
@@ -5916,12 +5957,12 @@ static void draw_support_form(void)
         if (i == 0)
             draw_text(60.0f, y + 38.0f,
                       g_support_title[0] ? 0x29243fff : 0x77718fff,
-                      g_support_title[0] ? g_support_title :
+                      g_support_title[0] ? title_preview :
                                            "Press CROSS to enter a title");
         else if (i == 1)
             draw_text(60.0f, y + 38.0f,
                       g_support_details[0] ? 0x29243fff : 0x77718fff,
-                      g_support_details[0] ? g_support_details :
+                      g_support_details[0] ? details_preview :
                                              "Press CROSS to describe the issue");
         else
             draw_text(60.0f, y + 38.0f, 0x77718fff,
@@ -5936,64 +5977,61 @@ static void draw_support_form(void)
     set_ui_font_size(14, 22);
 }
 
-static int support_json_escape(char *destination, size_t capacity,
-                               const char *source)
+static void generate_support_request_id(void)
 {
-    size_t used = 0;
-    if (!destination || capacity == 0 || !source)
-        return -1;
+    struct timeval now;
+    unsigned long seconds;
+    unsigned long micros;
+    unsigned long process_id;
+    unsigned long sequence;
+    unsigned long long tail;
 
-    while (*source) {
-        unsigned char c = (unsigned char)*source++;
-        if (c == '"' || c == '\\') {
-            if (used + 2 >= capacity) return -1;
-            destination[used++] = '\\';
-            destination[used++] = (char)c;
-        } else if (c == '\n' || c == '\r') {
-            if (used + 2 >= capacity) return -1;
-            destination[used++] = '\\';
-            destination[used++] = (c == '\n') ? 'n' : 'r';
-        } else if (c < 0x20) {
-            continue;
-        } else {
-            if (used + 1 >= capacity) return -1;
-            destination[used++] = (char)c;
-        }
+    if (gettimeofday(&now, NULL) != 0) {
+        now.tv_sec = time(NULL);
+        now.tv_usec = (suseconds_t)(++g_support_request_sequence & 0xffffu);
     }
-    destination[used] = '\0';
-    return 0;
+    seconds = (unsigned long)now.tv_sec;
+    micros = (unsigned long)now.tv_usec;
+    process_id = (unsigned long)getpid();
+    sequence = ++g_support_request_sequence;
+    tail = ((unsigned long long)seconds << 20) ^
+           ((unsigned long long)micros << 4) ^
+           ((unsigned long long)process_id << 12) ^
+           (unsigned long long)sequence;
+
+    (void)snprintf(g_support_request_id, sizeof(g_support_request_id),
+                   "%08lx-%04lx-4%03lx-a%03lx-%012llx",
+                   seconds & 0xfffffffful,
+                   micros & 0xfffful,
+                   process_id & 0xffful,
+                   sequence & 0xffful,
+                   tail & 0xffffffffffffull);
 }
 
 static int build_support_json(void)
 {
-    char title[128], details[128], model[128];
-    char firmware[96], platform[96];
-    int length;
+    char model[81];
+    char firmware[41];
+    char platform[81];
 
-    if (support_json_escape(title, sizeof(title), g_support_title) != 0 ||
-        support_json_escape(details, sizeof(details), g_support_details) != 0)
-        return -1;
     if (g_hardware_info_valid) {
-        if (support_json_escape(model, sizeof(model),
-                                g_hardware_info.model_series) != 0 ||
-            support_json_escape(firmware, sizeof(firmware),
-                                g_hardware_info.firmware_version) != 0 ||
-            support_json_escape(platform, sizeof(platform),
-                                g_hardware_info.platform_id) != 0)
-            return -1;
+        (void)snprintf(model, sizeof(model), "%s",
+                       g_hardware_info.model_series);
+        (void)snprintf(firmware, sizeof(firmware), "%s",
+                       g_hardware_info.firmware_version);
+        (void)snprintf(platform, sizeof(platform), "%s",
+                       g_hardware_info.platform_id);
     } else {
-        snprintf(model, sizeof(model), "UNKNOWN");
-        snprintf(firmware, sizeof(firmware), "UNKNOWN");
-        snprintf(platform, sizeof(platform), "UNKNOWN");
+        (void)snprintf(model, sizeof(model), "UNKNOWN");
+        (void)snprintf(firmware, sizeof(firmware), "UNKNOWN");
+        (void)snprintf(platform, sizeof(platform), "UNKNOWN");
     }
 
-    length = snprintf(g_support_json, sizeof(g_support_json),
-        "{\"kind\":\"%s\",\"title\":\"%s\",\"details\":\"%s\","
-        "\"model\":\"%s\",\"firmware\":\"%s\",\"platform\":\"%s\","
-        "\"app_version\":\"%s\"}",
+    return ps3scale_support_build_json(
+        g_support_json, sizeof(g_support_json), g_support_request_id,
         g_support_is_feedback ? "feedback" : "issue",
-        title, details, model, firmware, platform, PS3SCALE_APP_VERSION);
-    return (length < 0 || (size_t)length >= sizeof(g_support_json)) ? -1 : 0;
+        g_support_title, g_support_details, model, firmware, platform,
+        PS3SCALE_APP_VERSION);
 }
 
 static void support_submit_worker(void *arg)
@@ -6003,6 +6041,7 @@ static void support_submit_worker(void *arg)
     g_support_send_result = ps3scale_online_post_json(
         PS3SCALE_SUPPORT_URL, g_support_json, strlen(g_support_json),
         &response_code);
+    g_support_send_http_status = response_code;
     g_support_send_done = 1;
     g_support_send_running = 0;
     g_network_task_running = 0;
@@ -6012,6 +6051,21 @@ static void start_support_send(void)
 {
     int rc;
 
+    if (!g_support_report_saved || !g_support_request_id[0]) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "SAVE REPORT LOCALLY FIRST.");
+        return;
+    }
+    if (g_support_send_success) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "REPORT ALREADY SENT ONLINE.");
+        return;
+    }
+    if (g_support_thread_started || g_support_send_running) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "ANOTHER REPORT IS SENDING.");
+        return;
+    }
     if (strstr(PS3SCALE_SUPPORT_URL, "YOUR_PROJECT") != NULL) {
         snprintf(g_support_status, sizeof(g_support_status),
                  "LOCAL SAVE OK; ONLINE OFF.");
@@ -6022,22 +6076,21 @@ static void start_support_send(void)
         g_game_launch_running || g_game_launch_thread_started ||
         g_profile_arm_running || g_profile_arm_thread_started) {
         snprintf(g_support_status, sizeof(g_support_status),
-                 "LOCAL SAVE OK; NETWORK BUSY.");
-        return;
-    }
-    if (g_support_thread_started || g_support_send_running) {
-        snprintf(g_support_status, sizeof(g_support_status),
-                 "ANOTHER REPORT IS SENDING.");
+                 "LOCAL SAVE OK; NETWORK BUSY. PRESS CROSS TO RETRY.");
         return;
     }
     if (build_support_json() != 0) {
         snprintf(g_support_status, sizeof(g_support_status),
-                 "LOCAL SAVE OK; FORMAT ERROR.");
+                 "LOCAL SAVE OK; REPORT FORMAT INVALID.");
         return;
     }
 
+    (void)snprintf(g_support_sending_request_id,
+                   sizeof(g_support_sending_request_id), "%s",
+                   g_support_request_id);
     g_support_send_done = 0;
     g_support_send_result = -1;
+    g_support_send_http_status = 0;
     g_support_send_running = 1;
     g_network_task_running = 1;
     rc = sysThreadCreate(&g_support_thread, support_submit_worker, NULL,
@@ -6051,12 +6104,14 @@ static void start_support_send(void)
         g_support_send_running = 0;
         g_network_task_running = 0;
         snprintf(g_support_status, sizeof(g_support_status),
-                 "LOCAL SAVE OK; SEND START FAILED.");
+                 "LOCAL SAVE OK; SEND START FAILED. PRESS CROSS TO RETRY.");
     }
 }
 
 static void service_support_send(void)
 {
+    int is_current_report;
+
     if (!g_support_send_done)
         return;
     if (g_support_thread_started) {
@@ -6064,55 +6119,108 @@ static void service_support_send(void)
         (void)sysThreadJoin(g_support_thread, &thread_result);
         g_support_thread_started = 0;
     }
-    if (g_support_send_result == 0)
+    is_current_report =
+        strcmp(g_support_sending_request_id, g_support_request_id) == 0;
+    if (is_current_report && g_support_send_result == 0) {
+        g_support_send_success = 1;
         snprintf(g_support_status, sizeof(g_support_status),
                  "REPORT SENT ONLINE.");
-    else
+    } else if (is_current_report && g_support_send_http_status == 429) {
         snprintf(g_support_status, sizeof(g_support_status),
-                 "LOCAL SAVE OK; SEND FAILED.");
+                 "SERVER LIMIT REACHED; TRY TOMORROW.");
+    } else if (is_current_report && g_support_send_http_status >= 500) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "SERVER TEMPORARILY UNAVAILABLE; RETRY.");
+    } else if (is_current_report && g_support_send_http_status >= 400) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "SERVER REJECTED REPORT; CHECK DETAILS.");
+    } else if (is_current_report) {
+        snprintf(g_support_status, sizeof(g_support_status),
+                 "LOCAL SAVE OK; SEND FAILED. PRESS CROSS TO RETRY.");
+    }
     g_support_send_done = 0;
 }
 
 static int save_support_report(void)
 {
-    FILE *fp;
+    char report_path[512];
+    char report_contents[4096];
+    char model[81];
+    char firmware[41];
+    char platform[81];
+    int length;
     long timestamp;
 
+    if (g_support_report_saved) {
+        if (g_support_send_success) {
+            snprintf(g_support_status, sizeof(g_support_status),
+                     "REPORT ALREADY SENT ONLINE.");
+            return 0;
+        }
+        start_support_send();
+        return 0;
+    }
     if (!g_support_title[0] || !g_support_details[0]) {
         snprintf(g_support_status, sizeof(g_support_status),
                  "ADD TITLE + DETAILS.");
         return -1;
     }
 
-    (void)mkdir(PS3SCALE_SUPPORT_DIR, 0777);
-    fp = fopen(PS3SCALE_SUPPORT_OUTBOX_PATH, "a");
-    if (!fp) {
+    generate_support_request_id();
+    if (build_support_json() != 0) {
+        g_support_request_id[0] = '\0';
         snprintf(g_support_status, sizeof(g_support_status),
-                 "REPORT SAVE FAILED.");
+                 "REPORT TOO LONG OR INVALID.");
         return -1;
+    }
+
+    if (g_hardware_info_valid) {
+        (void)snprintf(model, sizeof(model), "%s",
+                       g_hardware_info.model_series);
+        (void)snprintf(firmware, sizeof(firmware), "%s",
+                       g_hardware_info.firmware_version);
+        (void)snprintf(platform, sizeof(platform), "%s",
+                       g_hardware_info.platform_id);
+    } else {
+        (void)snprintf(model, sizeof(model), "UNKNOWN");
+        (void)snprintf(firmware, sizeof(firmware), "UNKNOWN");
+        (void)snprintf(platform, sizeof(platform), "UNKNOWN");
     }
 
     timestamp = (long)time(NULL);
-    fprintf(fp, "\n--- PS3 SCALE %s REPORT %ld ---\n",
-            g_support_is_feedback ? "FEEDBACK" : "ISSUE", timestamp);
-    fprintf(fp, "TITLE: %s\n", g_support_title);
-    fprintf(fp, "DETAILS: %s\n", g_support_details);
-    if (g_hardware_info_valid) {
-        fprintf(fp, "MODEL: %s\n", g_hardware_info.model_series);
-        fprintf(fp, "FIRMWARE: %s\n", g_hardware_info.firmware_version);
-        fprintf(fp, "PLATFORM: %s\n", g_hardware_info.platform_id);
-    } else {
-        fprintf(fp, "MODEL: UNKNOWN\nFIRMWARE: UNKNOWN\n");
-    }
-    fprintf(fp, "APP VERSION: %s\n", PS3SCALE_APP_VERSION);
-    if (fclose(fp) != 0) {
+    length = snprintf(report_contents, sizeof(report_contents),
+        "PS3 SCALE SUPPORT REPORT\n"
+        "REQUEST ID: %s\n"
+        "TYPE: %s\n"
+        "CREATED: %ld\n"
+        "TITLE: %s\n"
+        "DETAILS:\n%s\n"
+        "MODEL: %s\n"
+        "FIRMWARE: %s\n"
+        "PLATFORM: %s\n"
+        "APP VERSION: %s\n",
+        g_support_request_id,
+        g_support_is_feedback ? "FEEDBACK" : "ISSUE",
+        timestamp, g_support_title, g_support_details,
+        model, firmware, platform, PS3SCALE_APP_VERSION);
+    if (length < 0 || (size_t)length >= sizeof(report_contents) ||
+        mkdir(PS3SCALE_SUPPORT_DIR, 0777) != 0 && access(PS3SCALE_SUPPORT_DIR, F_OK) != 0 ||
+        mkdir(PS3SCALE_SUPPORT_OUTBOX_DIR, 0777) != 0 &&
+            access(PS3SCALE_SUPPORT_OUTBOX_DIR, F_OK) != 0 ||
+        snprintf(report_path, sizeof(report_path), "%s/%s.txt",
+                 PS3SCALE_SUPPORT_OUTBOX_DIR, g_support_request_id) < 0 ||
+        strlen(report_path) >= sizeof(report_path) ||
+        ps3scale_atomic_file_write(report_path, report_contents,
+                                   (size_t)length) != 0) {
+        g_support_request_id[0] = '\0';
         snprintf(g_support_status, sizeof(g_support_status),
-                 "REPORT SAVE FAILED.");
+                 "REPORT SAVE FAILED; PREVIOUS REPORTS KEPT.");
         return -1;
     }
 
+    g_support_report_saved = 1;
     snprintf(g_support_status, sizeof(g_support_status),
-             "SAVED TO LOCAL OUTBOX.");
+             "SAVED LOCALLY; SENDING IF ONLINE.");
     start_support_send();
     return 0;
 }
@@ -6415,10 +6523,16 @@ static void keyboard_append(const char *value)
     if (!value) return;
     used = strlen(g_search);
     amount = strlen(value);
-    if (used + amount < sizeof(g_search)) {
-        memcpy(g_search + used, value, amount + 1);
-        g_selected = 0;
-        clamp_selection();
+    {
+        size_t maximum = sizeof(g_search) - 1;
+        if (g_keyboard_support_mode)
+            maximum = g_support_selected == 0 ?
+                PS3SCALE_SUPPORT_TITLE_MAX : PS3SCALE_SUPPORT_DETAILS_MAX;
+        if (used + amount <= maximum && used + amount < sizeof(g_search)) {
+            memcpy(g_search + used, value, amount + 1);
+            g_selected = 0;
+            clamp_selection();
+        }
     }
 }
 
@@ -6456,10 +6570,19 @@ static void keyboard_cancel(void)
 static void keyboard_apply(void)
 {
     if (g_keyboard_support_mode) {
-        if (g_support_selected == 0)
-            snprintf(g_support_title, sizeof(g_support_title), "%s", g_search);
-        else
+        if (g_support_selected == 0) {
+            if (strcmp(g_support_title, g_search) != 0) {
+                snprintf(g_support_title, sizeof(g_support_title), "%s", g_search);
+                g_support_report_saved = 0;
+                g_support_send_success = 0;
+                g_support_request_id[0] = '\0';
+            }
+        } else if (strcmp(g_support_details, g_search) != 0) {
             snprintf(g_support_details, sizeof(g_support_details), "%s", g_search);
+            g_support_report_saved = 0;
+            g_support_send_success = 0;
+            g_support_request_id[0] = '\0';
+        }
         snprintf(g_search, sizeof(g_search), "%s", g_search_backup);
         g_keyboard_support_mode = 0;
         g_screen = SCREEN_SUPPORT_FORM;
@@ -6706,6 +6829,10 @@ int main(int argc, char *argv[])
                 g_support_selected = 0;
                 g_support_title[0] = '\0';
                 g_support_details[0] = '\0';
+                g_support_request_id[0] = '\0';
+                g_support_sending_request_id[0] = '\0';
+                g_support_report_saved = 0;
+                g_support_send_success = 0;
                 snprintf(g_support_status, sizeof(g_support_status),
                          "ENTER TITLE + DETAILS.");
                 g_screen = SCREEN_SUPPORT_FORM;
