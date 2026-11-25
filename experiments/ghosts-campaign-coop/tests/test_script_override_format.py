@@ -41,11 +41,11 @@ class ScriptOverrideFormatIntegrationTests(unittest.TestCase):
 
     def test_parser_checks_capacity_before_segment_arithmetic(self):
         body = function_body(self.parser, "ghc_script_override_inspect_blob")
-        too_large = body.index("if ( bytes_read > capacity )")
-        header = body.index("if ( capacity < GHC_SCRIPT_OVERRIDE_GSC_HEADER_SIZE")
+        too_large = body.index("bytes_read > capacity")
+        header = body.index("capacity < GHC_SCRIPT_OVERRIDE_GSC_HEADER_SIZE")
         comp_bound = body.index("comp_len > capacity - GHC_SCRIPT_OVERRIDE_GSC_HEADER_SIZE")
         bytecode_bound = body.index("bytecode_len > capacity - GHC_SCRIPT_OVERRIDE_GSC_HEADER_SIZE - comp_len")
-        total_check = body.index("if ( total_len != bytes_read )")
+        total_check = body.index("total_len != bytes_read")
         self.assertLess(too_large, header)
         self.assertLess(header, comp_bound)
         self.assertLess(comp_bound, bytecode_bound)
