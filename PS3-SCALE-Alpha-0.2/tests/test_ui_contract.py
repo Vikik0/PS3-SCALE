@@ -864,7 +864,7 @@ assert "actions/upload-artifact@v4" not in build_workflow
 assert "actions/setup-python@v5" not in index_workflow
 
 # Keep the visible app, support payload and local report on one version.
-assert '#define PS3SCALE_APP_VERSION "ALPHA 0.31"' in src
+assert '#define PS3SCALE_APP_VERSION "ALPHA 0.32"' in src
 assert '#define SETTINGS_COUNT 10' in src
 assert '#include "ps3scale/atomic_file.h"' in src
 assert '"settings_version=3\\n"' in src
