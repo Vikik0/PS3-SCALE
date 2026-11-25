@@ -97,7 +97,7 @@ int main(void)
     assert(unlink(TEST_TARGET) == 0);
     assert(symlink(TEST_VICTIM, TEST_TARGET) == 0);
     assert(ps3scale_atomic_file_write(TEST_TARGET, "replacement", 11) == 0);
-    assert(read_text(TEST_VICTIM, buffer, sizeof(buffer)) == 19);
+    assert(read_text(TEST_VICTIM, buffer, sizeof(buffer)) == 20);
     assert(strcmp(buffer, "user data stays here") == 0);
     assert(read_text(TEST_TARGET, buffer, sizeof(buffer)) == 11);
     assert(strcmp(buffer, "replacement") == 0);
