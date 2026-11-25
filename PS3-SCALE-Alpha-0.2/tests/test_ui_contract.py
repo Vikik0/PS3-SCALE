@@ -686,6 +686,9 @@ assert "ps3scale_atomic_file_write(g_support_pending_path, validation_json" in s
 assert "g_support_json_ready" in src
 assert "ps3scale_support_request_id_valid" in src
 assert "opendir(PS3SCALE_SUPPORT_OUTBOX_DIR)" in src
+assert "lstat(report_path, &file_stat)" in src
+assert "S_ISREG(file_stat.st_mode)" in src
+assert "strlen(marker) < PS3SCALE_SUPPORT_REQUEST_ID_LENGTH + 1u" in src
 assert '"%s/%s.json"' in src
 assert "g_support_report_saved" in src
 assert "g_support_send_success" in src
