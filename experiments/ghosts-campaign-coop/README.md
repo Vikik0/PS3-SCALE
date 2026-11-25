@@ -265,3 +265,14 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - Capture-kit artifact ID: `15011056497`; inner ZIP: **523,270 bytes**, **55/55 files verified**, both GSC manifests and the activator audit verified.
 - Inner ZIP SHA-256: `853c3958d9601b7e63b6d7ef5d0fb2e42b6c5fb6f4cb878792d70c5fc655a702`.
 - **Runtime gate remains:** no original mission GSC was changed, no FastFile was rebuilt/injected, and no physical PS3 runtime result is claimed.
+
+
+### Phase 90 — mission event refactor dependency graph
+
+- Built a source-pinned call/dependency graph for the four shared interactions: **4 chains, 29 functions and 31 call edges**.
+- Carrier entity ownership is now explicit: `ranktable` runs on the AI rappeller; `var_0` is the map struct/animation target; `self` remains the rope animation entity. The real player must be a separate argument at the per-player rope watcher boundary.
+- Counted generic trigger-helper reuse: `black_ice_util::waittill_trigger` has 3 call sites; `player_scripted_anim_util::waittill_trigger` has 15. Do not rewrite either helper globally; add a separate player-aware helper and migrate only intended call sites.
+- Mapped per-player handlers versus shared state for the flare-stack console, rope cut, weapon hide and virus upload. Five mission-coordinator events remain single-shot.
+- Added graph validation to the capture-kit verifier and four negative tests for escaped edges, entity confusion and coordinator-lock misuse.
+- Report: `reports/PHASE90_REPORT_AR.md`; graph: `reports/PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json`.
+- **Implementation remains gated:** native Local Client 1 is not proven; no original mission GSC was modified and no FastFile was rebuilt/injected.
