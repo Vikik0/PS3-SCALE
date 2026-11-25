@@ -36,6 +36,8 @@ Replace the private-key filename with the actual local filename. Verify the decr
 
 ## Package and hardware limits
 
+The build uses the RGUI menu and keeps the embedded runtime below the PSL1GHT 1,024-entry PKG cap. Before finalization, the package file table is listed and compared against every staged file and directory; missing entries or truncation fail the build.
+
 - One installable PKG contains the native lobby, RetroArch, PCSX-ReARMed and the user's supplied Crash Bash BIN/CUE.
 - No BIOS is included. Use HLE on every console or supply the same BIOS dumped from the user's own console.
 - A successful cross-build does not certify actual gameplay. Follow `HARDWARE_TEST_PLAN.md` for local, two-console LAN, internet relay and four-player checks.
