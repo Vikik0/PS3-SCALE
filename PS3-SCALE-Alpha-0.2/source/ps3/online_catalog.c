@@ -291,7 +291,9 @@ static size_t discard_post_response(void *contents, size_t size,
     return bytes;
 }
 
-int ps3scale_online_post_json(const char *url, const char *json,
+int ps3scale_online_post_json(const char *url,
+                              const char *publishable_api_key,
+                              const char *json,
                               size_t json_size, long *response_code)
 {
     CURL *curl = NULL;
@@ -299,12 +301,20 @@ int ps3scale_online_post_json(const char *url, const char *json,
     CURLcode curl_result;
     long status = 0;
     size_t response_bytes = 0;
+    char apikey_header[256];
+    int apikey_length;
     int result = -1;
 
     if (response_code)
         *response_code = 0;
     if (!url || strncmp(url, "https://", 8) != 0 ||
-        !json || !json_size || json_size > 4096u)
+        !publishable_api_key ||
+        strncmp(publishable_api_key, "sb_publishable_", 15) != 0 ||
+        !json || !json_size || json_size > 8192u)
+        return -1;
+    apikey_length = snprintf(apikey_header, sizeof(apikey_header),
+                             "apikey: %s", publishable_api_key);
+    if (apikey_length < 0 || (size_t)apikey_length >= sizeof(apikey_header))
         return -1;
     if (network_modules_ready() != 0)
         return -1;
@@ -323,6 +333,10 @@ int ps3scale_online_post_json(const char *url, const char *json,
             goto cleanup;
         headers = next;
         next = curl_slist_append(headers, "Accept: application/json");
+        if (!next)
+            goto cleanup;
+        headers = next;
+        next = curl_slist_append(headers, apikey_header);
         if (!next)
             goto cleanup;
         headers = next;
