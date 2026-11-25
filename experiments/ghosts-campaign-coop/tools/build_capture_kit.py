@@ -203,6 +203,8 @@ def build_capture_kit(
             "PHASE88_MISSION_EVENT_LOCK_MAP.json",
             "PHASE89_REPORT_AR.md",
             "PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json",
+            "PHASE90_REPORT_AR.md",
+            "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json",
         ):
             source = project_root / "reports" / filename
             if source.is_file():
@@ -234,7 +236,7 @@ The mission trigger/activator audit report is pinned to the original source arch
 - Campaign and Multiplayer probe mode files.
 - PS3MAPI memory-dump scripts and TU1.16 runtime analyzers.
 - Experimental GSC source and GSCBIN under Experimental_GSC_Not_Installed only.
-- Phase 84–89 reports, event-lock map, activator-lineage audit and MANIFEST.json with per-file SHA-256 checksums.
+- Phase 84–90 reports, event-lock map, activator-lineage audit, mission refactor graph and MANIFEST.json with per-file SHA-256 checksums.
 
 ## Recommended offline test
 
