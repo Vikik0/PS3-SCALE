@@ -106,6 +106,8 @@ assert "cb_online_clear_disc_fingerprint(&task->session, &task->view" in source
 assert "cb_online_cancel_game_start(&task->session" in source
 assert "LOBBY_WORK_MARK_STARTED" in source
 assert "LOBBY_WORK_NETPLAY_ENDPOINT" in source
+assert "LOBBY_WORK_CONFIRM_DISC" in source
+assert "cb_disc_fingerprint(task->disc_path, task->fingerprint" in source
 assert "start_lobby_fingerprint_worker(" in source
 assert "cb_disc_fingerprint(" in source
 assert "cb_online_set_disc_fingerprint(" in source
@@ -148,6 +150,7 @@ for synchronous_call in (
     "cb_online_get_netplay_endpoint(&session",
     "cb_online_mark_game_started(&session",
     "cb_online_cancel_game_start(&session",
+    "cb_disc_fingerprint(discs[disc_selected].path",
 ):
     assert synchronous_call not in menu_loop, f"Synchronous room request remains: {synchronous_call}"
 assert menu_loop.count("cb_online_get_room(&session") == 0
@@ -161,7 +164,7 @@ for operation in (
     "LOBBY_WORK_HEARTBEAT", "LOBBY_WORK_LEAVE",
     "LOBBY_WORK_SET_DISC", "LOBBY_WORK_CLEAR_DISC",
     "LOBBY_WORK_MARK_STARTED", "LOBBY_WORK_CANCEL_STARTED",
-    "LOBBY_WORK_NETPLAY_ENDPOINT",
+    "LOBBY_WORK_NETPLAY_ENDPOINT", "LOBBY_WORK_CONFIRM_DISC",
 ):
     assert operation in source
 assert "worker_active && worker.operation != LOBBY_WORK_LIST" in source
