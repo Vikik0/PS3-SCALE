@@ -1061,8 +1061,8 @@ for token in ("PS2 ENHANCER", "L2H PERFORMANCE (0x46)",
               "APPLY 16:9 WIDESCREEN PATCH",
               "DOWNLOAD EXACT GAME CONFIG", "BACK UP CURRENT CONFIG",
               "RESTORE SAVED BACKUP",
-              "FPS patch needs exact serial + ELF hash.",
-              "60 FPS patch is experimental; it is not verified on hardware.",
+              "Game patches require exact serial + ELF hash.",
+              "FPS / widescreen patches are experimental; hardware testing is pending.",
               "XMB upscaler / smoothing are separate display settings.",
               "TRIANGLE: DISPLAY GUIDE"):
     assert token in ps2_enhancer_ui, f"Missing PS2 enhancer UI token: {token}"
@@ -1076,7 +1076,7 @@ assert "ps3scale_ps2_config_append_patches" in src
 assert "apply_ps2_game_patch(PS3SCALE_PS2_PATCH_FPS);" in src
 assert "apply_ps2_game_patch(PS3SCALE_PS2_PATCH_WIDESCREEN);" in src
 local_profile = section("static void apply_ps2_local_profile(void)",
-                        "static void apply_ps2_fps_patch(void)")
+                        "static void apply_ps2_game_patch(")
 assert "if (had_existing_config)" in local_profile
 assert "LOCAL PROFILE WILL NOT OVERWRITE IT." in local_profile
 assert "ps3scale_ps2_config_store_is_generated" not in local_profile
