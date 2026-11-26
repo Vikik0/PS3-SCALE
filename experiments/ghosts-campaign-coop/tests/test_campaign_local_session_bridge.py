@@ -505,5 +505,25 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertIn("if ( !isdefined( player ) )", abort)
 
 
+    def test_owned_player_command_adapter_revalidates_player_across_wait(self):
+        body = function_body(self.source, "ghc_campaign_wait_for_owned_player_command")
+        precheck = body.index("ghc_campaign_native_pair_is_current()")
+        pre_slot = body.index("ghc_campaign_event_lock_player_slot( player )")
+        wait = body.index("player waittill( command )")
+        postcheck = body.index("ghc_campaign_native_pair_is_current()", wait)
+        post_slot = body.index("ghc_campaign_event_lock_player_slot( player )", pre_slot + 1)
+        acquire = body.index("ghc_campaign_event_lock_acquire( player, event_id )")
+        result = body.index("return player")
+        self.assertIn("!isdefined( command )", body)
+        self.assertIn("ghc_campaign_event_lock_event_id_is_valid( event_id )", body)
+        self.assertLess(precheck, pre_slot)
+        self.assertLess(pre_slot, wait)
+        self.assertLess(wait, postcheck)
+        self.assertLess(postcheck, post_slot)
+        self.assertLess(post_slot, acquire)
+        self.assertLess(acquire, result)
+        self.assertIn("ghc_campaign_invalidate_local_session()", body)
+
+
 if __name__ == "__main__":
     unittest.main()

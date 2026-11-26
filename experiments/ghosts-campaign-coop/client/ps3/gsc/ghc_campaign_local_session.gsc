@@ -1109,6 +1109,50 @@ ghc_campaign_wait_for_owned_trigger( trigger_ent, event_id )
     return activator;
 }
 
+
+/*
+ * Wait for a player-scoped command notification such as "cut". The mission
+ * must register notifyonplayercommand on this player before calling.
+ * The native pair and player slot are checked both before and after waittill.
+ */
+ghc_campaign_wait_for_owned_player_command( player, command, event_id )
+{
+    if ( !isdefined( player )
+        || !isdefined( command )
+        || !isdefined( level.ghc_campaign_session_ready )
+        || !level.ghc_campaign_session_ready
+        || !ghc_campaign_event_lock_event_id_is_valid( event_id ) )
+        return undefined;
+
+    if ( !ghc_campaign_native_pair_is_current() )
+    {
+        ghc_campaign_invalidate_local_session();
+        return undefined;
+    }
+
+    if ( ghc_campaign_event_lock_player_slot( player ) < 0 )
+        return undefined;
+
+    player waittill( command );
+
+    if ( !isdefined( player ) )
+        return undefined;
+
+    if ( !ghc_campaign_native_pair_is_current() )
+    {
+        ghc_campaign_invalidate_local_session();
+        return undefined;
+    }
+
+    if ( ghc_campaign_event_lock_player_slot( player ) < 0 )
+        return undefined;
+
+    if ( !ghc_campaign_event_lock_acquire( player, event_id ) )
+        return undefined;
+
+    return player;
+}
+
 ghc_campaign_release_owned_trigger( player, event_id, completed )
 {
     if ( !isdefined( player ) )
