@@ -36,6 +36,63 @@ int ps3scale_ps2_config_store_probe(const char *path, size_t max_bytes,
     return 1;
 }
 
+int ps3scale_ps2_config_store_stage(const char *path, const void *data,
+                                    size_t length, size_t max_bytes)
+{
+    const unsigned char *bytes = (const unsigned char *)data;
+    size_t offset = 0;
+    int descriptor;
+    int created = 0;
+
+    if (!path || !path[0] || !data || length == 0 ||
+        max_bytes == 0 || length > max_bytes)
+        return -1;
+
+    if (ps3scale_ps2_config_store_probe(path, max_bytes, NULL) != 0)
+        return -2;
+
+    descriptor = open(path, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    if (descriptor < 0)
+        return -3;
+    created = 1;
+
+    while (offset < length) {
+        ssize_t count = write(descriptor, bytes + offset, length - offset);
+
+        if (count < 0 && errno == EINTR)
+            continue;
+        if (count <= 0)
+            goto fail;
+        offset += (size_t)count;
+    }
+
+    if (fsync(descriptor) != 0)
+        goto fail;
+    if (close(descriptor) != 0) {
+        descriptor = -1;
+        goto fail_unlink;
+    }
+    descriptor = -1;
+
+    {
+        size_t staged_size = 0;
+        if (ps3scale_ps2_config_store_probe(path, max_bytes,
+                                            &staged_size) != 1 ||
+            staged_size != length)
+            goto fail_unlink;
+    }
+
+    return 0;
+
+fail:
+    (void)close(descriptor);
+    descriptor = -1;
+fail_unlink:
+    if (created)
+        (void)unlink(path);
+    return -4;
+}
+
 static int files_equal(const char *left, const char *right, size_t max_bytes)
 {
     FILE *a = NULL;

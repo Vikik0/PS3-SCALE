@@ -82,6 +82,21 @@ Host CI also runs the actual local HTTP transport against a loopback webMAN mock
 12. Pre-create a valid rollback snapshot, then install a byte-matching replacement; confirm the target is replaced atomically and the existing rollback and original backup remain unchanged.
 13. Launch the same PS2 game with and without the CONFIG and record actual behavior; do not infer compatibility from a successful file install alone.
 
+## PS2 Enhancer — Alpha 0.34
+
+1. On a PS2 ISO, confirm L2H is selected by default and that the original ISO hash and size do not change after applying a profile.
+2. Apply L2H only (`0x46`); launch the same title and record loading, frame pacing, audio and any rendering differences.
+3. Enable sharper pixels (`0x44`) only; compare XMB smoothing On/Off separately and record aliasing/softness.
+4. Enable conservative frame pacing (`0x48`, mode 1, delay 20,000) only; record stutter, audio and timing. If any regression occurs, restore the saved CONFIG.
+5. Combine options only after the individual tests pass. Do not assume combined effects are additive.
+6. Confirm the first apply automatically creates a byte-identical backup, and that a second apply never overwrites an existing backup that differs from the current CONFIG.
+7. Confirm a stale backup, invalid CONFIG, oversized file, pre-existing temporary path or rollback conflict blocks the write without changing the current CONFIG.
+8. Confirm the generated sidecar is named exactly `<game.iso>.CONFIG` and is stored beside the ISO.
+9. Confirm PS2 Classics cannot use the plaintext local profile builder; only an exact matching encrypted ENC catalogue entry may be installed.
+10. Confirm the UI explicitly states that these options do not unlock 60 FPS. Test any future 60 FPS patch as a separate, exact per-game profile.
+11. For display scaling, test XMB `PS / PS2 Upscaler` Normal and Full Screen, then test `PS / PS2 Smoothing` On and Off. Record the best combination per title; PS3 SCALE does not change these XMB settings.
+12. Do not mark any option as hardware-verified until the test is completed on the physical PS3 Slim.
+
 ## Other hardware targets after the Slim test
 
 - Compatible CFW FAT

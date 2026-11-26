@@ -72,6 +72,19 @@
 - [x] No automatic CONFIG writes; all file changes require an explicit action in PS2 CONFIG Manager.
 - [ ] Physical validation of backup, restore and one matched CONFIG on the target PS3 Slim.
 
+## Alpha 0.34 — PS2 Enhancer
+
+- [x] Add a validated optional netemu `0x48` conservative VSYNC timing command (No-IPU, 20,000 delay).
+- [x] Add PS2 ISO profile toggles for L2H performance, sharper pixels and experimental frame pacing.
+- [x] Generate local `.iso.CONFIG` sidecars without modifying the game ISO.
+- [x] Automatically create and verify the original CONFIG backup before replacing an existing sidecar.
+- [x] Stage generated CONFIG data with exclusive file creation, fsync and size verification before atomic install.
+- [x] Keep PS2 Classics on the exact encrypted ENC catalogue route; no plaintext CONFIG is written into a Classics package.
+- [x] Document that XMB upscaling is separate and that no generic 60 FPS unlock exists.
+- [ ] Validate 0x44, 0x46 and 0x48 individually on the target PS3 Slim and representative games.
+- [ ] Build the per-game EE instruction patch pipeline around exact `0x0A` CONFIG entries; no guessed offsets.
+- [ ] Add a verified PS2 60 FPS patch catalogue only after per-title hardware tests.
+
 ## Alpha 0.4 — PS3 title-specific patch manager
 
 - [ ] Cryptographically sign the online catalog and downloads; Git blob SHA-1 verification is an integrity check, not a signature.

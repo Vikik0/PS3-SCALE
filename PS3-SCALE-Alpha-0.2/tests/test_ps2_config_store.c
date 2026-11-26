@@ -41,6 +41,7 @@ int main(void)
     char target[192], backup[192], backup_temp[192];
     char rollback[192], restore_temp[192], download_temp[192];
     char target2[192], backup2[192], rollback2[192], download2[192];
+    char staged[192];
     char oversized[192], oversized_backup[192], oversized_temp[192];
     char symlink_path[192], symlink_backup[192], symlink_temp[192];
     char large[TEST_LIMIT + 2u];
@@ -66,12 +67,22 @@ int main(void)
     MAKE_PATH(backup2, "new.iso.CONFIG.bak");
     MAKE_PATH(rollback2, "new.iso.CONFIG.rollback");
     MAKE_PATH(download2, "new.iso.CONFIG.download");
+    MAKE_PATH(staged, "staged.CONFIG");
     MAKE_PATH(oversized, "large.CONFIG");
     MAKE_PATH(oversized_backup, "large.CONFIG.bak");
     MAKE_PATH(oversized_temp, "large.CONFIG.tmp");
     MAKE_PATH(symlink_path, "linked.CONFIG");
     MAKE_PATH(symlink_backup, "linked.CONFIG.bak");
     MAKE_PATH(symlink_temp, "linked.CONFIG.tmp");
+
+    assert(ps3scale_ps2_config_store_stage(
+        staged, "staged-config", strlen("staged-config"), TEST_LIMIT) == 0);
+    expect_file(staged, "staged-config");
+    assert(ps3scale_ps2_config_store_stage(
+        staged, "must-not-overwrite", strlen("must-not-overwrite"),
+        TEST_LIMIT) == -2);
+    assert(ps3scale_ps2_config_store_stage(
+        staged, "oversized", TEST_LIMIT + 1u, TEST_LIMIT) == -1);
 
     write_file(target, "original-config");
     assert(ps3scale_ps2_config_store_probe(target, TEST_LIMIT, NULL) == 1);
@@ -164,6 +175,7 @@ int main(void)
     assert(unlink(backup) == 0);
     assert(unlink(rollback) == 0);
     assert(unlink(target2) == 0);
+    assert(unlink(staged) == 0);
     assert(unlink(oversized) == 0);
     assert(rmdir(root) == 0);
 

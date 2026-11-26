@@ -8,6 +8,10 @@
 
 #define PS3SCALE_PS2_CFG_DISABLE_SMOOTHING 0x01u
 #define PS3SCALE_PS2_CFG_ENABLE_L2H        0x02u
+#define PS3SCALE_PS2_CFG_FRAME_PACING      0x04u
+
+#define PS3SCALE_PS2_CFG_VSYNC_MODE_NO_IPU 1u
+#define PS3SCALE_PS2_CFG_VSYNC_DELAY_20MS  20000u
 
 /*
  * Build a conservative ps2_netemu CONFIG template in memory.
@@ -18,6 +22,11 @@
  *
  * ENABLE_L2H: netemu command 0x46; enables the documented L2H improvement.
  * Performance gains are title-dependent and are not guaranteed.
+ *
+ * FRAME_PACING: netemu command 0x48 with the conservative, documented
+ * No-IPU / 20,000 delay preset. It is optional and title-dependent; it is
+ * not a frame-rate unlock. More aggressive timing values are intentionally
+ * not exposed by this builder.
  *
  * Returns 0 on success, negative on invalid flags or insufficient capacity.
  */

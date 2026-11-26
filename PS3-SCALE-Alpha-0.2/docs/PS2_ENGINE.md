@@ -1,52 +1,76 @@
-# PS2 support on PS3 Slim
+# PS2 game enhancement on PS3 Slim
 
-The CECH-2504A uses software PS2 emulation (`ps2_netemu`) for PS2 Classics rather than the
-integrated PS2 Emotion Engine/Graphics Synthesizer found in early FAT models.
+## Hardware and emulator path
 
-The first safe PS2 milestone is:
-- Detect PS2 Classics installed under `/dev_hdd0/game/<TITLE_ID>/` using CATEGORY `2P`.
-- Detect PS2 ISO files under `/dev_hdd0/PS2ISO/` and mounted USB `PS2ISO` folders, including `.ISO`, `.BIN`, `.IMG` and `.MDF` formats supported by webMAN MOD. `.BIN.ENC` remains a separate PS2 Classics format.
-- Index title ID and matching `ps2_netemu` CONFIG metadata where available.
-- Keep original ISO and installed package files read-only.
-- Install only verified, per-title CONFIG data through a separate reversible operation.
+A CECH-25xx PS3 Slim does not contain the PS2 Emotion Engine / Graphics Synthesizer hardware found in early backward-compatible FAT models. PS2 titles run through Sony's software-emulation path, `ps2_netemu`. CFW enables homebrew access; it does not turn a Slim into a hardware-backward-compatible PS3.
 
-CONFIG files are emulator configuration/patch data, not a universal neural upscaler. Their
-commands are title-specific and can fix compatibility, timing, or rendering behavior. They
-must not be generated speculatively or applied to an unverified game ID.
+PS3 SCALE therefore targets the per-title `ps2_netemu` CONFIG sidecar for PS2 ISO files and the matching encrypted `.ENC` CONFIG route for PS2 Classics. The original ISO, EBOOT and installed game package remain untouched.
 
+## What the PS2 enhancement controls actually do
 
-## Verified CONFIG facts for the software-emulated Slim
+The local profile builder emits only a small, allow-listed CONFIG:
 
-The CECH-2504A belongs to the software-emulation family that uses `ps2_netemu.self`. PS3 Developer Wiki documents that external per-title CONFIG data is supported by `ps2_netemu`, with a maximum size of 16,384 bytes. CONFIG commands can adjust emulator behavior or apply per-game fixes; they are not a general-purpose AI upscaler.
+| Option | CONFIG command | Actual effect | Limit |
+|---|---|---|---|
+| Sharper pixels | `0x44` | Disables the emulator smoothing filter | Can make edges look more jagged; it is not an HD upscale |
+| L2H performance | `0x46` | Enables the documented L2H improvement | Title-dependent; not a universal FPS increase |
+| Conservative frame pacing | `0x48` + mode `1` + delay `20000` | Uses the documented No-IPU / conservative VSYNC-delay preset | Timing experiment; not an FPS unlock and not enabled by default |
 
-For PS2 ISO files, the PS3 Classics CONFIG guide describes a sidecar file named exactly after the ISO plus `.CONFIG`, for example `Game.iso.CONFIG`, stored beside the ISO. The ISO itself should remain unchanged. Command 0x46 is documented as an L2H improvement option, but its effect is title-dependent and must be tested. Command 0x21 is deliberately excluded because public references disagree on its netemu meaning.
+The `0x48` values are serialized little-endian as two 32-bit parameters. The builder deliberately exposes only the conservative preset documented in official CONFIG examples. More aggressive values and the separate `0x21` command are not generated automatically.
 
-References:
-- [PS3 Developer Wiki — PS2 Emulation / Game CONFIG](https://www.psdevwiki.com/ps3/PS2_Emulation)
-- [PS3 Classics — CONFIG Guide](https://github.com/ps3classics/ps2/blob/main/config-guide.html)
-- [PS2 Classics compatibility resource](https://ps3classics.github.io/ps2/)
+### Display scaling is a separate layer
 
+Sony's XMB exposes `Settings > Game Settings > PS / PS2 Upscaler` and `PS / PS2 Smoothing`. Upscaler choices affect how the SD output is scaled to the display; they do not add HD textures or change the game's internal render resolution. Smoothing reduces roughness but can soften the image. These are system-level display preferences; PS3 SCALE does not claim to change them through an undocumented registry write.
 
-## Alpha 0.31 CONFIG preview and manager
+Suggested manual check:
+1. Open XMB `Settings > Game Settings`.
+2. Choose `PS / PS2 Upscaler`: `Normal` preserves the aspect ratio; `Full Screen` stretches to fill the display.
+3. Try `PS / PS2 Smoothing` both `On` and `Off`; the best result varies by game and display.
 
-A small C module now builds a restricted CONFIG template in memory and has host unit tests:
-- Command `0x44`: disables the netemu smoothing filter. This can make the output appear less blurred, but may also make aliasing more visible; it is not anti-aliasing.
-- Command `0x46`: enables the documented L2H improvement option, which may help performance in some titles but is not guaranteed.
-- The generated file uses the documented 8-byte CONFIG header and is checked against the 16,384-byte netemu limit.
+## What can and cannot produce 60 FPS
 
-The Triangle UI screen still previews generated bytes in memory only; it does not write a sidecar or alter an ISO. A separate PS2 CONFIG Manager is now available from Game Details with SQUARE. It supports explicit backup and restore for standard ISO sidecars and webMAN PS2 Classics ENC files, plus download of an exact catalogue match. Backups are checked byte-for-byte, an existing backup is never overwritten, and replacement of an existing CONFIG is blocked unless the backup exactly matches the current file. Restore and replacement preserve the previous file as a rollback copy. Host tests pass; physical validation on the CECH-2504A is still pending.
+There is no safe universal switch that turns every PS2 game into native 60 FPS. A PS2 game may be designed for 30 FPS, 50 Hz PAL timing, 59.94 Hz NTSC timing, or a variable frame rate. Raising the display output to 60 Hz is not the same as raising the game's simulation and rendering rate.
 
-### File-operation hardening
+The PS3 netemu CONFIG format does include command `0x0A` (`EE_INSN_REPLACE32`), which can replace exact 32-bit EE instructions and is documented as netemu-only with a maximum list count of 32. This is a plausible foundation for carefully curated per-game code patches. It is not a generic FPS unlock: a valid patch needs the exact game serial, region, revision, EE address/mode, original opcode and replacement opcode. A wrong address or expected opcode can break the title.
 
-Host test builds use `lstat`-based probes and reject symlinked CONFIG, backup, rollback and temporary paths. The PS3 toolchain does not export `lstat`, so the console build uses `stat` for read-only presence/size checks. On both targets, temporary files are created exclusively (`O_EXCL`) rather than opening an existing path for writing. When a valid rollback snapshot already exists, installation keeps it and replaces the target with one atomic same-directory rename; it does not unlink the current CONFIG first. If no rollback exists, the current CONFIG is moved to the rollback path before replacement, and a failed replacement attempts to put it back. A rename replaces the path entry itself; it does not write through a symlink destination.
+PCSX2 `.pnach` files are not drop-in PS3 CONFIG files. Some entries are runtime data writes, some target code, and some depend on emulator-specific behavior. A future converter must reject unsupported patch types, map the exact EE address to the exact game's loaded ELF, verify the original 32-bit word, and generate only supported `0x0A` entries. It must not guess offsets or silently apply a patch from another region/revision.
 
-Host tests cover symlinked source and temporary paths, stale backups, oversized files, rollback conflicts, and replacement while retaining an existing rollback snapshot. These checks harden file handling but do not replace physical PS3 validation.
+Artemis PS3 is not treated as a generic runtime cheat injector for a PS2 game inside `ps2_netemu`. The current implementation therefore does not promise 60 FPS and does not convert arbitrary PCSX2 cheats.
 
-The public PS2 Classics guide and the developer wiki do not describe every command identically (notably command 0x21), so that command is deliberately excluded from the initial builder until the mapping is reconciled and tested.
+## PS3 SCALE implementation
 
+The PS2 Enhancer screen now provides:
 
-## Region-aware metadata and exact CONFIG matching — Alpha 0.31
+- `0x46` L2H performance toggle (on by default).
+- `0x44` smoothing-disable / sharper-pixel toggle (off by default).
+- Optional conservative `0x48` frame-pacing toggle (off by default and explicitly experimental).
+- Local CONFIG generation for PS2 ISO sidecars only; PS2 Classics require an exact matching encrypted ENC file.
+- Automatic byte-for-byte backup before replacing an existing CONFIG.
+- Exclusive temporary-file staging, validated generated bytes, atomic install, retained rollback, and restore.
+- Download of an exact title/serial CONFIG from the existing catalogue.
+- Clear notice that these settings do not unlock 60 FPS and that XMB scaling is separate.
 
-The game record now retains a region label inferred from the first four alphanumeric characters of its Title ID or PS2 disc serial. Known North American, European, Japanese, Korean and Asian prefixes are recognized; unrecognized IDs remain `UNKNOWN` rather than being guessed. Game Details displays the detected region.
+For ISO files the target remains `<game.iso>.CONFIG` beside the ISO. No bytes are written into the ISO itself. PS2 Classics ENC files continue to use the existing webMAN PS2CONFIG directory and exact catalogue matching; the local plaintext builder is intentionally disabled for Classics.
 
-PS2 CONFIG lookup remains exact after ID normalization: installed PS2 Classics prefer their Title ID, PS2 ISO titles use the extracted disc serial, and a Classics ENC entry can match its catalogued serial when no Title ID exists. The lookup does not fall back to another region's entry. Host scanner tests cover common region prefixes and unknown IDs.
+## Next stage: game-specific FPS patch catalogue
+
+1. Add a PS2 executable reader for ISO9660 and ELF load segments.
+2. Define a signed/hashed patch record containing serial, region, revision/hash, EE address, expected original opcode and replacement opcode.
+3. Accept only patch operations that can be represented safely by netemu `0x0A`; reject unsupported PCSX2 patch types.
+4. Generate a per-game CONFIG and keep the current original CONFIG as a rollback.
+5. Test one title at a time on the actual PS3 Slim, record the game's real frame rate and stability, and only then label a patch as verified.
+6. Never advertise 60 FPS unless the game itself sustains the target rate without broken physics, audio, cutscenes or timing.
+
+## References
+
+- [PS3 Developer Wiki — PS2 Emulation](https://www.psdevwiki.com/ps3/PS2_Emulation)
+- [PS3 Developer Wiki — PS2 CONFIG command reference](https://www.psdevwiki.com/ps3/PS2_Emulation/PS2_Config_Commands)
+- [PS3 Developer Wiki — official PS2 CONFIG examples](https://www.psdevwiki.com/ps3/PS2_Official_Configs)
+- [PS3 Classics — CONFIG guide](https://github.com/ps3classics/ps2/blob/main/config-guide.html)
+- [PS3 Classics — compatibility resources](https://ps3classics.github.io/ps2/)
+- [Sony PS3 manual — Game Settings](https://manuals.playstation.net/document/en/ps3/3_10/settings/gamesettings.html)
+- [PCSX2 — writing patches](https://pcsx2.net/docs/advanced/writing-patches)
+- [PCSX2 patch repository](https://github.com/PCSX2/pcsx2_patches)
+- [PSX-Place — PS2 netemu CONFIG discussion](https://psx-place.com/threads/w-i-p-configs-for-ps2_netemu-explained.15034/)
+
+Host-side tests validate CONFIG serialization and safe file staging. They do not prove game compatibility or a real FPS gain. Physical-console validation remains required.
