@@ -10,8 +10,8 @@ The latest successful PS3 runtime build is GitHub Actions run `45858627627` on b
 
 1. Keep the ZIP at the private Dropbox path `/Crash-Bash-Temporary-Transfer/Crash-Bash-Original-Disc-Temporary-Transfer.zip`.
 2. Generate a single-use Dropbox temporary download URL immediately before the personal build. Use a 900-second lifetime. Do not open, preview, HEAD-check, or otherwise request the URL; its first HTTP request consumes it.
-3. In GitHub, open **Settings → Secrets and variables → Actions → New repository secret**.
-4. Create the secret named `CRASH_BASH_DISC_ARCHIVE_URL` and paste the temporary Dropbox download URL as its value.
+3. In GitHub, open **Settings → Secrets and variables → Actions → New repository secret**. GitHub requires a non-empty value; do not create this secret blank.
+4. Immediately before the build, generate a fresh Dropbox temporary download URL and create `CRASH_BASH_DISC_ARCHIVE_URL` with that URL as its value. Do not paste the URL into chat or a public file.
 5. Open **Actions → Crash Bash Personal Game-Inclusive PS3 Build → Run workflow** on the `main` branch. Keep the default `runtime_run_id` value `45858627627`.
 6. The workflow downloads the archive once, validates the exact BIN/CUE members and hashes, embeds the game, builds one PKG, and encrypts the output for private transfer.
 7. Download the `Crash-Bash-Online-Personal-PS3-Encrypted` artifact before its one-day retention expires.
