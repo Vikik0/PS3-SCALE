@@ -7,7 +7,7 @@ This backend is isolated from every other Supabase project. It must be deployed 
 - The PS3 app writes each report as an atomic JSON file under its own UUID in the local outbox before attempting any network request.
 - The outbox uses a stable UUID request ID. Pending reports survive app restarts and can be retried from Help & Support; retrying the same report cannot create a duplicate database row or GitHub issue.
 - The app sends only report kind, title, details, model, firmware, platform, app version and request ID.
-- The public Edge Function validates the payload, enforces a 12 KiB request limit and a maximum of 100 title characters / 2,000 detail characters.
+- The public Edge Function reads request bodies in bounded chunks, cancels the stream above 12 KiB, rejects invalid UTF-8, and enforces a maximum of 100 title characters / 2,000 detail characters.
 - An HMAC-SHA-256 hash of the Cloudflare-provided client IP, keyed with the server-side Supabase secret, is used for an atomic limit of 8 reports per UTC day. Raw IP addresses are never stored.
 - Reports and rate-limit state have RLS enabled. Public and authenticated clients have no table access; only the Edge Function's server-side secret key can access them.
 - A GitHub Issue integration is optional. It is disabled unless a fine-grained GitHub token is deliberately configured as a server-side secret. By default, reports stay in the dedicated Supabase database.
@@ -36,11 +36,12 @@ The deployment must remain on Supabase's Free Plan. Do not create this project i
    ```sh
    supabase functions deploy ps3scale-support --no-verify-jwt --yes
    ```
-9. The function URL is:
+9. In **Edge Functions > Secrets**, verify the platform-provided `SUPABASE_SECRET_KEYS` JSON contains a `default` entry. The function reads this server-side key automatically; never copy it into the PS3 app or the repository.
+10. The function URL is:
    ```
    https://<NEW_PROJECT_REF>.supabase.co/functions/v1/ps3scale-support
    ```
-10. Only after the migration and function are verified, replace the `YOUR_PROJECT` placeholder in `PS3SCALE_SUPPORT_URL` in `PS3-SCALE-Alpha-0.2/source/ps3/main.c`, replace `YOUR_PUBLISHABLE_KEY` with that project's publishable key, bump the app version, and build a new PKG.
+11. Only after the migration and function are verified, replace the `YOUR_PROJECT` placeholder in `PS3SCALE_SUPPORT_URL` in `PS3-SCALE-Alpha-0.2/source/ps3/main.c`, replace `YOUR_PUBLISHABLE_KEY` with that project's publishable key, bump the app version, and build a new PKG.
 
 ### Free-plan limits and trade-offs
 
