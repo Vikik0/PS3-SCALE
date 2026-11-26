@@ -45,7 +45,7 @@ Pass criteria: both players see the same room membership and Ready state; only t
 
 1. Launch the single Crash Bash Online icon from the XMB.
 2. Choose **OPEN CRASH BASH ONLINE** in the built-in lobby to start the local game using the selected CUE.
-3. Start a local game and reach a playable arena.
+3. Confirm the original Crash Bash title loads directly from the selected embedded CUE (not the RetroArch menu), then start a local game and reach a playable arena.
 4. Confirm video, audio, controller response and all four local controller slots.
 5. Play for at least 10 minutes, including a busy arena with multiple effects.
 
