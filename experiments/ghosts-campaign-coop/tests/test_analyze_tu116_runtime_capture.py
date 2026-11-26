@@ -219,7 +219,8 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
 
         validation = result["player_pair_capture_validation"]
         self.assertEqual(validation["status"], "PASS_STRUCTURAL_CAPTURE_VALIDATION")
-        self.assertEqual(validation["evidence_authenticity"], "NOT_AUTHENTICATED_BY_THIS_TOOL")        self.assertEqual(validation["evidence_source"], "synthetic-unit-test")
+        self.assertEqual(validation["evidence_authenticity"], "NOT_AUTHENTICATED_BY_THIS_TOOL")
+        self.assertEqual(validation["evidence_source"], "synthetic-unit-test")
         self.assertTrue(validation["stable_pair_observation_validated"])
         self.assertEqual(
             validation["campaign_self_binding"]["status"],
@@ -472,7 +473,8 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
         self.assertEqual(result["ppu_analysis"]["status"], "GHIDRA_PPU_ANALYSIS_COMPLETED")
         self.assertEqual(result["ppu_analysis"]["multiplayer_only_builtin_lead_count"], 1)
         self.assertEqual(result["ppu_analysis"]["campaign_function_records"], 100)
-        self.assertEqual(result["ppu_analysis"]["campaign_builtin_call_xref_rows"], 2)        self.assertEqual(result["ppu_analysis"]["multiplayer_builtin_call_xref_rows"], 5)
+        self.assertEqual(result["ppu_analysis"]["campaign_builtin_call_xref_rows"], 2)
+        self.assertEqual(result["ppu_analysis"]["multiplayer_builtin_call_xref_rows"], 5)
         self.assertEqual(result["ppu_analysis"]["campaign_builtin_direct_call_xref_rows"], 2)
         self.assertEqual(result["ppu_analysis"]["multiplayer_builtin_computed_call_xref_rows"], 2)
         self.assertEqual(result["player_two_gate"]["status"], "NOT_PROVEN")
