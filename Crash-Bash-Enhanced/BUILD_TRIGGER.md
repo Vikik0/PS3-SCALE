@@ -36,11 +36,10 @@ warns that PSX netplay can be too demanding; lockstep is a mitigation, and
 two-console testing on real PS3 hardware is still required. Four-player support
 must not be advertised as verified until the four-player test passes.
 
-
 ## Private game-inclusive package
 
 The separate workflow `.github/workflows/crash-bash-personal-build.yml` is stored on `main`. It embeds the user's private BIN/CUE dump and encrypts the resulting one-PKG output to the recipient certificate. See [PERSONAL_BUILD_GUIDE.md](PERSONAL_BUILD_GUIDE.md) for the secure Dropbox handoff, runtime run ID, decryption and hardware limitations.
 
-The currently verified runtime-stage run is `45782554929`. The personal workflow checks the source run's branch, workflow path, success conclusion and unexpired `Crash-Bash-RetroArch-Stage` artifact before it downloads the runtime.
+The currently verified runtime-stage run is `45805022211`. The personal workflow checks the source run's branch, workflow path, success conclusion and unexpired `Crash-Bash-RetroArch-Stage` artifact before it downloads the runtime.
 
 The GitHub Actions secret `CRASH_BASH_DISC_ARCHIVE_URL` must be populated by the repository owner immediately before dispatch with a single-use HTTPS Dropbox download URL. The public repository must never contain the BIN/CUE archive, BIOS, Dropbox URL or private decryption key.
