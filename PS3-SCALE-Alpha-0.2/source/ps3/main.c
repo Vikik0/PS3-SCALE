@@ -6098,10 +6098,6 @@ static void draw_ps2_config_manager(void)
                      g_ps2_config_manager_selection == 9);
 
     set_ui_font_size(7, 11);
-    draw_text(48.0f, 374.0f, 0x514b69ff,
-              "XMB upscaler / smoothing are separate display settings.");
-    draw_text(48.0f, 392.0f, 0xb27b35ff,
-              "FPS / widescreen patches are experimental; hardware testing is pending.");
     draw_text(430.0f, 405.0f, 0xb27b35ff,
               "Exact game match required. Original ISO stays unchanged.");
 
