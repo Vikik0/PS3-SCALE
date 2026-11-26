@@ -31,7 +31,7 @@ The private Dropbox ZIP was inspected before dispatch:
 - `CRASHBSH/CRASHBSH.DAT` was read from the ISO9660 filesystem (73,220,096 bytes); all 992 DAT index entries were checked for overlap and out-of-range offsets, then reconstructed byte-for-byte with a matching SHA-256.
 - The staging script passed all eight security/regression cases and staged this exact archive successfully.
 
-The workflow repeats ZIP integrity, exact-member, file-size, BIN/CUE SHA-256 and CUE-to-BIN linkage checks inside GitHub Actions before it downloads the runtime or starts the expensive PS3 build. The checks are pinned to the verified dump hashes above. This local preflight does not replace the final PS3 PKG build or physical-console testing.
+The workflow repeats ZIP integrity, exact-member, file-size, BIN/CUE SHA-256 and CUE-to-BIN linkage checks inside GitHub Actions before it downloads the runtime or starts the expensive PS3 build. It then parses the ISO9660 filesystem, confirms the `SCUS_945.70` boot executable and verifies the 992-entry DAT table with byte-identical reconstruction. The checks are pinned to the verified dump hashes above. This preflight does not replace the final PS3 PKG build or physical-console testing.
 
 ## Private decryption
 
