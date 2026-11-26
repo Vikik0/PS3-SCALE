@@ -36,14 +36,15 @@ There is no safe universal switch that turns every PS2 game into native 60 FPS. 
 
 The PS3 netemu CONFIG format does include command `0x0A` (`EE_INSN_REPLACE32`), which can replace exact 32-bit EE instructions and is documented as netemu-only with a maximum list count of 32. Each entry contains an EE offset, expected original 32-bit word and replacement word. The builder supports only aligned mode-0 EE addresses below `0x10000000` and rejects duplicates or unverified address modes. This is a plausible foundation for carefully curated per-game code patches. It is not a generic FPS unlock: a valid patch needs the exact game serial, region, revision, EE address/mode, original opcode and replacement opcode. A wrong address or expected opcode can break the title.
 
-PCSX2 `.pnach` files are not drop-in PS3 CONFIG files. Some entries are runtime data writes, some target code, and some depend on emulator-specific behavior. PS3 SCALE now has a deliberately narrow converter for eight pinned proof-of-concept patch records. It resolves root-level or nested ISO9660 boot paths, extracts the boot ELF, and matches the PCSX2 serial + XOR ELF hash, maps the EE address through an executable `PT_LOAD` segment, reads the original 32-bit word, and creates a guarded netemu `0x0A` entry. It does not import arbitrary `.pnach` files, accept unsupported patch types, or guess offsets.
+PCSX2 `.pnach` files are not drop-in PS3 CONFIG files. Some entries are runtime data writes, some target code, and some depend on emulator-specific behavior. PS3 SCALE now has a deliberately narrow converter for a small, source-pinned set of proof-of-concept patch records. It resolves root-level or nested ISO9660 boot paths, extracts the boot ELF, and matches the PCSX2 serial + XOR ELF hash, maps the EE address through an executable `PT_LOAD` segment, reads the original 32-bit word, and creates a guarded netemu `0x0A` entry. It does not import arbitrary `.pnach` files, accept unsupported patch types, or guess offsets.
 
-Artemis PS3 is not treated as a generic runtime cheat injector for a PS2 game inside `ps2_netemu`. The current catalogue contains eight experimental 60 FPS candidates. The user must select the Enhancer action to apply a patch; games are not silently modified during launch. The catalogue does not promise a working 60 FPS result until tested on the actual PS3 Slim, and it does not convert arbitrary PCSX2 cheats.
+Artemis PS3 is not treated as a generic runtime cheat injector for a PS2 game inside `ps2_netemu`. The current catalogue contains nine experimental 60 FPS candidates. The user must select the Enhancer action to apply a patch; games are not silently modified during launch. The catalogue does not promise a working 60 FPS result until tested on the actual PS3 Slim, and it does not convert arbitrary PCSX2 cheats.
 
 ## PS3 SCALE implementation
 
 The PS2 Enhancer screen now provides:
 - Probe the selected ISO boot ELF on entry and show exact-match availability for FPS, 16:9 and 480p before the user applies a patch.
+- Validate every candidate patch address against a file-backed executable ELF segment before showing it as available; the apply path repeats this check.
 
 - `0x46` L2H performance toggle (on by default).
 - `0x44` smoothing-disable / sharper-pixel toggle (off by default).
@@ -75,8 +76,7 @@ The pinned PCSX2 source files also contain exact 16:9 widescreen sections for fo
 | Scooby-Doo! Night of 100 Frights | SLUS_203.49 | 10B1F370 | 8 |
 | Teen Titans | SLUS_211.83 | E1F17139 | 13 |
 | Disney's Kim Possible - What's the Switch | SLUS_214.37 | 86B490D1 | 7 |
-| Jimmy Neutron: Jet Fusion | SLUS_206.96 | FCC09959 |
-| Shin Megami Tensei - Devil Summoner 1 | SLPM_662.46 | 67D76160 | 3 |
+| Jimmy Neutron: Jet Fusion | SLUS_206.96 | FCC09959 | 3 |
 
 These are aspect-ratio/game-camera patches, not HD texture replacements or native-resolution upscaling. They remain experimental until tested on the target PS3; the ISO is never rewritten.
 
@@ -106,6 +106,7 @@ The current experimental catalogue contains nine exact serial + ELF-hash candida
 | The Ant Bully | SLUS_214.15 | E10A865B |
 | Indiana Jones and the Staff of Kings | SLUS_218.85 | B15F0BD6 |
 | Jimmy Neutron: Jet Fusion | SLUS_206.96 | FCC09959 |
+| Shin Megami Tensei - Devil Summoner 1 | SLPM_662.46 | 67D76160 |
 
 The Devil Summoner candidate uses the pinned PCSX2 `[60 FPS]` section's single aligned word replacement at `0x0011B560`; its same file's widescreen and no-interlacing sections are not imported. No EE-overclock requirement is noted in that FPS section.
 

@@ -254,6 +254,30 @@ static int iso_name_equal_ci(const unsigned char *name, size_t name_len,
     return equal_ci_n((const char *)name, wanted, wanted_len);
 }
 
+static int iso_component_equal_ci(const unsigned char *name, size_t name_len,
+                                  const char *wanted)
+{
+    size_t wanted_len;
+
+    if (!name || !wanted)
+        return 0;
+
+    wanted_len = strlen(wanted);
+    if (name_len == wanted_len)
+        return equal_ci_n((const char *)name, wanted, wanted_len);
+
+    /* ISO9660 ;1 version identifiers may be present or omitted in either source. */
+    if (name_len == wanted_len + 2u &&
+        name[name_len - 2u] == ';' && name[name_len - 1u] == '1')
+        return equal_ci_n((const char *)name, wanted, wanted_len);
+
+    if (wanted_len == name_len + 2u &&
+        wanted[wanted_len - 2u] == ';' && wanted[wanted_len - 1u] == '1')
+        return equal_ci_n((const char *)name, wanted, name_len);
+
+    return 0;
+}
+
 static int find_root_file(const unsigned char *root, size_t root_size,
                           const char *wanted, uint32_t *lba,
                           uint32_t *file_size)
@@ -282,7 +306,7 @@ static int find_root_file(const unsigned char *root, size_t root_size,
         name_len = rec[32];
         if (name_len > 0 && 33u + name_len <= rec_len &&
             !(name_len == 1u && (rec[33] == 0 || rec[33] == 1)) &&
-            iso_name_equal_ci(rec + 33, name_len, wanted) &&
+            iso_component_equal_ci(rec + 33, name_len, wanted) &&
             (rec[25] & 0x02u) == 0) {
             /* Never silently read only the first extent of a split file. */
             if (rec[25] & 0x80u)
@@ -296,26 +320,6 @@ static int find_root_file(const unsigned char *root, size_t root_size,
     }
 
     return -1;
-}
-
-static int iso_component_equal_ci(const unsigned char *name, size_t name_len,
-                                  const char *wanted)
-{
-    size_t wanted_len;
-
-    if (!name || !wanted)
-        return 0;
-
-    wanted_len = strlen(wanted);
-    if (name_len == wanted_len)
-        return equal_ci_n((const char *)name, wanted, wanted_len);
-
-    /* ISO9660 directory identifiers may carry an optional ;1 version. */
-    if (name_len == wanted_len + 2u &&
-        name[wanted_len] == ';' && name[wanted_len + 1u] == '1')
-        return equal_ci_n((const char *)name, wanted, wanted_len);
-
-    return 0;
 }
 
 static int find_directory_entry(const unsigned char *directory,

@@ -1,4 +1,5 @@
 #include "ps3scale/ps2_game_patch.h"
+#include "ps3scale/iso9660.h"
 #include <string.h>
 /* Pinned PCSX2 patch values. Original opcodes are read from the exact matched
  * boot ELF and used as guards in netemu CONFIG command 0x0A. */
@@ -62,4 +63,18 @@ const ps3scale_ps2_game_patch_t *ps3scale_ps2_game_patch_find(
  for(i=0;i<sizeof(g_patches)/sizeof(g_patches[0]);++i)
   if(g_patches[i].kind==kind&&strcmp(serial,g_patches[i].serial)==0&&hash==g_patches[i].pcsx2_elf_hash)return &g_patches[i];
  return NULL;
+}
+
+int ps3scale_ps2_game_patch_elf_addresses_valid(
+ const ps3scale_ps2_game_patch_t *patch,
+ const unsigned char *elf_data, size_t elf_size)
+{
+ size_t i;
+ if(!patch||!elf_data||elf_size==0||!patch->words||!patch->word_count)return 0;
+ for(i=0;i<patch->word_count;++i){
+  uint32_t original_word=0;
+  if(ps3scale_ps2_elf_read_exec_word(elf_data,elf_size,
+      patch->words[i].ee_address,&original_word)!=0)return 0;
+ }
+ return 1;
 }

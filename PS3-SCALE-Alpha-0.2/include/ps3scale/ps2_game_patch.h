@@ -15,4 +15,7 @@ typedef struct {
 } ps3scale_ps2_game_patch_t;
 const ps3scale_ps2_game_patch_t *ps3scale_ps2_game_patch_find(
  const char *serial,uint32_t pcsx2_elf_hash,ps3scale_ps2_patch_kind_t kind);
+int ps3scale_ps2_game_patch_elf_addresses_valid(
+ const ps3scale_ps2_game_patch_t *patch,
+ const unsigned char *elf_data, size_t elf_size);
 #endif

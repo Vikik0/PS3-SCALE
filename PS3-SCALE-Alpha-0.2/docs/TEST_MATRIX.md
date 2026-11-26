@@ -85,18 +85,19 @@ Host CI also runs the actual local HTTP transport against a loopback webMAN mock
 ## PS2 Enhancer — Alpha 0.34
 
 1. Probe a root-level BOOT/BOOT2 path and a nested ISO9660 path in host fixtures; reject parent traversal, malformed directory records and multi-extent boot ELFs without returning partial hashes.
-2. On a PS2 ISO, confirm L2H is selected by default and that the original ISO hash and size do not change after applying a profile.
-3. Apply L2H only (`0x46`); launch the same title and record loading, frame pacing, audio and any rendering differences.
-4. Enable sharper pixels (`0x44`) only; compare XMB smoothing On/Off separately and record aliasing/softness.
-5. Enable conservative frame pacing (`0x48`, mode 1, delay 20,000) only; record stutter, audio and timing. If any regression occurs, restore the saved CONFIG.
-6. Combine options only after the individual tests pass. Do not assume combined effects are additive.
-7. Confirm the first apply automatically creates a byte-identical backup. If the active CONFIG differs from that saved backup, confirm the tool blocks another profile until the user restores the saved backup; it must never overwrite that backup.
-8. Confirm an existing community CONFIG that contains commands outside the local allow-list is never replaced by a local profile. Confirm a stale backup, invalid CONFIG, oversized file, pre-existing temporary path or rollback conflict blocks the write without changing the current CONFIG.
-9. Confirm the generated sidecar is named exactly `<game.iso>.CONFIG` and is stored beside the ISO.
-10. Confirm PS2 Classics cannot use the plaintext local profile builder; only an exact matching encrypted ENC catalogue entry may be installed.
-11. Confirm the UI explicitly states that these options do not unlock 60 FPS. Test any future 60 FPS patch as a separate, exact per-game profile.
-12. For display scaling, test XMB `PS / PS2 Upscaler` Normal and Full Screen, then test `PS / PS2 Smoothing` On and Off. Record the best combination per title; PS3 SCALE does not change these XMB settings.
-13. Do not mark any option as hardware-verified until the test is completed on the physical PS3 Slim.
+3. Verify the Apply action is available only when every exact-match patch address maps to a file-backed executable PT_LOAD segment; one invalid address must make the entire profile unavailable.
+3. On a PS2 ISO, confirm L2H is selected by default and that the original ISO hash and size do not change after applying a profile.
+4. Apply L2H only (`0x46`); launch the same title and record loading, frame pacing, audio and any rendering differences.
+5. Enable sharper pixels (`0x44`) only; compare XMB smoothing On/Off separately and record aliasing/softness.
+6. Enable conservative frame pacing (`0x48`, mode 1, delay 20,000) only; record stutter, audio and timing. If any regression occurs, restore the saved CONFIG.
+7. Combine options only after the individual tests pass. Do not assume combined effects are additive.
+8. Confirm the first apply automatically creates a byte-identical backup. If the active CONFIG differs from that saved backup, confirm the tool blocks another profile until the user restores the saved backup; it must never overwrite that backup.
+9. Confirm an existing community CONFIG that contains commands outside the local allow-list is never replaced by a local profile. Confirm a stale backup, invalid CONFIG, oversized file, pre-existing temporary path or rollback conflict blocks the write without changing the current CONFIG.
+10. Confirm the generated sidecar is named exactly `<game.iso>.CONFIG` and is stored beside the ISO.
+11. Confirm PS2 Classics cannot use the plaintext local profile builder; only an exact matching encrypted ENC catalogue entry may be installed.
+12. Confirm the UI explicitly states that these options do not unlock 60 FPS. Test any future 60 FPS patch as a separate, exact per-game profile.
+13. For display scaling, test XMB `PS / PS2 Upscaler` Normal and Full Screen, then test `PS / PS2 Smoothing` On and Off. Record the best combination per title; PS3 SCALE does not change these XMB settings.
+14. Do not mark any option as hardware-verified until the test is completed on the physical PS3 Slim.
 
 ## Other hardware targets after the Slim test
 

@@ -155,7 +155,7 @@ int main(void)
 
     root = image + 20 * SECTOR;
     make_record(root + pos, 21, (unsigned int)(sizeof(cnf_nested) - 1),
-                "SYSTEM.CNF;1", 0);
+                "SYSTEM.CNF", 0);
     pos += root[pos];
     make_record(root + pos, 22, sizeof(elf), "SLUS_203.12;1", 0);
     pos += root[pos];
@@ -164,7 +164,7 @@ int main(void)
     boot_dir = image + 23 * SECTOR;
     boot_pos += make_special_record(boot_dir + boot_pos, 23, SECTOR, 0);
     boot_pos += make_special_record(boot_dir + boot_pos, 20, SECTOR, 1);
-    make_record(boot_dir + boot_pos, 24, sizeof(elf), "SLUS_203.12;1", 0);
+    make_record(boot_dir + boot_pos, 24, sizeof(elf), "SLUS_203.12", 0);
 
     memcpy(image + 21 * SECTOR, cnf_root, sizeof(cnf_root) - 1);
     memcpy(image + 22 * SECTOR, elf, sizeof(elf));
@@ -188,6 +188,32 @@ int main(void)
     assert(ps3scale_ps2_elf_read_exec_word(
         loaded_elf, loaded_elf_size, 0x00100004, &word) == 0);
     assert(word == 0x24030002);
+
+    {
+        static const ps3scale_ps2_patch_word_t valid_words[] = {
+            {0x00100000u, 0x00000000u},
+            {0x00100004u, 0x00000000u}
+        };
+        static const ps3scale_ps2_patch_word_t invalid_words[] = {
+            {0x00100000u, 0x00000000u},
+            {0x00110000u, 0x00000000u}
+        };
+        const ps3scale_ps2_game_patch_t valid_patch = {
+            "SLUS_203.12", 0xB0AE2D8Au, "fixture", NULL,
+            PS3SCALE_PS2_PATCH_FPS, valid_words,
+            sizeof(valid_words) / sizeof(valid_words[0])
+        };
+        const ps3scale_ps2_game_patch_t invalid_patch = {
+            "SLUS_203.12", 0xB0AE2D8Au, "fixture", NULL,
+            PS3SCALE_PS2_PATCH_FPS, invalid_words,
+            sizeof(invalid_words) / sizeof(invalid_words[0])
+        };
+        assert(ps3scale_ps2_game_patch_elf_addresses_valid(
+            &valid_patch, loaded_elf, loaded_elf_size) == 1);
+        assert(ps3scale_ps2_game_patch_elf_addresses_valid(
+            &invalid_patch, loaded_elf, loaded_elf_size) == 0);
+    }
+
     assert(ps3scale_ps2_elf_read_exec_word(
         loaded_elf, loaded_elf_size, 0x00100004 + 1, &word) < 0);
     assert(ps3scale_ps2_elf_read_exec_word(

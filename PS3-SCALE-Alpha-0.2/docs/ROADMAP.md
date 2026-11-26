@@ -84,6 +84,7 @@
 - [x] Resolve root-level and nested ISO9660 BOOT/BOOT2 paths with bounded traversal; reject `.` / `..`, malformed paths and multi-extent boot files.
 - [ ] Validate 0x44, 0x46 and 0x48 individually on the target PS3 Slim and representative games.
 - [x] Build the per-game EE instruction patch pipeline around exact `0x0A` CONFIG entries; no guessed offsets.
+- [x] Validate every FPS / widescreen / 480p patch address against a file-backed executable ELF segment before showing a profile as available; revalidate on apply.
 - [x] Seed a source-pinned experimental PS2 FPS / widescreen / 480p catalogue with exact serial + ELF-hash matching.
 - [ ] Validate each candidate on physical hardware before calling it a working or verified enhancement.
 
