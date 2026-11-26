@@ -73,7 +73,6 @@ assert "if (view->game_started)" in source
 assert "view->player_count >= 2" in online_source
 assert "OPEN CRASH BASH ONLINE" in main_source
 assert 'cb_launch_game(discs[0].path, 0, "CrashBashPlayer"' in main_source
-assert '"--menu"' not in launch_args, "Local Crash Bash launch must load the selected CUE directly."
 assert "/dev_hdd0/game/CBON00001/USRDIR/retroarch/EBOOT.BIN" in launcher
 assert "sysProcessExitSpawn2(CB_GAME_EBOOT, arguments" in launcher
 assert "TRAINING ARENA" not in main_source
@@ -81,6 +80,7 @@ assert "OFFLINE ARENA TEST" not in main_source
 
 disc_source = (root / "source/disc_browser.c").read_text(encoding="utf-8")
 launch_args = (root / "source/game_launch_args.c").read_text(encoding="utf-8")
+assert '"--menu"' not in launch_args, "Local Crash Bash launch must load the selected CUE directly."
 assert "#define SCREEN_DISC_SELECT 3" in source
 assert "cb_disc_scan(discs, CB_DISC_MAX, &scanned)" in source
 assert re.search(
