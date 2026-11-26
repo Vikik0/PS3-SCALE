@@ -1056,6 +1056,7 @@ ps2_enhancer_ui = section("static void draw_ps2_config_manager(void)",
                           "static void draw_fps_control(void)")
 for token in ("PS2 ENHANCER", "L2H PERFORMANCE (0x46)",
               "SHARPER PIXELS (0x44)", "FRAME PACING (0x48)",
+              "PRESSURE SENSITIVITY (0x50)",
               "APPLY LOCAL PROFILE", "RESTORE BACKUP FIRST",
               "APPLY EXPERIMENTAL 60 FPS PATCH",
               "APPLY 16:9 WIDESCREEN PATCH",
@@ -1084,8 +1085,8 @@ assert "g_ps2_enhancer_guide_open = 1" in src
 ps2_input = section("} else if (g_screen == SCREEN_PS2_CONFIG) {",
                     "} else if (g_screen == SCREEN_FPS_CONTROL) {")
 assert "triangle && !old_triangle" in ps2_input
-assert "(g_ps2_config_manager_selection + 8) % 9" in ps2_input
-assert "(g_ps2_config_manager_selection + 1) % 9" in ps2_input
+assert "(g_ps2_config_manager_selection + 9) % 10" in ps2_input
+assert "(g_ps2_config_manager_selection + 1) % 10" in ps2_input
 assert "perform_ps2_config_manager_action();" in ps2_input
 assert "draw_rounded_rect(544.0f, 376.0f, 272.0f, 4.0f" in details_ui
 tools_ui = section("static void draw_tools(void)",

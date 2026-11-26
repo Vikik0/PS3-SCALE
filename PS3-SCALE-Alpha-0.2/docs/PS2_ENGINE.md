@@ -15,6 +15,7 @@ The local profile builder emits only a small, allow-listed CONFIG:
 | Sharper pixels | `0x44` | Disables the emulator smoothing filter | Can make edges look more jagged; it is not an HD upscale |
 | L2H performance | `0x46` | Enables the documented L2H improvement | Title-dependent; not a universal FPS increase |
 | Conservative frame pacing | `0x48` + mode `1` + delay `20000` | Uses the documented No-IPU / conservative VSYNC-delay preset | Timing experiment; not an FPS unlock and not enabled by default |
+| Pressure-sensitive controls | `0x50` | Enables analog pressure-sensitive buttons | Optional; off by default; requires CONFIG revision 4.78+ |
 
 The `0x48` values are serialized little-endian as two 32-bit parameters. The command is documented for newer netemu builds (4.45-era and later); the builder deliberately exposes only the conservative preset documented in official CONFIG examples. More aggressive values and the separate `0x21` command are not generated automatically. Generated profiles end with the empty `0x00` terminator. A Title ID / multidisc command must remain the final command and is therefore not modified by the patch appender.
 
@@ -46,6 +47,7 @@ The PS2 Enhancer screen now provides:
 - `0x46` L2H performance toggle (on by default).
 - `0x44` smoothing-disable / sharper-pixel toggle (off by default).
 - Optional conservative `0x48` frame-pacing toggle (off by default and explicitly experimental).
+- Optional `0x50` pressure-sensitive controls toggle (off by default).
 - Local CONFIG generation for PS2 ISO sidecars only; PS2 Classics require an exact matching encrypted ENC file.
 - Refuse to replace any existing CONFIG with a minimal local profile, preserving community and previously installed settings. The separate FPS-patch path can append to compatible CONFIGs without discarding their commands.
 - Append exact-match experimental `0x0A` code-patch commands to compatible CONFIGs for one-word FPS candidates or curated multi-word 16:9 widescreen patches; preserve existing commands and refuse configs with an existing code-patch command or a trailing Title ID / multidisc enforcer.

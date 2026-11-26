@@ -3705,12 +3705,14 @@ static void perform_ps2_config_manager_action(void)
         return;
     }
 
-    if (g_ps2_config_manager_selection <= 2) {
+    if (g_ps2_config_manager_selection <= 3) {
         unsigned flag = g_ps2_config_manager_selection == 0 ?
             PS3SCALE_PS2_CFG_ENABLE_L2H :
             (g_ps2_config_manager_selection == 1 ?
              PS3SCALE_PS2_CFG_DISABLE_SMOOTHING :
-             PS3SCALE_PS2_CFG_FRAME_PACING);
+             (g_ps2_config_manager_selection == 2 ?
+              PS3SCALE_PS2_CFG_FRAME_PACING :
+              PS3SCALE_PS2_CFG_ENABLE_PRESSURE));
 
         if (!game || game->kind != PS3SCALE_GAME_PS2_ISO) {
             snprintf(g_ps2_config_manager_message,
@@ -3730,31 +3732,37 @@ static void perform_ps2_config_manager_action(void)
                      sizeof(g_ps2_config_manager_message),
                      (g_ps2_enhancement_flags & flag) ?
                      "SHARPER PIXELS ENABLED." : "SHARPER PIXELS DISABLED.");
-        else
+        else if (flag == PS3SCALE_PS2_CFG_FRAME_PACING)
             snprintf(g_ps2_config_manager_message,
                      sizeof(g_ps2_config_manager_message),
                      (g_ps2_enhancement_flags & flag) ?
                      "FRAME PACING ENABLED (EXPERIMENTAL)." :
                      "FRAME PACING DISABLED.");
-        return;
-    }
-
-    if (g_ps2_config_manager_selection == 3) {
-        apply_ps2_local_profile();
+        else
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     (g_ps2_enhancement_flags & flag) ?
+                     "PRESSURE SENSITIVITY ENABLED." :
+                     "PRESSURE SENSITIVITY DISABLED.");
         return;
     }
 
     if (g_ps2_config_manager_selection == 4) {
-        apply_ps2_game_patch(PS3SCALE_PS2_PATCH_FPS);
+        apply_ps2_local_profile();
         return;
     }
 
     if (g_ps2_config_manager_selection == 5) {
-        apply_ps2_game_patch(PS3SCALE_PS2_PATCH_WIDESCREEN);
+        apply_ps2_game_patch(PS3SCALE_PS2_PATCH_FPS);
         return;
     }
 
     if (g_ps2_config_manager_selection == 6) {
+        apply_ps2_game_patch(PS3SCALE_PS2_PATCH_WIDESCREEN);
+        return;
+    }
+
+    if (g_ps2_config_manager_selection == 7) {
         if (!entry) {
             snprintf(g_ps2_config_manager_message,
                      sizeof(g_ps2_config_manager_message),
@@ -3766,7 +3774,7 @@ static void perform_ps2_config_manager_action(void)
         return;
     }
 
-    if (g_ps2_config_manager_selection == 7) {
+    if (g_ps2_config_manager_selection == 8) {
         result = ps3scale_ps2_config_store_backup(
             g_ps2_config_manager_target,
             g_ps2_config_manager_backup,
@@ -3788,7 +3796,7 @@ static void perform_ps2_config_manager_action(void)
             snprintf(g_ps2_config_manager_message,
                      sizeof(g_ps2_config_manager_message),
                      "BACKUP FAILED. NO ORIGINAL FILE WAS CHANGED.");
-    } else if (g_ps2_config_manager_selection == 8) {
+    } else if (g_ps2_config_manager_selection == 9) {
         result = ps3scale_ps2_config_store_restore(
             g_ps2_config_manager_target,
             g_ps2_config_manager_backup,
@@ -6056,27 +6064,38 @@ static void draw_ps2_config_manager(void)
               (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_FRAME_PACING) ?
               "ON" : "OFF");
 
+    draw_soft_card(48.0f, 361.0f, 352.0f, 38.0f,
+                   g_ps2_config_manager_selection == 3);
+    draw_text(62.0f, 367.0f, 0x29243fff, "PRESSURE SENSITIVITY (0x50)");
+    draw_text(62.0f, 382.0f, 0x77718fff,
+              "Enables analog pressure-sensitive button input.");
+    draw_text(350.0f, 373.0f,
+              (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_PRESSURE) ?
+              0x26794bff : 0x77718fff,
+              (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_PRESSURE) ?
+              "ON" : "OFF");
+
     draw_soft_button(430.0f, 230.0f, 350.0f, 26.0f,
                      can_generate ?
                      (g_ps2_config_manager_target_state == 1 ?
                       "RESTORE BACKUP FIRST" : "APPLY LOCAL PROFILE") :
                      "ISO PROFILE ONLY",
-                     g_ps2_config_manager_selection == 3);
+                     g_ps2_config_manager_selection == 4);
     draw_soft_button(430.0f, 260.0f, 350.0f, 26.0f,
                      can_generate ? "APPLY EXPERIMENTAL 60 FPS PATCH" : "ISO PATCH ONLY",
-                     g_ps2_config_manager_selection == 4);
+                     g_ps2_config_manager_selection == 5);
     draw_soft_button(430.0f, 290.0f, 350.0f, 26.0f,
                      can_generate ? "APPLY 16:9 WIDESCREEN PATCH" : "ISO PATCH ONLY",
-                     g_ps2_config_manager_selection == 5);
+                     g_ps2_config_manager_selection == 6);
     draw_soft_button(430.0f, 320.0f, 350.0f, 26.0f,
                      entry ? "DOWNLOAD EXACT GAME CONFIG" : "NO EXACT GAME CONFIG",
-                     g_ps2_config_manager_selection == 6);
+                     g_ps2_config_manager_selection == 7);
     draw_soft_button(430.0f, 350.0f, 350.0f, 26.0f,
                      "BACK UP CURRENT CONFIG",
-                     g_ps2_config_manager_selection == 7);
+                     g_ps2_config_manager_selection == 8);
     draw_soft_button(430.0f, 380.0f, 350.0f, 26.0f,
                      "RESTORE SAVED BACKUP",
-                     g_ps2_config_manager_selection == 8);
+                     g_ps2_config_manager_selection == 9);
 
     set_ui_font_size(7, 11);
     draw_text(48.0f, 374.0f, 0x514b69ff,
@@ -7726,10 +7745,10 @@ int main(int argc, char *argv[])
             } else {
                 if (up && !old_up)
                     g_ps2_config_manager_selection =
-                        (g_ps2_config_manager_selection + 8) % 9;
+                        (g_ps2_config_manager_selection + 9) % 10;
                 if (down && !old_down)
                     g_ps2_config_manager_selection =
-                        (g_ps2_config_manager_selection + 1) % 9;
+                        (g_ps2_config_manager_selection + 1) % 10;
                 if (cross && !old_cross) perform_ps2_config_manager_action();
             }
         } else if (g_screen == SCREEN_FPS_CONTROL) {

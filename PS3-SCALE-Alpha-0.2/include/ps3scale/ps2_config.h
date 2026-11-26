@@ -9,6 +9,7 @@
 #define PS3SCALE_PS2_CFG_DISABLE_SMOOTHING 0x01u
 #define PS3SCALE_PS2_CFG_ENABLE_L2H        0x02u
 #define PS3SCALE_PS2_CFG_FRAME_PACING      0x04u
+#define PS3SCALE_PS2_CFG_ENABLE_PRESSURE   0x08u
 
 #define PS3SCALE_PS2_CFG_VSYNC_MODE_NO_IPU 1u
 #define PS3SCALE_PS2_CFG_VSYNC_DELAY_20MS  20000u
@@ -29,6 +30,9 @@ typedef struct {
  *
  * ENABLE_L2H: netemu command 0x46; enables the documented L2H improvement.
  * Performance gains are title-dependent and are not guaranteed.
+ *
+ * ENABLE_PRESSURE: netemu command 0x50; enables pressure-sensitive controls.
+ * It is optional and off by default.
  *
  * FRAME_PACING: netemu command 0x48 with the conservative, documented
  * No-IPU / 20,000 delay preset. It is optional and title-dependent; it is

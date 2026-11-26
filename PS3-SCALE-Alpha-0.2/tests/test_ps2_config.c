@@ -13,6 +13,7 @@ int main(void)
         0x48, 0x00, 0x00, 0x00,
         0x01, 0x00, 0x00, 0x00,
         0x20, 0x4E, 0x00, 0x00,
+        0x50, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00
     };
     static const uint8_t expected_frame_pacing[] = {
@@ -20,6 +21,11 @@ int main(void)
         0x48, 0x00, 0x00, 0x00,
         0x01, 0x00, 0x00, 0x00,
         0x20, 0x4E, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00
+    };
+    static const uint8_t expected_pressure[] = {
+        0x3D, 0x00, 0x00, 0x00, 0x57, 0x44, 0x00, 0x00,
+        0x50, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00
     };
     static const uint8_t expected_patch[] = {
@@ -41,10 +47,17 @@ int main(void)
         data, sizeof(data),
         PS3SCALE_PS2_CFG_DISABLE_SMOOTHING |
         PS3SCALE_PS2_CFG_ENABLE_L2H |
-        PS3SCALE_PS2_CFG_FRAME_PACING,
+        PS3SCALE_PS2_CFG_FRAME_PACING |
+        PS3SCALE_PS2_CFG_ENABLE_PRESSURE,
         &size) == 0);
     assert(size == sizeof(expected_all));
     assert(memcmp(data, expected_all, sizeof(expected_all)) == 0);
+    assert(ps3scale_ps2_config_validate_generated(data, size) == 0);
+
+    assert(ps3scale_ps2_config_build(
+        data, sizeof(data), PS3SCALE_PS2_CFG_ENABLE_PRESSURE, &size) == 0);
+    assert(size == sizeof(expected_pressure));
+    assert(memcmp(data, expected_pressure, sizeof(expected_pressure)) == 0);
     assert(ps3scale_ps2_config_validate_generated(data, size) == 0);
 
     assert(ps3scale_ps2_config_build(

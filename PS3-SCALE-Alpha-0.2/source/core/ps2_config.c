@@ -119,7 +119,8 @@ int ps3scale_ps2_config_build_with_patches(
     const unsigned allowed =
         PS3SCALE_PS2_CFG_DISABLE_SMOOTHING |
         PS3SCALE_PS2_CFG_ENABLE_L2H |
-        PS3SCALE_PS2_CFG_FRAME_PACING;
+        PS3SCALE_PS2_CFG_FRAME_PACING |
+        PS3SCALE_PS2_CFG_ENABLE_PRESSURE;
 
     if (out_size)
         *out_size = 0;
@@ -134,6 +135,8 @@ int ps3scale_ps2_config_build_with_patches(
         needed += 4u;
     if (has_flag(flags, PS3SCALE_PS2_CFG_FRAME_PACING))
         needed += 12u;
+    if (has_flag(flags, PS3SCALE_PS2_CFG_ENABLE_PRESSURE))
+        needed += 4u;
     if (patch_count != 0)
         needed += 8u + patch_count * 12u;
 
@@ -167,6 +170,13 @@ int ps3scale_ps2_config_build_with_patches(
         pos += 4u;
         write_u32_le(out + pos, PS3SCALE_PS2_CFG_VSYNC_DELAY_20MS);
         pos += 4u;
+    }
+
+    if (has_flag(flags, PS3SCALE_PS2_CFG_ENABLE_PRESSURE)) {
+        out[pos++] = 0x50;
+        out[pos++] = 0x00;
+        out[pos++] = 0x00;
+        out[pos++] = 0x00;
     }
 
     if (patch_count != 0) {
@@ -296,6 +306,9 @@ int ps3scale_ps2_config_validate_generated(const uint8_t *data, size_t size)
                 return -8;
             flag = PS3SCALE_PS2_CFG_FRAME_PACING;
             pos += 12u;
+        } else if (command == 0x50) {
+            flag = PS3SCALE_PS2_CFG_ENABLE_PRESSURE;
+            pos += 4u;
         } else if (command == 0x0A) {
             uint32_t count;
             size_t patch_pos;
@@ -327,7 +340,7 @@ int ps3scale_ps2_config_validate_generated(const uint8_t *data, size_t size)
                 }
                 patch_pos += 12u;
             }
-            flag = 0x08u;
+            flag = 0x10u;
             pos += 8u + (size_t)count * 12u;
         } else {
             return -5;
