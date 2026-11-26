@@ -161,6 +161,47 @@ jobs:
               print(f"Validated exact original BIN/CUE dump: {sizes['Crash Bash (USA).bin']:,} BIN bytes; both SHA-256 hashes match.")
           PY
 
+      - name: Audit the original Crash Bash PS1 filesystem and DAT index
+        shell: bash
+        run: |
+          set -euo pipefail
+          INPUT_DIR="/tmp/cb-original-disc-input"
+          AUDIT_DIR="/tmp/cb-original-disc-audit"
+          rm -rf "$INPUT_DIR" "$AUDIT_DIR"
+          mkdir -p "$INPUT_DIR" "$AUDIT_DIR"
+          python3 - <<'PY'
+          import shutil
+          import zipfile
+          archive_path = "/tmp/crash-bash-disc.zip"
+          destination = "/tmp/cb-original-disc-input"
+          with zipfile.ZipFile(archive_path) as archive:
+              for name in ("Crash Bash (USA).bin", "Crash Bash (USA).cue"):
+                  with archive.open(name) as source, open(f"{destination}/{name}", "wb") as output:
+                      shutil.copyfileobj(source, output, length=1024 * 1024)
+          PY
+          python3 Crash-Bash-Enhanced/tools/extract_disc.py \
+            --bin "$INPUT_DIR/Crash Bash (USA).bin" \
+            --cue "$INPUT_DIR/Crash Bash (USA).cue" \
+            --out "$AUDIT_DIR"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path("/tmp/cb-original-disc-audit/disc_manifest.json").read_text(encoding="utf-8"))
+          expected = {
+              "dat_entry_count": 992,
+              "size": 73220096,
+              "sha256": "3a02b477ab48ae99010e1a9db3b0d591c79e800b43d10779945ca18ab788acb7",
+              "executable_sha256": "fd5727a18feb2a2d5a6359a55966f0266284d1e50f64ee9b8a127a97091bd516",
+              "disc_bin_size": 178220448,
+          }
+          for field, value in expected.items():
+              if manifest.get(field) != value:
+                  raise SystemExit(f"Original Crash Bash disc audit mismatch for {field}: {manifest.get(field)!r}")
+          print("Verified original Crash Bash boot executable and all 992 CRASHBSH.DAT index entries.")
+          print("DAT split/reconstruction is byte-identical; temporary extracted game assets remain outside the package.")
+          PY
+          rm -rf "$INPUT_DIR" "$AUDIT_DIR"
+
       - name: Download the verified RetroArch + PCSX-ReARMed runtime
         uses: actions/download-artifact@v4
         with:
