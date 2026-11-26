@@ -1098,7 +1098,9 @@ for match in entry_pattern.finditer(patch_catalog):
     serial, elf_hash, title, filename, kind, array_name = match.groups()
     patch_counts[kind] += 1
     assert len(elf_hash) == 8 and filename.endswith(".pnach")
-    assert filename in patch_catalog
+    expected_prefix = serial.replace("_", "-").replace(".", "")
+    assert filename.startswith(expected_prefix + "_")
+    assert filename.endswith("_" + elf_hash.upper() + ".pnach")
     assert array_name in patch_arrays and 0 < len(patch_arrays[array_name]) <= 32
     key = (serial, elf_hash.upper(), kind)
     assert key not in patch_keys

@@ -90,6 +90,8 @@ Copy this section for each candidate tested.
 | Measurement | Baseline | Patched | Pass / fail / notes |
 |---|---|---|---|
 | Measured FPS (same scene) | NOT RECORDED | NOT RECORDED | NOT TESTED |
+| TV-reported output mode / resolution | NOT RECORDED | NOT RECORDED | NOT TESTED |
+| XMB PS / PS2 Upscaler setting | NOT RECORDED | NOT RECORDED | NOT TESTED |
 | Gameplay speed / timing | NOT RECORDED | NOT RECORDED | NOT TESTED |
 | Audio sync | NOT RECORDED | NOT RECORDED | NOT TESTED |
 | FMV / cutscene playback | NOT RECORDED | NOT RECORDED | NOT TESTED |

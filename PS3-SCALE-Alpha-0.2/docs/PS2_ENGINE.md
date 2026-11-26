@@ -86,7 +86,7 @@ The pinned PCSX2 source files also contain exact 16:9 widescreen sections for tw
 | Tom Clancy's Splinter Cell: Double Agent (PAL-M3) | SLES_538.27 | 6BD0E9C2 | 1 |
 | La Pucelle: Tactics (PAL) | SLES_529.78 | 474EC389 | 7 |
 
-These are aspect-ratio/game-camera patches, not HD texture replacements or native-resolution upscaling. They remain experimental until tested on the target PS3; the ISO is never rewritten.
+These are aspect-ratio/game-camera patches, not HD texture replacements or native-resolution upscaling. PCSX2-only `gsaspectratio=16:9` metadata is not copied into netemu CONFIG; the EE instruction words adjust the game's projection, while the actual PS3 display ratio and scaling remain controlled by the XMB settings. They remain experimental until tested on the target PS3; the ISO is never rewritten.
 
 ### 480p progressive-output patches
 
@@ -108,7 +108,7 @@ The pinned PCSX2 commit also contains simple word-only 480p sections for thirtee
 | Space Chimps (PAL-M) | SLES_553.40 | C423A2DC | 3 |
 | Cold Fear (PAL-M) | SLES_531.58 | E38A0AB6 | 2 |
 
-Only `word` writes are converted; files using `extended`, byte writes or conditional runtime codes are excluded. The kill.switch source notes that FMVs remain PAL even when the 480p startup mode is selected. This selects a 480p game mode where the title supports it; the PS3 XMB upscaler can then scale the output to the selected display mode. It is not a native 720p/1080p renderer, and some titles may show offset or FMV issues, so test per title and restore the backup if needed.
+Only `word` writes are converted; files using `extended`, byte writes or conditional runtime codes are excluded. PCSX2-only `gsinterlacemode=1` metadata is not copied into netemu CONFIG; only the game's EE instruction writes are imported. The actual 480p signal must therefore be confirmed on a physical PS3 and display, rather than inferred from a successful CONFIG write. The kill.switch source notes that FMVs remain PAL even when the 480p startup mode is selected. This selects a 480p game mode where the title supports it; the PS3 XMB upscaler can then scale the output to the selected display mode. It is not a native 720p/1080p renderer, and some titles may show offset or FMV issues, so test per title and restore the backup if needed.
 
 PCSX2's patch filename hash is not standard CRC32: its game ELF hash is the XOR of little-endian 32-bit words across the boot ELF. PS3 SCALE resolves the BOOT/BOOT2 path from SYSTEM.CNF through nested ISO9660 directories, computes this same hash, and reads the original word only from a file-backed executable MIPS ELF segment. The converter can then create a netemu `0x0A` replacement entry with the exact original word as a guard.
 
