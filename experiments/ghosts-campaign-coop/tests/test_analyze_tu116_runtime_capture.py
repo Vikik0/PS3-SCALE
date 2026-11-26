@@ -270,14 +270,15 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
 
     def test_campaign_self_change_during_analysis_aborts_before_output_promotion(self):
         original = self.campaign_self.read_bytes()
+        original_verify = self.fake_verify
 
         def mutate_campaign_self(self_file, dump_dir, map_file, output_elf, mode, *, overwrite=False):
-            result = self.fake_verify(self_file, dump_dir, map_file, output_elf, mode, overwrite=overwrite)
+            result = original_verify(self_file, dump_dir, map_file, output_elf, mode, overwrite=overwrite)
             if mode == "campaign":
                 self.campaign_self.write_bytes(original + b"-changed-during-analysis")
             return result
 
-        with patch.object(analyzer, "verify_dump", side_effect=mutate_campaign_self):
+        with patch.object(self, "fake_verify", side_effect=mutate_campaign_self):
             with self.assertRaisesRegex(ValueError, "campaign_default_self changed during analysis"):
                 self.run_analyzer()
 
@@ -287,12 +288,14 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
     def test_player_pair_capture_change_during_analysis_aborts_before_output_promotion(self):
         capture = self.write_player_pair_capture()
 
+        original_scan = self.fake_scan
+
         def mutate_capture(path):
-            result = self.fake_scan(path)
+            result = original_scan(path)
             capture.write_text(capture.read_text(encoding="utf-8") + "\n", encoding="utf-8")
             return result
 
-        with patch.object(analyzer, "scan_runtime_strings", side_effect=mutate_capture):
+        with patch.object(self, "fake_scan", side_effect=mutate_capture):
             with self.assertRaisesRegex(ValueError, "campaign_player_pair_capture changed during analysis"):
                 self.run_analyzer(campaign_player_capture=capture)
 
@@ -302,14 +305,15 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
     def test_campaign_dump_segment_change_during_analysis_aborts_before_output_promotion(self):
         segment = self.campaign_dumps / "GHOSTS_TU116_CAMPAIGN_SEG0.bin"
         original = segment.read_bytes()
+        original_verify = self.fake_verify
 
         def mutate_campaign_dump(self_file, dump_dir, map_file, output_elf, mode, *, overwrite=False):
-            result = self.fake_verify(self_file, dump_dir, map_file, output_elf, mode, overwrite=overwrite)
+            result = original_verify(self_file, dump_dir, map_file, output_elf, mode, overwrite=overwrite)
             if mode == "campaign":
                 segment.write_bytes(original + b"-changed-during-analysis")
             return result
 
-        with patch.object(analyzer, "verify_dump", side_effect=mutate_campaign_dump):
+        with patch.object(self, "fake_verify", side_effect=mutate_campaign_dump):
             with self.assertRaisesRegex(ValueError, "campaign dump segment_0 changed during analysis"):
                 self.run_analyzer()
 
