@@ -15,6 +15,9 @@ main = (root / "PS3-SCALE-Alpha-0.2/source/ps3/main.c").read_text(
     encoding="utf-8"
 )
 readme = (root / "supabase/README.md").read_text(encoding="utf-8")
+root_readme = (root / "README.md").read_text(encoding="utf-8")
+arabic_readme = (root / "PS3-SCALE-Alpha-0.2/README_AR.md").read_text(encoding="utf-8")
+build_status = (root / "PS3-SCALE-Alpha-0.2/docs/BUILD_STATUS.md").read_text(encoding="utf-8")
 
 # Database privacy: reports and rate-limit state are not public API tables.
 assert "create table if not exists public.ps3scale_support_reports" in migration
@@ -84,6 +87,10 @@ assert "separate Supabase organization on the Free Plan" in readme
 assert "Do not create this project in the existing `VIKIK` organization" in readme
 assert "Nano compute at $0/month" in readme
 assert "Never fall back to creating the project in `VIKIK`." in readme
+assert "separate Supabase Free Plan organization" in root_readme
+assert "separate Supabase Free Plan organization" in arabic_readme
+assert "separate Free Plan organization" in build_status
+assert "Never create this backend under VIKIK." in build_status
 assert "Do not reuse" in readme
 assert "supabase db push --linked --yes" in readme
 assert "supabase functions deploy ps3scale-support --no-verify-jwt --yes" in readme
