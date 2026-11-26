@@ -49,6 +49,13 @@ static void draw_text(float x, float y, int size, u32 color, const char *value)
 
 #define LOBBY_WORK_CONNECT 1
 #define LOBBY_WORK_LIST 2
+#define LOBBY_WORK_JOIN_ANY 3
+#define LOBBY_WORK_JOIN 4
+#define LOBBY_WORK_CREATE 5
+#define LOBBY_WORK_GET_ROOM 6
+#define LOBBY_WORK_SET_READY 7
+#define LOBBY_WORK_HEARTBEAT 8
+#define LOBBY_WORK_LEAVE 9
 #define LOBBY_WORKER_STACK_SIZE 0x20000
 
 typedef struct {
@@ -56,8 +63,14 @@ typedef struct {
     int operation;
     int result;
     int curl_initialized;
+    int ready;
+    int is_private;
     size_t room_count;
     CBOnlineRoom rooms[MENU_ROOM_LIMIT];
+    CBOnlineSession session;
+    CBOnlineRoomView view;
+    char guest_name[CB_ONLINE_NAME_MAX];
+    char room_code[7];
     char status[160];
 } LobbyWorkerTask;
 
@@ -86,6 +99,7 @@ static void lobby_worker(void *opaque)
     LobbyWorkerTask *task = (LobbyWorkerTask *)opaque;
     char error[160] = "";
     size_t count = 0;
+    int rc = -1;
 
     if (!task) {
         sysThreadExit(0);
@@ -128,8 +142,64 @@ static void lobby_worker(void *opaque)
                      "Found %d public room(s).", (int)count);
         }
     } else {
-        task->result = -1;
-        snprintf(task->status, sizeof(task->status), "Unknown lobby task.");
+        switch (task->operation) {
+        case LOBBY_WORK_JOIN_ANY:
+            rc = cb_online_join_any_room(task->guest_name, &task->session,
+                                          &task->view, error, sizeof(error));
+            break;
+        case LOBBY_WORK_JOIN:
+            rc = cb_online_join_room(task->room_code, task->guest_name,
+                                     &task->session, &task->view,
+                                     error, sizeof(error));
+            break;
+        case LOBBY_WORK_CREATE:
+            rc = cb_online_create_room(task->guest_name, task->is_private,
+                                       &task->session, &task->view,
+                                       error, sizeof(error));
+            break;
+        case LOBBY_WORK_GET_ROOM:
+            rc = cb_online_get_room(&task->session, &task->view,
+                                    error, sizeof(error));
+            break;
+        case LOBBY_WORK_SET_READY:
+            rc = cb_online_set_ready(&task->session, task->ready,
+                                     &task->view, error, sizeof(error));
+            break;
+        case LOBBY_WORK_HEARTBEAT:
+            rc = cb_online_heartbeat(&task->session, &task->view,
+                                     error, sizeof(error));
+            break;
+        case LOBBY_WORK_LEAVE:
+            rc = cb_online_leave_room(&task->session, error, sizeof(error));
+            break;
+        default:
+            snprintf(error, sizeof(error), "Unknown lobby task.");
+            rc = -1;
+            break;
+        }
+        task->result = rc;
+        if (rc == 0) {
+            if (task->operation == LOBBY_WORK_GET_ROOM)
+                snprintf(task->status, sizeof(task->status), "Room refreshed.");
+            else if (task->operation == LOBBY_WORK_SET_READY)
+                snprintf(task->status, sizeof(task->status), "Ready status updated.");
+            else if (task->operation == LOBBY_WORK_HEARTBEAT)
+                snprintf(task->status, sizeof(task->status), "Room connection active.");
+            else if (task->operation == LOBBY_WORK_LEAVE)
+                snprintf(task->status, sizeof(task->status), "Room left.");
+            else if (task->operation == LOBBY_WORK_CREATE)
+                snprintf(task->status, sizeof(task->status), "%s room %.6s created.",
+                         task->is_private ? "Private" : "Public", task->session.code);
+            else if (task->operation == LOBBY_WORK_JOIN_ANY)
+                snprintf(task->status, sizeof(task->status), "Joined public battle %.6s.",
+                         task->session.code);
+            else
+                snprintf(task->status, sizeof(task->status), "Joined room %.6s.",
+                         task->session.code);
+        } else {
+            snprintf(task->status, sizeof(task->status), "%s",
+                     error[0] ? error : "Room request failed.");
+        }
     }
 
     __sync_synchronize();
@@ -137,12 +207,25 @@ static void lobby_worker(void *opaque)
     sysThreadExit(0);
 }
 
-static int start_lobby_worker(sys_ppu_thread_t *thread,
-                              LobbyWorkerTask *task, int operation)
+static int start_lobby_action_worker(sys_ppu_thread_t *thread,
+                                     LobbyWorkerTask *task, int operation,
+                                     const CBOnlineSession *session,
+                                     const CBOnlineRoomView *view,
+                                     const char *guest_name,
+                                     const char *room_code,
+                                     int ready, int is_private)
 {
     if (!thread || !task) return -1;
     memset(task, 0, sizeof(*task));
     task->operation = operation;
+    if (session) task->session = *session;
+    if (view) task->view = *view;
+    if (guest_name)
+        snprintf(task->guest_name, sizeof(task->guest_name), "%.20s", guest_name);
+    if (room_code)
+        snprintf(task->room_code, sizeof(task->room_code), "%.6s", room_code);
+    task->ready = ready;
+    task->is_private = is_private;
     if (sysThreadCreate(thread, lobby_worker, task, 1500,
                         LOBBY_WORKER_STACK_SIZE, THREAD_JOINABLE,
                         g_lobby_worker_name) != 0) {
@@ -152,6 +235,13 @@ static int start_lobby_worker(sys_ppu_thread_t *thread,
         return -1;
     }
     return 0;
+}
+
+static int start_lobby_worker(sys_ppu_thread_t *thread,
+                              LobbyWorkerTask *task, int operation)
+{
+    return start_lobby_action_worker(thread, task, operation,
+                                     NULL, NULL, NULL, NULL, 0, 0);
 }
 
 static void join_lobby_worker(sys_ppu_thread_t thread)
@@ -175,8 +265,6 @@ static void return_to_rooms(CBOnlineSession *session, CBOnlineRoomView *view,
                             CBOnlineRoom *rooms, int *room_count, int *selected,
                             char *status, size_t status_size)
 {
-    char ignored[160] = "";
-    if (session && session->token[0]) cb_online_leave_room(session, ignored, sizeof(ignored));
     if (session) memset(session, 0, sizeof(*session));
     if (view) memset(view, 0, sizeof(*view));
     if (ready) *ready = 0;
@@ -567,19 +655,97 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
         }
 
         if (worker_active && worker.done) {
+            int completed_operation = worker.operation;
             join_lobby_worker(worker_thread);
             worker_active = 0;
-            if (worker.result == 0) {
-                memcpy(rooms, worker.rooms, sizeof(rooms));
-                room_count = (int)worker.room_count;
-                if (room_count == 0) selected = 0;
-                else if (selected >= room_count) selected = room_count - 1;
-                snprintf(status, status_size, "%s", worker.status);
-            } else {
-                snprintf(status, status_size, "%s",
-                         worker.status[0] ? worker.status : "Room refresh failed.");
+            if (completed_operation == LOBBY_WORK_LIST) {
+                if (worker.result == 0) {
+                    memcpy(rooms, worker.rooms, sizeof(rooms));
+                    room_count = (int)worker.room_count;
+                    if (room_count == 0) selected = 0;
+                    else if (selected >= room_count) selected = room_count - 1;
+                    snprintf(status, status_size, "%s", worker.status);
+                } else {
+                    snprintf(status, status_size, "%s",
+                             worker.status[0] ? worker.status : "Room refresh failed.");
+                }
+            } else if (completed_operation == LOBBY_WORK_JOIN_ANY ||
+                       completed_operation == LOBBY_WORK_JOIN ||
+                       completed_operation == LOBBY_WORK_CREATE) {
+                if (worker.result == 0) {
+                    session = worker.session;
+                    view = worker.view;
+                    ready = session.ready;
+                    screen = SCREEN_ROOM;
+                    poll_frames = 0;
+                    room_list_poll_frames = 0;
+                    snprintf(status, status_size, "%s", worker.status);
+                } else {
+                    snprintf(status, status_size, "%s", worker.status);
+                }
+            } else if (completed_operation == LOBBY_WORK_SET_READY) {
+                if (worker.result == 0) {
+                    session = worker.session;
+                    view = worker.view;
+                    ready = session.ready;
+                    snprintf(status, status_size, "%s",
+                             ready ? "You are ready." : "Ready status cancelled.");
+                } else if (session_is_gone(worker.status)) {
+                    return_to_rooms(&session, &view, &ready, &screen, &poll_frames,
+                                    rooms, &room_count, &selected, status, status_size);
+                } else {
+                    snprintf(status, status_size, "Ready update: %.120s", worker.status);
+                }
+            } else if (completed_operation == LOBBY_WORK_GET_ROOM ||
+                       completed_operation == LOBBY_WORK_HEARTBEAT) {
+                if (worker.result == 0) {
+                    session = worker.session;
+                    view = worker.view;
+                    ready = session.ready;
+                    if (completed_operation == LOBBY_WORK_GET_ROOM)
+                        snprintf(status, status_size, "Room refreshed.");
+                } else if (session_is_gone(worker.status)) {
+                    return_to_rooms(&session, &view, &ready, &screen, &poll_frames,
+                                    rooms, &room_count, &selected, status, status_size);
+                } else if (completed_operation == LOBBY_WORK_HEARTBEAT) {
+                    snprintf(status, status_size, "Heartbeat: %.120s", worker.status);
+                } else {
+                    snprintf(status, status_size, "Room refresh: %.120s", worker.status);
+                }
+            } else if (completed_operation == LOBBY_WORK_LEAVE) {
+                memset(&session, 0, sizeof(session));
+                memset(&view, 0, sizeof(view));
+                ready = 0;
+                screen = SCREEN_ROOMS;
+                poll_frames = 0;
+                room_list_poll_frames = 0;
+                if (!exit_after_worker) {
+                    if (start_lobby_worker(&worker_thread, &worker, LOBBY_WORK_LIST) == 0) {
+                        worker_active = 1;
+                        snprintf(status, status_size, "Refreshing public rooms...");
+                    } else {
+                        snprintf(status, status_size, "%s", worker.status);
+                    }
+                }
             }
             if (exit_after_worker) break;
+        }
+
+        if (worker_active && worker.operation != LOBBY_WORK_LIST) {
+            if (circle && !old_circle) exit_after_worker = 1;
+            if (screen == SCREEN_ROOMS)
+                draw_rooms(rooms, room_count, selected, private_create, status);
+            else if (screen == SCREEN_JOIN_CODE)
+                draw_join_code(join_code, code_cursor, status);
+            else if (screen == SCREEN_DISC_SELECT)
+                draw_disc_select(discs, disc_count, disc_selected, &session,
+                                 session_is_room_host(&session, &view), status);
+            else
+                draw_room(&view, &session, status);
+            old_up = up; old_down = down; old_left = left; old_right = right;
+            old_cross = cross; old_circle = circle; old_triangle = triangle; old_square = square;
+            old_l1 = l1; old_l2 = l2; old_r1 = r1; old_start = start;
+            continue;
         }
 
         if (screen == SCREEN_ROOMS) {
@@ -602,22 +768,26 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
             }
             if (r1 && !old_r1) { screen = SCREEN_JOIN_CODE; code_cursor = 0; }
             if (l2 && !old_l2 && !worker_active) {
-                if (cb_online_join_any_room(guest_name, &session, &view, error, sizeof(error)) == 0) {
-                    ready = 0; screen = SCREEN_ROOM; poll_frames = 0; room_list_poll_frames = 0;
-                    snprintf(status, status_size, "Joined public battle %.6s.", session.code);
-                } else snprintf(status, status_size, "Any battle: %.120s", error);
+                if (start_lobby_action_worker(&worker_thread, &worker, LOBBY_WORK_JOIN_ANY,
+                                              NULL, NULL, guest_name, NULL, 0, 0) == 0) {
+                    worker_active = 1;
+                    snprintf(status, status_size, "Joining a public battle...");
+                } else snprintf(status, status_size, "%s", worker.status);
             }
             if (cross && !old_cross && room_count > 0 && !worker_active) {
-                if (cb_online_join_room(rooms[selected].code, guest_name, &session, &view, error, sizeof(error)) == 0) {
-                    ready = 0; screen = SCREEN_ROOM; poll_frames = 0; room_list_poll_frames = 0;
-                    snprintf(status, status_size, "Joined room %.6s. Waiting for both players.", session.code);
-                } else snprintf(status, status_size, "Join room: %.120s", error);
+                if (start_lobby_action_worker(&worker_thread, &worker, LOBBY_WORK_JOIN,
+                                              NULL, NULL, guest_name, rooms[selected].code, 0, 0) == 0) {
+                    worker_active = 1;
+                    snprintf(status, status_size, "Joining room %.6s...", rooms[selected].code);
+                } else snprintf(status, status_size, "%s", worker.status);
             }
             if (triangle && !old_triangle && !worker_active) {
-                if (cb_online_create_room(guest_name, private_create, &session, &view, error, sizeof(error)) == 0) {
-                    ready = 0; screen = SCREEN_ROOM; poll_frames = 0; room_list_poll_frames = 0;
-                    snprintf(status, status_size, "%s room %.6s created. Share the code.", private_create ? "Private" : "Public", session.code);
-                } else snprintf(status, status_size, "Create room: %.120s", error);
+                if (start_lobby_action_worker(&worker_thread, &worker, LOBBY_WORK_CREATE,
+                                              NULL, NULL, guest_name, NULL, 0, private_create) == 0) {
+                    worker_active = 1;
+                    snprintf(status, status_size, "Creating %s room...",
+                             private_create ? "private" : "public");
+                } else snprintf(status, status_size, "%s", worker.status);
             }
             if (square && !old_square && !worker_active) {
                 if (start_lobby_worker(&worker_thread, &worker, LOBBY_WORK_LIST) == 0) {
@@ -647,10 +817,11 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                 join_code[code_cursor] = g_room_code_chars[(index + code_len - 1) % code_len];
             }
             if (cross && !old_cross && !worker_active) {
-                if (cb_online_join_room(join_code, guest_name, &session, &view, error, sizeof(error)) == 0) {
-                    ready = 0; screen = SCREEN_ROOM; poll_frames = 0; room_list_poll_frames = 0;
-                    snprintf(status, status_size, "Joined private/public room %.6s.", session.code);
-                } else snprintf(status, status_size, "Join code: %.120s", error);
+                if (start_lobby_action_worker(&worker_thread, &worker, LOBBY_WORK_JOIN,
+                                              NULL, NULL, guest_name, join_code, 0, 0) == 0) {
+                    worker_active = 1;
+                    snprintf(status, status_size, "Joining room %.6s...", join_code);
+                } else snprintf(status, status_size, "%s", worker.status);
             }
             if (circle && !old_circle) screen = SCREEN_ROOMS;
             draw_join_code(join_code, code_cursor, status);
@@ -755,15 +926,13 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
             draw_disc_select(discs, disc_count, disc_selected, &session,
                              session_is_room_host(&session, &view), status);
         } else {
-            if (cross && !old_cross) {
+            if (cross && !old_cross && !worker_active) {
                 int next_ready = !ready;
-                if (cb_online_set_ready(&session, next_ready, &view, error, sizeof(error)) == 0) {
-                    ready = next_ready;
-                    snprintf(status, status_size, "%s", ready ? "You are ready." : "Ready status cancelled.");
-                } else if (session_is_gone(error)) {
-                    return_to_rooms(&session, &view, &ready, &screen, &poll_frames,
-                                    rooms, &room_count, &selected, status, status_size);
-                } else snprintf(status, status_size, "Ready update: %.120s", error);
+                if (start_lobby_action_worker(&worker_thread, &worker, LOBBY_WORK_SET_READY,
+                                              &session, &view, NULL, NULL, next_ready, 0) == 0) {
+                    worker_active = 1;
+                    snprintf(status, status_size, "Updating READY status...");
+                } else snprintf(status, status_size, "%s", worker.status);
             }
             if (start && !old_start && screen == SCREEN_ROOM) {
                 if (!view.is_ready) {
@@ -788,38 +957,29 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                     }
                 }
             }
-            if (square && !old_square && screen == SCREEN_ROOM) {
-                if (cb_online_get_room(&session, &view, error, sizeof(error)) != 0) {
-                    if (session_is_gone(error)) {
-                        return_to_rooms(&session, &view, &ready, &screen, &poll_frames,
-                                        rooms, &room_count, &selected, status, status_size);
-                    } else snprintf(status, status_size, "Room refresh: %.120s", error);
-                } else {
-                    ready = session.ready;
-                }
-            }
-            if (circle && !old_circle) {
-                cb_online_leave_room(&session, error, sizeof(error));
-                memset(&session, 0, sizeof(session));
-                memset(&view, 0, sizeof(view));
-                ready = 0; screen = SCREEN_ROOMS; poll_frames = 0; room_list_poll_frames = 0;
-                if (start_lobby_worker(&worker_thread, &worker, LOBBY_WORK_LIST) == 0) {
+            if (square && !old_square && screen == SCREEN_ROOM && !worker_active) {
+                if (start_lobby_action_worker(&worker_thread, &worker, LOBBY_WORK_GET_ROOM,
+                                              &session, &view, NULL, NULL, 0, 0) == 0) {
                     worker_active = 1;
-                    snprintf(status, status_size, "Refreshing public rooms...");
-                } else {
-                    snprintf(status, status_size, "%s", worker.status);
-                }
+                    snprintf(status, status_size, "Refreshing room...");
+                } else snprintf(status, status_size, "%s", worker.status);
+            }
+            if (circle && !old_circle && !worker_active) {
+                if (start_lobby_action_worker(&worker_thread, &worker, LOBBY_WORK_LEAVE,
+                                              &session, &view, NULL, NULL, 0, 0) == 0) {
+                    worker_active = 1;
+                    snprintf(status, status_size, "Leaving battle room...");
+                } else snprintf(status, status_size, "%s", worker.status);
             }
             if ((screen == SCREEN_ROOM || screen == SCREEN_DISC_SELECT) &&
                 ++poll_frames >= ROOM_HEARTBEAT_FRAMES) {
                 poll_frames = 0;
-                if (cb_online_heartbeat(&session, &view, error, sizeof(error)) != 0) {
-                    if (session_is_gone(error)) {
-                        return_to_rooms(&session, &view, &ready, &screen, &poll_frames,
-                                        rooms, &room_count, &selected, status, status_size);
-                    } else snprintf(status, status_size, "Heartbeat: %.120s", error);
-                } else {
-                    ready = session.ready;
+                if (!worker_active) {
+                    if (start_lobby_action_worker(&worker_thread, &worker, LOBBY_WORK_HEARTBEAT,
+                                                  &session, &view, NULL, NULL, 0, 0) == 0) {
+                        worker_active = 1;
+                        snprintf(status, status_size, "Checking room connection...");
+                    } else snprintf(status, status_size, "%s", worker.status);
                 }
             }
             if (screen == SCREEN_DISC_SELECT && host_disc_waiting &&
@@ -952,7 +1112,35 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
         join_lobby_worker(worker_thread);
         worker_active = 0;
     }
-    if (session.token[0]) cb_online_leave_room(&session, error, sizeof(error));
+    if (worker_active) {
+        while (!worker.done) {
+            sysUtilCheckCallback();
+            draw_lobby_message("CLOSING ONLINE ROOMS",
+                               "Finishing the pending room request...", "", 0);
+        }
+        join_lobby_worker(worker_thread);
+        worker_active = 0;
+        if (worker.operation != LOBBY_WORK_LIST &&
+            worker.operation != LOBBY_WORK_LEAVE) {
+            session = worker.session;
+            view = worker.view;
+        } else if (worker.operation == LOBBY_WORK_LEAVE) {
+            memset(&session, 0, sizeof(session));
+            memset(&view, 0, sizeof(view));
+        }
+        if (worker.curl_initialized) curl_initialized = 1;
+    }
+    if (session.token[0] && curl_initialized) {
+        if (start_lobby_action_worker(&worker_thread, &worker, LOBBY_WORK_LEAVE,
+                                      &session, &view, NULL, NULL, 0, 0) == 0) {
+            while (!worker.done) {
+                sysUtilCheckCallback();
+                draw_lobby_message("LEAVING BATTLE ROOM",
+                                   "Closing your online room session...", "", 0);
+            }
+            join_lobby_worker(worker_thread);
+        }
+    }
     if (curl_initialized) cb_online_shutdown();
     return 0;
 }
