@@ -167,7 +167,6 @@ int main(void)
     size_t image_size = 27 * SECTOR;
     size_t pos = 0;
     size_t boot_pos = 0;
-    size_t root_boot_second_offset = 0;
     size_t nested_boot_first_offset = 0;
     size_t nested_boot_second_offset = 0;
 
@@ -193,7 +192,6 @@ int main(void)
 
     make_record_flags(root + pos, 24, SECTOR, "SLUS_203.12;1", 0x80u);
     pos += root[pos];
-    root_boot_second_offset = pos;
     make_record(root + pos, 25, SECTOR, "SLUS_203.12;1", 0);
     pos += root[pos];
     make_record(root + pos, 23, SECTOR, "BOOT;1", 1);
