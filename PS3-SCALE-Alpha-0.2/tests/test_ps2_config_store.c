@@ -3,6 +3,7 @@
 #endif
 
 #include "ps3scale/ps2_config_store.h"
+#include "ps3scale/ps2_config.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -74,6 +75,28 @@ int main(void)
     MAKE_PATH(symlink_path, "linked.CONFIG");
     MAKE_PATH(symlink_backup, "linked.CONFIG.bak");
     MAKE_PATH(symlink_temp, "linked.CONFIG.tmp");
+
+    {
+        static const unsigned char external_config[] = {
+            0x3D, 0x00, 0x00, 0x00, 0x57, 0x44, 0x00, 0x00,
+            0x0B, 0x00, 0x00, 0x00
+        };
+        unsigned char generated_config[64];
+        size_t generated_size = 0;
+
+        assert(ps3scale_ps2_config_build(
+            generated_config, sizeof(generated_config),
+            PS3SCALE_PS2_CFG_ENABLE_L2H, &generated_size) == 0);
+        assert(ps3scale_ps2_config_store_stage(
+            staged, generated_config, generated_size, TEST_LIMIT) == 0);
+        assert(ps3scale_ps2_config_store_is_generated(staged, TEST_LIMIT) == 1);
+        assert(unlink(staged) == 0);
+
+        assert(ps3scale_ps2_config_store_stage(
+            staged, external_config, sizeof(external_config), TEST_LIMIT) == 0);
+        assert(ps3scale_ps2_config_store_is_generated(staged, TEST_LIMIT) == 0);
+        assert(unlink(staged) == 0);
+    }
 
     assert(ps3scale_ps2_config_store_stage(
         staged, "staged-config", strlen("staged-config"), TEST_LIMIT) == 0);

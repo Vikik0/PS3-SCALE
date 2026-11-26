@@ -3383,6 +3383,16 @@ static void apply_ps2_local_profile(void)
     }
 
     had_existing_config = g_ps2_config_manager_target_state == 1;
+    if (had_existing_config &&
+        ps3scale_ps2_config_store_is_generated(
+            g_ps2_config_manager_target,
+            g_ps2_config_manager_max_bytes) != 1) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "EXISTING COMMUNITY CONFIG DETECTED. LOCAL PROFILE WILL NOT OVERWRITE ITS FIXES.");
+        return;
+    }
+
     result = ps2_config_ensure_backup(
         g_ps2_config_manager_target,
         g_ps2_config_manager_backup,

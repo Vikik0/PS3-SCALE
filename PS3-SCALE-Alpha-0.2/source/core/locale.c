@@ -309,6 +309,7 @@ static const locale_entry_t locale_entries[] = {
     {"60 FPS requires an exact per-game code patch; these options do not unlock it.", "يتطلب 60 FPS تعديلاً برمجياً مطابقاً للعبة؛ هذه الخيارات لا تفتح 60 إطاراً.", "60 FPS requiere un parche de código exacto por juego; estas opciones no lo desbloquean."},
     {"UP/DOWN: SELECT | CROSS: TOGGLE / RUN | CIRCLE / SELECT: BACK", "أعلى/أسفل: اختيار | X: تبديل/تنفيذ | دائرة/SELECT: رجوع", "Arriba/abajo: elegir | X: cambiar/ejecutar | Círculo/SELECT: volver"},
     {"L2H IS ON BY DEFAULT. SELECT OPTIONS THEN APPLY.", "تحسين L2H مفعّل افتراضياً. اختر الخيارات ثم طبّقها.", "L2H está activado por defecto. Elige opciones y aplica."},
+    {"EXISTING COMMUNITY CONFIG DETECTED. LOCAL PROFILE WILL NOT OVERWRITE ITS FIXES.", "تم العثور على إعداد مجتمع موجود. لن يستبدل الملف المحلي إصلاحاته.", "Se detectó un CONFIG comunitario. El perfil local no sobrescribirá sus ajustes."},
     {"SAVED BACKUP DOES NOT MATCH. RESTORE IT BEFORE CHANGING PROFILE.", "النسخة الاحتياطية لا تطابق الإعداد الحالي. استعدها قبل تغيير الملف.", "La copia no coincide. Restáurala antes de cambiar el perfil."},
     {"AUTOMATIC BACKUP FAILED. NO FILE WAS CHANGED.", "فشل النسخ الاحتياطي التلقائي. لم يتغير أي ملف.", "Falló la copia automática. No se cambió ningún archivo."},
     {"PS2 ENHANCEMENT CONFIG INSTALLED. NO PREVIOUS CONFIG EXISTED.", "تم تثبيت إعداد تحسين PS2. لم يكن هناك إعداد سابق.", "CONFIG de mejora PS2 instalado. No existía un CONFIG anterior."},

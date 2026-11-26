@@ -3,10 +3,12 @@
 #endif
 
 #include "ps3scale/ps2_config_store.h"
+#include "ps3scale/ps2_config.h"
 
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -91,6 +93,44 @@ fail_unlink:
     if (created)
         (void)unlink(path);
     return -4;
+}
+
+int ps3scale_ps2_config_store_is_generated(const char *path,
+                                           size_t max_bytes)
+{
+    FILE *file;
+    unsigned char *data;
+    size_t file_size = 0;
+    int state;
+    int valid;
+
+    state = ps3scale_ps2_config_store_probe(path, max_bytes, &file_size);
+    if (state != 1)
+        return state;
+    if (file_size == 0 || file_size > max_bytes)
+        return -1;
+
+    data = (unsigned char *)malloc(file_size);
+    if (!data)
+        return -1;
+
+    file = fopen(path, "rb");
+    if (!file) {
+        free(data);
+        return -1;
+    }
+
+    valid = fread(data, 1, file_size, file) == file_size;
+    if (fclose(file) != 0)
+        valid = 0;
+    if (!valid) {
+        free(data);
+        return -1;
+    }
+
+    valid = ps3scale_ps2_config_validate_generated(data, file_size) == 0;
+    free(data);
+    return valid ? 1 : 0;
 }
 
 static int files_equal(const char *left, const char *right, size_t max_bytes)
