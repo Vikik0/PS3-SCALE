@@ -146,7 +146,19 @@ jobs:
                   raise SystemExit("The Crash Bash BIN size does not match the verified original dump.")
               if sizes["Crash Bash (USA).bin"] % 2352:
                   raise SystemExit("The BIN is not aligned to 2352-byte sectors.")
-              print(f"Validated original BIN/CUE ZIP: {sizes['Crash Bash (USA).bin']:,} BIN bytes.")
+              import hashlib
+              expected_hashes = {
+                  "Crash Bash (USA).bin": "a1d6b967a2311f1444482f4af91dff2d75e083ed538419f25d57d77dd5a4d7fd",
+                  "Crash Bash (USA).cue": "de7f3b62c2703f3a1ee76a5d10e5fb27cc386dea26b196807e5eec5e04a8fce9",
+              }
+              for name, expected_hash in expected_hashes.items():
+                  actual_hash = hashlib.sha256(archive.read(name)).hexdigest()
+                  if actual_hash != expected_hash:
+                      raise SystemExit(f"{name} SHA-256 does not match the verified original disc dump.")
+              cue = archive.read("Crash Bash (USA).cue").decode("utf-8-sig")
+              if 'FILE "Crash Bash (USA).bin" BINARY' not in cue or "TRACK 01 MODE2/2352" not in cue:
+                  raise SystemExit("The CUE does not describe the expected Crash Bash BIN track.")
+              print(f"Validated exact original BIN/CUE dump: {sizes['Crash Bash (USA).bin']:,} BIN bytes; both SHA-256 hashes match.")
           PY
 
       - name: Download the verified RetroArch + PCSX-ReARMed runtime
