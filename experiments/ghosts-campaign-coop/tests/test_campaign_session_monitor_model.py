@@ -56,6 +56,43 @@ class CampaignSessionMonitorModelContractTests(unittest.TestCase):
         clear = main.index("level.ghc_campaign_player_0 = undefined")
         self.assertLess(guard, clear)
 
+    def test_main_cancels_pending_stop_before_alias_cleanup(self):
+        main = function_body(self.source, "main")
+        active = main.index("level.ghc_campaign_session_monitor_active")
+        cancel = main.index("level.ghc_campaign_session_monitor_stop = 0", active)
+        return_owner = main.index("return 1", cancel)
+        clear = main.index("level.ghc_campaign_player_0 = undefined")
+        self.assertLess(active, cancel)
+        self.assertLess(cancel, return_owner)
+        self.assertLess(return_owner, clear)
+
+    def test_start_monitor_cancels_pending_stop_without_starting_second_thread(self):
+        start = function_body(self.source, "ghc_campaign_start_session_monitor")
+        active = start.index("level.ghc_campaign_session_monitor_active")
+        cancel = start.index("level.ghc_campaign_session_monitor_stop = 0", active)
+        return_owner = start.index("return 1", cancel)
+        thread = start.index("thread ghc_campaign_watch_native_session()")
+        self.assertLess(active, cancel)
+        self.assertLess(cancel, return_owner)
+        self.assertLess(return_owner, thread)
+
+    def test_watcher_rebinds_automatically_after_invalidation(self):
+        watch = function_body(self.source, "ghc_campaign_watch_native_session")
+        query = watch.index('getentarray( "player", "classname" )')
+        refresh = watch.index("level.playerpiggyback = var_1", query)
+        bind = watch.index("ghc_campaign_bind_native_local_pair()", query)
+        self.assertLess(query, refresh)
+        self.assertLess(refresh, bind)
+        self.assertNotIn("main() must be called again", watch)
+
+    def test_explicit_stop_invalidates_ready_session_before_monitor_exit(self):
+        watch = function_body(self.source, "ghc_campaign_watch_native_session")
+        shutdown = watch.index("Explicit shutdown is fail-closed.")
+        invalidate = watch.index("ghc_campaign_invalidate_local_session()", shutdown)
+        monitor_exit = watch.index("level.ghc_campaign_session_monitor_active = undefined")
+        self.assertLess(shutdown, invalidate)
+        self.assertLess(invalidate, monitor_exit)
+
 
 if __name__ == "__main__":
     unittest.main()

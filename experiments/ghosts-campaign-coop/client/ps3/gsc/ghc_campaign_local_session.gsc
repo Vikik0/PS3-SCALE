@@ -13,14 +13,19 @@
 main()
 {
     /*
-     * If the guarded watcher is already active, it owns recovery/rebinding.
-     * Do not start a competing bounded bind loop or clear its live aliases.
+     * The active watcher remains the sole lifecycle owner. If shutdown was
+     * requested but the watcher has not exited yet, a new main() call
+     * cancels that pending stop instead of racing cleanup against the thread.
      */
     if ( isdefined( level.ghc_campaign_session_monitor_active )
-        && level.ghc_campaign_session_monitor_active
-        && ( !isdefined( level.ghc_campaign_session_monitor_stop )
-            || !level.ghc_campaign_session_monitor_stop ) )
+        && level.ghc_campaign_session_monitor_active )
+    {
+        if ( isdefined( level.ghc_campaign_session_monitor_stop )
+            && level.ghc_campaign_session_monitor_stop )
+            level.ghc_campaign_session_monitor_stop = 0;
+
         return 1;
+    }
 
     /*
      * Idempotent only while the exact same native primary/secondary pair
@@ -117,7 +122,14 @@ ghc_campaign_start_session_monitor()
 {
     if ( isdefined( level.ghc_campaign_session_monitor_active )
         && level.ghc_campaign_session_monitor_active )
+    {
+        /* Match the host model: start cancels a pending stop on the owner. */
+        if ( isdefined( level.ghc_campaign_session_monitor_stop )
+            && level.ghc_campaign_session_monitor_stop )
+            level.ghc_campaign_session_monitor_stop = 0;
+
         return 1;
+    }
 
     level.ghc_campaign_session_monitor_stop = 0;
     level.ghc_campaign_session_monitor_active = 1;
@@ -141,8 +153,9 @@ ghc_campaign_stop_session_monitor()
  * before invalidating the session, avoiding a one-frame entity-array
  * transition from clearing valid Campaign aliases.
  *
- * This monitor never creates or rebinds a player. After status 8, the
- * verified bridge main() must be called again to attempt a bounded rebind.
+ * This monitor never creates or clones a player. After status 8 it
+ * stays alive and automatically retries binding an already-existing native
+ * pair from a fresh engine player array every 250 ms.
  */
 ghc_campaign_watch_native_session()
 {
@@ -190,6 +203,14 @@ ghc_campaign_watch_native_session()
 
         wait 0.25;
     }
+
+    /*
+     * Explicit shutdown is fail-closed. Do not leave a ready Campaign alias
+     * set behind after its only lifecycle validator has stopped.
+     */
+    if ( isdefined( level.ghc_campaign_session_ready )
+        && level.ghc_campaign_session_ready )
+        ghc_campaign_invalidate_local_session();
 
     level.ghc_campaign_session_monitor_active = undefined;
     level.ghc_campaign_session_monitor_stop = undefined;

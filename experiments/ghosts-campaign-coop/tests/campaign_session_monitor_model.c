@@ -87,6 +87,7 @@ int ghc_session_monitor_model_tick(
         model->active = 0u;
         model->session_ready = 0u;
         model->consecutive_failures = 0u;
+        model->active_lock_count = 0u;
         model->state = GHC_SESSION_MONITOR_STOPPED;
         return 0;
     }
