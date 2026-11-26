@@ -9,12 +9,12 @@ The latest successful PS3 runtime build is GitHub Actions run `45858627627` on b
 ## One-time private archive handoff
 
 1. Keep the ZIP at the private Dropbox path `/Crash-Bash-Temporary-Transfer/Crash-Bash-Original-Disc-Temporary-Transfer.zip`.
-2. Generate a single-use Dropbox temporary download URL immediately before the personal build. Use a 900-second lifetime. Do not open, preview, HEAD-check, or otherwise request the URL; its first HTTP request consumes it.
-3. In GitHub, open **Settings → Secrets and variables → Actions → New repository secret**. GitHub requires a non-empty value; do not create this secret blank.
-4. Immediately before the build, generate a fresh Dropbox temporary download URL and create `CRASH_BASH_DISC_ARCHIVE_URL` with that URL as its value. Do not paste the URL into chat or a public file.
-5. Open **Actions → Crash Bash Personal Game-Inclusive PS3 Build → Run workflow** on the `main` branch. Keep the default `runtime_run_id` value `45858627627`.
-6. The workflow downloads the archive once, validates the exact BIN/CUE members and hashes, embeds the game, builds one PKG, and encrypts the output for private transfer.
-7. Download the `Crash-Bash-Online-Personal-PS3-Encrypted` artifact before its one-day retention expires.
+2. In GitHub, open **Settings → Secrets and variables → Actions → New repository secret**. GitHub requires a non-empty value; do not create this secret blank.
+3. Immediately before starting the build, generate one single-use Dropbox temporary download URL with a 900-second lifetime and set it as the value of `CRASH_BASH_DISC_ARCHIVE_URL`. Do not open, preview, HEAD-check, or otherwise request the URL; its first HTTP request consumes it. Do not paste the URL into chat or a public file.
+4. Open **Actions → Crash Bash Personal Game-Inclusive PS3 Build → Run workflow** on the `main` branch. Keep the default `runtime_run_id` value `45858627627`.
+5. The workflow downloads the archive once, validates the exact BIN/CUE members and hashes, audits the PS1 filesystem, embeds the game, builds one PKG, and encrypts the output for private transfer.
+6. Download the `Crash-Bash-Online-Personal-PS3-Encrypted` artifact before its one-day retention expires.
+7. After the run completes, delete the `CRASH_BASH_DISC_ARCHIVE_URL` repository secret. The URL is single-use and expires, but removing the stored value avoids retaining an obsolete bearer credential.
 
 If the temporary URL expires or is consumed before the workflow downloads it, generate a fresh URL and update the secret before starting a new run. The workflow never prints the URL and masks it in its logs.
 
@@ -30,6 +30,7 @@ The private Dropbox ZIP was inspected before dispatch:
 - `SYSTEM.CNF` identifies the boot executable as `SCUS_945.70;1`, and the referenced executable begins with the genuine `PS-X EXE` signature (432,128 bytes, load address `0x80010000`).
 - `CRASHBSH/CRASHBSH.DAT` was read from the ISO9660 filesystem (73,220,096 bytes; SHA-256 `3a02b477ab48ae99010e1a9db3b0d591c79e800b43d10779945ca18ab788acb7`); all 992 DAT index entries were checked for overlap and out-of-range offsets, then reconstructed byte-for-byte with the same SHA-256.
 - The boot executable SHA-256 is `fd5727a18feb2a2d5a6359a55966f0266284d1e50f64ee9b8a127a97091bd516`.
+- The lobby's 64-bit CUE/BIN fingerprint for this exact dump is `49472FA318780E01`; the same value was reproduced from the original Dropbox files and the staged package copy.
 - The staging script passed all eight security/regression cases and staged this exact archive successfully.
 
 The workflow repeats ZIP integrity, exact-member, file-size, BIN/CUE SHA-256 and CUE-to-BIN linkage checks inside GitHub Actions before it downloads the runtime or starts the expensive PS3 build. It then parses the ISO9660 filesystem, confirms the `SCUS_945.70` boot executable and verifies the 992-entry DAT table with byte-identical reconstruction. The checks are pinned to the verified dump hashes above. This preflight does not replace the final PS3 PKG build or physical-console testing.
