@@ -28,7 +28,7 @@ The private Dropbox ZIP was inspected before dispatch:
 - The CUE references the matching BIN and uses 2352-byte sectors.
 - The staging script passed all eight security/regression cases and staged this exact archive successfully.
 
-The workflow repeats the ZIP integrity, exact-member, file-size and SHA-256 checks inside GitHub Actions before building. This local preflight does not replace the final PS3 PKG build or physical-console testing.
+The workflow repeats ZIP integrity, exact-member, file-size, BIN/CUE SHA-256 and CUE-to-BIN linkage checks inside GitHub Actions before it downloads the runtime or starts the expensive PS3 build. The checks are pinned to the verified dump hashes above. This local preflight does not replace the final PS3 PKG build or physical-console testing.
 
 ## Private decryption
 
