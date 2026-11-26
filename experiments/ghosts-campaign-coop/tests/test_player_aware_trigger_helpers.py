@@ -26,6 +26,7 @@ BLACK_ICE_FIXTURE = """waittill_trigger( var_0, var_1, var_2, var_3, var_4, var_
 
 PLAYER_SCRIPTED_ANIM_FIXTURE = """waittill_trigger( var_0, var_1, var_2, var_3, var_4, var_5 )
 {
+    var_7 = isdefined( var_4 ) && var_4;
     var_0 thread _trigger_handle_triggering( var_7 );
     if ( level.player getstance() == "prone" )
         var_0 common_scripts\\utility::trigger_nobloodpool();
