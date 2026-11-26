@@ -17,6 +17,7 @@
 
 - [x] Atomic settings and favorites writes using unique exclusive temp files, fsync and same-directory rename.
 - [x] Protect one-launch webMAN script creation from existing temp files and symlink targets.
+- [x] Exercise the real webMAN HTTP transport with a loopback server: 2xx launch, redirect rejection, split PS3MAPI response and bounded timeout.
 - [x] Use unique O_EXCL HTTPS download temp paths so stale files do not block future refreshes.
 - [x] Preserve pre-existing catalog, community NCL and PS2 CONFIG destinations when a download fails.
 - [x] Add host regression tests for symlink handling, atomic persistence and download failure cleanup.

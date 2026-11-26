@@ -33,6 +33,8 @@
 
 - Settings and favorites now use unique exclusive same-directory temporary files, full write loops, fsync and atomic rename. A failed save leaves the previous file intact.
 - One-launch webMAN script installation uses O_EXCL; pre-existing temporary files and symlink paths are preserved rather than followed or overwritten.
+- The local webMAN HTTP transport now has loopback integration coverage for accepted 2xx launch responses, rejected redirects, split PS3MAPI JSON bodies and bounded no-response timeouts.
+- HTTP select/connect retries rebuild their descriptor sets and timeout values after EINTR; launch success requires a 2xx response rather than any 3xx redirect.
 - HTTPS downloads use unique PID/time/sequence temporary names with O_EXCL. A stale temporary file does not block later attempts.
 - Catalog, community NCL and PS2 CONFIG workers only remove destination files that the current worker successfully downloaded. Network failures no longer delete pre-existing destination files.
 - Added host tests for atomic settings/favorites writes, symlink-safe replacement, profile temp-file preservation and download-failure cleanup.

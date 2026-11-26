@@ -2,14 +2,16 @@
 #include "ps3scale/webman_command.h"
 
 #include <arpa/inet.h>
+#ifndef PS3SCALE_HOST_TEST
 #include <net/net.h>
 #include <net/netctl.h>
+#include <sysmodule/sysmodule.h>
+#endif
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/select.h>
-#include <sysmodule/sysmodule.h>
 #include <unistd.h>
 
 #include <errno.h>
@@ -20,11 +22,21 @@
 
 #define WEBMAN_HTTP_PATH_MAX 1536
 #define WEBMAN_HTTP_REQUEST_MAX 2048
+#ifndef WEBMAN_HTTP_PORT
+#define WEBMAN_HTTP_PORT 80
+#endif
+#ifndef WEBMAN_CONNECT_TIMEOUT_SEC
 #define WEBMAN_CONNECT_TIMEOUT_SEC 3
+#endif
+#ifndef WEBMAN_IO_TIMEOUT_SEC
 #define WEBMAN_IO_TIMEOUT_SEC 2
+#endif
 
 static int network_modules_ready(void)
 {
+#ifdef PS3SCALE_HOST_TEST
+    return 0;
+#else
     if (sysModuleLoad(SYSMODULE_NET) < 0)
         return -1;
     if (sysModuleLoad(SYSMODULE_NETCTL) < 0) {
@@ -43,14 +55,17 @@ static int network_modules_ready(void)
         return -1;
     }
     return 0;
+#endif
 }
 
 static void network_modules_shutdown(void)
 {
+#ifndef PS3SCALE_HOST_TEST
     netCtlTerm();
     netDeinitialize();
     sysModuleUnload(SYSMODULE_NETCTL);
     sysModuleUnload(SYSMODULE_NET);
+#endif
 }
 
 static int connect_with_timeout(int sock, const struct sockaddr *address,
@@ -69,18 +84,19 @@ static int connect_with_timeout(int sock, const struct sockaddr *address,
 
     result = connect(sock, address, address_length);
     if (result != 0 && errno != EINPROGRESS && errno != EWOULDBLOCK &&
-        errno != EALREADY) {
+        errno != EALREADY && errno != EINTR) {
         (void)fcntl(sock, F_SETFL, flags);
         return -1;
     }
 
     if (result != 0) {
-        FD_ZERO(&write_set);
-        FD_SET(sock, &write_set);
-        timeout.tv_sec = WEBMAN_CONNECT_TIMEOUT_SEC;
-        timeout.tv_usec = 0;
-
-        result = select(sock + 1, NULL, &write_set, NULL, &timeout);
+        do {
+            FD_ZERO(&write_set);
+            FD_SET(sock, &write_set);
+            timeout.tv_sec = WEBMAN_CONNECT_TIMEOUT_SEC;
+            timeout.tv_usec = 0;
+            result = select(sock + 1, NULL, &write_set, NULL, &timeout);
+        } while (result < 0 && errno == EINTR);
         if (result <= 0) {
             (void)fcntl(sock, F_SETFL, flags);
             return -1;
@@ -110,7 +126,7 @@ static int http_status_is_success(const char *response)
     if (!space)
         return 0;
     status = atoi(space + 1);
-    return status >= 200 && status < 400;
+    return status >= 200 && status < 300;
 }
 
 /* Do not rely only on SO_RCVTIMEO: some PS3 socket builds ignore it. */
@@ -120,14 +136,16 @@ static int wait_for_readable(int sock)
     struct timeval timeout;
     int result;
 
-    FD_ZERO(&read_set);
-    FD_SET(sock, &read_set);
-    timeout.tv_sec = WEBMAN_IO_TIMEOUT_SEC;
-    timeout.tv_usec = 0;
-
-    do {
+    for (;;) {
+        FD_ZERO(&read_set);
+        FD_SET(sock, &read_set);
+        timeout.tv_sec = WEBMAN_IO_TIMEOUT_SEC;
+        timeout.tv_usec = 0;
         result = select(sock + 1, &read_set, NULL, NULL, &timeout);
-    } while (result < 0 && errno == EINTR);
+        if (result < 0 && errno == EINTR)
+            continue;
+        break;
+    }
 
     return result > 0 && FD_ISSET(sock, &read_set) ? 0 : -1;
 }
@@ -178,7 +196,7 @@ static int webman_http_get(const char *path, char *response,
     server.sin_len = sizeof(server);
 #endif
     server.sin_family = AF_INET;
-    server.sin_port = htons(80);
+    server.sin_port = htons(WEBMAN_HTTP_PORT);
     if (inet_pton(AF_INET, "127.0.0.1", &server.sin_addr) != 1) {
         result = PS3SCALE_WEBMAN_ERROR_CONNECT;
         goto cleanup;
@@ -191,7 +209,7 @@ static int webman_http_get(const char *path, char *response,
 
     ret = snprintf(request, sizeof(request),
         "GET %s HTTP/1.0\r\nHost: 127.0.0.1\r\n"
-        "User-Agent: PS3SCALE/0.30\r\nConnection: close\r\n\r\n",
+        "User-Agent: PS3SCALE/0.33\r\nConnection: close\r\n\r\n",
         path);
     if (ret < 0 || (size_t)ret >= sizeof(request)) {
         result = PS3SCALE_WEBMAN_ERROR_INVALID_REQUEST;

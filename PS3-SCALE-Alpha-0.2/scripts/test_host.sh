@@ -102,6 +102,16 @@ cc -std=c99 -Wall -Wextra -Werror \
   -o "$OUT/test_webman_command"
 "$OUT/test_webman_command"
 
+cc -std=c99 -D_XOPEN_SOURCE=700 -DPS3SCALE_HOST_TEST=1 \
+  -DWEBMAN_HTTP_PORT=19876 -DWEBMAN_CONNECT_TIMEOUT_SEC=1 \
+  -DWEBMAN_IO_TIMEOUT_SEC=1 -Wall -Wextra -Werror -pthread \
+  -I"$ROOT/include" \
+  "$ROOT/source/core/webman_command.c" \
+  "$ROOT/source/ps3/webman_control.c" \
+  "$ROOT/tests/test_webman_http.c" \
+  -o "$OUT/test_webman_http"
+"$OUT/test_webman_http"
+
 cc -std=c99 -Wall -Wextra -Werror \
   -DPS3SCALE_WEBMAN_TMP_DIR='"/tmp/ps3scale-profile-apply-test"' \
   -DPS3SCALE_WEBMAN_SCRIPT_DIR='"/tmp/ps3scale-profile-apply-test/wm_ingame"' \

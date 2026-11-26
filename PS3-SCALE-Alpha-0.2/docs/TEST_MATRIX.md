@@ -46,6 +46,12 @@ No real screenshot pairs are currently bundled in the repository; this part requ
 
 ## webMAN launch and profile safety
 
+Host CI also runs the actual local HTTP transport against a loopback webMAN mock:
+- A 200 response is accepted for a valid game-launch request.
+- A 302 redirect is rejected rather than treated as proof of a launch.
+- A PS3MAPI JSON body split across TCP packets is fully read and validated.
+- A server that accepts a request but never responds is bounded by the configured timeout.
+
 1. Test a normal unmodified game launch with webMAN MOD available and no profile armed.
 2. Test a normal launch with PS3MAPI disabled; the game should still start unmodified.
 3. Arm a one-write profile, then make PS3MAPI unavailable before Start Game. PS3 SCALE should remove its own pending script and still start the game unmodified.
