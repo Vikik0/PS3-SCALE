@@ -18,7 +18,7 @@ test("room arrows focus room controls only while room view is active",()=>{
 });
 test("two ready players are enough to ready a room",()=>{
  assert.match(html,/players\.length>=2&&players\.every\(p=>p\.ready\)/);
- assert.match(api,/players\.length >= 2 && players\.every\(player => player\.ready === true\)/);
+ assert.match(api,/players\\.length >= 2 && players\\.every\\(\\(player\\) => player\\.ready === true\\)/);
 });
 test("room list errors are rendered as text",()=>{
  assert.match(html,/errorNode\.textContent=e\.message/);
