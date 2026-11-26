@@ -107,6 +107,7 @@ test("room session generation prevents an old refresh from restoring a room afte
     Promise
   };
   vm.runInNewContext(script, context);
+  const getState = () => vm.runInContext("state", context);
   await new Promise(resolve => setImmediate(resolve));
 
   const entering = context.enterRoom({
@@ -118,16 +119,16 @@ test("room session generation prevents an old refresh from restoring a room afte
   assert.equal(roomReadCount, 1);
 
   await context.leaveRoom();
-  assert.equal(context.state.token, "");
-  assert.equal(context.state.room, null);
-  assert.equal(context.state.screen, "battle");
+  assert.equal(getState().token, "");
+  assert.equal(getState().room, null);
+  assert.equal(getState().screen, "battle");
 
   resolveRoomRead();
   await entering;
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(context.state.token, "");
-  assert.equal(context.state.room, null);
-  assert.equal(context.state.player, null);
-  assert.equal(context.state.screen, "battle");
+  assert.equal(getState().token, "");
+  assert.equal(getState().room, null);
+  assert.equal(getState().player, null);
+  assert.equal(getState().screen, "battle");
   assert.equal(roomReadCount, 1);
 });
