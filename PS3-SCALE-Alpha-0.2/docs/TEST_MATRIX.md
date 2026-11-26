@@ -85,19 +85,21 @@ Host CI also runs the actual local HTTP transport against a loopback webMAN mock
 ## PS2 Enhancer — Alpha 0.34
 
 1. Probe root-level and nested ISO9660 paths with single- and multi-extent SYSTEM.CNF / BOOT files; verify ordered assembly and reject malformed, oversized, mismatched or non-sector-aligned extent chains.
-2. Verify the Apply action is available only when every exact-match patch address maps to a file-backed executable PT_LOAD segment; one invalid address must make the entire profile unavailable.
-3. On a PS2 ISO, confirm L2H is selected by default and that the original ISO hash and size do not change after applying a profile.
-4. Apply L2H only (`0x46`); launch the same title and record loading, frame pacing, audio and any rendering differences.
-5. Enable sharper pixels (`0x44`) only; compare XMB smoothing On/Off separately and record aliasing/softness.
-6. Enable conservative frame pacing (`0x48`, mode 1, delay 20,000) only; record stutter, audio and timing. If any regression occurs, restore the saved CONFIG.
-7. Combine options only after the individual tests pass. Do not assume combined effects are additive.
-8. Confirm the first apply automatically creates a byte-identical backup. If the active CONFIG differs from that saved backup, confirm the tool blocks another profile until the user restores the saved backup; it must never overwrite that backup.
-9. Confirm an existing community CONFIG that contains commands outside the local allow-list is never replaced by a local profile. Confirm a stale backup, invalid CONFIG, oversized file, pre-existing temporary path or rollback conflict blocks the write without changing the current CONFIG.
-10. Confirm the generated sidecar is named exactly `<game.iso>.CONFIG` and is stored beside the ISO.
-11. Confirm PS2 Classics cannot use the plaintext local profile builder; only an exact matching encrypted ENC catalogue entry may be installed.
-12. Confirm the UI states that generic CONFIG toggles do not unlock 60 FPS. Treat the 11 source-pinned FPS candidates as separate exact per-game profiles; verify a wrong serial or ELF hash never exposes Apply, and verify the generated `0x0A` entries include the exact original-word guard.
-13. On the physical PS3 Slim, test each FPS candidate separately and record actual frame rate, gameplay timing, audio, cutscenes, controller input, crashes and stability. A successful CONFIG write is not proof of 60 FPS.
-14. For display scaling, test XMB `PS / PS2 Upscaler` Normal and Full Screen, then test `PS / PS2 Smoothing` On and Off. Record the best combination per title; PS3 SCALE does not change these XMB settings.
+2. Verify the local netemu options and game-patch Apply actions are enabled only after syscall detection confirms a PS3 Slim / Super Slim. Confirm FAT hardware (including CECHA/B and CECHC/E) and unknown / unavailable hardware show NETEMU HARDWARE REQUIRED and reject Cross without touching any CONFIG.
+3. Verify PS2 ISO community CONFIG lookup uses a known hardware profile (NET for Slim / Super Slim, GX / SOFT for the mapped FAT families); unknown hardware must not guess a preferred ISO CONFIG type. PS2 Classics exact ENC lookup remains available.
+4. Verify the Apply action is available only when every exact-match patch address maps to a file-backed executable PT_LOAD segment; one invalid address must make the entire profile unavailable.
+5. On a confirmed Slim / Super Slim PS2 ISO, confirm L2H is selected by default and that the original ISO hash and size do not change after applying a profile.
+6. Apply L2H only (`0x46`); launch the same title and record loading, frame pacing, audio and any rendering differences.
+7. Enable sharper pixels (`0x44`) only; compare XMB smoothing On/Off separately and record aliasing/softness.
+8. Enable conservative frame pacing (`0x48`, mode 1, delay 20,000) only; record stutter, audio and timing. If any regression occurs, restore the saved CONFIG.
+9. Combine options only after the individual tests pass. Do not assume combined effects are additive.
+10. Confirm the first apply automatically creates a byte-identical backup. If the active CONFIG differs from that saved backup, confirm the tool blocks another profile until the user restores the saved backup; it must never overwrite that backup.
+11. Confirm an existing community CONFIG that contains commands outside the local allow-list is never replaced by a local profile. Confirm a stale backup, invalid CONFIG, oversized file, pre-existing temporary path or rollback conflict blocks the write without changing the current CONFIG.
+12. Confirm the generated sidecar is named exactly `<game.iso>.CONFIG` and is stored beside the ISO.
+13. Confirm PS2 Classics cannot use the plaintext local profile builder; only an exact matching encrypted ENC catalogue entry may be installed.
+14. Confirm the UI states that generic CONFIG toggles do not unlock 60 FPS. Treat the 11 source-pinned FPS candidates as separate exact per-game profiles; verify a wrong serial or ELF hash never exposes Apply, and verify the generated `0x0A` entries include the exact original-word guard.
+15. On the physical PS3 Slim, test each FPS candidate separately and record actual frame rate, gameplay timing, audio, cutscenes, controller input, crashes and stability. A successful CONFIG write is not proof of 60 FPS.
+16. For display scaling, test XMB `PS / PS2 Upscaler` Normal and Full Screen, then test `PS / PS2 Smoothing` On and Off. Record the best combination per title; PS3 SCALE does not change these XMB settings.
 15. Do not mark any option as hardware-verified until the test is completed on the physical PS3 Slim.
 
 ## Other hardware targets after the Slim test

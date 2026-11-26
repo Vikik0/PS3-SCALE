@@ -29,6 +29,7 @@ int main(void)
     assert(info.build_number == 0xb5edu);
     assert(info.family == PS3SCALE_HARDWARE_FAT);
     assert(strstr(info.model_series, "CECHC") != NULL);
+    assert(!ps3scale_hardware_supports_netemu_ps2_iso(&info));
 
     memset(raw, 0, sizeof(raw));
     raw[0] = 0x04;
@@ -39,6 +40,7 @@ int main(void)
     assert(strcmp(info.firmware_version, "4.92") == 0);
     assert(info.family == PS3SCALE_HARDWARE_SLIM);
     assert(strstr(info.model_series, "CECH-25xx") != NULL);
+    assert(ps3scale_hardware_supports_netemu_ps2_iso(&info));
 
     memset(raw, 0, sizeof(raw));
     raw[0] = 0x04;
@@ -48,6 +50,7 @@ int main(void)
     assert(ps3scale_hardware_info_parse(raw, sizeof(raw), &info) == 0);
     assert(info.family == PS3SCALE_HARDWARE_SUPER_SLIM);
     assert(strstr(info.model_series, "CECH-40xx") != NULL);
+    assert(ps3scale_hardware_supports_netemu_ps2_iso(&info));
 
     memset(raw, 0, sizeof(raw));
     raw[0] = 0x04;
@@ -57,6 +60,8 @@ int main(void)
     assert(ps3scale_hardware_info_parse(raw, sizeof(raw), &info) == 0);
     assert(info.family == PS3SCALE_HARDWARE_UNKNOWN);
     assert(strcmp(info.model_series, "Unknown PS3 hardware revision") == 0);
+    assert(!ps3scale_hardware_supports_netemu_ps2_iso(&info));
+    assert(!ps3scale_hardware_supports_netemu_ps2_iso(NULL));
 
     assert(ps3scale_hardware_info_parse(raw, 23, &info) == -1);
     assert(ps3scale_hardware_info_parse(NULL, 24, &info) == -1);

@@ -4,7 +4,7 @@
 
 A CECH-25xx PS3 Slim does not contain the PS2 Emotion Engine / Graphics Synthesizer hardware found in early backward-compatible FAT models. PS2 titles run through Sony's software-emulation path, `ps2_netemu`. CFW enables homebrew access; it does not turn a Slim into a hardware-backward-compatible PS3.
 
-PS3 SCALE therefore targets the per-title `ps2_netemu` CONFIG sidecar for PS2 ISO files and the matching encrypted `.ENC` CONFIG route for PS2 Classics. The original ISO, EBOOT and installed game package remain untouched.
+PS3 SCALE targets the per-title `ps2_netemu` CONFIG sidecar for PS2 ISO files and the matching encrypted `.ENC` CONFIG route for PS2 Classics. The app enables netemu-only local profiles and code patches only when syscall hardware detection positively identifies a PS3 Slim or Super Slim. FAT hardware (which may use `ps2_emu` / `ps2_gxemu`) and unknown hardware fail closed for these netemu-only commands; the app does not assume that command `0x0A` is portable across emulators. The original ISO, EBOOT and installed game package remain untouched.
 
 ## What the PS2 enhancement controls actually do
 
@@ -34,7 +34,7 @@ The separate `Display Settings > Video Output Settings` menu chooses supported o
 
 There is no safe universal switch that turns every PS2 game into native 60 FPS. A PS2 game may be designed for 30 FPS, 50 Hz PAL timing, 59.94 Hz NTSC timing, or a variable frame rate. Raising the display output to 60 Hz is not the same as raising the game's simulation and rendering rate.
 
-The PS3 netemu CONFIG format does include command `0x0A` (`EE_INSN_REPLACE32`), which can replace exact 32-bit EE instructions and is documented as netemu-only with a maximum list count of 32. Each entry contains an EE offset, expected original 32-bit word and replacement word. The builder supports only aligned mode-0 EE addresses below `0x10000000` and rejects duplicates or unverified address modes. This is a plausible foundation for carefully curated per-game code patches. It is not a generic FPS unlock: a valid patch needs the exact game serial, region, revision, EE address/mode, original opcode and replacement opcode. A wrong address or expected opcode can break the title.
+The PS3 netemu CONFIG format does include command `0x0A` (`EE_INSN_REPLACE32`), which can replace exact 32-bit EE instructions and is documented as netemu-only with a maximum list count of 32. The app therefore fails closed unless a Slim / Super Slim platform ID is positively detected; FAT / hardware-backward-compatible and unknown models cannot apply these records through this path. Each entry contains an EE offset, expected original 32-bit word and replacement word. The builder supports only aligned mode-0 EE addresses below `0x10000000` and rejects duplicates or unverified address modes. This is a plausible foundation for carefully curated per-game code patches. It is not a generic FPS unlock: a valid patch needs the exact game serial, region, revision, EE address/mode, original opcode and replacement opcode. A wrong address or expected opcode can break the title.
 
 PCSX2 `.pnach` files are not drop-in PS3 CONFIG files. Some entries are runtime data writes, some target code, and some depend on emulator-specific behavior. PS3 SCALE now has a deliberately narrow converter for a small, source-pinned set of proof-of-concept patch records. It resolves root-level or nested ISO9660 boot paths, assembles bounded multi-extent files, extracts the boot ELF, matches the PCSX2 serial + XOR ELF hash, maps each EE address through an executable `PT_LOAD` segment, reads the original 32-bit word, and creates a guarded netemu `0x0A` entry. It does not import arbitrary `.pnach` files, accept unsupported patch types, or guess offsets.
 
@@ -43,7 +43,7 @@ Artemis PS3 is not treated as a generic runtime cheat injector for a PS2 game in
 ## PS3 SCALE implementation
 
 The PS2 Enhancer screen now provides:
-- Probe the selected ISO boot ELF on entry and show exact-match availability for FPS, 16:9 and 480p before the user applies a patch.
+- Probe the selected ISO boot ELF on entry and show exact-match availability for FPS, 16:9 and 480p before the user applies a patch; these actions are gated behind confirmed Slim / Super Slim netemu hardware.
 - Validate every candidate patch address against a file-backed executable ELF segment before showing it as available; the apply path repeats this check.
 
 - `0x46` L2H performance toggle (on by default).
@@ -51,7 +51,7 @@ The PS2 Enhancer screen now provides:
 - Optional conservative `0x48` frame-pacing toggle (off by default and explicitly experimental).
 - Optional `0x50` pressure-sensitive controls toggle (off by default).
 - Exact-match 480p progressive-output patches for three PAL titles; unsupported patch types are rejected.
-- Local CONFIG generation for PS2 ISO sidecars only; PS2 Classics require an exact matching encrypted ENC file.
+- Local netemu CONFIG generation for PS2 ISO sidecars only on confirmed Slim / Super Slim hardware; PS2 Classics require an exact matching encrypted ENC file.
 - Refuse to replace any existing CONFIG with a minimal local profile, preserving community and previously installed settings. The separate game-patch path can append to compatible CONFIGs without discarding their commands.
 - Append or safely merge exact-match experimental `0x0A` code-patch entries for FPS, widescreen and 480p. Existing patch lists are merged only when the complete CONFIG uses the validated allow-listed command subset; duplicate addresses, unknown command streams and Title ID / multidisc footers are refused.
 - Automatic byte-for-byte backup before replacing an existing CONFIG. If the saved backup no longer matches the current file, restore it before applying a different profile; the backup is never silently replaced.

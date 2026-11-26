@@ -39,6 +39,14 @@ const char *ps3scale_hardware_family_name(ps3scale_hardware_family_t family);
 const char *ps3scale_console_type_name(ps3scale_console_type_t type);
 
 /* Read-only GameOS query. Returns non-zero when the CFW denies syscall 387. */
+/*
+ * Stock PS2 netemu CONFIG commands are not interchangeable with the
+ * hardware-backed ps2_emu / gxemu paths. Fail closed unless the platform
+ * is a positively identified Slim or Super Slim.
+ */
+int ps3scale_hardware_supports_netemu_ps2_iso(
+    const ps3scale_hardware_info_t *info);
+
 int ps3scale_hardware_detect(ps3scale_hardware_info_t *out);
 
 #endif

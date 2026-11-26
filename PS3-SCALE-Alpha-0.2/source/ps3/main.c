@@ -1521,6 +1521,11 @@ static void refresh_ps2_patch_availability(void)
     if (!game || game->kind != PS3SCALE_GAME_PS2_ISO)
         return;
 
+    if (!ps2_netemu_iso_supported()) {
+        g_ps2_patch_probe_valid = -2;
+        return;
+    }
+
     g_ps2_patch_probe_valid = -1;
     if (ps3scale_ps2_iso_load_boot_elf(game->path, &elf_data, &elf_size,
             serial, sizeof(serial), &elf_hash) == 0) {
@@ -3254,16 +3259,26 @@ static int file_exists_readonly(const char *path)
     return 1;
 }
 
+static int ps2_netemu_iso_supported(void)
+{
+    return g_hardware_info_valid &&
+        ps3scale_hardware_supports_netemu_ps2_iso(&g_hardware_info);
+}
+
 static const char *ps2_config_preferred_type(void)
 {
-    if (g_hardware_info_valid &&
-        g_hardware_info.family == PS3SCALE_HARDWARE_FAT) {
+    if (!g_hardware_info_valid)
+        return NULL;
+    if (g_hardware_info.family == PS3SCALE_HARDWARE_FAT) {
         if (strstr(g_hardware_info.model_series, "CECHC") ||
             strstr(g_hardware_info.model_series, "CECHE"))
             return "GX";
         return "SOFT";
     }
-    return "NET";
+    if (g_hardware_info.family == PS3SCALE_HARDWARE_SLIM ||
+        g_hardware_info.family == PS3SCALE_HARDWARE_SUPER_SLIM)
+        return "NET";
+    return NULL;
 }
 
 static const ps3scale_ps2_config_entry_t *ps2_config_for_game(
@@ -3274,11 +3289,12 @@ static const ps3scale_ps2_config_entry_t *ps2_config_for_game(
         return NULL;
 
     if (game->kind == PS3SCALE_GAME_PS2_ISO) {
+        const char *preferred_type = ps2_config_preferred_type();
         id = game->disc_id;
-        if (!id[0])
+        if (!id[0] || !preferred_type)
             return NULL;
         return ps3scale_ps2_config_db_find(
-            &g_ps2_config_db, id, ps2_config_preferred_type());
+            &g_ps2_config_db, id, preferred_type);
     }
 
     if (game->kind == PS3SCALE_GAME_PS2_CLASSIC) {
@@ -3409,6 +3425,12 @@ static void apply_ps2_local_profile(void)
                  "LOCAL PROFILES REQUIRE A PS2 ISO; CLASSICS NEED AN EXACT ENC CONFIG.");
         return;
     }
+    if (!ps2_netemu_iso_supported()) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "LOCAL PROFILES REQUIRE CONFIRMED PS2 NETEMU HARDWARE (SLIM / SUPER SLIM).");
+        return;
+    }
 
     if (g_ps2_enhancement_flags == 0) {
         snprintf(g_ps2_config_manager_message,
@@ -3527,6 +3549,11 @@ static void apply_ps2_game_patch(ps3scale_ps2_patch_kind_t patch_kind)
         snprintf(g_ps2_config_manager_message, sizeof(g_ps2_config_manager_message),
                  "GAME PATCHES ARE AVAILABLE FOR PS2 ISO FILES ONLY.");
         return;
+    }
+    if (!ps2_netemu_iso_supported()) {
+        snprintf(g_ps2_config_manager_message, sizeof(g_ps2_config_manager_message),
+                 "GAME PATCHES REQUIRE CONFIRMED PS2 NETEMU HARDWARE (SLIM / SUPER SLIM).");
+        goto cleanup;
     }
     if (ps3scale_ps2_iso_load_boot_elf(game->path, &elf_data, &elf_size,
             serial, sizeof(serial), &elf_hash) != 0) {
@@ -3763,6 +3790,12 @@ static void perform_ps2_config_manager_action(void)
             snprintf(g_ps2_config_manager_message,
                      sizeof(g_ps2_config_manager_message),
                      "LOCAL PROFILES REQUIRE A PS2 ISO; CLASSICS NEED AN EXACT ENC CONFIG.");
+            return;
+        }
+        if (!ps2_netemu_iso_supported()) {
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "NETEMU OPTIONS ARE DISABLED: CONFIRM A PS3 SLIM / SUPER SLIM FIRST.");
             return;
         }
 
@@ -6022,18 +6055,20 @@ static void draw_ps2_config_manager(void)
     const ps3scale_ps2_config_entry_t *entry = ps2_config_for_game(game);
     const int can_generate =
         game && game->kind == PS3SCALE_GAME_PS2_ISO;
+    const int netemu_supported = ps2_netemu_iso_supported();
     const char *fps_patch_label = !can_generate ? "ISO PATCH ONLY" :
+        (!netemu_supported ? "NETEMU HARDWARE REQUIRED" :
         (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
          (g_ps2_patch_fps_available ? "APPLY EXPERIMENTAL 60 FPS PATCH" :
-                                      "NO EXACT 60 FPS PATCH"));
+                                      "NO EXACT 60 FPS PATCH")));
     const char *widescreen_patch_label = !can_generate ? "ISO PATCH ONLY" :
         (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
          (g_ps2_patch_widescreen_available ? "APPLY 16:9 WIDESCREEN PATCH" :
-                                             "NO EXACT 16:9 PATCH"));
+                                             "NO EXACT 16:9 PATCH")));
     const char *p480_patch_label = !can_generate ? "ISO PATCH ONLY" :
         (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
          (g_ps2_patch_480p_available ? "APPLY 480P OUTPUT PATCH" :
-                                       "NO EXACT 480P PATCH"));
+                                       "NO EXACT 480P PATCH")));
     const char *config_state =
         g_ps2_config_manager_target_state == 1 ? "PRESENT" :
         (g_ps2_config_manager_target_state == 0 ? "MISSING" :
@@ -6090,7 +6125,9 @@ static void draw_ps2_config_manager(void)
         snprintf(line, sizeof(line), "Target: %.52s", target_name);
         draw_text(48.0f, 204.0f, 0x514b69ff, line);
     }
-    if (can_generate && g_ps2_patch_probe_valid == 1) {
+    if (can_generate && !netemu_supported) {
+        snprintf(line, sizeof(line), "PATCH MATCH: NETEMU HARDWARE REQUIRED");
+    } else if (can_generate && g_ps2_patch_probe_valid == 1) {
         snprintf(line, sizeof(line), "PATCH MATCH: FPS %s | 16:9 %s | 480P %s",
                  g_ps2_patch_fps_available ? "YES" : "NO",
                  g_ps2_patch_widescreen_available ? "YES" : "NO",
@@ -6101,6 +6138,12 @@ static void draw_ps2_config_manager(void)
                  "PATCH MATCH: PS2 ISO REQUIRED");
     }
     draw_text(430.0f, 204.0f, 0xb27b35ff, line);
+    draw_text(48.0f, 220.0f, netemu_supported ? 0x26794bff : 0xb27b35ff,
+              can_generate ?
+              (netemu_supported ?
+               "NETEMU-ONLY OPTIONS: SUPPORTED HARDWARE CONFIRMED." :
+               "NETEMU-ONLY OPTIONS DISABLED: DETECTED HARDWARE IS NOT A SLIM / SUPER SLIM.") :
+              "LOCAL PROFILES AND CODE PATCHES REQUIRE A PS2 ISO.");
 
     draw_soft_card(48.0f, 232.0f, 352.0f, 38.0f,
                    g_ps2_config_manager_selection == 0);
@@ -6148,8 +6191,9 @@ static void draw_ps2_config_manager(void)
 
     draw_soft_button(430.0f, 218.0f, 350.0f, 22.0f,
                      can_generate ?
-                     (g_ps2_config_manager_target_state == 1 ?
-                      "EXISTING CONFIG PRESERVED" : "APPLY LOCAL PROFILE") :
+                     (!netemu_supported ? "NETEMU HARDWARE REQUIRED" :
+                      (g_ps2_config_manager_target_state == 1 ?
+                       "EXISTING CONFIG PRESERVED" : "APPLY LOCAL PROFILE")) :
                      "ISO PROFILE ONLY",
                      g_ps2_config_manager_selection == 4);
     draw_soft_button(430.0f, 246.0f, 350.0f, 22.0f,
