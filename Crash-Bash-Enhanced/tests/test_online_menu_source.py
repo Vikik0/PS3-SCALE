@@ -134,11 +134,14 @@ for synchronous_call in (
     "cb_online_join_room(",
     "cb_online_create_room(",
     "cb_online_set_ready(&session",
-    "cb_online_get_room(&session",
     "cb_online_heartbeat(&session",
     "cb_online_leave_room(&session",
 ):
     assert synchronous_call not in menu_loop, f"Synchronous room request remains: {synchronous_call}"
+assert menu_loop.count("cb_online_get_room(&session") == 1
+host_disc_poll = menu_loop[menu_loop.index("if (screen == SCREEN_DISC_SELECT && host_disc_waiting"):]
+host_disc_poll = host_disc_poll[:host_disc_poll.index("if (screen == SCREEN_DISC_SELECT && netplay_waiting")]
+assert "cb_online_get_room(&session" in host_disc_poll
 for operation in (
     "LOBBY_WORK_JOIN_ANY", "LOBBY_WORK_JOIN", "LOBBY_WORK_CREATE",
     "LOBBY_WORK_GET_ROOM", "LOBBY_WORK_SET_READY",
