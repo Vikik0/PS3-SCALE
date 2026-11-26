@@ -99,10 +99,14 @@ assert '"/dev_usb000/PSXISO"' in disc_source
 assert 'argv[used++] = "--connect";' in launch_args
 assert 'argv[used++] = "--mitm-session";' in launch_args
 assert "endpoint->mitm_session[0]" in launch_args
-assert "cb_online_get_netplay_endpoint(&session, &endpoint" in source
-assert "cb_online_mark_game_started(&session, &view" in source
-host_start = source[source.index("} else if (view.disc_match)"):source.index("} else if (view.disc_mismatch)", source.index("} else if (view.disc_match)"))]
-assert host_start.index("cb_online_mark_game_started(&session, &view") < host_start.index("make_netplay_nickname")
+assert "cb_online_get_netplay_endpoint(&task->session, &task->endpoint" in source
+assert "cb_online_mark_game_started(&task->session, &task->view" in source
+assert "cb_online_set_disc_fingerprint(&task->session, task->fingerprint" in source
+assert "cb_online_clear_disc_fingerprint(&task->session, &task->view" in source
+assert "cb_online_cancel_game_start(&task->session" in source
+assert "LOBBY_WORK_MARK_STARTED" in source
+assert "LOBBY_WORK_NETPLAY_ENDPOINT" in source
+assert "start_lobby_fingerprint_worker(" in source
 assert "cb_disc_fingerprint(" in source
 assert "cb_online_set_disc_fingerprint(" in source
 assert "host_disc_waiting" in source
@@ -125,8 +129,8 @@ assert "view->game_started" in online_source
 assert "if (view->game_started) view->is_ready = 1;" in online_source
 assert "cb_online_get_netplay_endpoint" in online_source
 assert "cb_online_clear_disc_fingerprint" in online_source
-assert "clear_disc_confirmation(" in source
-assert source.count("clear_disc_confirmation(&session, &view, error, sizeof(error))") >= 4
+assert "player_has_disc_confirmation(" in source
+assert source.count("player_has_disc_confirmation(&session, &view)") >= 4
 
 # Room lifecycle HTTP requests are dispatched to the worker, never called on
 # the frame/render loop. This prevents 9-second HTTP timeouts from freezing UI.
@@ -138,16 +142,26 @@ for synchronous_call in (
     "cb_online_set_ready(&session",
     "cb_online_heartbeat(&session",
     "cb_online_leave_room(&session",
+    "cb_online_get_room(&session",
+    "cb_online_set_disc_fingerprint(&session",
+    "cb_online_clear_disc_fingerprint(&session",
+    "cb_online_get_netplay_endpoint(&session",
+    "cb_online_mark_game_started(&session",
+    "cb_online_cancel_game_start(&session",
 ):
     assert synchronous_call not in menu_loop, f"Synchronous room request remains: {synchronous_call}"
-assert menu_loop.count("cb_online_get_room(&session") == 1
+assert menu_loop.count("cb_online_get_room(&session") == 0
 host_disc_poll = menu_loop[menu_loop.index("if (screen == SCREEN_DISC_SELECT && host_disc_waiting"):]
 host_disc_poll = host_disc_poll[:host_disc_poll.index("if (screen == SCREEN_DISC_SELECT && netplay_waiting")]
-assert "cb_online_get_room(&session" in host_disc_poll
+assert "start_lobby_action_worker(" in host_disc_poll
+assert "LOBBY_WORK_GET_ROOM" in host_disc_poll
 for operation in (
     "LOBBY_WORK_JOIN_ANY", "LOBBY_WORK_JOIN", "LOBBY_WORK_CREATE",
     "LOBBY_WORK_GET_ROOM", "LOBBY_WORK_SET_READY",
     "LOBBY_WORK_HEARTBEAT", "LOBBY_WORK_LEAVE",
+    "LOBBY_WORK_SET_DISC", "LOBBY_WORK_CLEAR_DISC",
+    "LOBBY_WORK_MARK_STARTED", "LOBBY_WORK_CANCEL_STARTED",
+    "LOBBY_WORK_NETPLAY_ENDPOINT",
 ):
     assert operation in source
 assert "worker_active && worker.operation != LOBBY_WORK_LIST" in source
@@ -156,4 +170,5 @@ assert "Finishing the pending room refresh..." not in source
 assert "Finishing the pending room refresh..." not in source
 assert "if (session.token[0] && curl_initialized)" in source
 assert "cb_online_mark_game_started(&session, error" not in source
-assert source.count("cb_online_mark_game_started(&session, &view, error") == 2
+assert source.count("cb_online_mark_game_started(&task->session, &task->view") == 1
+assert source.count("cb_online_get_netplay_endpoint(&task->session, &task->endpoint") == 1
