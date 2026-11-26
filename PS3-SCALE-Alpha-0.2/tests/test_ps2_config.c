@@ -94,6 +94,29 @@ int main(void)
         }
     }
 
+    {
+        static const uint8_t community_config[] = {
+            0x3D, 0x00, 0x00, 0x00, 0x57, 0x44, 0x00, 0x00,
+            0x21, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00
+        };
+        uint8_t merged[128];
+        size_t merged_size = 0;
+
+        assert(ps3scale_ps2_config_append_patches(
+            community_config, sizeof(community_config),
+            &patch, 1, merged, sizeof(merged), &merged_size) == 0);
+        assert(merged_size == sizeof(community_config) + 16u);
+        assert(memcmp(merged, community_config,
+                      sizeof(community_config) - 4u) == 0);
+        assert(ps3scale_ps2_config_validate_external(
+            merged, merged_size, "CUSTOM") == 0);
+
+        assert(ps3scale_ps2_config_append_patches(
+            community_config, sizeof(community_config) - 4u,
+            &patch, 1, merged, sizeof(merged), &merged_size) == -1);
+    }
+
     patch.ee_address = 0x00161861u;
     assert(ps3scale_ps2_config_build_with_patches(
         data, sizeof(data), 0, &patch, 1, &size) < 0);
