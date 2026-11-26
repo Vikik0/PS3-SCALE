@@ -61,6 +61,7 @@ static void draw_text(float x, float y, int size, u32 color, const char *value)
 #define LOBBY_WORK_MARK_STARTED 12
 #define LOBBY_WORK_CANCEL_STARTED 13
 #define LOBBY_WORK_NETPLAY_ENDPOINT 14
+#define LOBBY_WORK_CONFIRM_DISC 15
 #define DISC_ACTION_NONE 0
 #define DISC_ACTION_SELECT 1
 #define DISC_ACTION_RESCAN 2
@@ -80,6 +81,7 @@ typedef struct {
     CBOnlineRoomView view;
     CBOnlineNetplayEndpoint endpoint;
     char fingerprint[17];
+    char disc_path[CB_DISC_PATH_MAX];
     char guest_name[CB_ONLINE_NAME_MAX];
     char room_code[7];
     char status[160];
@@ -184,6 +186,17 @@ static void lobby_worker(void *opaque)
             rc = cb_online_set_disc_fingerprint(&task->session, task->fingerprint,
                                                   &task->view, error, sizeof(error));
             break;
+        case LOBBY_WORK_CONFIRM_DISC:
+            if (cb_disc_fingerprint(task->disc_path, task->fingerprint,
+                                    sizeof(task->fingerprint)) != 0) {
+                snprintf(error, sizeof(error),
+                         "Could not read the selected CUE or one of its track files.");
+                rc = -1;
+            } else {
+                rc = cb_online_set_disc_fingerprint(&task->session, task->fingerprint,
+                                                     &task->view, error, sizeof(error));
+            }
+            break;
         case LOBBY_WORK_CLEAR_DISC:
             rc = cb_online_clear_disc_fingerprint(&task->session, &task->view,
                                                    error, sizeof(error));
@@ -215,7 +228,8 @@ static void lobby_worker(void *opaque)
                 snprintf(task->status, sizeof(task->status), "Ready status updated.");
             else if (task->operation == LOBBY_WORK_HEARTBEAT)
                 snprintf(task->status, sizeof(task->status), "Room connection active.");
-            else if (task->operation == LOBBY_WORK_SET_DISC)
+            else if (task->operation == LOBBY_WORK_SET_DISC ||
+                     task->operation == LOBBY_WORK_CONFIRM_DISC)
                 snprintf(task->status, sizeof(task->status), "Disc confirmation updated.");
             else if (task->operation == LOBBY_WORK_CLEAR_DISC)
                 snprintf(task->status, sizeof(task->status), "Disc confirmation cleared.");
@@ -281,15 +295,15 @@ static int start_lobby_fingerprint_worker(sys_ppu_thread_t *thread,
                                          LobbyWorkerTask *task,
                                          const CBOnlineSession *session,
                                          const CBOnlineRoomView *view,
-                                         const char *fingerprint)
+                                         const char *disc_path)
 {
-    if (!thread || !task || !session || !view || !fingerprint ||
-        strlen(fingerprint) != 16) return -1;
+    if (!thread || !task || !session || !view || !disc_path || !disc_path[0] ||
+        strlen(disc_path) >= CB_DISC_PATH_MAX) return -1;
     memset(task, 0, sizeof(*task));
-    task->operation = LOBBY_WORK_SET_DISC;
+    task->operation = LOBBY_WORK_CONFIRM_DISC;
     task->session = *session;
     task->view = *view;
-    snprintf(task->fingerprint, sizeof(task->fingerprint), "%.16s", fingerprint);
+    snprintf(task->disc_path, sizeof(task->disc_path), "%s", disc_path);
     if (sysThreadCreate(thread, lobby_worker, task, 1500,
                         LOBBY_WORKER_STACK_SIZE, THREAD_JOINABLE,
                         g_lobby_worker_name) != 0) {
@@ -809,7 +823,7 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                 } else {
                     snprintf(status, status_size, "Room refresh: %.120s", worker.status);
                 }
-            } else if (completed_operation == LOBBY_WORK_SET_DISC) {
+            } else if (completed_operation == LOBBY_WORK_CONFIRM_DISC) {
                 if (worker.result == 0) {
                     int is_host;
                     session = worker.session;
@@ -1233,15 +1247,11 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                              "Room changed. All active players must be READY again.");
                 } else {
                     char fingerprint[17];
-                    if (cb_disc_fingerprint(discs[disc_selected].path,
-                                            fingerprint, sizeof(fingerprint)) != 0) {
-                        snprintf(status, status_size,
-                                 "Could not read the selected CUE or one of its track files.");
-                    } else if (start_lobby_fingerprint_worker(&worker_thread, &worker,
-                                                             &session, &view,
-                                                             fingerprint) == 0) {
+                    if (start_lobby_fingerprint_worker(&worker_thread, &worker,
+                                                       &session, &view,
+                                                       discs[disc_selected].path) == 0) {
                         worker_active = 1;
-                        snprintf(status, status_size, "Confirming selected disc...");
+                        snprintf(status, status_size, "Reading and confirming selected disc...");
                     } else {
                         snprintf(status, status_size, "%s", worker.status);
                     }
