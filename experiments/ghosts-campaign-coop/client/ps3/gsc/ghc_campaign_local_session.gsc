@@ -309,7 +309,13 @@ ghc_campaign_bind_native_local_pair()
     level.ghc_campaign_player_0.unique_id = "player0";
     level.ghc_campaign_player_1.unique_id = "player1";
 
-    ghc_campaign_event_lock_init();
+    if ( !ghc_campaign_event_lock_init() )
+    {
+        ghc_campaign_clear_session_aliases();
+        level.ghc_campaign_session_status = 9;
+        return 0;
+    }
+
     ghc_campaign_drill_state_init();
 
     /*
@@ -833,11 +839,97 @@ ghc_campaign_drill_abort_player( var_0 )
 }
 
 /* Reusable single-owner lock for shared Campaign mission interactions. */
+ghc_campaign_event_lock_event_id_is_valid( event_id )
+{
+    if ( !isdefined( event_id ) )
+        return 0;
+
+    if ( event_id == 0 || event_id == 1 || event_id == 2 || event_id == 3
+        || event_id == 4 || event_id == 5 || event_id == 6 || event_id == 7
+        || event_id == 8 || event_id == 9 || event_id == 10 || event_id == 11
+        || event_id == 12 || event_id == 13 || event_id == 14 || event_id == 15 )
+        return 1;
+
+    return 0;
+}
+
+ghc_campaign_event_lock_slot_is_valid( slot )
+{
+    if ( !isdefined( slot ) )
+        return 0;
+
+    if ( slot == 0 || slot == 1 )
+        return 1;
+
+    return 0;
+}
+
+ghc_campaign_event_lock_state_is_valid()
+{
+    if ( !isdefined( level.ghc_campaign_event_lock_initialized )
+        || !level.ghc_campaign_event_lock_initialized
+        || !isdefined( level.ghc_campaign_event_lock_owner )
+        || !isdefined( level.ghc_campaign_event_lock_active )
+        || !isdefined( level.ghc_campaign_event_lock_complete ) )
+        return 0;
+
+    if ( level.ghc_campaign_event_lock_owner.size != 16
+        || level.ghc_campaign_event_lock_active.size != 2
+        || level.ghc_campaign_event_lock_complete.size != 16 )
+        return 0;
+
+    if ( !isdefined( level.ghc_campaign_event_lock_active[0] )
+        || !isdefined( level.ghc_campaign_event_lock_active[1] ) )
+        return 0;
+
+    for ( var_0 = 0; var_0 < 16; var_0++ )
+    {
+        if ( !isdefined( level.ghc_campaign_event_lock_owner[var_0] )
+            || ( level.ghc_campaign_event_lock_owner[var_0] != -1
+                && level.ghc_campaign_event_lock_owner[var_0] != 0
+                && level.ghc_campaign_event_lock_owner[var_0] != 1 ) )
+            return 0;
+
+        if ( !isdefined( level.ghc_campaign_event_lock_complete[var_0] )
+            || ( level.ghc_campaign_event_lock_complete[var_0] != 0
+                && level.ghc_campaign_event_lock_complete[var_0] != 1 ) )
+            return 0;
+
+        if ( level.ghc_campaign_event_lock_owner[var_0] == 0
+            && level.ghc_campaign_event_lock_active[0] != var_0 )
+            return 0;
+
+        if ( level.ghc_campaign_event_lock_owner[var_0] == 1
+            && level.ghc_campaign_event_lock_active[1] != var_0 )
+            return 0;
+
+        if ( level.ghc_campaign_event_lock_complete[var_0]
+            && level.ghc_campaign_event_lock_owner[var_0] != -1 )
+            return 0;
+    }
+
+    for ( var_1 = 0; var_1 < 2; var_1++ )
+    {
+        var_2 = level.ghc_campaign_event_lock_active[var_1];
+
+        if ( var_2 != -1 )
+        {
+            if ( !ghc_campaign_event_lock_event_id_is_valid( var_2 ) )
+                return 0;
+
+            if ( level.ghc_campaign_event_lock_owner[var_2] != var_1 )
+                return 0;
+        }
+    }
+
+    return 1;
+}
+
 ghc_campaign_event_lock_init()
 {
     if ( isdefined( level.ghc_campaign_event_lock_initialized )
         && level.ghc_campaign_event_lock_initialized )
-        return 1;
+        return ghc_campaign_event_lock_state_is_valid();
 
     level.ghc_campaign_event_lock_owner = [];
     level.ghc_campaign_event_lock_active = [];
@@ -853,7 +945,7 @@ ghc_campaign_event_lock_init()
         level.ghc_campaign_event_lock_active[var_1] = -1;
 
     level.ghc_campaign_event_lock_initialized = 1;
-    return 1;
+    return ghc_campaign_event_lock_state_is_valid();
 }
 
 ghc_campaign_event_lock_player_slot( player )
@@ -883,10 +975,17 @@ ghc_campaign_event_lock_acquire( player, event_id )
 
     if ( !isdefined( level.ghc_campaign_event_lock_initialized )
         || !level.ghc_campaign_event_lock_initialized )
-        ghc_campaign_event_lock_init();
+    {
+        if ( !ghc_campaign_event_lock_init() )
+            return 0;
+    }
+
+    if ( !ghc_campaign_event_lock_state_is_valid() )
+        return 0;
 
     var_0 = ghc_campaign_event_lock_player_slot( player );
-    if ( var_0 < 0 || event_id < 0 || event_id > 15 )
+    if ( !ghc_campaign_event_lock_slot_is_valid( var_0 )
+        || !ghc_campaign_event_lock_event_id_is_valid( event_id ) )
         return 0;
 
     if ( level.ghc_campaign_event_lock_owner[event_id] != -1
@@ -907,7 +1006,8 @@ ghc_campaign_event_lock_release( player, event_id, completed )
         return 0;
 
     if ( !isdefined( level.ghc_campaign_event_lock_initialized )
-        || !level.ghc_campaign_event_lock_initialized )
+        || !level.ghc_campaign_event_lock_initialized
+        || !ghc_campaign_event_lock_state_is_valid() )
         return 0;
 
     if ( !isdefined( level.ghc_campaign_session_ready )
@@ -918,7 +1018,8 @@ ghc_campaign_event_lock_release( player, event_id, completed )
         return ghc_campaign_invalidate_local_session();
 
     var_0 = ghc_campaign_event_lock_player_slot( player );
-    if ( var_0 < 0 || event_id < 0 || event_id > 15 )
+    if ( !ghc_campaign_event_lock_slot_is_valid( var_0 )
+        || !ghc_campaign_event_lock_event_id_is_valid( event_id ) )
         return 0;
 
     if ( level.ghc_campaign_event_lock_owner[event_id] != var_0
@@ -936,14 +1037,13 @@ ghc_campaign_event_lock_release( player, event_id, completed )
 ghc_campaign_event_lock_abort_slot( slot )
 {
     if ( !isdefined( level.ghc_campaign_event_lock_initialized )
-        || !level.ghc_campaign_event_lock_initialized )
-        return 0;
-
-    if ( slot < 0 || slot > 1 )
+        || !level.ghc_campaign_event_lock_initialized
+        || !ghc_campaign_event_lock_state_is_valid()
+        || !ghc_campaign_event_lock_slot_is_valid( slot ) )
         return 0;
 
     var_0 = level.ghc_campaign_event_lock_active[slot];
-    if ( var_0 < 0 || var_0 > 15 )
+    if ( !ghc_campaign_event_lock_event_id_is_valid( var_0 ) )
         return 0;
 
     if ( level.ghc_campaign_event_lock_owner[var_0] != slot )
@@ -975,8 +1075,9 @@ ghc_campaign_event_lock_owner( event_id )
 {
     if ( !isdefined( level.ghc_campaign_event_lock_initialized )
         || !level.ghc_campaign_event_lock_initialized
-        || event_id < 0 || event_id > 15 )
-        return -1;
+        || !ghc_campaign_event_lock_state_is_valid()
+        || !ghc_campaign_event_lock_event_id_is_valid( event_id ) )
+        return -2;
 
     return level.ghc_campaign_event_lock_owner[event_id];
 }
@@ -995,8 +1096,9 @@ ghc_campaign_event_lock_is_complete( event_id )
 {
     if ( !isdefined( level.ghc_campaign_event_lock_initialized )
         || !level.ghc_campaign_event_lock_initialized
-        || event_id < 0 || event_id > 15 )
-        return 0;
+        || !ghc_campaign_event_lock_state_is_valid()
+        || !ghc_campaign_event_lock_event_id_is_valid( event_id ) )
+        return -1;
 
     return level.ghc_campaign_event_lock_complete[event_id];
 }
@@ -1004,11 +1106,13 @@ ghc_campaign_event_lock_is_complete( event_id )
 ghc_campaign_event_lock_is_owner( player, event_id )
 {
     if ( !isdefined( level.ghc_campaign_event_lock_initialized )
-        || !level.ghc_campaign_event_lock_initialized )
+        || !level.ghc_campaign_event_lock_initialized
+        || !ghc_campaign_event_lock_state_is_valid() )
         return 0;
 
     var_0 = ghc_campaign_event_lock_player_slot( player );
-    if ( var_0 < 0 || event_id < 0 || event_id > 15 )
+    if ( !ghc_campaign_event_lock_slot_is_valid( var_0 )
+        || !ghc_campaign_event_lock_event_id_is_valid( event_id ) )
         return 0;
 
     return level.ghc_campaign_event_lock_owner[event_id] == var_0
@@ -1019,10 +1123,13 @@ ghc_campaign_event_lock_reset( event_id )
 {
     if ( !isdefined( level.ghc_campaign_event_lock_initialized )
         || !level.ghc_campaign_event_lock_initialized
-        || event_id < 0 || event_id > 15 )
+        || !ghc_campaign_event_lock_state_is_valid()
+        || !ghc_campaign_event_lock_event_id_is_valid( event_id ) )
         return 0;
 
-    if ( level.ghc_campaign_event_lock_owner[event_id] != -1 )
+    if ( level.ghc_campaign_event_lock_owner[event_id] != -1
+        || level.ghc_campaign_event_lock_active[0] == event_id
+        || level.ghc_campaign_event_lock_active[1] == event_id )
         return 0;
 
     level.ghc_campaign_event_lock_complete[event_id] = 0;

@@ -50,7 +50,7 @@ class CampaignEventLockTests(unittest.TestCase):
         self.assertIn("ghc_campaign_native_pair_is_current()", body)
         self.assertIn("ghc_campaign_invalidate_local_session()", body)
         self.assertIn("ghc_campaign_event_lock_player_slot( player )", body)
-        self.assertIn("event_id < 0 || event_id > 15", body)
+        self.assertIn("ghc_campaign_event_lock_event_id_is_valid( event_id )", body)
         self.assertIn("level.ghc_campaign_event_lock_owner[event_id] != -1", body)
         self.assertIn("level.ghc_campaign_event_lock_active[var_0] != -1", body)
         self.assertIn("level.ghc_campaign_event_lock_complete[event_id]", body)
@@ -117,6 +117,66 @@ class CampaignEventLockTests(unittest.TestCase):
         ):
             with self.subTest(function=name):
                 self.assertNotRegex(function_body(self.source, name).lower(), r"\bwait\b")
+
+    def test_event_ids_are_exact_discrete_values(self):
+        body = function_body(self.source, "ghc_campaign_event_lock_event_id_is_valid")
+        self.assertIn("!isdefined( event_id )", body)
+        for event_id in range(16):
+            self.assertIn(f"event_id == {event_id}", body)
+        self.assertNotIn("event_id < 0", body)
+        self.assertNotIn("event_id > 15", body)
+
+    def test_state_validator_checks_array_shapes_enums_and_owner_active_consistency(self):
+        body = function_body(self.source, "ghc_campaign_event_lock_state_is_valid")
+        self.assertIn("owner.size != 16", body)
+        self.assertIn("active.size != 2", body)
+        self.assertIn("complete.size != 16", body)
+        self.assertIn("owner[var_0] != -1", body)
+        self.assertIn("owner[var_0] != 0", body)
+        self.assertIn("owner[var_0] != 1", body)
+        self.assertIn("complete[var_0] != 0", body)
+        self.assertIn("complete[var_0] != 1", body)
+        self.assertIn("active[0] != var_0", body)
+        self.assertIn("active[1] != var_0", body)
+        self.assertIn("owner[var_2] != var_1", body)
+        self.assertIn("complete[var_0]", body)
+
+    def test_initialized_corrupt_event_state_is_not_silently_reset(self):
+        init = function_body(self.source, "ghc_campaign_event_lock_init")
+        self.assertIn("return ghc_campaign_event_lock_state_is_valid()", init)
+        self.assertLess(
+            init.index("return ghc_campaign_event_lock_state_is_valid()"),
+            init.index("level.ghc_campaign_event_lock_owner = []"),
+        )
+        self.assertIn("ghc_campaign_event_lock_state_is_valid()", self.source)
+
+    def test_invalid_event_queries_use_distinct_sentinels(self):
+        owner = function_body(self.source, "ghc_campaign_event_lock_owner")
+        complete = function_body(self.source, "ghc_campaign_event_lock_is_complete")
+        self.assertIn("return -2", owner)
+        self.assertIn("return -1", complete)
+        self.assertIn("ghc_campaign_event_lock_state_is_valid()", owner)
+        self.assertIn("ghc_campaign_event_lock_state_is_valid()", complete)
+
+    def test_abort_and_reset_fail_closed_on_corrupt_state_or_invalid_ids(self):
+        abort = function_body(self.source, "ghc_campaign_event_lock_abort_slot")
+        reset = function_body(self.source, "ghc_campaign_event_lock_reset")
+        for body in (abort, reset):
+            self.assertIn("ghc_campaign_event_lock_state_is_valid()", body)
+        self.assertIn("ghc_campaign_event_lock_slot_is_valid( slot )", abort)
+        self.assertIn("ghc_campaign_event_lock_event_id_is_valid( event_id )", reset)
+        self.assertIn("active[0] == event_id", reset)
+        self.assertIn("active[1] == event_id", reset)
+
+    def test_native_pair_binding_fails_closed_if_event_lock_storage_is_invalid(self):
+        bind = function_body(self.session, "ghc_campaign_bind_native_local_pair")
+        self.assertIn("if ( !ghc_campaign_event_lock_init() )", bind)
+        self.assertIn("ghc_campaign_clear_session_aliases()", bind)
+        self.assertIn("level.ghc_campaign_session_status = 9", bind)
+        self.assertLess(
+            bind.index("if ( !ghc_campaign_event_lock_init() )"),
+            bind.index("level.ghc_campaign_session_ready = 1"),
+        )
 
     def test_event_lock_never_creates_players_or_polls_controller_input(self):
         source = self.source.lower()
