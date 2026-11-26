@@ -149,3 +149,6 @@ for operation in (
 ):
     assert operation in source
 assert "worker_active && worker.operation != LOBBY_WORK_LIST" in source
+
+assert "Finishing the pending room refresh..." not in source
+assert source.count('if (worker_active) {') == 2  # pending-worker join and final leave worker
