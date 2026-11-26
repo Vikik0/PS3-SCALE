@@ -1,3 +1,4 @@
+import hashlib
 import json
 import tempfile
 import unittest
@@ -129,6 +130,7 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
             "title_update": "01.16",
             "mode": "CAMPAIGN",
             "evidence_source": "synthetic-unit-test",
+            "campaign_self_sha256": hashlib.sha256(self.campaign_self.read_bytes()).hexdigest(),
             "observations": observations,
         }, indent=2), encoding="utf-8")
         return path
@@ -217,9 +219,17 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
 
         validation = result["player_pair_capture_validation"]
         self.assertEqual(validation["status"], "PASS_STRUCTURAL_CAPTURE_VALIDATION")
-        self.assertEqual(validation["evidence_authenticity"], "NOT_AUTHENTICATED_BY_THIS_TOOL")
-        self.assertEqual(validation["evidence_source"], "synthetic-unit-test")
+        self.assertEqual(validation["evidence_authenticity"], "NOT_AUTHENTICATED_BY_THIS_TOOL")        self.assertEqual(validation["evidence_source"], "synthetic-unit-test")
         self.assertTrue(validation["stable_pair_observation_validated"])
+        self.assertEqual(
+            validation["campaign_self_binding"]["status"],
+            "PASS_CAMPAIGN_SELF_SHA256_MATCH",
+        )
+        self.assertTrue(validation["campaign_self_binding"]["capture_bound_to_analyzer_self"])
+        self.assertEqual(
+            result["player_two_gate"]["campaign_self_binding_status"],
+            "PASS_CAMPAIGN_SELF_SHA256_MATCH",
+        )
         self.assertEqual(validation["input_sha256"], analyzer.sha256_file(capture))
         self.assertEqual(result["player_two_gate"]["status"], "NOT_PROVEN")
         self.assertFalse(result["player_two_gate"]["native_campaign_local_client_creation"])
@@ -231,6 +241,31 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
             (self.output_dir / "campaign_player_pair_validation.json").read_text(encoding="utf-8")
         )
         self.assertEqual(saved["status"], "PASS_STRUCTURAL_CAPTURE_VALIDATION")
+
+    def test_missing_campaign_self_hash_is_reported_as_unbound(self):
+        capture = self.write_player_pair_capture()
+        data = json.loads(capture.read_text(encoding="utf-8"))
+        data.pop("campaign_self_sha256")
+        capture.write_text(json.dumps(data), encoding="utf-8")
+
+        result = self.run_analyzer(campaign_player_capture=capture)
+
+        binding = result["player_pair_capture_validation"]["campaign_self_binding"]
+        self.assertEqual(binding["status"], "NOT_PROVIDED")
+        self.assertFalse(binding["capture_bound_to_analyzer_self"])
+        self.assertEqual(result["player_two_gate"]["campaign_self_binding_status"], "NOT_PROVIDED")
+        self.assertEqual(result["player_two_gate"]["status"], "NOT_PROVEN")
+
+    def test_mismatched_campaign_self_hash_is_rejected_before_dump_analysis(self):
+        capture = self.write_player_pair_capture()
+        data = json.loads(capture.read_text(encoding="utf-8"))
+        data["campaign_self_sha256"] = "0" * 64
+        capture.write_text(json.dumps(data), encoding="utf-8")
+
+        with patch.object(analyzer, "verify_dump") as verify:
+            with self.assertRaisesRegex(ValueError, "does not match"):
+                self.run_analyzer(campaign_player_capture=capture)
+            verify.assert_not_called()
 
     def test_missing_player_pair_capture_is_reported_without_upgrading_gate(self):
         result = self.run_analyzer()
@@ -437,8 +472,7 @@ class RuntimeCaptureAnalyzerTests(unittest.TestCase):
         self.assertEqual(result["ppu_analysis"]["status"], "GHIDRA_PPU_ANALYSIS_COMPLETED")
         self.assertEqual(result["ppu_analysis"]["multiplayer_only_builtin_lead_count"], 1)
         self.assertEqual(result["ppu_analysis"]["campaign_function_records"], 100)
-        self.assertEqual(result["ppu_analysis"]["campaign_builtin_call_xref_rows"], 2)
-        self.assertEqual(result["ppu_analysis"]["multiplayer_builtin_call_xref_rows"], 5)
+        self.assertEqual(result["ppu_analysis"]["campaign_builtin_call_xref_rows"], 2)        self.assertEqual(result["ppu_analysis"]["multiplayer_builtin_call_xref_rows"], 5)
         self.assertEqual(result["ppu_analysis"]["campaign_builtin_direct_call_xref_rows"], 2)
         self.assertEqual(result["ppu_analysis"]["multiplayer_builtin_computed_call_xref_rows"], 2)
         self.assertEqual(result["player_two_gate"]["status"], "NOT_PROVEN")
