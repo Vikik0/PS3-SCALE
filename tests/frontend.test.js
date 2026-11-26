@@ -41,3 +41,93 @@ test("create-room failures are shown as errors rather than unavailable game mode
   assert.match(script, /catch\(e\)\{showNotice\("Could not create battle: "\+e\.message,true\);\}/);
   assert.match(html, /id="modeNotice"[^>]*role="alert"[^>]*aria-live="polite"/);
 });
+
+
+test("room session generation prevents an old refresh from restoring a room after leave", async () => {
+  const vm = require("node:vm");
+  const elements = new Map();
+  const makeElement = (id = "") => ({
+    id, hidden: false, className: "", textContent: "", value: "", checked: false,
+    disabled: false, innerHTML: "", style: {},
+    classList: { add() {}, remove() {}, toggle() {} },
+    querySelectorAll() { return []; },
+    querySelector() { return { textContent: "" }; },
+    appendChild() {}, replaceChildren() {}, scrollIntoView() {}, focus() {}, click() {}
+  });
+  const document = {
+    getElementById(id) {
+      if (!elements.has(id)) elements.set(id, makeElement(id));
+      return elements.get(id);
+    },
+    createElement(tag) { return makeElement(tag); },
+    addEventListener() {}
+  };
+  const storage = new Map();
+  const sessionStorage = {
+    getItem(key) { return storage.has(key) ? storage.get(key) : null; },
+    setItem(key, value) { storage.set(key, String(value)); },
+    removeItem(key) { storage.delete(key); }
+  };
+  let resolveRoomRead;
+  let roomReadCount = 0;
+  const jsonResponse = (body, status = 200) => ({
+    ok: status >= 200 && status < 300,
+    status,
+    async json() { return body; }
+  });
+  const fetch = async (url, options = {}) => {
+    if (url === "/api/health") {
+      return jsonResponse({ ok: true, storageConfigured: true, tokenConfigured: true });
+    }
+    if (url.startsWith("/api/rooms?code=")) {
+      roomReadCount++;
+      return new Promise(resolve => { resolveRoomRead = () => resolve(jsonResponse({
+        room: {
+          code: "ABC234",
+          selfPlayerId: "player-1",
+          players: [{ id: "player-1", name: "Host", ready: true }],
+          maxPlayers: 4,
+          gameStarted: false
+        }
+      })); });
+    }
+    if (url === "/api/rooms" && options.method === "POST") {
+      return jsonResponse({ ok: true });
+    }
+    if (url === "/api/rooms" && options.method === "GET") {
+      return jsonResponse({ rooms: [] });
+    }
+    throw new Error("Unexpected fetch: " + url);
+  };
+  const context = {
+    document, sessionStorage, fetch, console,
+    setTimeout(fn) { fn(); return 1; },
+    setInterval() { return 1; },
+    clearInterval() {},
+    Promise
+  };
+  vm.runInNewContext(script, context);
+  await new Promise(resolve => setImmediate(resolve));
+
+  const entering = context.enterRoom({
+    token: "guest-token",
+    room: { code: "ABC234" },
+    player: { id: "player-1", name: "Host" }
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(roomReadCount, 1);
+
+  await context.leaveRoom();
+  assert.equal(context.state.token, "");
+  assert.equal(context.state.room, null);
+  assert.equal(context.state.screen, "battle");
+
+  resolveRoomRead();
+  await entering;
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(context.state.token, "");
+  assert.equal(context.state.room, null);
+  assert.equal(context.state.player, null);
+  assert.equal(context.state.screen, "battle");
+  assert.equal(roomReadCount, 1);
+});
