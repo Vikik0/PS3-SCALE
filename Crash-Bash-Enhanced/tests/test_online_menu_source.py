@@ -40,7 +40,9 @@ heartbeat = re.search(
     re.S,
 )
 assert heartbeat, "Periodic room heartbeat block is missing"
-assert heartbeat.group(1).count("cb_online_heartbeat(") == 1
+assert "start_lobby_action_worker(" in heartbeat.group(1)
+assert "LOBBY_WORK_HEARTBEAT" in heartbeat.group(1)
+assert "cb_online_heartbeat(" not in heartbeat.group(1)
 assert "cb_online_set_ready(" not in heartbeat.group(1)
 assert "cb_online_get_room(" not in heartbeat.group(1), (
     "Heartbeat must return the player list itself; do not issue a duplicate room GET."
@@ -62,7 +64,7 @@ main_source = (root / "source/main.c").read_text(encoding="utf-8")
 online_source = (root / "source/online.c").read_text(encoding="utf-8")
 assert "cb_online_heartbeat" in online_source
 assert r'\"set_ready\"' in online_source
-assert "cb_online_set_ready(&session, next_ready" in source
+assert "cb_online_set_ready(&task->session, task->ready" in source
 launcher = (root / "source/game_launcher.c").read_text(encoding="utf-8")
 assert "BTN_START" in source
 assert "cb_launch_game(" in source
@@ -123,3 +125,24 @@ assert "cb_online_get_netplay_endpoint" in online_source
 assert "cb_online_clear_disc_fingerprint" in online_source
 assert "clear_disc_confirmation(" in source
 assert source.count("clear_disc_confirmation(&session, &view, error, sizeof(error))") >= 4
+
+# Room lifecycle HTTP requests are dispatched to the worker, never called on
+# the frame/render loop. This prevents 9-second HTTP timeouts from freezing UI.
+menu_loop = source[source.index("int cb_online_menu"):]
+for synchronous_call in (
+    "cb_online_join_any_room(&session",
+    "cb_online_join_room(",
+    "cb_online_create_room(",
+    "cb_online_set_ready(&session",
+    "cb_online_get_room(&session",
+    "cb_online_heartbeat(&session",
+    "cb_online_leave_room(&session",
+):
+    assert synchronous_call not in menu_loop, f"Synchronous room request remains: {synchronous_call}"
+for operation in (
+    "LOBBY_WORK_JOIN_ANY", "LOBBY_WORK_JOIN", "LOBBY_WORK_CREATE",
+    "LOBBY_WORK_GET_ROOM", "LOBBY_WORK_SET_READY",
+    "LOBBY_WORK_HEARTBEAT", "LOBBY_WORK_LEAVE",
+):
+    assert operation in source
+assert "worker_active && worker.operation != LOBBY_WORK_LIST" in source
