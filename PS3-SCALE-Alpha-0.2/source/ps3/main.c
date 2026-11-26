@@ -3592,7 +3592,7 @@ cleanup:
     refresh_ps2_config_manager_cache();
 }
 
-static void ps2_config_download_workerstatic void ps2_config_download_worker(void *arg)
+static void ps2_config_download_worker(void *arg)
 {
     unsigned char *data = NULL;
     FILE *fp = NULL;
