@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "phase": 114,
+  "title": "Player-aware mission trigger helper prototypes",
+  "source_inputs": {
+    "black_ice": {
+      "sha256": "3de920d152d16b5c70673d322ce2f9d65e22fab5a88ba7a4c7dad3291828c355",
+      "bytes": 51474
+    },
+    "carrier": {
+      "sha256": "40886bdad63803469e7e54bfd565ebe8fea61aa8643d2a4ec9d4be385bb76b0e",
+      "bytes": 2303
+    },
+    "cornered": {
+      "sha256": "40886bdad63803469e7e54bfd565ebe8fea61aa8643d2a4ec9d4be385bb76b0e",
+      "bytes": 2303
+    }
+  },
+  "outputs": {
+    "black_ice": {
+      "source_sha256": "35e4066c37d693d4041ebd76568ab7a89a193488ccf8b1f29ffdce27adc8ab0c",
+      "gscbin_sha256": "e24db1a926f8e630a62785cf8ae4816ead5028e04c5d96e62e5c096ebb886255",
+      "gscbin_bytes": 12043,
+      "local_compile_decompile_recompile": "PASS"
+    },
+    "carrier_cornered_shared": {
+      "source_sha256": "e28b43675f8879f0db1e4883c4c0425bc78038e3b41299acaa22c4522d533699",
+      "gscbin_sha256": "f82011abe291d8ec2b66b5c7069ec70e68693243d953c72be041ebe9ab5f45bb",
+      "gscbin_bytes": 646,
+      "local_compile_decompile_recompile": "PASS"
+    }
+  },
+  "runtime_boundary": {
+    "mission_callsites_migrated": 0,
+    "retail_fastfiles_modified": false,
+    "physical_ps3_tested": false,
+    "player_two": "NOT_PROVEN",
+    "shared_interactions_ready": "0/4"
+  }
+}

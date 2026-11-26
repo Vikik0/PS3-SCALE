@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "phase": 115,
+  "title": "Activator-aware owned-trigger adapter",
+  "ci": {
+    "run": 1642,
+    "run_id": 45863929336,
+    "status": "7/7 PASS",
+    "python_tests": "606/606",
+    "gsc_bridge_compile_decompile": "PASS",
+    "explicit_player_helper_fixture_roundtrip": "PASS",
+    "prx_protocol_capture_jobs": "PASS"
+  },
+  "bridge": {
+    "source_sha256": "33ef12fb9f8929cb1f70149ed40f7d5b7f5eb2edd636c21fe77bf7e5c83ab9b4",
+    "compiled_gscbin_sha256": "34e462ba5d70fcc5b53b7238d45c5841195644f324a73518bb2244ba68734024",
+    "compiled_gscbin_bytes": 5751
+  },
+  "capture_kit": {
+    "files": "57/57",
+    "bytes": 540916,
+    "sha256": "a33fdcf4db0f0c6145f1e8c003010ad356029fec34dd1b415d3d7f0fe9853cde",
+    "artifact_id": 15139148167,
+    "url": "https://github.com/Vikik0/PS3-SCALE/actions/runs/45863929336/artifacts/15139148167"
+  },
+  "mission_integration": {
+    "generic_waittill_trigger_callsites": {
+      "black_ice": 3,
+      "carrier": 2,
+      "cornered": 10,
+      "total": 15
+    },
+    "migrated": 0,
+    "shared_interactions_ready": "0/4"
+  },
+  "runtime_boundary": {
+    "physical_ps3_tested": false,
+    "native_second_campaign_local_client_proven": false,
+    "player_two": "NOT_PROVEN",
+    "retail_eboot_self_fastfile_modified": false
+  }
+}

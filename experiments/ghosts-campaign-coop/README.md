@@ -486,3 +486,22 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - Report: `docs/phase113-event-lock-cleanup.md` and `reports/PHASE113_REPORT_AR.md`; machine-readable summary: `reports/PHASE113_VALIDATION.json`.
 
 **Runtime gate unchanged:** this phase hardens cleanup and ownership queries only. It does not prove physical PS3 Campaign execution or create Player 2. Native second Campaign Local Client, independent camera/HUD and original shared mission interactions remain unproven. Player 2 remains `NOT_PROVEN`; shared interactions remain **0/4 ready**.
+
+### Phase 114 — player-aware mission trigger helper prototypes
+
+- Built isolated helper variants from the exact supplied original GSC sources. The original generic signatures remain as compatibility wrappers; the new variants accept an explicit player entity.
+- Black Ice's new helper scopes aim, stance, movement and use-button checks to the supplied player.
+- Carrier and Cornered share byte-identical `player_scripted_anim_util.gsc` sources. Their new helper passes the explicit player into the trigger callback; the callback captures the `"trigger"` event activator and ignores events from any other player.
+- Local GSC Tool 1.6.2.364 compile/decompile/recompile byte-for-byte passed against the supplied original source files. The helper variants are not installed and mission call sites are not migrated.
+- See `docs/phase114-player-aware-trigger-helpers.md` and `reports/PHASE114_REPORT_AR.md`.
+
+### Phase 115 — activator-aware trigger adapter
+
+- Added `ghc_campaign_wait_for_owned_trigger(trigger_ent, event_id)` to the actual Campaign local-session bridge. It validates the native pair before and after waiting, accepts only the actual registered trigger activator, and acquires the event lock for that exact player.
+- Added explicit-player release and abort wrappers. The adapter does not create clients or actors.
+- CI run [#1642](https://github.com/Vikik0/PS3-SCALE/actions/runs/45863929336): **7/7 jobs successful**, **606 Python tests**, GSC bridge compile/decompile and helper-fixture round trips passed.
+- Bridge source SHA-256: `33ef12fb9f8929cb1f70149ed40f7d5b7f5eb2edd636c21fe77bf7e5c83ab9b4`; compiled GSCBIN SHA-256: `34e462ba5d70fcc5b53b7238d45c5841195644f324a73518bb2244ba68734024`; size **5,751 bytes**.
+- Capture kit: **57/57 files**, **540,916 bytes**, SHA-256 `a33fdcf4db0f0c6145f1e8c003010ad356029fec34dd1b415d3d7f0fe9853cde`; artifact ID `15139148167`.
+- See `docs/phase115-activator-aware-trigger-adapter.md` and `reports/PHASE115_REPORT_AR.md`.
+
+**Runtime and mission integration gate unchanged:** 15 generic trigger call sites remain unmigrated (3 Black Ice, 2 Carrier, 10 Cornered). The four shared mission interactions remain **0/4 ready**. A native second Campaign Local Client, independent Player 2 camera/HUD and physical PS3 Campaign execution remain unproven. Player 2 remains `NOT_PROVEN`; no retail EBOOT, SELF or FastFile was modified or injected.
