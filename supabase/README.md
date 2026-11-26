@@ -30,11 +30,11 @@ The deployment must remain on Supabase's Free Plan. Do not create this project i
    ```
 7. Apply the isolated database migration:
    ```sh
-   supabase db push --remote=<NEW_PROJECT_REF> --yes
+   supabase db push --linked --yes
    ```
 8. Deploy the public, rate-limited Edge Function (it validates its own payload and uses only server-side credentials):
    ```sh
-   supabase functions deploy ps3scale-support --yes
+   supabase functions deploy ps3scale-support --no-verify-jwt --yes
    ```
 9. The function URL is:
    ```
