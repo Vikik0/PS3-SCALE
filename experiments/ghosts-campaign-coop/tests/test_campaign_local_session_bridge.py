@@ -279,7 +279,7 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         body = function_body(self.source, "ghc_campaign_drill_begin")
         self.assertIn("level.ghc_campaign_session_ready", body)
         self.assertIn("ghc_campaign_drill_player_slot( var_0 )", body)
-        self.assertIn("var_1 < 0 || var_1 > 1", body)
+        self.assertIn("!isdefined( var_1 ) || var_1 < 0 || var_1 > 1", body)
         self.assertIn("ghc_campaign_drill_active_spot_for_player", body)
         self.assertIn("ghc_campaign_drill_is_complete", body)
         self.assertIn("ghc_campaign_drill_owner_for_spot", body)
@@ -292,11 +292,23 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertIn("ghc_campaign_drill_player_slot( var_0 )", body)
         self.assertIn("ghc_campaign_drill_owner_for_spot( var_1 ) != var_3", body)
         self.assertIn("ghc_campaign_drill_active_spot_for_player( var_3 ) != var_1", body)
+        self.assertIn("!isdefined( var_2 )", body)
+        self.assertIn("( var_2 != 0 && var_2 != 1 )", body)
         self.assertIn("if ( var_2 )", body)
+        self.assertLess(body.index("!isdefined( var_2 )"), body.index("ghc_campaign_drill_set_owner_for_spot( var_1, -1 )"))
         self.assertIn("ghc_campaign_drill_set_complete_for_spot( var_1, 1 )", body)
         self.assertIn("ghc_campaign_drill_set_owner_for_spot( var_1, -1 )", body)
         self.assertIn("ghc_campaign_drill_set_active_spot_for_player( var_3, -1 )", body)
         self.assertNotIn("wait", body.lower())
+
+    def test_drill_completion_state_setter_rejects_non_boolean_values(self):
+        body = function_body(self.source, "ghc_campaign_drill_set_complete_for_spot")
+        self.assertIn("!isdefined( var_0 )", body)
+        self.assertIn("var_0 < 0 || var_0 > 1", body)
+        self.assertIn("!isdefined( var_1 )", body)
+        self.assertIn("( var_1 != 0 && var_1 != 1 )", body)
+        self.assertLess(body.index("return 0"), body.index("level.ghc_campaign_drill_complete_0 = var_1"))
+        self.assertLess(body.index("return 0"), body.index("level.ghc_campaign_drill_complete_1 = var_1"))
 
     def test_drill_cancel_and_abort_release_without_marking_complete(self):
         cancel = function_body(self.source, "ghc_campaign_drill_cancel")

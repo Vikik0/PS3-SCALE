@@ -602,6 +602,10 @@ ghc_campaign_drill_set_owner_for_spot( var_0, var_1 )
 
 ghc_campaign_drill_set_complete_for_spot( var_0, var_1 )
 {
+    if ( !isdefined( var_0 ) || var_0 < 0 || var_0 > 1
+        || !isdefined( var_1 ) || ( var_1 != 0 && var_1 != 1 ) )
+        return 0;
+
     if ( var_0 == 0 )
     {
         level.ghc_campaign_drill_complete_0 = var_1;
@@ -627,7 +631,7 @@ ghc_campaign_drill_begin( var_0, var_1 )
         return ghc_campaign_invalidate_local_session();
 
     var_2 = ghc_campaign_drill_player_slot( var_0 );
-    if ( var_2 < 0 || var_1 < 0 || var_1 > 1 )
+    if ( var_2 < 0 || !isdefined( var_1 ) || var_1 < 0 || var_1 > 1 )
         return 0;
 
     if ( ghc_campaign_drill_active_spot_for_player( var_2 ) != -1 )
@@ -655,6 +659,11 @@ ghc_campaign_drill_begin( var_0, var_1 )
 
 ghc_campaign_drill_finish( var_0, var_1, var_2 )
 {
+    /* Completion must be an explicit numeric boolean, never GSC truthiness. */
+    if ( !isdefined( var_2 )
+        || ( var_2 != 0 && var_2 != 1 ) )
+        return 0;
+
     if ( !isdefined( level.ghc_campaign_session_ready )
         || !level.ghc_campaign_session_ready )
         return 0;
@@ -663,7 +672,7 @@ ghc_campaign_drill_finish( var_0, var_1, var_2 )
         return ghc_campaign_invalidate_local_session();
 
     var_3 = ghc_campaign_drill_player_slot( var_0 );
-    if ( var_3 < 0 || var_1 < 0 || var_1 > 1 )
+    if ( var_3 < 0 || !isdefined( var_1 ) || var_1 < 0 || var_1 > 1 )
         return 0;
 
     if ( ghc_campaign_drill_owner_for_spot( var_1 ) != var_3 )
