@@ -5,6 +5,7 @@
   "title_update": "01.16",
   "mode": "CAMPAIGN",
   "evidence_source": "RECORD_ACTUAL_PS3MAPI_OR_GSC_PROBE_SOURCE",
+  "campaign_self_sha256": "SHA256_OF_THE_EXACT_CAMPAIGN_DEFAULT_SELF_FILE",
   "observations": [
     {
       "timestamp_ms": 0,
