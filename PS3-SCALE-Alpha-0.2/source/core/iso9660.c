@@ -400,7 +400,7 @@ static int find_iso_path(FILE *fp, uint32_t root_lba, uint32_t root_size,
         int lookup_result;
 
         if (separator)
-            *separator = '\\0';
+            *separator = '\0';
         if (!component[0] || strcmp(component, ".") == 0 ||
             strcmp(component, "..") == 0 || strchr(component, ':') ||
             strchr(component, '\\') || ++depth > 16u)
