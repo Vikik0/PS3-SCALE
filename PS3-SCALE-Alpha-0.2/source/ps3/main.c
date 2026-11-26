@@ -5961,6 +5961,9 @@ static void draw_details(void)
                   "No matched comparison images are available.");
     }
 
+    draw_text(544.0f, 362.0f, 0x77718fff,
+              "This is NOT an HD texture replacement.");
+
     draw_soft_button(20.0f, 400.0f, 250.0f, 44.0f,
                      game_is_ps3(game) ?
                      (profile ? "TRIANGLE: ARM PROFILE" : "NO EXACT FPS PROFILE") :
