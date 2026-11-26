@@ -25,7 +25,7 @@ test("room list errors are rendered as text",()=>{
  assert.doesNotMatch(html,/innerHTML=.*e\.message/);
 });
 test("host Netplay nickname is derived from the server-issued launch identity",()=>{
- const native=fs.readFileSync(path.join(root,"source","online_menu.c"),"utf8");
+ const native=fs.readFileSync(path.join(root,"..","source","online_menu.c"),"utf8");
  assert.match(api,/String\(room\.netplayId\)\.slice\(0, 16\)/);
  assert.match(native,/CB-%\.16s-HOST/);
  const start=native.indexOf("cb_online_mark_game_started(&session, &view");
