@@ -106,7 +106,7 @@ int main(void)
         assert(ps3scale_ps2_config_append_patches(
             community_config, sizeof(community_config),
             &patch, 1, merged, sizeof(merged), &merged_size) == 0);
-        assert(merged_size == sizeof(community_config) + 16u);
+        assert(merged_size == sizeof(community_config) + 20u);
         assert(memcmp(merged, community_config,
                       sizeof(community_config) - 4u) == 0);
         assert(ps3scale_ps2_config_validate_external(
