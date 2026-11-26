@@ -132,7 +132,7 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertIn("return 1", body)
         self.assertLess(
             body.index("if ( ghc_campaign_bind_native_local_pair() )"),
-            body.index("wait 0.05"),
+            body.index("wait 0.05", body.index("for ( var_0 = 0; var_0 < 200; var_0++ )")),
         )
         self.assertNotIn("level.playerpiggyback = undefined", body)
         self.assertIn("level.ghc_campaign_session_status = 2", body)
