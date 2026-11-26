@@ -62,6 +62,7 @@ The build uses the RGUI menu and keeps the embedded runtime below the PSL1GHT 1,
 
 - One installable PKG contains the native lobby, RetroArch, PCSX-ReARMed and the user's supplied Crash Bash BIN/CUE.
 - The original BIN/CUE are copied byte-for-byte into `USRDIR/PSXISO/` and checked with `cmp`; the project adds only the PS3 launcher, lobby and emulator runtime around the retail game. It does not replace Crash Bash with a new game or rewrite the disc image.
+- Local play passes the embedded CUE directly to RetroArch; it does not use `--menu`, which would open the frontend without loading Crash Bash.
 - No BIOS is included. Use HLE on every console or supply the same BIOS dumped from the user's own console.
 - A successful cross-build does not certify actual gameplay. Follow `HARDWARE_TEST_PLAN.md` for local, two-console LAN, internet relay and four-player checks.
 - Cross-play with `crashbash.app` remains blocked until its owner grants written permission and supplies a supported client/API contract. Do not reverse-engineer or automate its private client.
