@@ -56,7 +56,7 @@ For ISO files the target remains `<game.iso>.CONFIG` beside the ISO. No bytes ar
 
 ## First game-specific FPS patch proof of concept
 
-The first candidate is **Ed, Edd n Eddy: The Mis-Edventures (NTSC-U)** from the PCSX2 patch repository:
+The first candidate is **Ed, Edd n Eddy: The Mis-Edventures (NTSC-U)** from the PCSX2 patch repository (now represented in the exact-match patch catalogue):
 - Serial: `SLUS_212.60`
 - PCSX2 ELF hash: `B0AE2D8A`
 - Patch: `patch=1,EE,00161860,word,2C620000`

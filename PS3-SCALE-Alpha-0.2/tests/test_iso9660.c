@@ -1,4 +1,5 @@
 #include "ps3scale/iso9660.h"
+#include "ps3scale/ps2_fps_patch.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -146,6 +147,17 @@ int main(void)
         loaded_elf, loaded_elf_size, 0x00100004 + 1, &word) < 0);
     assert(ps3scale_ps2_elf_read_exec_word(
         loaded_elf, loaded_elf_size, 0x00110000, &word) < 0);
+    {
+        const ps3scale_ps2_fps_patch_t *fps_patch =
+            ps3scale_ps2_fps_patch_find("SLUS_212.60", 0xB0AE2D8Au);
+        assert(fps_patch != NULL);
+        assert(fps_patch->ee_address == 0x00161860u);
+        assert(fps_patch->replacement_word == 0x2C620000u);
+        assert(ps3scale_ps2_fps_patch_find(
+            "SLUS_212.60", 0xB0AE2D8Bu) == NULL);
+        assert(ps3scale_ps2_fps_patch_find(
+            "SLUS_203.12", 0xB0AE2D8Au) == NULL);
+    }
     free(loaded_elf);
 
     assert(ps3scale_title_id_from_filename(
