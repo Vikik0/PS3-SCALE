@@ -6090,7 +6090,10 @@ static void draw_ps2_config_manager(void)
               "ON" : "OFF");
 
     draw_soft_button(430.0f, 230.0f, 350.0f, 30.0f,
-                     can_generate ? "APPLY LOCAL PROFILE" : "ISO PROFILE ONLY",
+                     can_generate ?
+                     (g_ps2_config_manager_target_state == 1 ?
+                      "RESTORE BACKUP FIRST" : "APPLY LOCAL PROFILE") :
+                     "ISO PROFILE ONLY",
                      g_ps2_config_manager_selection == 3);
     draw_soft_button(430.0f, 264.0f, 350.0f, 30.0f,
                      can_generate ? "APPLY EXPERIMENTAL 60 FPS PATCH" :

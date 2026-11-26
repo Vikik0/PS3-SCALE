@@ -311,6 +311,7 @@ static const locale_entry_t locale_entries[] = {
     {"L2H IS ON BY DEFAULT. SELECT OPTIONS THEN APPLY.", "تحسين L2H مفعّل افتراضياً. اختر الخيارات ثم طبّقها.", "L2H está activado por defecto. Elige opciones y aplica."},
     {"EXISTING COMMUNITY CONFIG DETECTED. LOCAL PROFILE WILL NOT OVERWRITE ITS FIXES.", "تم العثور على إعداد مجتمع موجود. لن يستبدل الملف المحلي إصلاحاته.", "Se detectó un CONFIG comunitario. El perfil local no sobrescribirá sus ajustes."},
     {"EXISTING CONFIG DETECTED. LOCAL PROFILE WILL NOT OVERWRITE IT.", "تم العثور على إعداد موجود. لن يستبدله الملف المحلي.", "Se detectó un CONFIG existente. El perfil local no lo sobrescribirá."},
+    {"RESTORE BACKUP FIRST", "استعد النسخة الاحتياطية أولاً", "Restaura primero la copia de seguridad"},
     {"APPLY EXPERIMENTAL 60 FPS PATCH", "تطبيق تعديل 60 إطاراً تجريبياً", "Aplicar parche experimental de 60 FPS"},
     {"ISO PATCH ONLY", "تعديل ISO فقط", "Solo parche ISO"},
     {"FPS patch needs exact serial + ELF hash.", "تعديل FPS يتطلب تطابق الرقم التسلسلي وبصمة ELF.", "El parche FPS requiere coincidencia exacta de serie y hash ELF."},
