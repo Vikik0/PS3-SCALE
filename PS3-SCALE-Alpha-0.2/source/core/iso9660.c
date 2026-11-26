@@ -742,8 +742,8 @@ int ps3scale_ps2_iso_load_boot_elf(const char *iso_path,
     if (read_iso_file(fp, &cnf_file, system_cnf, cnf_file.total_size) != 0)
         goto cleanup;
 
-    if (serial_at(system_cnf, cnf_size, serial, serial_size) != 0 ||
-        boot_filename_from_cnf(system_cnf, cnf_size,
+    if (serial_at(system_cnf, cnf_file.total_size, serial, serial_size) != 0 ||
+        boot_filename_from_cnf(system_cnf, cnf_file.total_size,
                                boot_name, sizeof(boot_name)) != 0)
         goto cleanup;
 
