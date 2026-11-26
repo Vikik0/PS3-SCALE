@@ -1,5 +1,5 @@
 #include "ps3scale/iso9660.h"
-#include "ps3scale/ps2_fps_patch.h"
+#include "ps3scale/ps2_game_patch.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -148,29 +148,29 @@ int main(void)
     assert(ps3scale_ps2_elf_read_exec_word(
         loaded_elf, loaded_elf_size, 0x00110000, &word) < 0);
     {
-        const ps3scale_ps2_fps_patch_t *fps_patch =
-            ps3scale_ps2_fps_patch_find("SLUS_212.60", 0xB0AE2D8Au);
-        assert(fps_patch != NULL);
-        assert(fps_patch->ee_address == 0x00161860u);
-        assert(fps_patch->replacement_word == 0x2C620000u);
-        assert(ps3scale_ps2_fps_patch_find(
-            "SLUS_212.60", 0xB0AE2D8Bu) == NULL);
-        assert(ps3scale_ps2_fps_patch_find(
-            "SLUS_203.12", 0xB0AE2D8Au) == NULL);
-        assert(ps3scale_ps2_fps_patch_find(
-            "SLUS_203.49", 0x10B1F370u) != NULL);
-        assert(ps3scale_ps2_fps_patch_find(
-            "SLUS_211.83", 0xE1F17139u) != NULL);
-        assert(ps3scale_ps2_fps_patch_find(
-            "SLUS_214.37", 0x86B490D1u) != NULL);
-        assert(ps3scale_ps2_fps_patch_find(
-            "SLUS_214.55", 0xBAFEFC57u) != NULL);
-        assert(ps3scale_ps2_fps_patch_find(
-            "SLUS_214.15", 0xE10A865Bu) != NULL);
-        assert(ps3scale_ps2_fps_patch_find(
-            "SLUS_218.85", 0xB15F0BD6u) != NULL);
-        assert(ps3scale_ps2_fps_patch_find(
-            "SLUS_206.96", 0xFCC09959u) != NULL);
+        const ps3scale_ps2_game_patch_t *patch;
+        patch = ps3scale_ps2_game_patch_find("SLUS_212.60",0xB0AE2D8Au,PS3SCALE_PS2_PATCH_FPS);
+        assert(patch && patch->word_count == 1u);
+        assert(patch->words[0].ee_address == 0x00161860u);
+        assert(patch->words[0].replacement_word == 0x2C620000u);
+        assert(ps3scale_ps2_game_patch_find("SLUS_212.60",0xB0AE2D8Bu,PS3SCALE_PS2_PATCH_FPS)==NULL);
+        assert(ps3scale_ps2_game_patch_find("SLUS_203.12",0xB0AE2D8Au,PS3SCALE_PS2_PATCH_FPS)==NULL);
+        assert(ps3scale_ps2_game_patch_find("SLUS_203.49",0x10B1F370u,PS3SCALE_PS2_PATCH_FPS)!=NULL);
+        assert(ps3scale_ps2_game_patch_find("SLUS_211.83",0xE1F17139u,PS3SCALE_PS2_PATCH_FPS)!=NULL);
+        assert(ps3scale_ps2_game_patch_find("SLUS_214.37",0x86B490D1u,PS3SCALE_PS2_PATCH_FPS)!=NULL);
+        assert(ps3scale_ps2_game_patch_find("SLUS_214.55",0xBAFEFC57u,PS3SCALE_PS2_PATCH_FPS)!=NULL);
+        assert(ps3scale_ps2_game_patch_find("SLUS_214.15",0xE10A865Bu,PS3SCALE_PS2_PATCH_FPS)!=NULL);
+        assert(ps3scale_ps2_game_patch_find("SLUS_218.85",0xB15F0BD6u,PS3SCALE_PS2_PATCH_FPS)!=NULL);
+        assert(ps3scale_ps2_game_patch_find("SLUS_206.96",0xFCC09959u,PS3SCALE_PS2_PATCH_FPS)!=NULL);
+        patch=ps3scale_ps2_game_patch_find("SLUS_203.49",0x10B1F370u,PS3SCALE_PS2_PATCH_WIDESCREEN);
+        assert(patch && patch->word_count == 8u);
+        patch=ps3scale_ps2_game_patch_find("SLUS_211.83",0xE1F17139u,PS3SCALE_PS2_PATCH_WIDESCREEN);
+        assert(patch && patch->word_count == 13u);
+        patch=ps3scale_ps2_game_patch_find("SLUS_214.37",0x86B490D1u,PS3SCALE_PS2_PATCH_WIDESCREEN);
+        assert(patch && patch->word_count == 7u);
+        patch=ps3scale_ps2_game_patch_find("SLUS_206.96",0xFCC09959u,PS3SCALE_PS2_PATCH_WIDESCREEN);
+        assert(patch && patch->word_count == 3u);
+        assert(ps3scale_ps2_game_patch_find("SLUS_203.49",0x10B1F370u,(ps3scale_ps2_patch_kind_t)99)==NULL);
     }
     free(loaded_elf);
 

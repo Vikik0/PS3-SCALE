@@ -24,7 +24,7 @@ cc -std=c99 -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror \
 cc -std=c99 -Wall -Wextra -Werror \
   -I"$ROOT/include" \
   "$ROOT/source/core/iso9660.c" \
-  "$ROOT/source/core/ps2_fps_patch.c" \
+  "$ROOT/source/core/ps2_game_patch.c" \
   "$ROOT/tests/test_iso9660.c" \
   -o "$OUT/test_iso9660"
 "$OUT/test_iso9660"
