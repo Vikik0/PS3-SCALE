@@ -128,7 +128,7 @@ static void activate_selection(void)
         size_t disc_count = 0;
         if (cb_disc_scan(discs, CB_DISC_MAX, &disc_count) != 0 || disc_count == 0) {
             snprintf(g_status, sizeof(g_status),
-                     "No CUE found. Copy Crash Bash to a PSXISO folder.");
+                     "Embedded Crash Bash disc not found. Reinstall the package or add a CUE to PSXISO.");
         } else {
             cb_launch_game(discs[0].path, 0, "CrashBashPlayer", NULL,
                            g_status, sizeof(g_status));
