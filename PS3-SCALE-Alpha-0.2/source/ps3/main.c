@@ -223,6 +223,7 @@ static char g_details_message[128] = "NO VERIFIED GRAPHICS PROFILE FOR THIS VERS
 static int g_details_cache_valid = 0;
 static int g_details_ps2_config_exists = 0;
 static int g_ps2_config_manager_selection=0,g_ps2_config_manager_target_state=0,g_ps2_config_manager_backup_state=0,g_ps2_config_manager_rollback_state=0;
+static int g_ps2_enhancer_guide_open=0;
 static unsigned int g_ps2_enhancement_flags = PS3SCALE_PS2_CFG_ENABLE_L2H;
 static size_t g_ps2_config_manager_target_size=0,g_ps2_config_manager_backup_size=0,g_ps2_config_manager_max_bytes=PS3SCALE_PS2_CONFIG_MAX_BYTES;
 static char g_ps2_config_manager_message[128]="SELECT AN ACTION.";
@@ -6152,8 +6153,39 @@ static void draw_ps2_config_manager(void)
                   g_ps2_config_manager_message);
     }
 
+    if (g_ps2_enhancer_guide_open) {
+        draw_rounded_rect(24.0f, 92.0f, 806.0f, 340.0f, 14.0f,
+                          0xfaf8ffff);
+        draw_rounded_outline(24.0f, 92.0f, 806.0f, 340.0f, 14.0f,
+                             0xd9d1eaff);
+        set_ui_font_size(10, 16);
+        draw_text(58.0f, 118.0f, 0x29243fff,
+                  "PS3 XMB IMAGE SETTINGS");
+        set_ui_font_size(7, 11);
+        draw_text(58.0f, 154.0f, 0x514b69ff,
+                  "Settings > Game Settings > PS / PS2 Upscaler");
+        draw_text(58.0f, 178.0f, 0x26794bff,
+                  "Normal: upscale while preserving the original aspect ratio.");
+        draw_text(58.0f, 202.0f, 0xb27b35ff,
+                  "Full Screen: stretch to fill the screen; aspect ratio changes.");
+        draw_text(58.0f, 242.0f, 0x514b69ff,
+                  "PS / PS2 Smoothing");
+        draw_text(58.0f, 266.0f, 0x26794bff,
+                  "On: soften jagged edges; may look blurrier.");
+        draw_text(58.0f, 290.0f, 0x514b69ff,
+                  "Off: keep pixels sharper; aliasing may be more visible.");
+        draw_text(58.0f, 330.0f, 0x514b69ff,
+                  "Display Settings > Video Output Settings: choose a supported 720p / 1080p output.");
+        draw_text(58.0f, 354.0f, 0x514b69ff,
+                  "This upscales the output; it does not render the PS2 game natively at HD.");
+        draw_text(58.0f, 390.0f, 0x875be8ff,
+                  "These are global XMB settings. PS3 SCALE cannot change them automatically.");
+    }
+
     draw_text(24.0f, PS3SCALE_UI_FOOTER_SINGLE_Y, 0x77718fff,
-              "UP/DOWN: SELECT | CROSS: TOGGLE / RUN | CIRCLE / SELECT: BACK");
+              g_ps2_enhancer_guide_open ?
+              "TRIANGLE / CIRCLE: CLOSE DISPLAY GUIDE" :
+              "UP/DOWN: SELECT | CROSS: TOGGLE / RUN | TRIANGLE: DISPLAY GUIDE | CIRCLE: BACK");
     set_ui_font_size(14, 22);
 }
 
@@ -7670,7 +7702,8 @@ int main(int argc, char *argv[])
                     } else if (game->kind == PS3SCALE_GAME_PS2_ISO ||
                                game->kind == PS3SCALE_GAME_PS2_CLASSIC) {
                         g_ps2_config_manager_selection = 0;
-                         g_ps2_enhancement_flags = PS3SCALE_PS2_CFG_ENABLE_L2H;
+                        g_ps2_enhancer_guide_open = 0;
+                        g_ps2_enhancement_flags = PS3SCALE_PS2_CFG_ENABLE_L2H;
                         snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),
                                  "L2H IS ON BY DEFAULT. SELECT OPTIONS THEN APPLY.");
                         refresh_ps2_config_manager_cache();
@@ -7712,7 +7745,14 @@ int main(int argc, char *argv[])
                 }
             }
         } else if (g_screen == SCREEN_PS2_CONFIG) {
-            if ((circle && !old_circle) || (select && !old_select) || (left && !old_left)) {
+            if (g_ps2_enhancer_guide_open) {
+                if ((triangle && !old_triangle) ||
+                    (circle && !old_circle) || (select && !old_select))
+                    g_ps2_enhancer_guide_open = 0;
+            } else if (triangle && !old_triangle) {
+                g_ps2_enhancer_guide_open = 1;
+            } else if ((circle && !old_circle) ||
+                       (select && !old_select) || (left && !old_left)) {
                 g_screen = SCREEN_DETAILS;
                 g_details_cache_valid = 0;
             } else {
