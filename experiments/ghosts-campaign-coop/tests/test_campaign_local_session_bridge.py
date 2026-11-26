@@ -279,9 +279,10 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         body = function_body(self.source, "ghc_campaign_drill_begin")
         self.assertIn("level.ghc_campaign_session_ready", body)
         self.assertIn("ghc_campaign_drill_player_slot( var_0 )", body)
-        self.assertIn("!isdefined( var_1 ) || var_1 < 0 || var_1 > 1", body)
+        self.assertIn("!isdefined( var_1 ) || ( var_1 != 0 && var_1 != 1 )", body)
         self.assertIn("ghc_campaign_drill_active_spot_for_player", body)
         self.assertIn("ghc_campaign_drill_is_complete", body)
+        self.assertIn("( var_1 != 0 && var_1 != 1 )", body)
         self.assertIn("ghc_campaign_drill_owner_for_spot", body)
         self.assertIn("ghc_campaign_drill_set_owner_for_spot", body)
         self.assertIn("ghc_campaign_drill_set_active_spot_for_player", body)
@@ -304,7 +305,7 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
     def test_drill_completion_state_setter_rejects_non_boolean_values(self):
         body = function_body(self.source, "ghc_campaign_drill_set_complete_for_spot")
         self.assertIn("!isdefined( var_0 )", body)
-        self.assertIn("var_0 < 0 || var_0 > 1", body)
+        self.assertIn("( var_0 != 0 && var_0 != 1 )", body)
         self.assertIn("!isdefined( var_1 )", body)
         self.assertIn("( var_1 != 0 && var_1 != 1 )", body)
         self.assertLess(body.index("return 0"), body.index("level.ghc_campaign_drill_complete_0 = var_1"))
@@ -319,10 +320,55 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
             self.assertIn("!level.ghc_campaign_drill_state_initialized", body)
         for body in (active, owner):
             self.assertIn("!isdefined( var_0 )", body)
-            self.assertIn("var_0 < 0 || var_0 > 1", body)
+            self.assertIn("( var_0 != 0 && var_0 != 1 )", body)
             self.assertIn("!isdefined( var_1 )", body)
-            self.assertIn("var_1 < -1 || var_1 > 1", body)
+            self.assertIn("( var_1 != -1 && var_1 != 0 && var_1 != 1 )", body)
         self.assertIn("( var_1 != 0 && var_1 != 1 )", complete)
+
+    def test_drill_state_getters_fail_closed_for_uninitialized_or_corrupt_state(self):
+        owner = function_body(self.source, "ghc_campaign_drill_owner_for_spot")
+        complete = function_body(self.source, "ghc_campaign_drill_is_complete")
+        active = function_body(self.source, "ghc_campaign_drill_active_spot_for_player")
+        for body in (owner, complete, active):
+            self.assertIn("!isdefined( level.ghc_campaign_drill_state_initialized )", body)
+            self.assertIn("!level.ghc_campaign_drill_state_initialized", body)
+            self.assertIn("!isdefined( var_0 )", body)
+            self.assertIn("( var_0 != 0 && var_0 != 1 )", body)
+        self.assertIn("!isdefined( level.ghc_campaign_drill_owner_0 )", owner)
+        self.assertIn("!isdefined( level.ghc_campaign_drill_owner_1 )", owner)
+        self.assertIn("return -2", owner)
+        self.assertIn("!isdefined( level.ghc_campaign_drill_complete_0 )", complete)
+        self.assertIn("!isdefined( level.ghc_campaign_drill_complete_1 )", complete)
+        self.assertIn("return -1", complete)
+        self.assertIn("!isdefined( level.ghc_campaign_drill_active_player_0 )", active)
+        self.assertIn("!isdefined( level.ghc_campaign_drill_active_player_1 )", active)
+        self.assertIn("return -2", active)
+
+    def test_drill_state_setters_accept_only_discrete_enum_values(self):
+        active = function_body(self.source, "ghc_campaign_drill_set_active_spot_for_player")
+        owner = function_body(self.source, "ghc_campaign_drill_set_owner_for_spot")
+        complete = function_body(self.source, "ghc_campaign_drill_set_complete_for_spot")
+        for body in (active, owner, complete):
+            self.assertIn("( var_0 != 0 && var_0 != 1 )", body)
+        for body in (active, owner):
+            self.assertIn("( var_1 != -1 && var_1 != 0 && var_1 != 1 )", body)
+        self.assertIn("( var_1 != 0 && var_1 != 1 )", complete)
+
+    def test_drill_begin_rolls_back_partial_claim_if_second_setter_fails(self):
+        body = function_body(self.source, "ghc_campaign_drill_begin")
+        self.assertIn("if ( !ghc_campaign_drill_set_owner_for_spot( var_1, var_2 ) )", body)
+        self.assertIn("if ( !ghc_campaign_drill_set_active_spot_for_player( var_2, var_1 ) )", body)
+        self.assertIn("ghc_campaign_drill_set_owner_for_spot( var_1, -1 )", body)
+
+    def test_drill_finish_and_abort_roll_back_partial_state_release(self):
+        finish = function_body(self.source, "ghc_campaign_drill_finish")
+        abort = function_body(self.source, "ghc_campaign_drill_abort_slot")
+        self.assertIn("if ( !ghc_campaign_drill_set_owner_for_spot( var_1, -1 ) )", finish)
+        self.assertIn("ghc_campaign_drill_set_owner_for_spot( var_1, var_3 )", finish)
+        self.assertIn("ghc_campaign_drill_set_complete_for_spot( var_1, 0 )", finish)
+        self.assertIn("if ( !ghc_campaign_drill_set_owner_for_spot( var_1, -1 ) )", abort)
+        self.assertIn("ghc_campaign_drill_set_owner_for_spot( var_1, var_0 )", abort)
+        self.assertIn("var_0 != 0 && var_0 != 1", abort)
 
     def test_drill_state_setter_rejection_precedes_every_state_write(self):
         for name, write in (
