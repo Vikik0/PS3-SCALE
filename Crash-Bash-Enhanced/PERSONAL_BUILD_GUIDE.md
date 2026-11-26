@@ -4,14 +4,14 @@ The public repository intentionally does not contain the Crash Bash disc image o
 
 ## Current verified runtime
 
-The latest successful PS3 runtime build is GitHub Actions run `45858627627` on branch `crash-bash-enhanced`. It produced an unexpired `Crash-Bash-RetroArch-Stage` artifact and a successful unified lobby/runtime PKG. The personal-build workflow validates the selected run and artifact before downloading it.
+The latest successful PS3 runtime build is GitHub Actions run `45864425109` on branch `crash-bash-enhanced`. It produced an unexpired `Crash-Bash-RetroArch-Stage` artifact and a successful unified lobby/runtime PKG. The personal-build workflow validates the selected run and artifact before downloading it.
 
 ## One-time private archive handoff
 
 1. Keep the ZIP at the private Dropbox path `/Crash-Bash-Temporary-Transfer/Crash-Bash-Original-Disc-Temporary-Transfer.zip`.
 2. In GitHub, open **Settings → Secrets and variables → Actions → New repository secret**. GitHub requires a non-empty value; do not create this secret blank.
 3. Immediately before starting the build, generate one single-use Dropbox temporary download URL with a 900-second lifetime and set it as the value of `CRASH_BASH_DISC_ARCHIVE_URL`. Do not open, preview, HEAD-check, or otherwise request the URL; its first HTTP request consumes it. Do not paste the URL into chat or a public file.
-4. Open **Actions → Crash Bash Personal Game-Inclusive PS3 Build → Run workflow** on the `main` branch. Keep the default `runtime_run_id` value `45858627627`.
+4. Open **Actions → Crash Bash Personal Game-Inclusive PS3 Build → Run workflow** on the `main` branch. Keep the default `runtime_run_id` value `45864425109`.
 5. The workflow downloads the archive once, validates the exact BIN/CUE members and hashes, audits the PS1 filesystem, embeds the game, builds one PKG, and encrypts the output for private transfer.
 6. Download the `Crash-Bash-Online-Personal-PS3-Encrypted` artifact before its one-day retention expires.
 7. After the run completes, delete the `CRASH_BASH_DISC_ARCHIVE_URL` repository secret. The URL is single-use and expires, but removing the stored value avoids retaining an obsolete bearer credential.
