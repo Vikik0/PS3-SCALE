@@ -52,6 +52,35 @@ static size_t make_special_record(unsigned char *p, unsigned int lba,
     return 34u;
 }
 
+static void make_record_flags(unsigned char *p, unsigned int lba,
+                              unsigned int size, const char *name,
+                              unsigned char flags)
+{
+    make_record(p, lba, size, name, (flags & 0x02u) != 0u);
+    p[25] = flags;
+}
+
+static void write_u32_at(const char *path, long offset, unsigned int value)
+{
+    unsigned char bytes[4];
+    FILE *fp;
+    put32le(bytes, value);
+    fp = fopen(path, "r+b");
+    assert(fp != NULL);
+    assert(fseek(fp, offset, SEEK_SET) == 0);
+    assert(fwrite(bytes, 1, sizeof(bytes), fp) == sizeof(bytes));
+    assert(fclose(fp) == 0);
+}
+
+static void write_byte_at(const char *path, long offset, unsigned char value)
+{
+    FILE *fp = fopen(path, "r+b");
+    assert(fp != NULL);
+    assert(fseek(fp, offset, SEEK_SET) == 0);
+    assert(fputc(value, fp) != EOF);
+    assert(fclose(fp) == 0);
+}
+
 static void write_sector(const char *path, unsigned int lba,
                          const void *data, size_t size)
 {
@@ -124,7 +153,7 @@ int main(void)
     unsigned char *pvd;
     unsigned char *root;
     unsigned char *boot_dir;
-    unsigned char elf[512];
+    unsigned char elf[4096];
     const char cnf_root[] = "BOOT2 = cdrom0:\\SLUS_203.12;1\r\n";
     const char cnf_nested[] = "BOOT2 = cdrom0:\\BOOT\\SLUS_203.12;1\r\n";
     const char cnf_traversal[] = "BOOT2 = cdrom0:\\..\\SLUS_203.12;1\r\n";
@@ -135,9 +164,12 @@ int main(void)
     size_t loaded_elf_size = 0;
     uint32_t elf_hash = 0;
     uint32_t word = 0;
-    size_t image_size = 25 * SECTOR;
+    size_t image_size = 27 * SECTOR;
     size_t pos = 0;
     size_t boot_pos = 0;
+    size_t root_boot_second_offset = 0;
+    size_t nested_boot_first_offset = 0;
+    size_t nested_boot_second_offset = 0;
 
     make_test_elf(elf, sizeof(elf));
     image = (unsigned char *)calloc(1, image_size);
@@ -154,22 +186,31 @@ int main(void)
     image[17 * SECTOR + 6] = 1;
 
     root = image + 20 * SECTOR;
-    make_record(root + pos, 21, (unsigned int)(sizeof(cnf_nested) - 1),
-                "SYSTEM.CNF", 0);
+    make_record_flags(root + pos, 21, SECTOR, "SYSTEM.CNF", 0x80u);
     pos += root[pos];
-    make_record(root + pos, 22, sizeof(elf), "SLUS_203.12;1", 0);
+    make_record(root + pos, 26, 1u, "SYSTEM.CNF", 0);
+    pos += root[pos];
+
+    make_record_flags(root + pos, 24, SECTOR, "SLUS_203.12;1", 0x80u);
+    pos += root[pos];
+    root_boot_second_offset = pos;
+    make_record(root + pos, 25, SECTOR, "SLUS_203.12;1", 0);
     pos += root[pos];
     make_record(root + pos, 23, SECTOR, "BOOT;1", 1);
 
     boot_dir = image + 23 * SECTOR;
     boot_pos += make_special_record(boot_dir + boot_pos, 23, SECTOR, 0);
     boot_pos += make_special_record(boot_dir + boot_pos, 20, SECTOR, 1);
-    make_record(boot_dir + boot_pos, 24, sizeof(elf), "SLUS_203.12", 0);
+    nested_boot_first_offset = boot_pos;
+    make_record_flags(boot_dir + boot_pos, 24, SECTOR,
+                      "SLUS_203.12", 0x80u);
+    boot_pos += boot_dir[boot_pos];
+    nested_boot_second_offset = boot_pos;
+    make_record(boot_dir + boot_pos, 25, SECTOR, "SLUS_203.12", 0);
 
-    memcpy(image + 21 * SECTOR, cnf_root, sizeof(cnf_root) - 1);
-    memcpy(image + 22 * SECTOR, elf, sizeof(elf));
-    memcpy(image + 24 * SECTOR, elf, sizeof(elf));
-
+    memcpy(image + 21 * SECTOR, cnf_root, sizeof(cnf_root) - 1u);
+    memcpy(image + 24 * SECTOR, elf, SECTOR);
+    memcpy(image + 25 * SECTOR, elf + SECTOR, SECTOR);
     fp = fopen(path, "wb");
     assert(fp != NULL);
     assert(fwrite(image, 1, image_size, fp) == image_size);
@@ -280,25 +321,61 @@ int main(void)
     assert(elf_hash == 0u);
     assert(serial[0] == '\0');
 
-    /* A multi-extent boot ELF is rejected instead of hashing only its first part. */
+    /* Root-level multi-extent BOOT ELF is assembled in directory-record order. */
+    assert(loaded_elf == NULL);
+    assert(ps3scale_ps2_iso_load_boot_elf(
+        path, &loaded_elf, &loaded_elf_size,
+        serial, sizeof(serial), &elf_hash) == 0);
+    assert(loaded_elf_size == sizeof(elf));
+    assert(elf_hash == pcsx2_hash(elf, sizeof(elf)));
+    free(loaded_elf);
+    loaded_elf = NULL;
+
+    /* Nested multi-extent BOOT ELF is assembled from both extents as well. */
     write_sector(path, 21, cnf_nested, sizeof(cnf_nested) - 1u);
-    fp = fopen(path, "r+b");
-    assert(fp != NULL);
-    assert(fseek(fp, 23L * SECTOR + 68L + 25L, SEEK_SET) == 0);
-    {
-        int flags = fgetc(fp);
-        assert(flags >= 0);
-        assert(fseek(fp, -1L, SEEK_CUR) == 0);
-        assert(fputc(flags | 0x80, fp) != EOF);
-    }
-    assert(fclose(fp) == 0);
+    assert(ps3scale_ps2_iso_load_boot_elf(
+        path, &loaded_elf, &loaded_elf_size,
+        serial, sizeof(serial), &elf_hash) == 0);
+    assert(loaded_elf_size == sizeof(elf));
+    assert(elf_hash == pcsx2_hash(elf, sizeof(elf)));
+    free(loaded_elf);
+    loaded_elf = NULL;
+
+    /* A continuation record with a different identifier is rejected. */
+    write_byte_at(path,
+        23L * SECTOR + (long)nested_boot_second_offset + 33L, 'X');
     assert(ps3scale_ps2_iso_load_boot_elf(
         path, &loaded_elf, &loaded_elf_size,
         serial, sizeof(serial), &elf_hash) < 0);
-    assert(loaded_elf == NULL);
-    assert(loaded_elf_size == 0u);
-    assert(elf_hash == 0u);
+    assert(loaded_elf == NULL && loaded_elf_size == 0u && elf_hash == 0u);
     assert(serial[0] == '\0');
+    write_byte_at(path,
+        23L * SECTOR + (long)nested_boot_second_offset + 33L, 'S');
+
+    /* A non-final extent must be sector-aligned. */
+    write_u32_at(path,
+        23L * SECTOR + (long)nested_boot_first_offset + 10L, SECTOR - 1u);
+    assert(ps3scale_ps2_iso_load_boot_elf(
+        path, &loaded_elf, &loaded_elf_size,
+        serial, sizeof(serial), &elf_hash) < 0);
+    assert(loaded_elf == NULL && loaded_elf_size == 0u && elf_hash == 0u);
+    write_u32_at(path,
+        23L * SECTOR + (long)nested_boot_first_offset + 10L, SECTOR);
+
+    /* Extent totals above the 32 MiB boot-ELF limit are rejected before I/O. */
+    write_u32_at(path,
+        23L * SECTOR + (long)nested_boot_second_offset + 10L,
+        33u * 1024u * 1024u);
+    assert(ps3scale_ps2_iso_load_boot_elf(
+        path, &loaded_elf, &loaded_elf_size,
+        serial, sizeof(serial), &elf_hash) < 0);
+    assert(loaded_elf == NULL && loaded_elf_size == 0u && elf_hash == 0u);
+    write_u32_at(path,
+        23L * SECTOR + (long)nested_boot_second_offset + 10L, SECTOR);
+
+    /* SYSTEM.CNF's two extents are also joined for serial extraction. */
+    assert(ps3scale_ps2_iso_read_serial(path, serial, sizeof(serial)) == 0);
+    assert(strcmp(serial, "SLUS_203.12") == 0);
 
     assert(ps3scale_title_id_from_filename(
         "Grand Theft Auto V [BLUS31156].iso", ps3id, sizeof(ps3id)) == 0);
