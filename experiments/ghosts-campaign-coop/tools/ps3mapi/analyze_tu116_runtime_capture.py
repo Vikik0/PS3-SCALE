@@ -24,6 +24,7 @@ from tools.ps3mapi.compare_runtime_strings import compare as compare_runtime_str
 from tools.ps3mapi.diff_runtime_elfs import compare as compare_runtime_elfs
 from tools.ps3mapi.scan_runtime_strings import scan as scan_runtime_strings
 from tools.ps3mapi.verify_tu116_dump import verify as verify_dump
+from tools.ps3mapi.reconstruct_elf_from_ps3mapi_dumps import locate_dump
 from tools.ps3mapi.verify_capture_metadata import verify_capture_metadata
 from tools.ps3mapi.validate_campaign_player_pair_capture import validate_capture as validate_campaign_player_pair_capture
 from tools.ps3mapi.campaign_capture_binding import bind_capture_to_campaign_self
@@ -82,6 +83,32 @@ def _require_file(path: Path, label: str) -> None:
 def _require_directory(path: Path, label: str) -> None:
     if not path.is_dir():
         raise FileNotFoundError(f"{label} directory was not found: {path}")
+
+
+def _locate_dump_segments(dump_dir: Path, mode: str) -> dict[str, Path]:
+    return {
+        f"segment_{index}": locate_dump(dump_dir, index, mode)
+        for index in (0, 1)
+    }
+
+
+def _assert_input_snapshots_unchanged(
+    file_paths: dict[str, Path],
+    file_hashes: dict[str, str],
+    dump_paths: dict[str, dict[str, Path]],
+    dump_hashes: dict[str, dict[str, str]],
+) -> None:
+    for name, path in file_paths.items():
+        if sha256_file(path) != file_hashes[name]:
+            raise ValueError(f"{name} changed during analysis; no outputs were committed")
+
+    for mode, segments in dump_paths.items():
+        for segment_name, path in segments.items():
+            if sha256_file(path) != dump_hashes[mode][segment_name]:
+                raise ValueError(
+                    f"{mode} dump {segment_name} changed during analysis; "
+                    "no outputs were committed"
+                )
 
 
 def _commit_staged_outputs(
@@ -214,6 +241,48 @@ def analyze(
         _require_file(campaign_input_log, "Campaign DualShock Input Probe log")
         _require_file(multiplayer_input_log, "Multiplayer DualShock Input Probe log")
 
+    if campaign_player_capture is not None:
+        campaign_player_capture = Path(campaign_player_capture)
+        _require_file(campaign_player_capture, "Campaign native player-pair capture")
+
+    input_file_paths = {
+        "campaign_default_self": campaign_self,
+        "multiplayer_default_mp_self": multiplayer_self,
+        "tu116_memory_map": map_file,
+    }
+    optional_input_paths = (
+        ("campaign_pad_probe_log", campaign_log),
+        ("multiplayer_pad_probe_log", multiplayer_log),
+        ("campaign_capture_metadata", campaign_metadata),
+        ("multiplayer_capture_metadata", multiplayer_metadata),
+        ("campaign_pad_input_probe_log", campaign_input_log),
+        ("multiplayer_pad_input_probe_log", multiplayer_input_log),
+        ("campaign_player_pair_capture", campaign_player_capture),
+    )
+    input_file_paths.update({
+        name: path for name, path in optional_input_paths if path is not None
+    })
+    input_file_hashes = {
+        name: sha256_file(path) for name, path in input_file_paths.items()
+    }
+
+    campaign_dump_paths = _locate_dump_segments(campaign_dumps, "campaign")
+    multiplayer_dump_paths = _locate_dump_segments(multiplayer_dumps, "multiplayer")
+    if {path.resolve() for path in campaign_dump_paths.values()} & {
+        path.resolve() for path in multiplayer_dump_paths.values()
+    }:
+        raise ValueError("Campaign and Multiplayer dump segment inputs must be different files")
+    dump_paths = {
+        "campaign": campaign_dump_paths,
+        "multiplayer": multiplayer_dump_paths,
+    }
+    dump_hashes = {
+        mode: {
+            name: sha256_file(path) for name, path in segments.items()
+        }
+        for mode, segments in dump_paths.items()
+    }
+
     player_pair_validation = {
         "status": "NOT_PROVIDED",
         "evidence_authenticity": "NOT_AUTHENTICATED_BY_THIS_TOOL",
@@ -225,14 +294,16 @@ def analyze(
         },
     }
     if campaign_player_capture is not None:
-        campaign_player_capture = Path(campaign_player_capture)
-        _require_file(campaign_player_capture, "Campaign native player-pair capture")
         player_pair_data = json.loads(campaign_player_capture.read_text(encoding="utf-8"))
         player_pair_validation = validate_campaign_player_pair_capture(player_pair_data)
-        player_pair_validation["campaign_self_binding"] = bind_capture_to_campaign_self(
-            player_pair_data, campaign_self
-        )
-        player_pair_validation["input_sha256"] = sha256_file(campaign_player_capture)
+        campaign_self_binding = bind_capture_to_campaign_self(player_pair_data, campaign_self)
+        if campaign_self_binding["campaign_self_sha256"] != input_file_hashes["campaign_default_self"]:
+            raise ValueError(
+                "Campaign default.self changed before player-pair capture binding; "
+                "no analysis outputs were committed"
+            )
+        player_pair_validation["campaign_self_binding"] = campaign_self_binding
+        player_pair_validation["input_sha256"] = input_file_hashes["campaign_player_pair_capture"]
 
     capture_metadata = {"status": "NOT_PROVIDED", "both_modes_validated": False}
     if campaign_metadata is not None:
@@ -339,8 +410,8 @@ def analyze(
                 parse_pad_input_probe_log(multiplayer_input_log),
             )
             input_probe_comparison["input_sha256"] = {
-                "campaign_log": sha256_file(campaign_input_log),
-                "multiplayer_log": sha256_file(multiplayer_input_log),
+                "campaign_log": input_file_hashes["campaign_pad_input_probe_log"],
+                "multiplayer_log": input_file_hashes["multiplayer_pad_input_probe_log"],
             }
 
         ppu_analysis = {"status": "NOT_RUN"}
@@ -413,21 +484,12 @@ def analyze(
         write_json(outputs["input_probe_comparison.json"], input_probe_comparison)
         write_json(outputs["campaign_player_pair_validation.json"], player_pair_validation)
 
-        input_hashes = {
-            "campaign_default_self": sha256_file(campaign_self),
-            "multiplayer_default_mp_self": sha256_file(multiplayer_self),
-        }
-        if campaign_log is not None:
-            input_hashes["campaign_pad_probe_log"] = sha256_file(campaign_log)
-            input_hashes["multiplayer_pad_probe_log"] = sha256_file(multiplayer_log)
-        if campaign_metadata is not None:
-            input_hashes["campaign_capture_metadata"] = sha256_file(campaign_metadata)
-            input_hashes["multiplayer_capture_metadata"] = sha256_file(multiplayer_metadata)
-        if campaign_input_log is not None:
-            input_hashes["campaign_pad_input_probe_log"] = sha256_file(campaign_input_log)
-            input_hashes["multiplayer_pad_input_probe_log"] = sha256_file(multiplayer_input_log)
-        if campaign_player_capture is not None:
-            input_hashes["campaign_player_pair_capture"] = sha256_file(campaign_player_capture)
+        _assert_input_snapshots_unchanged(
+            input_file_paths, input_file_hashes, dump_paths, dump_hashes
+        )
+        input_hashes = dict(input_file_hashes)
+        input_hashes["campaign_dump_segments"] = dict(dump_hashes["campaign"])
+        input_hashes["multiplayer_dump_segments"] = dict(dump_hashes["multiplayer"])
 
         summary = {
             "status": status,
