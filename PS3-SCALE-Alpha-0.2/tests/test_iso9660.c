@@ -157,6 +157,20 @@ int main(void)
             "SLUS_212.60", 0xB0AE2D8Bu) == NULL);
         assert(ps3scale_ps2_fps_patch_find(
             "SLUS_203.12", 0xB0AE2D8Au) == NULL);
+        assert(ps3scale_ps2_fps_patch_find(
+            "SLUS_203.49", 0x10B1F370u) != NULL);
+        assert(ps3scale_ps2_fps_patch_find(
+            "SLUS_211.83", 0xE1F17139u) != NULL);
+        assert(ps3scale_ps2_fps_patch_find(
+            "SLUS_214.37", 0x86B490D1u) != NULL);
+        assert(ps3scale_ps2_fps_patch_find(
+            "SLUS_214.55", 0xBAFEFC57u) != NULL);
+        assert(ps3scale_ps2_fps_patch_find(
+            "SLUS_214.15", 0xE10A865Bu) != NULL);
+        assert(ps3scale_ps2_fps_patch_find(
+            "SLUS_218.85", 0xB15F0BD6u) != NULL);
+        assert(ps3scale_ps2_fps_patch_find(
+            "SLUS_206.96", 0xFCC09959u) != NULL);
     }
     free(loaded_elf);
 

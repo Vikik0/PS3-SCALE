@@ -64,7 +64,20 @@ The first candidate is **Ed, Edd n Eddy: The Mis-Edventures (NTSC-U)** from the 
 
 PCSX2's patch filename hash is not standard CRC32: its game ELF hash is the XOR of little-endian 32-bit words across the boot ELF. PS3 SCALE now extracts the root-level BOOT/BOOT2 ELF from SYSTEM.CNF, computes this same hash, and reads the original word only from a file-backed executable MIPS ELF segment. The converter can then create a netemu `0x0A` replacement entry with the exact original word as a guard.
 
-This is a proof-of-concept conversion path, not yet a hardware-verified PS3 patch. The patch must be tested on the target PS3 Slim for actual frame rate, timing, audio, cutscenes and stability before being marked verified.
+The current experimental catalogue contains eight exact serial + ELF-hash candidates from the same pinned PCSX2 patch commit:
+
+| PS2 title | Serial | PCSX2 ELF hash |
+|---|---|---|
+| Ed, Edd n Eddy: The Mis-Edventures | SLUS_212.60 | B0AE2D8A |
+| Scooby-Doo! Night of 100 Frights | SLUS_203.49 | 10B1F370 |
+| Teen Titans | SLUS_211.83 | E1F17139 |
+| Disney's Kim Possible - What's the Switch | SLUS_214.37 | 86B490D1 |
+| Happy Feet | SLUS_214.55 | BAFEFC57 |
+| The Ant Bully | SLUS_214.15 | E10A865B |
+| Indiana Jones and the Staff of Kings | SLUS_218.85 | B15F0BD6 |
+| Jimmy Neutron: Jet Fusion | SLUS_206.96 | FCC09959 |
+
+Each source file's `[60 FPS]` section contains a single `patch=1,EE,...,word,...` replacement. The catalogue deliberately excludes PCSX2 extended writes, mode-2 addresses and patches whose notes require EE overclocking. These remain candidates, not hardware-verified PS3 patches. Every candidate must be tested on the target PS3 Slim for actual frame rate, timing, audio, cutscenes and stability before being marked verified.
 
 ## Next stage: game-specific FPS patch catalogue
 
