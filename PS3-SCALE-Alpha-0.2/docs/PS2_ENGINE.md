@@ -38,7 +38,7 @@ The PS3 netemu CONFIG format does include command `0x0A` (`EE_INSN_REPLACE32`), 
 
 PCSX2 `.pnach` files are not drop-in PS3 CONFIG files. Some entries are runtime data writes, some target code, and some depend on emulator-specific behavior. PS3 SCALE now has a deliberately narrow converter for a small, source-pinned set of proof-of-concept patch records. It resolves root-level or nested ISO9660 boot paths, assembles bounded multi-extent files, extracts the boot ELF, matches the PCSX2 serial + XOR ELF hash, maps each EE address through an executable `PT_LOAD` segment, reads the original 32-bit word, and creates a guarded netemu `0x0A` entry. It does not import arbitrary `.pnach` files, accept unsupported patch types, or guess offsets.
 
-Artemis PS3 is not treated as a generic runtime cheat injector for a PS2 game inside `ps2_netemu`. The current catalogue contains nine experimental 60 FPS candidates. The user must select the Enhancer action to apply a patch; games are not silently modified during launch. The catalogue does not promise a working 60 FPS result until tested on the actual PS3 Slim, and it does not convert arbitrary PCSX2 cheats.
+Artemis PS3 is not treated as a generic runtime cheat injector for a PS2 game inside `ps2_netemu`. The current catalogue contains eleven experimental 60 FPS candidates. The user must select the Enhancer action to apply a patch; games are not silently modified during launch. The catalogue does not promise a working 60 FPS result until tested on the actual PS3 Slim, and it does not convert arbitrary PCSX2 cheats.
 
 ## PS3 SCALE implementation
 
@@ -94,7 +94,7 @@ Only `word` writes are converted; files using `extended`, byte writes or conditi
 
 PCSX2's patch filename hash is not standard CRC32: its game ELF hash is the XOR of little-endian 32-bit words across the boot ELF. PS3 SCALE resolves the BOOT/BOOT2 path from SYSTEM.CNF through nested ISO9660 directories, computes this same hash, and reads the original word only from a file-backed executable MIPS ELF segment. The converter can then create a netemu `0x0A` replacement entry with the exact original word as a guard.
 
-The current experimental catalogue contains nine exact serial + ELF-hash candidates from the same pinned PCSX2 patch commit:
+The current experimental catalogue contains eleven exact serial + ELF-hash candidates from the same pinned PCSX2 patch commit:
 
 | PS2 title | Serial | PCSX2 ELF hash |
 |---|---|---|
@@ -107,6 +107,10 @@ The current experimental catalogue contains nine exact serial + ELF-hash candida
 | Indiana Jones and the Staff of Kings | SLUS_218.85 | B15F0BD6 |
 | Jimmy Neutron: Jet Fusion | SLUS_206.96 | FCC09959 |
 | Shin Megami Tensei - Devil Summoner 1 | SLPM_662.46 | 67D76160 |
+| Manhunt | SLUS_208.27 | 38DEA143 |
+| Pirates of the Caribbean: The Legend of Jack Sparrow | SLUS_211.10 | 632E3976 |
+
+The Manhunt and Pirates of the Caribbean candidates each use one direct aligned `word` replacement from their pinned PCSX2 `[60 FPS]` sections; neither section notes an EE-overclock requirement. For Manhunt, only the FPS section is imported; its separate PCSX2 crane-bug fix is not included.
 
 The Devil Summoner candidate uses the pinned PCSX2 `[60 FPS]` section's single aligned word replacement at `0x0011B560`; its same file's widescreen and no-interlacing sections are not imported. No EE-overclock requirement is noted in that FPS section.
 

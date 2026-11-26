@@ -14,6 +14,8 @@ static const ps3scale_ps2_patch_word_t fps_ant[]={{0x0015CCD4u,0x2C620000u}};
 static const ps3scale_ps2_patch_word_t fps_indiana[]={{0x001505B4u,0x2C620000u}};
 static const ps3scale_ps2_patch_word_t fps_jimmy[]={{0x0022CA0Cu,0x28420001u}};
 static const ps3scale_ps2_patch_word_t fps_devil_summoner[]={{0x0011B560u,0x10000006u}};
+static const ps3scale_ps2_patch_word_t fps_manhunt[]={{0x00548960u,0x08000001u}};
+static const ps3scale_ps2_patch_word_t fps_pirates[]={{0x00384CD0u,0x10000004u}};
 static const ps3scale_ps2_patch_word_t ws_scooby[]={
  {0x001E6268u,0x080A04ACu},{0x002812B0u,0x3C013F40u},{0x002812B4u,0x4481F000u},
  {0x002812B8u,0xC6010068u},{0x002812BCu,0xC602006Cu},{0x002812C0u,0x461E0843u},
@@ -47,6 +49,8 @@ static const ps3scale_ps2_game_patch_t g_patches[]={
  PATCH("SLUS_218.85",0xB15F0BD6u,"Indiana Jones and the Staff of Kings (NTSC-U)","SLUS-21885_B15F0BD6.pnach",PS3SCALE_PS2_PATCH_FPS,fps_indiana),
  PATCH("SLUS_206.96",0xFCC09959u,"Jimmy Neutron: Jet Fusion (NTSC-U)","SLUS-20696_FCC09959.pnach",PS3SCALE_PS2_PATCH_FPS,fps_jimmy),
  PATCH("SLPM_662.46",0x67D76160u,"Shin Megami Tensei - Devil Summoner 1","SLPM-66246_67D76160.pnach",PS3SCALE_PS2_PATCH_FPS,fps_devil_summoner),
+ PATCH("SLUS_208.27",0x38DEA143u,"Manhunt (NTSC-U)","SLUS-20827_38DEA143.pnach",PS3SCALE_PS2_PATCH_FPS,fps_manhunt),
+ PATCH("SLUS_211.10",0x632E3976u,"Pirates of the Caribbean: The Legend of Jack Sparrow (NTSC-U)","SLUS-21110_632E3976.pnach",PS3SCALE_PS2_PATCH_FPS,fps_pirates),
  PATCH("SLUS_203.49",0x10B1F370u,"Scooby-Doo! Night of 100 Frights (NTSC-U)","SLUS-20349_10B1F370.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_scooby),
  PATCH("SLUS_211.83",0xE1F17139u,"Teen Titans (NTSC-U)","SLUS-21183_E1F17139.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_titans),
  PATCH("SLUS_214.37",0x86B490D1u,"Disney's Kim Possible - What's the Switch (NTSC-U)","SLUS-21437_86B490D1.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_kim),
