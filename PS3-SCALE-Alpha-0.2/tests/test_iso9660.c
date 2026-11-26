@@ -155,6 +155,8 @@ int main(void)
     unsigned char *boot_dir;
     unsigned char elf[4096];
     const char cnf_root[] = "BOOT2 = cdrom0:\\SLUS_203.12;1\r\n";
+    const char cnf_tail[] = "\r\nBOOT2 = cdrom0:\\SLUS_203.12;1\r\n";
+    unsigned char cnf_first[SECTOR];
     const char cnf_nested[] = "BOOT2 = cdrom0:\\BOOT\\SLUS_203.12;1\r\n";
     const char cnf_traversal[] = "BOOT2 = cdrom0:\\..\\SLUS_203.12;1\r\n";
     char serial[16];
@@ -164,7 +166,7 @@ int main(void)
     size_t loaded_elf_size = 0;
     uint32_t elf_hash = 0;
     uint32_t word = 0;
-    size_t image_size = 27 * SECTOR;
+    size_t image_size = 28 * SECTOR;
     size_t pos = 0;
     size_t boot_pos = 0;
     size_t nested_boot_first_offset = 0;
@@ -187,12 +189,13 @@ int main(void)
     root = image + 20 * SECTOR;
     make_record_flags(root + pos, 21, SECTOR, "SYSTEM.CNF", 0x80u);
     pos += root[pos];
-    make_record(root + pos, 26, 1u, "SYSTEM.CNF", 0);
+    make_record(root + pos, 26, (unsigned int)(sizeof(cnf_tail) - 1u),
+                "SYSTEM.CNF", 0);
     pos += root[pos];
 
     make_record_flags(root + pos, 24, SECTOR, "SLUS_203.12;1", 0x80u);
     pos += root[pos];
-    make_record(root + pos, 25, SECTOR, "SLUS_203.12;1", 0);
+    make_record(root + pos, 27, SECTOR, "SLUS_203.12;1", 0);
     pos += root[pos];
     make_record(root + pos, 23, SECTOR, "BOOT;1", 1);
 
@@ -204,11 +207,13 @@ int main(void)
                       "SLUS_203.12", 0x80u);
     boot_pos += boot_dir[boot_pos];
     nested_boot_second_offset = boot_pos;
-    make_record(boot_dir + boot_pos, 25, SECTOR, "SLUS_203.12", 0);
+    make_record(boot_dir + boot_pos, 27, SECTOR, "SLUS_203.12", 0);
 
-    memcpy(image + 21 * SECTOR, cnf_root, sizeof(cnf_root) - 1u);
+    memset(cnf_first, ' ', sizeof(cnf_first));
+    memcpy(image + 21 * SECTOR, cnf_first, sizeof(cnf_first));
+    memcpy(image + 26 * SECTOR, cnf_tail, sizeof(cnf_tail) - 1u);
     memcpy(image + 24 * SECTOR, elf, SECTOR);
-    memcpy(image + 25 * SECTOR, elf + SECTOR, SECTOR);
+    memcpy(image + 27 * SECTOR, elf + SECTOR, SECTOR);
     fp = fopen(path, "wb");
     assert(fp != NULL);
     assert(fwrite(image, 1, image_size, fp) == image_size);
@@ -223,6 +228,7 @@ int main(void)
         serial, sizeof(serial), &elf_hash) == 0);
     assert(strcmp(serial, "SLUS_203.12") == 0);
     assert(loaded_elf_size == sizeof(elf));
+    assert(memcmp(loaded_elf, elf, sizeof(elf)) == 0);
     assert(elf_hash == pcsx2_hash(elf, sizeof(elf)));
     assert(ps3scale_ps2_elf_read_exec_word(
         loaded_elf, loaded_elf_size, 0x00100004, &word) == 0);
@@ -305,6 +311,7 @@ int main(void)
         serial, sizeof(serial), &elf_hash) == 0);
     assert(strcmp(serial, "SLUS_203.12") == 0);
     assert(loaded_elf_size == sizeof(elf));
+    assert(memcmp(loaded_elf, elf, sizeof(elf)) == 0);
     assert(elf_hash == pcsx2_hash(elf, sizeof(elf)));
     free(loaded_elf);
     loaded_elf = NULL;
@@ -326,6 +333,7 @@ int main(void)
         path, &loaded_elf, &loaded_elf_size,
         serial, sizeof(serial), &elf_hash) == 0);
     assert(loaded_elf_size == sizeof(elf));
+    assert(memcmp(loaded_elf, elf, sizeof(elf)) == 0);
     assert(elf_hash == pcsx2_hash(elf, sizeof(elf)));
     free(loaded_elf);
     loaded_elf = NULL;
@@ -336,6 +344,7 @@ int main(void)
         path, &loaded_elf, &loaded_elf_size,
         serial, sizeof(serial), &elf_hash) == 0);
     assert(loaded_elf_size == sizeof(elf));
+    assert(memcmp(loaded_elf, elf, sizeof(elf)) == 0);
     assert(elf_hash == pcsx2_hash(elf, sizeof(elf)));
     free(loaded_elf);
     loaded_elf = NULL;
@@ -371,6 +380,31 @@ int main(void)
     assert(loaded_elf == NULL && loaded_elf_size == 0u && elf_hash == 0u);
     write_u32_at(path,
         23L * SECTOR + (long)nested_boot_second_offset + 10L, SECTOR);
+
+    /* Extent chains longer than the 32-record bound are rejected. */
+    {
+        unsigned char many_extents[SECTOR];
+        size_t many_pos = 0;
+        unsigned int extent_index;
+        memset(many_extents, 0, sizeof(many_extents));
+        many_pos += make_special_record(
+            many_extents + many_pos, 23, SECTOR, 0);
+        many_pos += make_special_record(
+            many_extents + many_pos, 20, SECTOR, 1);
+        for (extent_index = 0; extent_index < 33u; ++extent_index) {
+            unsigned char flags = extent_index < 32u ? 0x80u : 0u;
+            make_record_flags(many_extents + many_pos,
+                24u + extent_index, SECTOR, "SLUS_203.12", flags);
+            many_pos += many_extents[many_pos];
+        }
+        assert(many_pos <= sizeof(many_extents));
+        write_sector(path, 23, many_extents, sizeof(many_extents));
+        assert(ps3scale_ps2_iso_load_boot_elf(
+            path, &loaded_elf, &loaded_elf_size,
+            serial, sizeof(serial), &elf_hash) < 0);
+        assert(loaded_elf == NULL && loaded_elf_size == 0u && elf_hash == 0u);
+        assert(serial[0] == '\0');
+    }
 
     /* SYSTEM.CNF's two extents are also joined for serial extraction. */
     assert(ps3scale_ps2_iso_read_serial(path, serial, sizeof(serial)) == 0);
