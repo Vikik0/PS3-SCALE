@@ -58,6 +58,25 @@ def make_project(root: Path):
     )
     reports = root / "reports"
     reports.mkdir(parents=True, exist_ok=True)
+    for filename in (
+        "PHASE112_REPORT_AR.md",
+        "PHASE112_VALIDATION.json",
+        "PHASE113_REPORT_AR.md",
+        "PHASE113_VALIDATION.json",
+        "PHASE114_REPORT_AR.md",
+        "PHASE114_VALIDATION.json",
+        "PHASE115_REPORT_AR.md",
+        "PHASE115_VALIDATION.json",
+        "PHASE117_REPORT_AR.md",
+        "PHASE117_VALIDATION.json",
+    ):
+        shutil.copy2(source_root / "reports" / filename, reports / filename)
+    docs = root / "docs"
+    docs.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(
+        source_root / "docs" / "phase116-ps3-runtime-capture-quickstart-ar.md",
+        docs / "phase116-ps3-runtime-capture-quickstart-ar.md",
+    )
     shutil.copy2(
         source_root / "reports" / "PHASE88_MISSION_EVENT_LOCK_MAP.json",
         reports / "PHASE88_MISSION_EVENT_LOCK_MAP.json",
@@ -154,6 +173,9 @@ class CaptureKitBuilderTests(unittest.TestCase):
                 self.assertTrue(any(name.endswith("/Tools/mission_event_activator_audit.py") for name in names))
                 self.assertTrue(any(name.endswith("/Reports/PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json") for name in names))
                 self.assertTrue(any(name.endswith("/Reports/PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json") for name in names))
+                self.assertTrue(any(name.endswith("/Reports/PHASE117_REPORT_AR.md") for name in names))
+                self.assertTrue(any(name.endswith("/Reports/PHASE117_VALIDATION.json") for name in names))
+                self.assertTrue(any(name.endswith("/Docs/PS3_RUNTIME_CAPTURE_QUICKSTART_AR.md") for name in names))
 
     def test_missing_ci_artifact_payload_fails_closed(self):
         with tempfile.TemporaryDirectory() as temp:

@@ -161,6 +161,17 @@ def build_capture_kit(
             root / "Experimental_GSC_Not_Installed" / registry_source.name,
         )
 
+        # Arabic one-page runtime capture quick start.
+        quickstart = (
+            project_root / "docs" / "phase116-ps3-runtime-capture-quickstart-ar.md"
+        )
+        if not quickstart.is_file():
+            raise FileNotFoundError(f"missing PS3 runtime capture quick start: {quickstart}")
+        shutil.copy2(
+            quickstart,
+            root / "Docs" / "PS3_RUNTIME_CAPTURE_QUICKSTART_AR.md",
+        )
+
         # Capture scripts, runtime analyzers, and integrity verifier.
         ps3mapi_root = project_root / "tools" / "ps3mapi"
         ps3mapi_destination = root / "Tools" / "ps3mapi"
@@ -205,6 +216,16 @@ def build_capture_kit(
             "PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json",
             "PHASE90_REPORT_AR.md",
             "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json",
+            "PHASE112_REPORT_AR.md",
+            "PHASE112_VALIDATION.json",
+            "PHASE113_REPORT_AR.md",
+            "PHASE113_VALIDATION.json",
+            "PHASE114_REPORT_AR.md",
+            "PHASE114_VALIDATION.json",
+            "PHASE115_REPORT_AR.md",
+            "PHASE115_VALIDATION.json",
+            "PHASE117_REPORT_AR.md",
+            "PHASE117_VALIDATION.json",
         ):
             source = project_root / "reports" / filename
             if source.is_file():
@@ -236,7 +257,7 @@ The mission trigger/activator audit report is pinned to the original source arch
 - Campaign and Multiplayer probe mode files.
 - PS3MAPI memory-dump scripts and TU1.16 runtime analyzers.
 - Experimental GSC source and GSCBIN under Experimental_GSC_Not_Installed only.
-- Phase 84–90 reports, event-lock map, activator-lineage audit, mission refactor graph and MANIFEST.json with per-file SHA-256 checksums.
+- Selected Phase 84–90 and Phase 112–117 reports, event-lock map, activator-lineage audit, mission refactor graph, Arabic runtime capture quick start and MANIFEST.json with per-file SHA-256 checksums.
 
 ## Recommended offline test
 
@@ -246,7 +267,7 @@ Use the comparators in Tools to analyze both logs. A passing port-input comparis
 
 ## Experimental GSC warning
 
-The Local Session bridge and player registry are compiled GSC scripts, not PRX files. They are not inserted into a retail FastFile and are not runtime-tested. Do not load GSCBIN through PS3MAPI. The event-lock API is lifecycle-integrated with the session bridge but is not yet wired into original mission handlers.
+The Local Session bridge and player registry are compiled GSC scripts, not PRX files. They are not inserted into a retail FastFile and are not runtime-tested. Do not load GSCBIN through PS3MAPI. The bridge includes activator-aware entity-trigger and player-command adapters, but neither is wired into original mission handlers yet.
 
 ## Not yet proven
 
