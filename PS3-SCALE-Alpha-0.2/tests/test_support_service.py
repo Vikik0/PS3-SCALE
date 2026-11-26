@@ -79,6 +79,8 @@ assert "PS3SCALE_GITHUB_TOKEN" not in main
 assert "PS3SCALE_SUPPORT_URL" in main
 assert "PS3SCALE_SUPPORT_API_KEY" in main
 assert "YOUR_PUBLISHABLE_KEY" in main
+assert "Never include PSN IDs, passwords or account tokens." in main
+assert "Model, firmware, platform and app version are added automatically." in main
 assert "npm:@supabase/supabase-js@2.119.2" in (root / "supabase/functions/ps3scale-support/deno.json").read_text(encoding="utf-8")
 assert "verify_jwt = false" in config
 gitignore = (root / ".gitignore").read_text(encoding="utf-8")
