@@ -10,7 +10,7 @@ PS3 SCALE is a PS3 homebrew application for managing PS3/PS2 game libraries and 
 - Development branch: `design/splash-transitions-ui-v6`
 - Review: [Draft PR #16](https://github.com/Vikik0/PS3-SCALE/pull/16)
 
-The latest Alpha 0.33 GitHub Actions run #903 passed host tests, the support Edge Function type-check, and PS3 ELF/SELF/standard PKG/GNPDRM PKG validation. A successful CI build is not a substitute for a physical-console smoke test; hardware behavior remains explicitly unverified until tested on a real PS3.
+The Alpha 0.33 code build recorded in GitHub Actions run #903 passed host tests, the support Edge Function type-check, and PS3 ELF/SELF/standard PKG/GNPDRM PKG validation. A successful CI build is not a substitute for a physical-console smoke test; hardware behavior remains explicitly unverified until tested on a real PS3.
 
 ## Current features
 
