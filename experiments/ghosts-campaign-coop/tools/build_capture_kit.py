@@ -161,7 +161,24 @@ def build_capture_kit(
             root / "Experimental_GSC_Not_Installed" / registry_source.name,
         )
 
-        # Arabic one-page runtime capture quick start.
+        # Arabic quick starts and static mission trigger inventory.
+        quickstart = (
+            project_root / "docs" / "phase116-ps3-runtime-capture-quickstart-ar.md"
+        )
+        if not quickstart.is_file():
+            raise FileNotFoundError(f"missing PS3 runtime capture quick start: {quickstart}")
+        shutil.copy2(
+            quickstart,
+            root / "Docs" / "PS3_RUNTIME_CAPTURE_QUICKSTART_AR.md",
+        )
+        callsite_doc = project_root / "docs" / "phase118-trigger-callsite-inventory.md"
+        if not callsite_doc.is_file():
+            raise FileNotFoundError(f"missing trigger call-site inventory: {callsite_doc}")
+        shutil.copy2(
+            callsite_doc,
+            root / "Docs" / "PHASE118_TRIGGER_CALLSITE_INVENTORY.md",
+        )
+
         quickstart = (
             project_root / "docs" / "phase116-ps3-runtime-capture-quickstart-ar.md"
         )
@@ -226,6 +243,9 @@ def build_capture_kit(
             "PHASE115_VALIDATION.json",
             "PHASE117_REPORT_AR.md",
             "PHASE117_VALIDATION.json",
+            "PHASE118_REPORT_AR.md",
+            "PHASE118_TRIGGER_CALLSITE_INVENTORY.json",
+            "PHASE118_VALIDATION.json",
         ):
             source = project_root / "reports" / filename
             if source.is_file():
@@ -257,7 +277,7 @@ The mission trigger/activator audit report is pinned to the original source arch
 - Campaign and Multiplayer probe mode files.
 - PS3MAPI memory-dump scripts and TU1.16 runtime analyzers.
 - Experimental GSC source and GSCBIN under Experimental_GSC_Not_Installed only.
-- Selected Phase 84–90 and Phase 112–117 reports, event-lock map, activator-lineage audit, mission refactor graph, Arabic runtime capture quick start and MANIFEST.json with per-file SHA-256 checksums.
+- Selected Phase 84–90 and Phase 112–118 reports, event-lock map, activator-lineage audit, mission refactor graph, Arabic runtime capture quick start, trigger call-site inventory and MANIFEST.json with per-file SHA-256 checksums.
 
 ## Recommended offline test
 

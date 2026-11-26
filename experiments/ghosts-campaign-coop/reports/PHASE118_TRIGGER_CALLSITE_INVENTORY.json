@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "phase": 118,
+  "source_archive": {
+    "filename": "Ghosts_Campaign_Missions_Phase31.zip",
+    "bytes": 1530334,
+    "sha256": "ca4c0fb46a12b6179b406bc6f7ee5e10729c66ac7a7d2664bf9c3d3cfa14a77a"
+  },
+  "summary": {
+    "black_ice": 3,
+    "carrier": 2,
+    "cornered": 10,
+    "total": 15,
+    "migrated": 0
+  },
+  "callsites": [
+    {
+      "mission": "Black Ice",
+      "file": "maps/black_ice_ascend.gsc",
+      "line": 293,
+      "caller": "ascend_logic",
+      "helper": "maps\\black_ice_util::waittill_trigger",
+      "source_sha256": "7204bb1ec7c217f95a157765642c2953c0aa5a892d4b17f50cdd7a7367f945c0"
+    },
+    {
+      "mission": "Black Ice",
+      "file": "maps/black_ice_command.gsc",
+      "line": 66,
+      "caller": "magicreloadwhenreachenemy",
+      "helper": "maps\\black_ice_util::waittill_trigger",
+      "source_sha256": "fd224c0d5fd7417dcfeaed5c761d353d47afb244584e964e02c5d717fc47b6f3"
+    },
+    {
+      "mission": "Black Ice",
+      "file": "maps/black_ice_flarestack.gsc",
+      "line": 268,
+      "caller": "event_player_turns_key",
+      "helper": "maps\\black_ice_util::waittill_trigger",
+      "source_sha256": "87257aab8fa64715abc08636768a1c52a93ffc2a1d4c8e36b0a6e4878df8c11f"
+    },
+    {
+      "mission": "Carrier",
+      "file": "maps/carrier_deck_transition.gsc",
+      "line": 432,
+      "caller": "osprey_control",
+      "helper": "maps\\player_scripted_anim_util::waittill_trigger",
+      "source_sha256": "71f4e9dbb35ae33290d44195b0c2b4fec6307cb488068e0a3459ba49f204ae07"
+    },
+    {
+      "mission": "Carrier",
+      "file": "maps/carrier_defend_sparrow.gsc",
+      "line": 139,
+      "caller": "run_deck_transition",
+      "helper": "maps\\player_scripted_anim_util::waittill_trigger",
+      "source_sha256": "851374e3d50cf27549922afaf8a03b569af6d4b975a84d3c5443a3580611f27f"
+    },
+    {
+      "mission": "Cornered",
+      "file": "maps/cornered_building_entry.gsc",
+      "line": 346,
+      "caller": "handle_building_entry",
+      "helper": "maps\\player_scripted_anim_util::waittill_trigger",
+      "source_sha256": "723471a1f7aa700b982ce5b7225decd2d2e274bd88206352c083dc119bab8214"
+    },
+    {
+      "mission": "Cornered",
+      "file": "maps/cornered_building_entry.gsc",
+      "line": 671,
+      "caller": "upload_virus_loop_anims",
+      "helper": "maps\\player_scripted_anim_util::waittill_trigger",
+      "source_sha256": "723471a1f7aa700b982ce5b7225decd2d2e274bd88206352c083dc119bab8214"
+    },
+    {
+      "mission": "Cornered",
+      "file": "maps/cornered_building_entry.gsc",
+      "line": 766,
+      "caller": "upload_virus_anims",
+      "helper": "maps\\player_scripted_anim_util::waittill_trigger",
+      "source_sha256": "723471a1f7aa700b982ce5b7225decd2d2e274bd88206352c083dc119bab8214"
+    },
+    {
+      "mission": "Cornered",
+      "file": "maps/cornered_building_entry.gsc",
+      "line": 783,
+      "caller": "upload_virus_anims",
+      "helper": "maps\\player_scripted_anim_util::waittill_trigger",
+      "source_sha256": "723471a1f7aa700b982ce5b7225decd2d2e274bd88206352c083dc119bab8214"
+    },
+    {
+      "mission": "Cornered",
+      "file": "maps/cornered_building_entry.gsc",
+      "line": 2757,
+      "caller": "handle_rappel_inverted",
+      "helper": "maps\\player_scripted_anim_util::waittill_trigger",
+      "source_sha256": "723471a1f7aa700b982ce5b7225decd2d2e274bd88206352c083dc119bab8214"
+    },
+    {
+      "mission": "Cornered",
+      "file": "maps/cornered_destruct.gsc",
+      "line": 794,
+      "caller": "hvt_office_anim_struct",
+      "helper": "maps\\player_scripted_anim_util::waittill_trigger",
+      "source_sha256": "11619ed70e83f89ce4d2d3e61f73dc4f87a0557827e68dc3acc6ec5c6488bcb3"
+    },
+    {
+      "mission": "Cornered",
+      "file": "maps/cornered_interior.gsc",
+      "line": 2398,
+      "caller": "junction_elevator_control_doors_open",
+      "helper": "maps\\player_scripted_anim_util::waittill_trigger",
+      "source_sha256": "79eae3c39c2e2502428c902cd30ed5686d5c87f4dfc028a3e48f386a8870fa76"
+    },
+    {
+      "mission": "Cornered",
+      "file": "maps/cornered_intro.gsc",
+      "line": 1896,
+      "caller": "zipline_mvmt_npc",
+      "helper": "maps\\player_scripted_anim_util::waittill_trigger",
+      "source_sha256": "a5bb759c6fa663bb24841793077a9322a7b5374f38f51ead3f42b21cac66d9d8"
+    },
+    {
+      "mission": "Cornered",
+      "file": "maps/cornered_rappel.gsc",
+      "line": 131,
+      "caller": "player_combat_rappel",
+      "helper": "maps\\player_scripted_anim_util::waittill_trigger",
+      "source_sha256": "83ac9beae5fa4914eab16e15ac32af6f448a0f0f87816dd15dd39e131f7d00fe"
+    },
+    {
+      "mission": "Cornered",
+      "file": "maps/cornered_zipline_turret.gsc",
+      "line": 20,
+      "caller": "player_handle_speed_for_knockdown",
+      "helper": "maps\\player_scripted_anim_util::waittill_trigger",
+      "source_sha256": "b92e8b9c363145eb6b140e620fe47b736627bab2148806b1d9061e524bec879b"
+    }
+  ],
+  "critical_shared_interactions": [
+    {
+      "mission": "Black Ice",
+      "routine": "event_player_turns_key",
+      "event_lock_id": 0,
+      "status": "BLOCKED_ACTIVATOR_LINEAGE_MISSING"
+    },
+    {
+      "mission": "Carrier",
+      "routine": "cut_the_rope",
+      "event_lock_id": 1,
+      "status": "BLOCKED_ACTIVATOR_LINEAGE_MISSING",
+      "event_shape": "notifyonplayercommand"
+    },
+    {
+      "mission": "Cornered",
+      "routine": "gun_down_trigger_internal",
+      "event_lock_id": 2,
+      "status": "BLOCKED_ACTIVATOR_LINEAGE_MISSING"
+    },
+    {
+      "mission": "Cornered",
+      "routine": "upload_virus_enter",
+      "event_lock_id": 3,
+      "status": "BLOCKED_ACTIVATOR_LINEAGE_MISSING"
+    }
+  ],
+  "adapters": {
+    "entity_trigger": "ghc_campaign_wait_for_owned_trigger",
+    "player_command": "ghc_campaign_wait_for_owned_player_command"
+  },
+  "decision": "Do not mass-replace legacy helper calls. Migrate one critical handler only after physical PS3 Campaign native-player evidence; preserve shared mission coordinator and event ownership.",
+  "runtime_boundary": {
+    "physical_ps3_tested": false,
+    "native_campaign_player_two_proven": false,
+    "shared_interactions_ready": "0/4",
+    "retail_fastfiles_modified": false
+  }
+}

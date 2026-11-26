@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "phase": 118,
+  "title": "Original mission trigger call-site inventory",
+  "source_archive_sha256": "ca4c0fb46a12b6179b406bc6f7ee5e10729c66ac7a7d2664bf9c3d3cfa14a77a",
+  "counts": {
+    "black_ice": 3,
+    "carrier": 2,
+    "cornered": 10,
+    "total": 15,
+    "migrated": 0
+  },
+  "four_shared_interactions": [
+    "Black Ice:event_player_turns_key",
+    "Carrier:cut_the_rope",
+    "Cornered:gun_down_trigger_internal",
+    "Cornered:upload_virus_enter"
+  ],
+  "status": "STATIC_AUDIT_COMPLETE; MISSION_MIGRATION_BLOCKED_PENDING_PHYSICAL_PS3_RUNTIME_EVIDENCE",
+  "runtime_boundary": {
+    "physical_ps3_tested": false,
+    "player_two": "NOT_PROVEN",
+    "shared_interactions_ready": "0/4",
+    "retail_fastfiles_modified": false
+  }
+}

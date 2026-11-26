@@ -524,3 +524,12 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - See `docs/phase117-player-command-adapter.md` and `reports/PHASE117_REPORT_AR.md`.
 
 **Runtime and mission integration gate unchanged:** the Carrier rope-cut handler and all other original mission call sites remain unmigrated. Player 2 remains `NOT_PROVEN`; shared interactions remain **0/4 ready**. No physical PS3 Campaign execution or retail EBOOT/SELF/FastFile modification is claimed.
+
+### Phase 118 — original mission trigger call-site inventory
+
+- Audited the exact supplied Phase 31 mission archive and pinned its SHA-256.
+- Confirmed **15** legacy waittill_trigger call sites: 3 Black Ice, 2 Carrier and 10 Cornered. All 15 still use the legacy wrapper; none has been migrated to an explicit player.
+- Recorded every source file, line, caller and source-file SHA-256 in reports/PHASE118_TRIGGER_CALLSITE_INVENTORY.json.
+- Reconfirmed the four blocked shared interactions: Black Ice event_player_turns_key, Carrier cut_the_rope, Cornered gun_down_trigger_internal, and Cornered upload_virus_enter.
+- Decision: no mass replacement. Migrate one handler only after a physical PS3 capture proves the native Campaign Player 2 entity and input path.
+- See docs/phase118-trigger-callsite-inventory.md and reports/PHASE118_REPORT_AR.md.
