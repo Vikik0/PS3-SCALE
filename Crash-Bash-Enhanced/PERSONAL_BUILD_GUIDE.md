@@ -18,6 +18,18 @@ The latest successful PS3 runtime build is GitHub Actions run `45805022211` on b
 
 If the temporary URL expires or is consumed before the workflow downloads it, generate a fresh URL and update the secret before starting a new run. The workflow never prints the URL and masks it in its logs.
 
+## Original disc archive verification
+
+The private Dropbox ZIP was inspected before dispatch:
+- ZIP size: 80,246,798 bytes; archive integrity test passed.
+- Exact members: `Crash Bash (USA).bin` (178,220,448 bytes) and `Crash Bash (USA).cue` (82 bytes).
+- BIN SHA-256: `a1d6b967a2311f1444482f4af91dff2d75e083ed538419f25d57d77dd5a4d7fd`.
+- CUE SHA-256: `de7f3b62c2703f3a1ee76a5d10e5fb27cc386dea26b196807e5eec5e04a8fce9`.
+- The CUE references the matching BIN and uses 2352-byte sectors.
+- The staging script passed all eight security/regression cases and staged this exact archive successfully.
+
+The workflow repeats the ZIP integrity, exact-member, file-size and SHA-256 checks inside GitHub Actions before building. This local preflight does not replace the final PS3 PKG build or physical-console testing.
+
 ## Private decryption
 
 The matching private key is provided separately to the project owner as `Crash-Bash-Personal-Build-Key-Package.zip`. Keep `Crash-Bash-Personal-Build-Private-Key.key` offline and private; it is not stored in GitHub or Dropbox. The public certificate is committed at `keys/personal-build-public.pem`.
