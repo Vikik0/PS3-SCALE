@@ -89,7 +89,7 @@ Host CI also runs the actual local HTTP transport against a loopback webMAN mock
 3. Enable sharper pixels (`0x44`) only; compare XMB smoothing On/Off separately and record aliasing/softness.
 4. Enable conservative frame pacing (`0x48`, mode 1, delay 20,000) only; record stutter, audio and timing. If any regression occurs, restore the saved CONFIG.
 5. Combine options only after the individual tests pass. Do not assume combined effects are additive.
-6. Confirm the first apply automatically creates a byte-identical backup, and that a second apply never overwrites an existing backup that differs from the current CONFIG.
+6. Confirm the first apply automatically creates a byte-identical backup. If the active CONFIG differs from that saved backup, confirm the tool blocks another profile until the user restores the saved backup; it must never overwrite that backup.
 7. Confirm a stale backup, invalid CONFIG, oversized file, pre-existing temporary path or rollback conflict blocks the write without changing the current CONFIG.
 8. Confirm the generated sidecar is named exactly `<game.iso>.CONFIG` and is stored beside the ISO.
 9. Confirm PS2 Classics cannot use the plaintext local profile builder; only an exact matching encrypted ENC catalogue entry may be installed.

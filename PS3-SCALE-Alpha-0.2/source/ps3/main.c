@@ -3350,6 +3350,7 @@ static void apply_ps2_local_profile(void)
     size_t config_size = 0;
     const ps3scale_game_t *game = selected_game();
     int result;
+    int had_existing_config;
 
     if (g_network_task_running || g_ps2_config_download_running ||
         g_ps2_config_download_done || g_ps2_config_download_thread_started) {
@@ -3381,6 +3382,7 @@ static void apply_ps2_local_profile(void)
         return;
     }
 
+    had_existing_config = g_ps2_config_manager_target_state == 1;
     result = ps2_config_ensure_backup(
         g_ps2_config_manager_target,
         g_ps2_config_manager_backup,
@@ -3389,7 +3391,9 @@ static void apply_ps2_local_profile(void)
     if (result != 0) {
         snprintf(g_ps2_config_manager_message,
                  sizeof(g_ps2_config_manager_message),
-                 "BACKUP FAILED OR DOES NOT MATCH CURRENT CONFIG. NO FILE WAS CHANGED.");
+                 result == -5 ?
+                 "SAVED BACKUP DOES NOT MATCH. RESTORE IT BEFORE CHANGING PROFILE." :
+                 "AUTOMATIC BACKUP FAILED. NO FILE WAS CHANGED.");
         refresh_ps2_config_manager_cache();
         return;
     }
@@ -3425,7 +3429,9 @@ static void apply_ps2_local_profile(void)
     if (result == 0) {
         snprintf(g_ps2_config_manager_message,
                  sizeof(g_ps2_config_manager_message),
-                 "PS2 ENHANCEMENT CONFIG INSTALLED. ORIGINAL CONFIG BACKED UP.");
+                 had_existing_config ?
+                 "PS2 ENHANCEMENT CONFIG INSTALLED. ORIGINAL CONFIG BACKED UP." :
+                 "PS2 ENHANCEMENT CONFIG INSTALLED. NO PREVIOUS CONFIG EXISTED.");
     } else {
         (void)unlink(g_ps2_config_manager_download_temp);
         if (result == -2)
@@ -3523,7 +3529,7 @@ static void start_ps2_config_download(void){
  state=ps3scale_ps2_config_store_probe(target,max_bytes,NULL);
  if(state<0){set_details_message("EXISTING CONFIG IS INVALID OR EXCEEDS THE SAFE SIZE LIMIT.");goto copy_message;}
  if(ps3scale_ps2_config_store_probe(temporary,max_bytes,NULL)!=0){set_details_message("A PS3 SCALE TEMP FILE ALREADY EXISTS. CHECK THE CONFIG FOLDER.");goto copy_message;}
- if(state==1&&ps2_config_ensure_backup(target,backup,backup_temp,max_bytes)!=0){set_details_message("AUTOMATIC BACKUP FAILED OR DOES NOT MATCH. NO REPLACEMENT WAS MADE.");goto copy_message;}
+ if(state==1&&ps2_config_ensure_backup(target,backup,backup_temp,max_bytes)!=0){set_details_message("SAVED BACKUP DOES NOT MATCH. RESTORE IT BEFORE REPLACING CONFIG.");goto copy_message;}
  snprintf(g_ps2_config_download_url,sizeof(g_ps2_config_download_url),"%s",url);
  snprintf(g_ps2_config_download_path,sizeof(g_ps2_config_download_path),"%s",target);
  snprintf(g_ps2_config_download_temp_path,sizeof(g_ps2_config_download_temp_path),"%s",temporary);
@@ -4142,7 +4148,7 @@ static void service_community_download(void)
 static void service_ps2_config_download(void){
  if(!g_ps2_config_download_done)return;
  if(g_ps2_config_download_thread_started){u64 thread_result=0;(void)sysThreadJoin(g_ps2_config_download_thread,&thread_result);g_ps2_config_download_thread_started=0;}
- if(g_ps2_config_download_result==0)set_details_message("PS2 CONFIG INSTALLED. BACKUP AND ROLLBACK FILES WERE RETAINED.");
+ if(g_ps2_config_download_result==0)set_details_message("PS2 CONFIG INSTALLED. GAME ISO AND EBOOT WERE NOT MODIFIED.");
  else if(g_ps2_config_download_result==-2)set_details_message("CONFIG CHANGED OR WAS NOT BACKED UP. NO REPLACEMENT WAS MADE.");
  else if(g_ps2_config_download_result==-4)set_details_message("DOWNLOADED CONFIG FAILED VALIDATION. FILE REMOVED.");
  else if(g_ps2_config_download_result==-5)set_details_message("COULD NOT INSTALL CONFIG. ORIGINAL FILE WAS PRESERVED.");
@@ -7468,6 +7474,7 @@ int main(int argc, char *argv[])
                     } else if (game->kind == PS3SCALE_GAME_PS2_ISO ||
                                game->kind == PS3SCALE_GAME_PS2_CLASSIC) {
                         g_ps2_config_manager_selection = 0;
+                         g_ps2_enhancement_flags = PS3SCALE_PS2_CFG_ENABLE_L2H;
                         snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),
                                  "L2H IS ON BY DEFAULT. SELECT OPTIONS THEN APPLY.");
                         refresh_ps2_config_manager_cache();
