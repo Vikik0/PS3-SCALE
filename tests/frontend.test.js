@@ -132,3 +132,64 @@ test("room session generation prevents an old refresh from restoring a room afte
   assert.equal(getState().screen, "battle");
   assert.equal(roomReadCount, 1);
 });
+
+
+test("room entry actions share a single in-flight guard", async () => {
+  const vm = require("node:vm");
+  const elements = new Map();
+  const makeElement = id => ({
+    id, hidden: false, className: "", textContent: "", value: "", checked: false,
+    disabled: false, innerHTML: "", style: {},
+    classList: { add() {}, remove() {}, toggle() {} },
+    querySelectorAll() { return []; },
+    querySelector() { return { textContent: "" }; },
+    appendChild() {}, replaceChildren() {}, scrollIntoView() {}, focus() {}, click() {}
+  });
+  const document = {
+    getElementById(id) {
+      if (!elements.has(id)) elements.set(id, makeElement(id));
+      return elements.get(id);
+    },
+    createElement(tag) { return makeElement(tag); },
+    addEventListener() {}
+  };
+  const storage = new Map();
+  const sessionStorage = {
+    getItem(key) { return storage.has(key) ? storage.get(key) : null; },
+    setItem(key, value) { storage.set(key, String(value)); },
+    removeItem(key) { storage.delete(key); }
+  };
+  let resolveAny;
+  let anyCalls = 0;
+  const response = (body, status = 200) => ({
+    ok: status >= 200 && status < 300,
+    status,
+    async json() { return body; }
+  });
+  const fetch = async (url, options = {}) => {
+    if (url === "/api/health") return response({ ok: true, storageConfigured: true, tokenConfigured: true });
+    if (url === "/api/rooms" && options.method === "POST") {
+      anyCalls++;
+      return new Promise(resolve => { resolveAny = () => resolve(response({ error: "No public battle is waiting." }, 404)); });
+    }
+    throw new Error("Unexpected fetch: " + url);
+  };
+  const context = {
+    document, sessionStorage, fetch, console, Promise,
+    setTimeout(fn) { fn(); return 1; },
+    setInterval() { return 1; },
+    clearInterval() {}
+  };
+  vm.runInNewContext(script, context);
+  await new Promise(resolve => setImmediate(resolve));
+
+  const first = context.anyBattle();
+  const second = context.anyBattle();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(anyCalls, 1);
+  assert.equal(vm.runInContext("state.entryInFlight", context), true);
+
+  resolveAny();
+  await Promise.all([first, second]);
+  assert.equal(vm.runInContext("state.entryInFlight", context), false);
+});
