@@ -199,21 +199,31 @@ static void test_explicit_stop_transitions_monitor_to_stopped(void)
     assert(m.state == GHC_SESSION_MONITOR_STOPPED);
 }
 
-static void test_start_cancels_a_pending_stop_on_the_active_monitor(void)
+static void test_start_waits_for_pending_stop_then_restarts_after_exit(void)
 {
     GhcSessionMonitorModel m;
     GhcSessionMonitorObservation o = ready_pair();
     ghc_session_monitor_model_init(&m);
     assert(ghc_session_monitor_model_start(&m) == 1);
     assert(ghc_session_monitor_model_tick(&m, &o) == 1);
+    m.active_lock_count = 2u;
+    m.completed_event_count = 7u;
     assert(ghc_session_monitor_model_stop(&m) == 1);
     assert(m.stop_requested == 1u);
+    assert(ghc_session_monitor_model_start(&m) == 0);
+    assert(m.active == 1u);
+    assert(m.stop_requested == 1u);
+    assert(ghc_session_monitor_model_tick(&m, &o) == 0);
+    assert(m.active == 0u);
+    assert(m.session_ready == 0u);
+    assert(m.active_lock_count == 0u);
+    assert(m.completed_event_count == 7u);
     assert(ghc_session_monitor_model_start(&m) == 1);
     assert(m.active == 1u);
     assert(m.stop_requested == 0u);
-    assert(m.session_ready == 1u);
-    assert(m.rebind_count == 1u);
+    assert(m.state == GHC_SESSION_MONITOR_WAITING_FOR_PAIR);
     assert(ghc_session_monitor_model_tick(&m, &o) == 1);
+    assert(m.rebind_count == 2u);
 }
 
 static void test_explicit_stop_releases_active_locks_and_preserves_history(void)
@@ -258,7 +268,7 @@ int main(void)
     test_completed_history_survives_disconnect_and_rebind();
     test_start_is_idempotent_while_monitor_active();
     test_explicit_stop_transitions_monitor_to_stopped();
-    test_start_cancels_a_pending_stop_on_the_active_monitor();
+    test_start_waits_for_pending_stop_then_restarts_after_exit();
     test_explicit_stop_releases_active_locks_and_preserves_history();
     test_inactive_monitor_ignores_ticks();
     puts("Campaign session-monitor model tests: 16/16 PASS");

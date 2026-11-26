@@ -13,18 +13,29 @@
 main()
 {
     /*
-     * The active watcher remains the sole lifecycle owner. If shutdown was
-     * requested but the watcher has not exited yet, a new main() call
-     * cancels that pending stop instead of racing cleanup against the thread.
+     * The active watcher remains the sole lifecycle owner. If shutdown is
+     * pending, wait for its exit before touching aliases or starting a new
+     * monitor. A bounded timeout fails closed instead of racing two threads.
      */
     if ( isdefined( level.ghc_campaign_session_monitor_active )
         && level.ghc_campaign_session_monitor_active )
     {
-        if ( isdefined( level.ghc_campaign_session_monitor_stop )
-            && level.ghc_campaign_session_monitor_stop )
-            level.ghc_campaign_session_monitor_stop = 0;
+        if ( !isdefined( level.ghc_campaign_session_monitor_stop )
+            || !level.ghc_campaign_session_monitor_stop )
+            return 1;
 
-        return 1;
+        for ( var_0 = 0; var_0 < 40; var_0++ )
+        {
+            if ( !isdefined( level.ghc_campaign_session_monitor_active )
+                || !level.ghc_campaign_session_monitor_active )
+                break;
+
+            wait 0.05;
+        }
+
+        if ( isdefined( level.ghc_campaign_session_monitor_active )
+            && level.ghc_campaign_session_monitor_active )
+            return 0;
     }
 
     /*
@@ -123,10 +134,10 @@ ghc_campaign_start_session_monitor()
     if ( isdefined( level.ghc_campaign_session_monitor_active )
         && level.ghc_campaign_session_monitor_active )
     {
-        /* Match the host model: start cancels a pending stop on the owner. */
+        /* Never start a replacement while the previous owner is exiting. */
         if ( isdefined( level.ghc_campaign_session_monitor_stop )
             && level.ghc_campaign_session_monitor_stop )
-            level.ghc_campaign_session_monitor_stop = 0;
+            return 0;
 
         return 1;
     }

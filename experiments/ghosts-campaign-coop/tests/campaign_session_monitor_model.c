@@ -24,8 +24,8 @@ int ghc_session_monitor_model_start(GhcSessionMonitorModel *model)
 {
     if (!model)
         return 0;
-    if (model->active && !model->stop_requested)
-        return 1;
+    if (model->active)
+        return model->stop_requested ? 0 : 1;
     model->active = 1u;
     model->stop_requested = 0u;
     model->state = model->session_ready

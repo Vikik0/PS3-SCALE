@@ -56,25 +56,30 @@ class CampaignSessionMonitorModelContractTests(unittest.TestCase):
         clear = main.index("level.ghc_campaign_player_0 = undefined")
         self.assertLess(guard, clear)
 
-    def test_main_cancels_pending_stop_before_alias_cleanup(self):
+    def test_main_waits_for_pending_stop_to_exit_before_alias_cleanup(self):
         main = function_body(self.source, "main")
         active = main.index("level.ghc_campaign_session_monitor_active")
-        cancel = main.index("level.ghc_campaign_session_monitor_stop = 0", active)
-        return_owner = main.index("return 1", cancel)
+        stop_check = main.index("level.ghc_campaign_session_monitor_stop", active)
+        wait_loop = main.index("var_0 < 40", stop_check)
+        wait = main.index("wait 0.05", wait_loop)
+        timeout = main.index("return 0", wait)
         clear = main.index("level.ghc_campaign_player_0 = undefined")
-        self.assertLess(active, cancel)
-        self.assertLess(cancel, return_owner)
-        self.assertLess(return_owner, clear)
+        self.assertLess(active, stop_check)
+        self.assertLess(stop_check, wait_loop)
+        self.assertLess(wait_loop, wait)
+        self.assertLess(wait, timeout)
+        self.assertLess(timeout, clear)
+        self.assertNotIn("level.ghc_campaign_session_monitor_stop = 0", main[:clear])
 
-    def test_start_monitor_cancels_pending_stop_without_starting_second_thread(self):
+    def test_start_monitor_refuses_a_second_owner_while_stop_is_pending(self):
         start = function_body(self.source, "ghc_campaign_start_session_monitor")
         active = start.index("level.ghc_campaign_session_monitor_active")
-        cancel = start.index("level.ghc_campaign_session_monitor_stop = 0", active)
-        return_owner = start.index("return 1", cancel)
+        stop_check = start.index("level.ghc_campaign_session_monitor_stop", active)
+        refuse = start.index("return 0", stop_check)
         thread = start.index("thread ghc_campaign_watch_native_session()")
-        self.assertLess(active, cancel)
-        self.assertLess(cancel, return_owner)
-        self.assertLess(return_owner, thread)
+        self.assertLess(active, stop_check)
+        self.assertLess(stop_check, refuse)
+        self.assertLess(refuse, thread)
 
     def test_watcher_rebinds_automatically_after_invalidation(self):
         watch = function_body(self.source, "ghc_campaign_watch_native_session")
