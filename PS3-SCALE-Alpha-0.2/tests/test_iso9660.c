@@ -154,7 +154,7 @@ int main(void)
     image[17 * SECTOR + 6] = 1;
 
     root = image + 20 * SECTOR;
-    make_record(root + pos, 21, (unsigned int)(sizeof(cnf_root) - 1),
+    make_record(root + pos, 21, (unsigned int)(sizeof(cnf_nested) - 1),
                 "SYSTEM.CNF;1", 0);
     pos += root[pos];
     make_record(root + pos, 22, sizeof(elf), "SLUS_203.12;1", 0);
@@ -199,6 +199,12 @@ int main(void)
         assert(patch->words[0].ee_address == 0x00161860u);
         assert(patch->words[0].replacement_word == 0x2C620000u);
         assert(ps3scale_ps2_game_patch_find("SLUS_212.60",0xB0AE2D8Bu,PS3SCALE_PS2_PATCH_FPS)==NULL);
+        assert(ps3scale_ps2_game_patch_find("SLPM_662.46",0x67D76160u,PS3SCALE_PS2_PATCH_FPS)!=NULL);
+        patch=ps3scale_ps2_game_patch_find("SLPM_662.46",0x67D76160u,PS3SCALE_PS2_PATCH_FPS);
+        assert(patch && patch->word_count == 1u);
+        assert(patch->words[0].ee_address == 0x0011B560u);
+        assert(patch->words[0].replacement_word == 0x10000006u);
+        assert(ps3scale_ps2_game_patch_find("SLPM_662.46",0x67D76161u,PS3SCALE_PS2_PATCH_FPS)==NULL);
         assert(ps3scale_ps2_game_patch_find("SLUS_203.12",0xB0AE2D8Au,PS3SCALE_PS2_PATCH_FPS)==NULL);
         assert(ps3scale_ps2_game_patch_find("SLUS_203.49",0x10B1F370u,PS3SCALE_PS2_PATCH_FPS)!=NULL);
         assert(ps3scale_ps2_game_patch_find("SLUS_211.83",0xE1F17139u,PS3SCALE_PS2_PATCH_FPS)!=NULL);

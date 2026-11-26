@@ -75,7 +75,8 @@ The pinned PCSX2 source files also contain exact 16:9 widescreen sections for fo
 | Scooby-Doo! Night of 100 Frights | SLUS_203.49 | 10B1F370 | 8 |
 | Teen Titans | SLUS_211.83 | E1F17139 | 13 |
 | Disney's Kim Possible - What's the Switch | SLUS_214.37 | 86B490D1 | 7 |
-| Jimmy Neutron: Jet Fusion | SLUS_206.96 | FCC09959 | 3 |
+| Jimmy Neutron: Jet Fusion | SLUS_206.96 | FCC09959 |
+| Shin Megami Tensei - Devil Summoner 1 | SLPM_662.46 | 67D76160 | 3 |
 
 These are aspect-ratio/game-camera patches, not HD texture replacements or native-resolution upscaling. They remain experimental until tested on the target PS3; the ISO is never rewritten.
 
@@ -93,7 +94,7 @@ Only `word` writes are converted; files using `extended`, byte writes or conditi
 
 PCSX2's patch filename hash is not standard CRC32: its game ELF hash is the XOR of little-endian 32-bit words across the boot ELF. PS3 SCALE resolves the BOOT/BOOT2 path from SYSTEM.CNF through nested ISO9660 directories, computes this same hash, and reads the original word only from a file-backed executable MIPS ELF segment. The converter can then create a netemu `0x0A` replacement entry with the exact original word as a guard.
 
-The current experimental catalogue contains eight exact serial + ELF-hash candidates from the same pinned PCSX2 patch commit:
+The current experimental catalogue contains nine exact serial + ELF-hash candidates from the same pinned PCSX2 patch commit:
 
 | PS2 title | Serial | PCSX2 ELF hash |
 |---|---|---|
@@ -105,6 +106,8 @@ The current experimental catalogue contains eight exact serial + ELF-hash candid
 | The Ant Bully | SLUS_214.15 | E10A865B |
 | Indiana Jones and the Staff of Kings | SLUS_218.85 | B15F0BD6 |
 | Jimmy Neutron: Jet Fusion | SLUS_206.96 | FCC09959 |
+
+The Devil Summoner candidate uses the pinned PCSX2 `[60 FPS]` section's single aligned word replacement at `0x0011B560`; its same file's widescreen and no-interlacing sections are not imported. No EE-overclock requirement is noted in that FPS section.
 
 Each source file's `[60 FPS]` section contains a single `patch=1,EE,...,word,...` replacement. The catalogue deliberately excludes PCSX2 extended writes, mode-2 addresses and patches whose notes require EE overclocking. These remain candidates, not hardware-verified PS3 patches. Every candidate must be tested on the target PS3 Slim for actual frame rate, timing, audio, cutscenes and stability before being marked verified.
 
