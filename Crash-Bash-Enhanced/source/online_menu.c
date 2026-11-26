@@ -892,10 +892,10 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                         }
                     } else if (is_host) {
                         host_disc_waiting = 0;
-                        make_netplay_nickname(netplay_nickname, sizeof(netplay_nickname), &session, &view, 1);
-                        if (cb_online_mark_game_started(&session, error, sizeof(error)) != 0) {
+                        if (cb_online_mark_game_started(&session, &view, error, sizeof(error)) != 0) {
                             snprintf(status, status_size, "Could not lock the room for launch: %.100s", error);
                         } else {
+                            make_netplay_nickname(netplay_nickname, sizeof(netplay_nickname), &session, &view, 1);
                             int launch_result = cb_launch_game(discs[disc_selected].path, 1, netplay_nickname, NULL, error, sizeof(error));
                             if (launch_result < 0) {
                                 char launch_error[160];
