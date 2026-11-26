@@ -14,6 +14,12 @@ on:
       - ".github/workflows/build-ps3.yml"
   workflow_dispatch:
 
+# A branch with an open PR receives both push and pull_request events.
+# Share one concurrency group so the newer run replaces the duplicate/stale run.
+concurrency:
+  group: ps3scale-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
