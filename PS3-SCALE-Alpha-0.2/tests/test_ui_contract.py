@@ -1076,6 +1076,7 @@ assert "ps3scale_ps2_game_patch_find" in src
 assert "ps2_netemu_iso_supported" in src
 assert "ps3scale_hardware_supports_netemu_ps2_iso(&g_hardware_info)" in src
 assert "if (!ps2_netemu_iso_supported())" in src
+assert "const int local_profile_supported = can_generate && netemu_supported;" in src
 
 # Keep the pinned PS2 patch catalogue exact, aligned, bounded and source-backed.
 patch_catalog_path = source_path.parent.parent / "core" / "ps2_game_patch.c"
@@ -1102,8 +1103,10 @@ for match in entry_pattern.finditer(patch_catalog):
     key = (serial, elf_hash.upper(), kind)
     assert key not in patch_keys
     patch_keys.add(key)
+    addresses = [address for address, replacement in patch_arrays[array_name]]
+    assert len(addresses) == len(set(addresses))
     for address, replacement in patch_arrays[array_name]:
-        assert address < 0x10000000 and address % 4 == 0
+        assert address < 0x02000000 and address % 4 == 0
 assert patch_counts == {"FPS": 11, "WIDESCREEN": 12, "480P": 13}
 assert "1fd98102b8e2fffe3e0c29aab55339d48af0ffe5" in patch_catalog
 assert "refresh_ps2_patch_availability();" in src

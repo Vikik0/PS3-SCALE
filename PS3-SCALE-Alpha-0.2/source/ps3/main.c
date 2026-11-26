@@ -6024,7 +6024,7 @@ static void draw_details(void)
         draw_text(544.0f, 311.0f, 0x514b69ff,
                   "PS2 ISO CONFIG MATCHING IS DISABLED.");
         draw_text(544.0f, 332.0f, 0x77718fff,
-                  "DETECT DEVICE AGAIN AND RESCAN.");
+                  "HARDWARE DETECTION IS REQUIRED.");
     } else {
         draw_text(544.0f, 290.0f, 0xb27b35ff,
                   "NO VERIFIED ENHANCEMENT AVAILABLE");
@@ -6073,6 +6073,7 @@ static void draw_ps2_config_manager(void)
     const int can_generate =
         game && game->kind == PS3SCALE_GAME_PS2_ISO;
     const int netemu_supported = ps2_netemu_iso_supported();
+    const int local_profile_supported = can_generate && netemu_supported;
     const char *fps_patch_label = !can_generate ? "ISO PATCH ONLY" :
         (!netemu_supported ? "NETEMU HARDWARE REQUIRED" :
         (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
@@ -6160,7 +6161,7 @@ static void draw_ps2_config_manager(void)
                  "PATCH MATCH: PS2 ISO REQUIRED");
     }
     draw_text(430.0f, 204.0f, 0xb27b35ff, line);
-    draw_text(48.0f, 220.0f, netemu_supported ? 0x26794bff : 0xb27b35ff,
+    draw_text(48.0f, 220.0f, local_profile_supported ? 0x26794bff : 0xb27b35ff,
               can_generate ?
               (netemu_supported ?
                "NETEMU-ONLY OPTIONS: SUPPORTED HARDWARE CONFIRMED." :
@@ -6169,44 +6170,44 @@ static void draw_ps2_config_manager(void)
 
     draw_soft_card(48.0f, 232.0f, 352.0f, 38.0f,
                    g_ps2_config_manager_selection == 0);
-    draw_text(62.0f, 238.0f, netemu_supported ? 0x29243fff : 0x77718fff, "L2H PERFORMANCE (0x46)");
+    draw_text(62.0f, 238.0f, local_profile_supported ? 0x29243fff : 0x77718fff, "L2H PERFORMANCE (0x46)");
     draw_text(62.0f, 253.0f, 0x77718fff,
               "May help titles using L2H downloads.");
     draw_text(350.0f, 244.0f,
-              netemu_supported && (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_L2H) ?
+              local_profile_supported && (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_L2H) ?
               0x26794bff : 0x77718fff,
               (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_L2H) ?
               "ON" : "OFF");
 
     draw_soft_card(48.0f, 275.0f, 352.0f, 38.0f,
                    g_ps2_config_manager_selection == 1);
-    draw_text(62.0f, 281.0f, netemu_supported ? 0x29243fff : 0x77718fff, "SHARPER PIXELS (0x44)");
+    draw_text(62.0f, 281.0f, local_profile_supported ? 0x29243fff : 0x77718fff, "SHARPER PIXELS (0x44)");
     draw_text(62.0f, 296.0f, 0x77718fff,
               "Disables smoothing; aliasing may increase.");
     draw_text(350.0f, 287.0f,
-              netemu_supported && (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_DISABLE_SMOOTHING) ?
+              local_profile_supported && (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_DISABLE_SMOOTHING) ?
               0x26794bff : 0x77718fff,
               (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_DISABLE_SMOOTHING) ?
               "ON" : "OFF");
 
     draw_soft_card(48.0f, 318.0f, 352.0f, 38.0f,
                    g_ps2_config_manager_selection == 2);
-    draw_text(62.0f, 324.0f, netemu_supported ? 0x29243fff : 0x77718fff, "FRAME PACING (0x48)");
+    draw_text(62.0f, 324.0f, local_profile_supported ? 0x29243fff : 0x77718fff, "FRAME PACING (0x48)");
     draw_text(62.0f, 339.0f, 0x77718fff,
               "Conservative VSYNC timing; experimental.");
     draw_text(350.0f, 330.0f,
-              netemu_supported && (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_FRAME_PACING) ?
+              local_profile_supported && (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_FRAME_PACING) ?
               0xb27b35ff : 0x77718fff,
               (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_FRAME_PACING) ?
               "ON" : "OFF");
 
     draw_soft_card(48.0f, 361.0f, 352.0f, 38.0f,
                    g_ps2_config_manager_selection == 3);
-    draw_text(62.0f, 367.0f, netemu_supported ? 0x29243fff : 0x77718fff, "PRESSURE SENSITIVITY (0x50)");
+    draw_text(62.0f, 367.0f, local_profile_supported ? 0x29243fff : 0x77718fff, "PRESSURE SENSITIVITY (0x50)");
     draw_text(62.0f, 382.0f, 0x77718fff,
               "Enables analog pressure-sensitive button input.");
     draw_text(350.0f, 373.0f,
-              netemu_supported && (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_PRESSURE) ?
+              local_profile_supported && (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_PRESSURE) ?
               0x26794bff : 0x77718fff,
               (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_PRESSURE) ?
               "ON" : "OFF");
