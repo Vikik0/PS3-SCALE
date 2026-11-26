@@ -38,6 +38,52 @@ async function hmacSha256Hex(secret: string, value: string): Promise<string> {
     .join("");
 }
 
+type BoundedBodyRead =
+  | { text: string }
+  | { tooLarge: true }
+  | { invalid: true };
+
+async function readBoundedBody(
+  request: Request,
+  maxBytes: number,
+): Promise<BoundedBodyRead> {
+  if (!request.body) return { text: "" };
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        return { tooLarge: true };
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return { invalid: true };
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  try {
+    return { text: new TextDecoder("utf-8", { fatal: true }).decode(bytes) };
+  } catch {
+    return { invalid: true };
+  }
+}
+
 function isRequestId(value: string | null): value is string {
   return value !== null &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -52,13 +98,17 @@ Deno.serve(async (request) => {
     return reply(405, { ok: false, error: "method_not_allowed" });
   }
 
+  const boundedBody = await readBoundedBody(request, 12 * 1024);
+  if ("tooLarge" in boundedBody) {
+    return reply(413, { ok: false, error: "request_too_large" });
+  }
+  if ("invalid" in boundedBody) {
+    return reply(400, { ok: false, error: "invalid_body_encoding" });
+  }
+
   let body: Record<string, unknown>;
   try {
-    const rawBody = await request.text();
-    if (new TextEncoder().encode(rawBody).byteLength > 12 * 1024) {
-      return reply(413, { ok: false, error: "request_too_large" });
-    }
-    body = JSON.parse(rawBody);
+    body = JSON.parse(boundedBody.text);
     if (!body || typeof body !== "object" || Array.isArray(body)) {
       return reply(400, { ok: false, error: "invalid_json_object" });
     }
