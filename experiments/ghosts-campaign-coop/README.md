@@ -445,3 +445,16 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - Capture kit: 57/57 files, 538,971 bytes; SHA-256 `0217d080d58da690e6ba8931e8ae74c32bdf0fbe21f3170be5e62e31abc89b96`; artifact `15100798110`.
 
 **Runtime gate unchanged:** no physical PS3 Campaign test or native Player 2 capture has been supplied. Player 2 remains `NOT_PROVEN`; the four shared interactions remain **0/4 ready**.
+
+### Phase 111 — fail-closed Clockwork drill state reads and transactional updates
+
+- Hardened the owner, completion and active-spot getters. They now reject uninitialized state, undefined/non-discrete IDs, missing backing fields and corrupted stored enum values. Invalid owner/active reads return the reserved sentinel `-2`; invalid completion reads return `-1`, distinct from valid values.
+- Drill slot and spot arguments now accept only exact discrete values: player slots `0/1`, spot IDs `0/1`, and owner/active values `-1/0/1`. Fractional values cannot enter state.
+- Begin, finish and abort now check each lower-level setter result. Partial claims are rolled back; failed releases restore the previous owner and, where needed, the previous completion flag.
+- Added four source-contract regression tests for getter fail-closed behavior, exact enums and transactional rollback.
+- CI run [#1625](https://github.com/Vikik0/PS3-SCALE/actions/runs/45802942130): **7/7 jobs successful**, **587 Python tests**, **16/16 session-monitor C**, **21/21 Event Lock C**, **10/10 GSC parser**, **12/12 GSC loader**, and **10,030 host-runtime checks with 0 failures**. GSC Tool 1.6.2.364 compile/decompile and manifest pins passed.
+- Bridge source SHA-256: `8ccd5ea42cd4c0e734bda6adae8f85a8498c2ba8e349cabfd8bfee6e1cfa2d9d`; compiled GSCBIN SHA-256: `d0743de26d5352ba1da9466a639d1506f760265152b7b3d96651ec4785c970f6`; size: **4,851 bytes**.
+- Capture kit: **57/57 files**, **539,423 bytes**, SHA-256 `6c67a3895a27caebacd411a79568212e1aa8d24771652f2afe31d8f8bb1306e1`; artifact ID `15108372304`.
+- Report: `docs/phase111-clockwork-drill-state-integrity.md` and `reports/PHASE111_REPORT_AR.md`; machine-readable summary: `reports/PHASE111_VALIDATION.json`.
+
+**Runtime gate unchanged:** these are source, compiler, CI and host-model results. They do not prove a physical PS3 Campaign session, a native second Campaign Local Client, independent Player 2 camera/HUD, or playable co-op. Player 2 remains `NOT_PROVEN`; original shared interactions remain **0/4 ready**. No retail EBOOT or FastFile was modified.

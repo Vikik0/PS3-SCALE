@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "phase": 111,
+  "title": "Fail-closed Clockwork drill state reads and transactional updates",
+  "ci_run": 1625,
+  "ci_run_id": 45802942130,
+  "ci": "7/7 PASS",
+  "python_tests": "587/587",
+  "session_monitor_c_tests": "16/16",
+  "event_lock_c_tests": "21/21",
+  "gsc_wrapper_parser_c_tests": "10/10",
+  "gsc_wrapper_loader_c_tests": "12/12",
+  "host_runtime_simulator": {
+    "checks": 10030,
+    "failures": 0
+  },
+  "gsc": {
+    "tool": "1.6.2.364",
+    "source_sha256": "8ccd5ea42cd4c0e734bda6adae8f85a8498c2ba8e349cabfd8bfee6e1cfa2d9d",
+    "compiled_gscbin_sha256": "d0743de26d5352ba1da9466a639d1506f760265152b7b3d96651ec4785c970f6",
+    "compiled_gscbin_bytes": 4851,
+    "compile_decompile_manifest_pin": "PASS"
+  },
+  "capture_kit": {
+    "files": "57/57",
+    "bytes": 539423,
+    "sha256": "6c67a3895a27caebacd411a79568212e1aa8d24771652f2afe31d8f8bb1306e1",
+    "artifact_id": 15108372304,
+    "url": "https://github.com/Vikik0/PS3-SCALE/actions/runs/45802942130/artifacts/15108372304"
+  },
+  "runtime_boundary": {
+    "physical_ps3_campaign_tested": false,
+    "native_second_campaign_local_client_proven": false,
+    "player_two_gate": "NOT_PROVEN",
+    "original_shared_interactions_ready": "0/4",
+    "retail_eboot_or_fastfile_modified": false
+  }
+}
