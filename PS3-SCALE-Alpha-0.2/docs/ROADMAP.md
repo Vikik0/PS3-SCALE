@@ -81,7 +81,7 @@
 - [x] Stage generated CONFIG data with exclusive file creation, fsync and size verification before atomic install.
 - [x] Keep PS2 Classics on the exact encrypted ENC catalogue route; no plaintext CONFIG is written into a Classics package.
 - [x] Document that XMB upscaling is separate and that no generic 60 FPS unlock exists.
-- [x] Resolve root-level and nested ISO9660 BOOT/BOOT2 paths with bounded traversal; reject `.` / `..`, malformed paths and multi-extent boot files.
+- [x] Resolve root-level and nested ISO9660 BOOT/BOOT2 paths; assemble bounded multi-extent SYSTEM.CNF / BOOT files and reject malformed, interleaved, oversized or mismatched extent chains.
 - [ ] Validate 0x44, 0x46 and 0x48 individually on the target PS3 Slim and representative games.
 - [x] Build the per-game EE instruction patch pipeline around exact `0x0A` CONFIG entries; no guessed offsets.
 - [x] Validate every FPS / widescreen / 480p patch address against a file-backed executable ELF segment before showing a profile as available; revalidate on apply.
