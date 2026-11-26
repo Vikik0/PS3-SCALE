@@ -118,6 +118,8 @@ Each source file's `[60 FPS]` section contains a single `patch=1,EE,...,word,...
 
 Root-level and nested ISO9660 multi-extent SYSTEM.CNF / BOOT files are assembled from bounded, ordered extent chains. The reader rejects mismatched identifiers, unsupported special-file flags, extended attributes, interleaved files, non-sector-aligned continuation extents, oversized chains and chains longer than 32 records. Host fixtures exercise successful split reads and malformed-chain rejection.
 
+Physical-console acceptance criteria and the per-title result register are maintained in [PS2_HARDWARE_TEST_REPORT.md](PS2_HARDWARE_TEST_REPORT.md).
+
 ## Next stage: broaden PS2 game enhancement coverage
 
 1. Build a per-title validation matrix for 60 FPS, 16:9, 480p/Y-fix, FMV playback and controller behavior.
