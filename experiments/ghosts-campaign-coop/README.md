@@ -458,3 +458,18 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - Report: `docs/phase111-clockwork-drill-state-integrity.md` and `reports/PHASE111_REPORT_AR.md`; machine-readable summary: `reports/PHASE111_VALIDATION.json`.
 
 **Runtime gate unchanged:** these are source, compiler, CI and host-model results. They do not prove a physical PS3 Campaign session, a native second Campaign Local Client, independent Player 2 camera/HUD, or playable co-op. Player 2 remains `NOT_PROVEN`; original shared interactions remain **0/4 ready**. No retail EBOOT or FastFile was modified.
+
+### Phase 112 — validate shared Campaign event-lock state
+
+- Added exact validators for the 16 event IDs and two player slots. Undefined, fractional and out-of-range IDs are rejected before array access.
+- Added a full invariant check: owner/active/completion arrays must exist with sizes 16/2/16; stored enums must be valid; owner-to-active and active-to-owner links must agree; completed events cannot remain owned.
+- Existing initialized but corrupt lock storage now fails closed instead of silently reinitializing and erasing completed-event history.
+- Acquire, release, owner queries, abort and reset validate state before reading or mutating it. Invalid owner/completion queries use distinct sentinels (`-2` and `-1`).
+- Native Campaign pair binding refuses to set the session-ready flag when event-lock state is invalid; stale aliases are cleared and status 9 is returned.
+- Added six event-lock regression tests.
+- CI run [#1628](https://github.com/Vikik0/PS3-SCALE/actions/runs/45803806486): **7/7 jobs successful**, **593 Python tests**, **16/16 session-monitor C**, **21/21 Event Lock C**, **10/10 GSC parser**, **12/12 GSC loader**, and **10,030 host-runtime checks with 0 failures**. GSC Tool 1.6.2.364 compile/decompile and manifest pins passed.
+- Bridge source SHA-256: `fd179a44d0aba94e6c42b32d29755093f8a7e6b730f88f63c75ca599d6147c7a`; compiled GSCBIN SHA-256: `e63db21a6436325023c7bc142719c07fc0f152224e142782f55a2d647b626d52`; size: **5,508 bytes**.
+- Capture kit: **57/57 files**, **540,179 bytes**, SHA-256 `ca1d34d5201e42941d923de11c9e73c207e223be3551653353eae980043c0516`; artifact ID `15107823638`.
+- Report: `docs/phase112-event-lock-integrity.md` and `reports/PHASE112_REPORT_AR.md`; machine-readable summary: `reports/PHASE112_VALIDATION.json`.
+
+**Runtime gate unchanged:** CI success is not a physical PS3 Campaign result. The native second Campaign Local Client, independent Player 2 camera/HUD and four original shared mission interactions remain unproven. Player 2 remains `NOT_PROVEN`; shared interactions remain **0/4 ready**. No retail EBOOT or FastFile was modified.

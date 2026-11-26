@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "phase": 112,
+  "title": "Validate shared Campaign event-lock state",
+  "ci_run": 1628,
+  "ci_run_id": 45803806486,
+  "ci": "7/7 PASS",
+  "python_tests": "593/593",
+  "session_monitor_c_tests": "16/16",
+  "event_lock_c_tests": "21/21",
+  "gsc_wrapper_parser_c_tests": "10/10",
+  "gsc_wrapper_loader_c_tests": "12/12",
+  "host_runtime_simulator": {
+    "checks": 10030,
+    "failures": 0
+  },
+  "gsc": {
+    "tool": "1.6.2.364",
+    "source_sha256": "fd179a44d0aba94e6c42b32d29755093f8a7e6b730f88f63c75ca599d6147c7a",
+    "compiled_gscbin_sha256": "e63db21a6436325023c7bc142719c07fc0f152224e142782f55a2d647b626d52",
+    "compiled_gscbin_bytes": 5508,
+    "compile_decompile_manifest_pin": "PASS"
+  },
+  "capture_kit": {
+    "files": "57/57",
+    "bytes": 540179,
+    "sha256": "ca1d34d5201e42941d923de11c9e73c207e223be3551653353eae980043c0516",
+    "artifact_id": 15107823638,
+    "url": "https://github.com/Vikik0/PS3-SCALE/actions/runs/45803806486/artifacts/15107823638"
+  },
+  "runtime_boundary": {
+    "physical_ps3_campaign_tested": false,
+    "native_second_campaign_local_client_proven": false,
+    "player_two_gate": "NOT_PROVEN",
+    "original_shared_interactions_ready": "0/4",
+    "retail_eboot_or_fastfile_modified": false
+  }
+}
