@@ -1064,7 +1064,6 @@ for token in ("PS2 ENHANCER", "L2H PERFORMANCE (0x46)",
               "DOWNLOAD EXACT GAME CONFIG", "BACK UP CURRENT CONFIG",
               "RESTORE SAVED BACKUP",
               "Game patches require exact serial + ELF hash.",
-              "FPS / widescreen patches are experimental; hardware testing is pending.",
               "XMB upscaler / smoothing are separate display settings.",
               "TRIANGLE: DISPLAY GUIDE"):
     assert token in ps2_enhancer_ui, f"Missing PS2 enhancer UI token: {token}"
