@@ -80,6 +80,18 @@ int main(void)
         assert(ps3scale_ps2_config_append_patches(
             merged, merged_size, &patch, 1, base, sizeof(base),
             &base_size) == -3);
+
+        {
+            uint8_t title_id_config[64] = {
+                0x3D, 0x00, 0x00, 0x00, 0x57, 0x44, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                'S', 'L', 'U', 'S', '-', '2', '1', '2', '6', '0',
+                0x00, 0x00, 0x00, 0x00
+            };
+            assert(ps3scale_ps2_config_append_patches(
+                title_id_config, sizeof(title_id_config),
+                &patch, 1, merged, sizeof(merged), &merged_size) == -2);
+        }
     }
 
     patch.ee_address = 0x00161861u;

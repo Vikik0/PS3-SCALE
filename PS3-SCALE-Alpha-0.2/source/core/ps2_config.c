@@ -27,6 +27,29 @@ static uint32_t read_u32_le(const uint8_t *in)
            ((uint32_t)in[3] << 24);
 }
 
+static int looks_like_title_id(const uint8_t *text, size_t length)
+{
+    size_t i;
+    unsigned letters = 0;
+    unsigned digits = 0;
+
+    if (!text || length < 9u || length > 12u)
+        return 0;
+
+    for (i = 0; i < length; ++i) {
+        uint8_t c = text[i];
+        if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
+            ++letters;
+        } else if (c >= '0' && c <= '9') {
+            ++digits;
+        } else if (c != '_' && c != '-' && c != '.') {
+            return 0;
+        }
+    }
+
+    return letters >= 3u && digits >= 4u;
+}
+
 static int patches_valid(const ps3scale_ps2_code_patch_t *patches,
                          size_t patch_count)
 {
@@ -194,19 +217,15 @@ int ps3scale_ps2_config_append_patches(
     payload_size = base_size - 4u;
 
     /* A Title ID / multidisc command must remain the final command. */
-    for (i = sizeof(ps2_config_header); i + 14u <= payload_size; i += 4u) {
-        if (read_u32_le(base + i) == 0 &&
-            base[i + 4u] >= 'A' && base[i + 4u] <= 'Z' &&
-            base[i + 5u] >= 'A' && base[i + 5u] <= 'Z' &&
-            base[i + 6u] >= 'A' && base[i + 6u] <= 'Z' &&
-            base[i + 7u] >= 'A' && base[i + 7u] <= 'Z' &&
-            base[i + 8u] == '-' &&
-            base[i + 9u] >= '0' && base[i + 9u] <= '9' &&
-            base[i + 10u] >= '0' && base[i + 10u] <= '9' &&
-            base[i + 11u] >= '0' && base[i + 11u] <= '9' &&
-            base[i + 12u] >= '0' && base[i + 12u] <= '9' &&
-            base[i + 13u] >= '0' && base[i + 13u] <= '9')
-            return -2;
+    for (i = sizeof(ps2_config_header); i + 13u <= payload_size; i += 4u) {
+        size_t id_length;
+        if (read_u32_le(base + i) == 0) {
+            for (id_length = 9u; id_length <= 12u &&
+                 i + 4u + id_length <= payload_size; ++id_length) {
+                if (looks_like_title_id(base + i + 4u, id_length))
+                    return -2;
+            }
+        }
         if (read_u32_le(base + i) == 0x0Au)
             return -3;
     }
