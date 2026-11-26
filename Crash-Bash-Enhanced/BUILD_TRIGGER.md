@@ -10,6 +10,7 @@ The installable PKG is built from:
 
 - RetroArch's PSL1GHT PS3 frontend with Netplay enabled.
 - A statically linked PCSX-ReARMed PS1 core.
+- Local single-player launch passes the embedded Crash Bash CUE as the content argument; it does not use RetroArch `--menu`, which would open the menu without loading the game.
 - Port 1 Multitap enabled in the core.
 - RetroArch Netplay lockstep enabled to reduce the memory cost of the
   0x440000-byte PS1 savestate.
