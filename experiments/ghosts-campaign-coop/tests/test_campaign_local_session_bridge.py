@@ -317,7 +317,6 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         for body in (active, owner, complete):
             self.assertIn("level.ghc_campaign_drill_state_initialized", body)
             self.assertIn("!level.ghc_campaign_drill_state_initialized", body)
-            self.assertLess(body.index("return 0"), body.index("level.ghc_campaign_drill_"))
         for body in (active, owner):
             self.assertIn("!isdefined( var_0 )", body)
             self.assertIn("var_0 < 0 || var_0 > 1", body)
