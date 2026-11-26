@@ -310,6 +310,30 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         self.assertLess(body.index("return 0"), body.index("level.ghc_campaign_drill_complete_0 = var_1"))
         self.assertLess(body.index("return 0"), body.index("level.ghc_campaign_drill_complete_1 = var_1"))
 
+    def test_drill_state_setters_require_initialized_state_and_valid_ranges(self):
+        active = function_body(self.source, "ghc_campaign_drill_set_active_spot_for_player")
+        owner = function_body(self.source, "ghc_campaign_drill_set_owner_for_spot")
+        complete = function_body(self.source, "ghc_campaign_drill_set_complete_for_spot")
+        for body in (active, owner, complete):
+            self.assertIn("level.ghc_campaign_drill_state_initialized", body)
+            self.assertIn("!level.ghc_campaign_drill_state_initialized", body)
+            self.assertLess(body.index("return 0"), body.index("level.ghc_campaign_drill_"))
+        for body in (active, owner):
+            self.assertIn("!isdefined( var_0 )", body)
+            self.assertIn("var_0 < 0 || var_0 > 1", body)
+            self.assertIn("!isdefined( var_1 )", body)
+            self.assertIn("var_1 < -1 || var_1 > 1", body)
+        self.assertIn("( var_1 != 0 && var_1 != 1 )", complete)
+
+    def test_drill_state_setter_rejection_precedes_every_state_write(self):
+        for name, write in (
+            ("ghc_campaign_drill_set_active_spot_for_player", "level.ghc_campaign_drill_active_player_0 = var_1"),
+            ("ghc_campaign_drill_set_owner_for_spot", "level.ghc_campaign_drill_owner_0 = var_1"),
+            ("ghc_campaign_drill_set_complete_for_spot", "level.ghc_campaign_drill_complete_0 = var_1"),
+        ):
+            body = function_body(self.source, name)
+            self.assertLess(body.index("return 0"), body.index(write))
+
     def test_drill_cancel_and_abort_release_without_marking_complete(self):
         cancel = function_body(self.source, "ghc_campaign_drill_cancel")
         abort_player = function_body(self.source, "ghc_campaign_drill_abort_player")

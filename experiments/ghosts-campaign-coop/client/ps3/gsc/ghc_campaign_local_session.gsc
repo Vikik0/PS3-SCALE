@@ -568,6 +568,12 @@ ghc_campaign_drill_active_spot_for_player( var_0 )
 
 ghc_campaign_drill_set_active_spot_for_player( var_0, var_1 )
 {
+    if ( !isdefined( level.ghc_campaign_drill_state_initialized )
+        || !level.ghc_campaign_drill_state_initialized
+        || !isdefined( var_0 ) || var_0 < 0 || var_0 > 1
+        || !isdefined( var_1 ) || var_1 < -1 || var_1 > 1 )
+        return 0;
+
     if ( var_0 == 0 )
     {
         level.ghc_campaign_drill_active_player_0 = var_1;
@@ -585,6 +591,12 @@ ghc_campaign_drill_set_active_spot_for_player( var_0, var_1 )
 
 ghc_campaign_drill_set_owner_for_spot( var_0, var_1 )
 {
+    if ( !isdefined( level.ghc_campaign_drill_state_initialized )
+        || !level.ghc_campaign_drill_state_initialized
+        || !isdefined( var_0 ) || var_0 < 0 || var_0 > 1
+        || !isdefined( var_1 ) || var_1 < -1 || var_1 > 1 )
+        return 0;
+
     if ( var_0 == 0 )
     {
         level.ghc_campaign_drill_owner_0 = var_1;
@@ -602,7 +614,9 @@ ghc_campaign_drill_set_owner_for_spot( var_0, var_1 )
 
 ghc_campaign_drill_set_complete_for_spot( var_0, var_1 )
 {
-    if ( !isdefined( var_0 ) || var_0 < 0 || var_0 > 1
+    if ( !isdefined( level.ghc_campaign_drill_state_initialized )
+        || !level.ghc_campaign_drill_state_initialized
+        || !isdefined( var_0 ) || var_0 < 0 || var_0 > 1
         || !isdefined( var_1 ) || ( var_1 != 0 && var_1 != 1 ) )
         return 0;
 
