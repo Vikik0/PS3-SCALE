@@ -25,7 +25,7 @@ The matching private key was generated and delivered separately as `Crash-Bash-P
 Certificate SHA-256 fingerprint:
 
 ```text
-9ba2aaf245b0f19d5d0e9ee023d4d9c96291437b7a26e4c7d9d1cf65c2770bcd
+02d9fa8058313b3c0b55a32036308248c82fbe837b28003d673c069d1557088c
 ```
 
 After downloading the encrypted artifact, decrypt it locally with the matching key:
