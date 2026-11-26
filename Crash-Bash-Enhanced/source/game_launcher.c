@@ -18,7 +18,7 @@ int cb_launch_game(const char *content_path, int is_host, const char *nickname,
         stat(content_path, &target) != 0 || !S_ISREG(target.st_mode)) {
         if (error && error_size) {
             snprintf(error, error_size,
-                     "Crash Bash CUE not found. Put it in a PSXISO folder.");
+                     "Crash Bash CUE not found in the embedded or external PSXISO folders.");
         }
         return -1;
     }
