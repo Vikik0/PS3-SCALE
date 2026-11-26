@@ -85,6 +85,9 @@ assert "Do not create this project in the existing `VIKIK` organization" in read
 assert "Nano compute at $0/month" in readme
 assert "Never fall back to creating the project in `VIKIK`." in readme
 assert "Do not reuse" in readme
+assert "supabase db push --linked --yes" in readme
+assert "supabase functions deploy ps3scale-support --no-verify-jwt --yes" in readme
+assert "--remote=" not in readme
 assert "HMAC-SHA-256" in readme
 assert "PS3SCALE_GITHUB_TOKEN" in readme
 assert "If no token is configured" in readme
