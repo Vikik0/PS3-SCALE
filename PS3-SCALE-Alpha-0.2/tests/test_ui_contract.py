@@ -1061,7 +1061,8 @@ for token in ("PS2 ENHANCER", "L2H PERFORMANCE (0x46)",
               "RESTORE SAVED BACKUP",
               "FPS patch needs exact serial + ELF hash.",
               "60 FPS patch is experimental; it is not verified on hardware.",
-              "XMB upscaler / smoothing are separate display settings."):
+              "XMB upscaler / smoothing are separate display settings.",
+              "TRIANGLE: DISPLAY GUIDE"):
     assert token in ps2_enhancer_ui, f"Missing PS2 enhancer UI token: {token}"
 assert "ps2_config_ensure_backup" in src
 assert "ps3scale_ps2_config_store_stage" in src
@@ -1071,8 +1072,10 @@ assert "ps3scale_ps2_elf_read_exec_word" in src
 assert "ps3scale_ps2_fps_patch_find" in src
 assert "ps3scale_ps2_config_append_patches" in src
 assert "apply_ps2_fps_patch();" in src
+assert "g_ps2_enhancer_guide_open = 1" in src
 ps2_input = section("} else if (g_screen == SCREEN_PS2_CONFIG) {",
                     "} else if (g_screen == SCREEN_FPS_CONTROL) {")
+assert "triangle && !old_triangle" in ps2_input
 assert "(g_ps2_config_manager_selection + 7) % 8" in ps2_input
 assert "(g_ps2_config_manager_selection + 1) % 8" in ps2_input
 assert "perform_ps2_config_manager_action();" in ps2_input

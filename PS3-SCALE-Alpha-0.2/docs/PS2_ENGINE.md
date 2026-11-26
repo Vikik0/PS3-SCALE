@@ -20,12 +20,14 @@ The `0x48` values are serialized little-endian as two 32-bit parameters. The com
 
 ### Display scaling is a separate layer
 
-Sony's XMB exposes `Settings > Game Settings > PS / PS2 Upscaler` and `PS / PS2 Smoothing`. Upscaler choices affect how the SD output is scaled to the display; they do not add HD textures or change the game's internal render resolution. Smoothing reduces roughness but can soften the image. These are system-level display preferences; PS3 SCALE does not claim to change them through an undocumented registry write.
+Sony's XMB exposes `Settings > Game Settings > PS / PS2 Upscaler` and `PS / PS2 Smoothing`. PS3 SCALE now provides a `TRIANGLE: DISPLAY GUIDE` overlay for these global settings.
 
-Suggested manual check:
-1. Open XMB `Settings > Game Settings`.
-2. Choose `PS / PS2 Upscaler`: `Normal` preserves the aspect ratio; `Full Screen` stretches to fill the display.
-3. Try `PS / PS2 Smoothing` both `On` and `Off`; the best result varies by game and display.
+The official [PS3 Game Settings manual](https://manuals.playstation.net/document/en/ps3/current/settings/gamesettings.html) describes:
+- `Normal`: upscale while preserving the original aspect ratio.
+- `Full Screen`: stretch to fill the screen and change the aspect ratio.
+- `PS / PS2 Smoothing`: reduce jagged edges, with possible softening/blur.
+
+The separate `Display Settings > Video Output Settings` menu chooses supported output modes such as 720p/1080p. This upscales the output signal; it does not render PS2 games natively at HD. These settings are global, and PS3 SCALE does not change them automatically.
 
 ## What can and cannot produce 60 FPS
 
