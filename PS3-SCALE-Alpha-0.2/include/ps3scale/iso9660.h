@@ -14,7 +14,8 @@ int ps3scale_ps2_iso_read_serial(const char *iso_path,
 
 /*
  * Load the BOOT/BOOT2 ELF referenced by SYSTEM.CNF, including nested
- * ISO9660 directory paths. Multi-extent boot files are rejected safely.
+ * ISO9660 directory paths. Bounded multi-extent SYSTEM.CNF and boot files
+ * are supported; malformed chains, interleaved files and unsafe paths fail closed.
  * The caller owns *elf_data and must free it. The returned hash matches
  * PCSX2's ELF hash used in <serial>_<hash>.pnach filenames.
  */
