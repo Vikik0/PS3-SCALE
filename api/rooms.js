@@ -140,6 +140,33 @@ function discSelection(room, players = room.players || []) {
   return { discSelectionCount: selected.length, discMatch: players.length >= 2 && selected.length === players.length && !mismatch, discMismatch: mismatch };
 }
 
+function roomView(room, players = activePlayers(room), selfPlayerId = "") {
+  const ready = Boolean(room.gameStartedAt) || (
+    players.length >= 2 &&
+    players.length === (room.players || []).length &&
+    players.every((player) => player.ready)
+  );
+  return {
+    code: room.code,
+    status: ready ? "ready" : "waiting",
+    hostPlayerId: room.hostPlayerId || players[0]?.id || "",
+    netplayId: room.netplayId || "",
+    gameStarted: Boolean(room.gameStartedAt),
+    isPrivate: Boolean(room.isPrivate),
+    players: players.map(({ id, name, ready: playerReady, discFingerprint }) => ({
+      id,
+      name,
+      ready: Boolean(playerReady),
+      discFingerprint: discFingerprint || ""
+    })),
+    ...discSelection(room, players),
+    selfPlayerId,
+    maxPlayers: MAX_PLAYERS,
+    createdAt: room.createdAt,
+    updatedAt: room.updatedAt
+  };
+}
+
 function publicRoom(room) {
   const now = Date.now();
   expireStaleReadyPlayers(room, now);
@@ -578,7 +605,7 @@ module.exports = async function handler(req, res) {
             room.gameStartCancelUntil = room.gameStartedAt + 30 * 1000;
           }
           room.updatedAt = now;
-          return { status: 200, body: { ok: true, gameStartedAt: room.gameStartedAt } };
+          return { status: 200, body: { ok: true, gameStartedAt: room.gameStartedAt, room: roomView(room, active, claims.sub) } };
         }
 
         if (!room.gameStartedAt) {
@@ -594,7 +621,7 @@ module.exports = async function handler(req, res) {
         delete room.gameStartedAt;
         delete room.gameStartCancelUntil;
         room.updatedAt = now;
-        return { status: 200, body: { ok: true, gameStartCancelled: true } };
+        return { status: 200, body: { ok: true, gameStartCancelled: true, room: roomView(room, active, claims.sub) } };
       });
       if (!outcome.found) return reply(res, 404, { error: "Room not found." });
       return reply(res, outcome.outcome.status || 200, outcome.outcome.body);
