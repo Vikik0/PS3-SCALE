@@ -2,6 +2,7 @@
 """Static UI contract checks for PS3 SCALE's PS3-only UI."""
 import math
 import pathlib
+import re
 import sys
 
 source_path = pathlib.Path(sys.argv[1])
@@ -1054,7 +1055,7 @@ assert "PS2 CONFIG: %u%%" in details_ui
 # PS2 Enhancer uses only reviewed netemu CONFIG options and keeps the ISO read-only.
 ps2_enhancer_ui = section("static void draw_ps2_config_manager(void)",
                           "static void draw_fps_control(void)")
-for token in ("PS2 ENHANCER", "L2H PERFORMANCE (0x46)",
+for token in ("PS2 ENHANCER", "NETEMU HARDWARE REQUIRED", "L2H PERFORMANCE (0x46)",
               "SHARPER PIXELS (0x44)", "FRAME PACING (0x48)",
               "PRESSURE SENSITIVITY (0x50)",
               "APPLY LOCAL PROFILE", "EXISTING CONFIG PRESERVED",
@@ -1072,6 +1073,39 @@ assert "PS3SCALE_PS2_CFG_FRAME_PACING" in src
 assert "ps3scale_ps2_iso_load_boot_elf" in src
 assert "ps3scale_ps2_elf_read_exec_word" in src
 assert "ps3scale_ps2_game_patch_find" in src
+assert "ps2_netemu_iso_supported" in src
+assert "ps3scale_hardware_supports_netemu_ps2_iso(&g_hardware_info)" in src
+assert "if (!ps2_netemu_iso_supported())" in src
+
+# Keep the pinned PS2 patch catalogue exact, aligned, bounded and source-backed.
+patch_catalog_path = source_path.parent.parent / "core" / "ps2_game_patch.c"
+patch_catalog = patch_catalog_path.read_text(encoding="utf-8")
+entry_pattern = re.compile(
+    r'PATCH\("([^"]+)",0x([0-9A-Fa-f]{8})u,"([^"]+)","([^"]+)",'
+    r'PS3SCALE_PS2_PATCH_(FPS|WIDESCREEN|480P),([A-Za-z0-9_]+)\)')
+array_pattern = re.compile(
+    r'static const ps3scale_ps2_patch_word_t\s+([A-Za-z0-9_]+)\[\]=\{([\s\S]*?)\};')
+word_pattern = re.compile(r'\{0x([0-9A-Fa-f]+)u,0x([0-9A-Fa-f]+)u\}')
+patch_arrays = {}
+for match in array_pattern.finditer(patch_catalog):
+    patch_arrays[match.group(1)] = [
+        (int(word.group(1), 16), int(word.group(2), 16))
+        for word in word_pattern.finditer(match.group(2))]
+patch_counts = {"FPS": 0, "WIDESCREEN": 0, "480P": 0}
+patch_keys = set()
+for match in entry_pattern.finditer(patch_catalog):
+    serial, elf_hash, title, filename, kind, array_name = match.groups()
+    patch_counts[kind] += 1
+    assert len(elf_hash) == 8 and filename.endswith(".pnach")
+    assert filename in patch_catalog
+    assert array_name in patch_arrays and 0 < len(patch_arrays[array_name]) <= 32
+    key = (serial, elf_hash.upper(), kind)
+    assert key not in patch_keys
+    patch_keys.add(key)
+    for address, replacement in patch_arrays[array_name]:
+        assert address < 0x10000000 and address % 4 == 0
+assert patch_counts == {"FPS": 11, "WIDESCREEN": 12, "480P": 13}
+assert "1fd98102b8e2fffe3e0c29aab55339d48af0ffe5" in patch_catalog
 assert "refresh_ps2_patch_availability();" in src
 assert "g_ps2_patch_fps_available" in src
 assert "g_ps2_patch_widescreen_available" in src

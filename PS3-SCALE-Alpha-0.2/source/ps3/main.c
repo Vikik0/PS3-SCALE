@@ -5875,7 +5875,9 @@ static void draw_details(void)
                           "MATCHED PROFILE - AUTO APPLY ON CROSS" :
                           "MANUAL PROFILE - REVIEW FIRST") :
               ps2_config ? "MATCHED PS2 CONFIG - REVIEW FIRST" :
-                           "NO MATCHED FILE - PLAY UNMODIFIED");
+              (game->kind == PS3SCALE_GAME_PS2_ISO &&
+               !ps2_config_preferred_type() ? "HARDWARE NOT IDENTIFIED" :
+                                              "NO MATCHED FILE - PLAY UNMODIFIED"));
     set_ui_font_size(11, 17);
     snprintf(line, sizeof(line), "%.26s", game->title);
     draw_text(204.0f, 110.0f, 0x29243fff, line);
@@ -5924,6 +5926,12 @@ static void draw_details(void)
                   ps2_config_exists ? 0xffcc66ff : 0x2c9f8eff,
                   ps2_config_exists ? "Config already installed." :
                                       "Verified config available.");
+    } else if (game->kind == PS3SCALE_GAME_PS2_ISO &&
+               !ps2_config_preferred_type()) {
+        draw_text(204.0f, 320.0f, 0xffcc66ff,
+                  "CONSOLE HARDWARE NOT IDENTIFIED.");
+        draw_text(204.0f, 346.0f, 0x77718fff,
+                  "PS2 ISO CONFIG MATCHING DISABLED.");
     } else {
         draw_text(204.0f, 320.0f, 0xffcc66ff,
                   "No verified PS2 config matches this ID.");
@@ -6009,6 +6017,14 @@ static void draw_details(void)
                   "No universal 60 FPS or HD texture unlock.");
         draw_text(544.0f, 342.0f, 0x875be8ff,
                   "XMB upscaler is a separate display setting.");
+    } else if (game->kind == PS3SCALE_GAME_PS2_ISO &&
+               !ps2_config_preferred_type()) {
+        draw_text(544.0f, 290.0f, 0xb27b35ff,
+                  "CONSOLE HARDWARE NOT IDENTIFIED");
+        draw_text(544.0f, 311.0f, 0x514b69ff,
+                  "PS2 ISO CONFIG MATCHING IS DISABLED.");
+        draw_text(544.0f, 332.0f, 0x77718fff,
+                  "DETECT DEVICE AGAIN AND RESCAN.");
     } else {
         draw_text(544.0f, 290.0f, 0xb27b35ff,
                   "NO VERIFIED ENHANCEMENT AVAILABLE");
@@ -6112,7 +6128,10 @@ static void draw_ps2_config_manager(void)
               0x26794bff : 0x77718fff, line);
 
     snprintf(line, sizeof(line), "Match: %.42s",
-             entry ? entry->title : "NO EXACT GAME CONFIG");
+             entry ? entry->title :
+             (game && game->kind == PS3SCALE_GAME_PS2_ISO &&
+              !ps2_config_preferred_type() ? "HARDWARE NOT IDENTIFIED" :
+                                             "NO EXACT GAME CONFIG"));
     draw_text(430.0f, 142.0f,
               entry ? 0x26794bff : 0xb27b35ff, line);
     snprintf(line, sizeof(line), "ID: %s | Type: %s",
@@ -6145,49 +6164,49 @@ static void draw_ps2_config_manager(void)
               can_generate ?
               (netemu_supported ?
                "NETEMU-ONLY OPTIONS: SUPPORTED HARDWARE CONFIRMED." :
-               "NETEMU-ONLY OPTIONS DISABLED: DETECTED HARDWARE IS NOT A SLIM / SUPER SLIM.") :
+               "NETEMU-ONLY OPTIONS DISABLED: HARDWARE NOT CONFIRMED AS SLIM / SUPER SLIM.") :
               "LOCAL PROFILES AND CODE PATCHES REQUIRE A PS2 ISO.");
 
     draw_soft_card(48.0f, 232.0f, 352.0f, 38.0f,
                    g_ps2_config_manager_selection == 0);
-    draw_text(62.0f, 238.0f, 0x29243fff, "L2H PERFORMANCE (0x46)");
+    draw_text(62.0f, 238.0f, netemu_supported ? 0x29243fff : 0x77718fff, "L2H PERFORMANCE (0x46)");
     draw_text(62.0f, 253.0f, 0x77718fff,
               "May help titles using L2H downloads.");
     draw_text(350.0f, 244.0f,
-              (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_L2H) ?
+              netemu_supported && (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_L2H) ?
               0x26794bff : 0x77718fff,
               (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_L2H) ?
               "ON" : "OFF");
 
     draw_soft_card(48.0f, 275.0f, 352.0f, 38.0f,
                    g_ps2_config_manager_selection == 1);
-    draw_text(62.0f, 281.0f, 0x29243fff, "SHARPER PIXELS (0x44)");
+    draw_text(62.0f, 281.0f, netemu_supported ? 0x29243fff : 0x77718fff, "SHARPER PIXELS (0x44)");
     draw_text(62.0f, 296.0f, 0x77718fff,
               "Disables smoothing; aliasing may increase.");
     draw_text(350.0f, 287.0f,
-              (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_DISABLE_SMOOTHING) ?
+              netemu_supported && (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_DISABLE_SMOOTHING) ?
               0x26794bff : 0x77718fff,
               (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_DISABLE_SMOOTHING) ?
               "ON" : "OFF");
 
     draw_soft_card(48.0f, 318.0f, 352.0f, 38.0f,
                    g_ps2_config_manager_selection == 2);
-    draw_text(62.0f, 324.0f, 0x29243fff, "FRAME PACING (0x48)");
+    draw_text(62.0f, 324.0f, netemu_supported ? 0x29243fff : 0x77718fff, "FRAME PACING (0x48)");
     draw_text(62.0f, 339.0f, 0x77718fff,
               "Conservative VSYNC timing; experimental.");
     draw_text(350.0f, 330.0f,
-              (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_FRAME_PACING) ?
+              netemu_supported && (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_FRAME_PACING) ?
               0xb27b35ff : 0x77718fff,
               (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_FRAME_PACING) ?
               "ON" : "OFF");
 
     draw_soft_card(48.0f, 361.0f, 352.0f, 38.0f,
                    g_ps2_config_manager_selection == 3);
-    draw_text(62.0f, 367.0f, 0x29243fff, "PRESSURE SENSITIVITY (0x50)");
+    draw_text(62.0f, 367.0f, netemu_supported ? 0x29243fff : 0x77718fff, "PRESSURE SENSITIVITY (0x50)");
     draw_text(62.0f, 382.0f, 0x77718fff,
               "Enables analog pressure-sensitive button input.");
     draw_text(350.0f, 373.0f,
-              (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_PRESSURE) ?
+              netemu_supported && (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_PRESSURE) ?
               0x26794bff : 0x77718fff,
               (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_PRESSURE) ?
               "ON" : "OFF");
@@ -6209,7 +6228,10 @@ static void draw_ps2_config_manager(void)
                      p480_patch_label,
                      g_ps2_config_manager_selection == 7);
     draw_soft_button(430.0f, 330.0f, 350.0f, 22.0f,
-                     entry ? "DOWNLOAD EXACT GAME CONFIG" : "NO EXACT GAME CONFIG",
+                     entry ? "DOWNLOAD EXACT GAME CONFIG" :
+                     (game && game->kind == PS3SCALE_GAME_PS2_ISO &&
+                      !ps2_config_preferred_type() ? "HARDWARE NOT IDENTIFIED" :
+                                                     "NO EXACT GAME CONFIG"),
                      g_ps2_config_manager_selection == 8);
     draw_soft_button(430.0f, 358.0f, 350.0f, 22.0f,
                      "BACK UP CURRENT CONFIG",
