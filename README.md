@@ -10,7 +10,7 @@ PS3 SCALE is a PS3 homebrew application for managing PS3/PS2 game libraries and 
 - Development branch: `design/splash-transitions-ui-v6`
 - Review: [Draft PR #16](https://github.com/Vikik0/PS3-SCALE/pull/16)
 
-The latest Alpha 0.33 GitHub Actions run #865 passed host tests, the support Edge Function type-check, and PS3 ELF/SELF/PKG validation. A successful CI build is not a substitute for a physical-console smoke test; hardware behavior remains explicitly unverified until tested on a real PS3.
+The latest Alpha 0.33 GitHub Actions run #903 passed host tests, the support Edge Function type-check, and PS3 ELF/SELF/standard PKG/GNPDRM PKG validation. A successful CI build is not a substitute for a physical-console smoke test; hardware behavior remains explicitly unverified until tested on a real PS3.
 
 ## Current features
 
@@ -52,6 +52,8 @@ The latest Alpha 0.33 GitHub Actions run #865 passed host tests, the support Edg
 ### Persistence and support reliability — Alpha 0.33
 - Support reports are saved as atomic JSON outbox files with stable UUIDs.
 - Pending reports survive app restarts and can be retried from Help & Support.
+- The public support endpoint reads request bodies with a strict 12 KiB streaming cap and rejects invalid UTF-8 before JSON parsing.
+- Help & Support warns users not to include PSN IDs, passwords or account tokens; its form and delivery/error messages are localized in Arabic and Spanish.
 - Server responses are mapped to retry guidance; successful sends remove only the matching pending file.
 - The dedicated Supabase migration and Edge Function are prepared, but live reporting stays disabled until a separate Supabase Free Plan organization is created, the isolated project is deployed, and its publishable key/URL are configured. Do not create it under the existing VIKIK Pro organization.
 
