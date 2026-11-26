@@ -22,9 +22,10 @@ prototypes; they are not the gameplay path in this PKG.
 ## CI checks
 
 1. Bash syntax check for the PS3 package build script.
-2. Host-side protocol, JSON, archive, netcode and UDP peer tests.
-3. Web lobby token/security tests.
-4. PS3 cross-build, SELF/SFO identity checks, PKG header validation and
+2. Host-side protocol, JSON, archive, netcode, UDP peer, disc-browser, fingerprint and game-launch tests.
+3. Both BIN/CUE staging suites, including missing-track, sector-alignment, path-traversal, duplicate-name and unexpected-file rejection cases.
+4. Web lobby token/security tests.
+5. PS3 cross-build, SELF/SFO identity checks, PKG header validation and
    SHA-256 verification.
 
 The PS3 runtime is pinned to RetroArch's RGUI menu, so the package includes only shared fonts and RGUI assets; unused XMB, Ozone and wallpaper libraries are excluded. PSL1GHT's package tool has a 1,024-entry cap, and the Makefile now lists the unfinalized PKG and verifies every staged path and the item count before NPDRM finalization.
