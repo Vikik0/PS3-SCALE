@@ -116,7 +116,7 @@ The Devil Summoner candidate uses the pinned PCSX2 `[60 FPS]` section's single a
 
 Each source file's `[60 FPS]` section contains a single `patch=1,EE,...,word,...` replacement. The catalogue deliberately excludes PCSX2 extended writes, mode-2 addresses and patches whose notes require EE overclocking. These remain candidates, not hardware-verified PS3 patches. Every candidate must be tested on the target PS3 Slim for actual frame rate, timing, audio, cutscenes and stability before being marked verified.
 
-Root-level and nested ISO9660 multi-extent SYSTEM.CNF / BOOT files are assembled from bounded, ordered extent chains. The reader rejects mismatched identifiers, inconsistent flags, interleaved records, non-sector-aligned continuation extents, oversized chains and chains longer than 32 records. Host fixtures exercise successful split reads and malformed-chain rejection.
+Root-level and nested ISO9660 multi-extent SYSTEM.CNF / BOOT files are assembled from bounded, ordered extent chains. The reader rejects mismatched identifiers, unsupported special-file flags, extended attributes, interleaved files, non-sector-aligned continuation extents, oversized chains and chains longer than 32 records. Host fixtures exercise successful split reads and malformed-chain rejection.
 
 ## Next stage: broaden PS2 game enhancement coverage
 

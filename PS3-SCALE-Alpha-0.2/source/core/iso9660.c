@@ -316,6 +316,10 @@ static int collect_extent_chain(const unsigned char *directory,
     first_name = record + 33u;
     base_flags = (unsigned char)(record[25] & 0x7Fu);
 
+    /* Only hidden and directory flags are supported for boot/config files. */
+    if ((base_flags & 0x7Cu) != 0u)
+        return -1;
+
     memset(file, 0, sizeof(*file));
 
     for (;;) {

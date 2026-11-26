@@ -361,6 +361,26 @@ int main(void)
     free(loaded_elf);
     loaded_elf = NULL;
 
+    /* Associated/record/protection flags are not treated as ordinary files. */
+    write_byte_at(path,
+        23L * SECTOR + (long)nested_boot_first_offset + 25L, 0x84u);
+    assert(ps3scale_ps2_iso_load_boot_elf(
+        path, &loaded_elf, &loaded_elf_size,
+        serial, sizeof(serial), &elf_hash) < 0);
+    assert(loaded_elf == NULL && loaded_elf_size == 0u && elf_hash == 0u);
+    write_byte_at(path,
+        23L * SECTOR + (long)nested_boot_first_offset + 25L, 0x80u);
+
+    /* Interleaved extents are rejected rather than read as contiguous data. */
+    write_byte_at(path,
+        23L * SECTOR + (long)nested_boot_first_offset + 26L, 1u);
+    assert(ps3scale_ps2_iso_load_boot_elf(
+        path, &loaded_elf, &loaded_elf_size,
+        serial, sizeof(serial), &elf_hash) < 0);
+    assert(loaded_elf == NULL && loaded_elf_size == 0u && elf_hash == 0u);
+    write_byte_at(path,
+        23L * SECTOR + (long)nested_boot_first_offset + 26L, 0u);
+
     /* A continuation record with a different identifier is rejected. */
     write_byte_at(path,
         23L * SECTOR + (long)nested_boot_second_offset + 33L, 'X');
