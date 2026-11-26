@@ -436,3 +436,12 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - Capture kit: 57/57 files, 538,860 bytes; SHA-256 `d0ae425baa7f139b701b29e20189eddd29c7fb67b579f364dde45b66658a11b1`; artifact `15100672886`.
 
 **Runtime gate unchanged:** no physical PS3 Campaign test has been supplied. Player 2 remains `NOT_PROVEN`, and the four shared interactions remain **0/4 ready**.
+
+
+### Phase 110 — guard Clockwork drill state setters
+
+- All three lower-level drill state setters now require initialized shared state and validate their slot/value ranges before any mutation. Completion remains restricted to exact numeric `0` or `1`.
+- CI [#1622](https://github.com/Vikik0/PS3-SCALE/actions/runs/45787583744): **7/7 successful**, **583 Python tests**, **16/16 session-monitor C**, **21/21 Event Lock C**, **10/10 GSC parser**, **12/12 GSC loader**, and **10,030 host-runtime checks with 0 failures**. GSC compile/round-trip and manifest pin passed.
+- Capture kit: 57/57 files, 538,971 bytes; SHA-256 `0217d080d58da690e6ba8931e8ae74c32bdf0fbe21f3170be5e62e31abc89b96`; artifact `15100798110`.
+
+**Runtime gate unchanged:** no physical PS3 Campaign test or native Player 2 capture has been supplied. Player 2 remains `NOT_PROVEN`; the four shared interactions remain **0/4 ready**.

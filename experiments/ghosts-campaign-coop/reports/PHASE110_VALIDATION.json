@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "phase": 110,
+  "title": "Guard Clockwork drill state setters",
+  "ci_run": 1622,
+  "ci_run_id": 45787583744,
+  "ci": "7/7 PASS",
+  "python_tests": "583/583",
+  "session_monitor_c_tests": "16/16",
+  "event_lock_c_tests": "21/21",
+  "gsc_wrapper_parser_c_tests": "10/10",
+  "gsc_wrapper_loader_c_tests": "12/12",
+  "host_runtime_simulator": {
+    "checks": 10030,
+    "failures": 0
+  },
+  "gsc": {
+    "tool": "1.6.2.364",
+    "source_sha256": "875b21dd7f47004257c9ef156eba44a27b448c4967122a9136b6d0a43fd003a8",
+    "compiled_gscbin_sha256": "3f588ac0004b47c3f2e4c0245e22454767501540b3f7b2f01d5bfc016fd53a35",
+    "compiled_gscbin_bytes": 4378,
+    "compile_decompile_manifest_pin": "PASS"
+  },
+  "capture_kit": {
+    "files": "57/57",
+    "bytes": 538971,
+    "sha256": "0217d080d58da690e6ba8931e8ae74c32bdf0fbe21f3170be5e62e31abc89b96",
+    "artifact_id": 15100798110,
+    "url": "https://github.com/Vikik0/PS3-SCALE/actions/runs/45787583744/artifacts/15100798110"
+  },
+  "runtime_boundary": {
+    "physical_ps3_campaign_tested": false,
+    "native_second_campaign_local_client_proven": false,
+    "player_two_gate": "NOT_PROVEN",
+    "original_shared_interactions_ready": "0/4",
+    "retail_eboot_or_fastfile_modified": false
+  }
+}
