@@ -1107,15 +1107,6 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
         while (!worker.done) {
             sysUtilCheckCallback();
             draw_lobby_message("CLOSING ONLINE ROOMS",
-                               "Finishing the pending room refresh...", "", 0);
-        }
-        join_lobby_worker(worker_thread);
-        worker_active = 0;
-    }
-    if (worker_active) {
-        while (!worker.done) {
-            sysUtilCheckCallback();
-            draw_lobby_message("CLOSING ONLINE ROOMS",
                                "Finishing the pending room request...", "", 0);
         }
         join_lobby_worker(worker_thread);
