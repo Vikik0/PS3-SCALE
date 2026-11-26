@@ -6062,13 +6062,15 @@ static void draw_ps2_config_manager(void)
          (g_ps2_patch_fps_available ? "APPLY EXPERIMENTAL 60 FPS PATCH" :
                                       "NO EXACT 60 FPS PATCH")));
     const char *widescreen_patch_label = !can_generate ? "ISO PATCH ONLY" :
-        (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
-         (g_ps2_patch_widescreen_available ? "APPLY 16:9 WIDESCREEN PATCH" :
-                                             "NO EXACT 16:9 PATCH")));
+        (!netemu_supported ? "NETEMU HARDWARE REQUIRED" :
+         (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
+          (g_ps2_patch_widescreen_available ? "APPLY 16:9 WIDESCREEN PATCH" :
+                                              "NO EXACT 16:9 PATCH")));
     const char *p480_patch_label = !can_generate ? "ISO PATCH ONLY" :
-        (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
-         (g_ps2_patch_480p_available ? "APPLY 480P OUTPUT PATCH" :
-                                       "NO EXACT 480P PATCH")));
+        (!netemu_supported ? "NETEMU HARDWARE REQUIRED" :
+         (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
+          (g_ps2_patch_480p_available ? "APPLY 480P OUTPUT PATCH" :
+                                        "NO EXACT 480P PATCH")));
     const char *config_state =
         g_ps2_config_manager_target_state == 1 ? "PRESENT" :
         (g_ps2_config_manager_target_state == 0 ? "MISSING" :
