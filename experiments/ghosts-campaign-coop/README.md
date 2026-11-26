@@ -505,3 +505,10 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - See `docs/phase115-activator-aware-trigger-adapter.md` and `reports/PHASE115_REPORT_AR.md`.
 
 **Runtime and mission integration gate unchanged:** 15 generic trigger call sites remain unmigrated (3 Black Ice, 2 Carrier, 10 Cornered). The four shared mission interactions remain **0/4 ready**. A native second Campaign Local Client, independent Player 2 camera/HUD and physical PS3 Campaign execution remain unproven. Player 2 remains `NOT_PROVEN`; no retail EBOOT, SELF or FastFile was modified or injected.
+
+### Phase 116 — PS3 runtime capture quick start
+
+- أضفت دليلاً عربياً موحداً لتشغيل Pad Probe وDualShock Input Probe والتقاط مقاطع Campaign/Multiplayer من TU 1.16 والتحقق منها.
+- يحدد الدليل الملفات المطلوبة، أوامر PS3MAPI، سجلات المقارنة، وملفات JSON التي يجب مشاركتها.
+- هذا هو بوابة الانتقال التالية: إثبات Native Campaign Local Client الثاني على الجهاز الفعلي قبل تعديل أي FastFile.
+- See `docs/phase116-ps3-runtime-capture-quickstart-ar.md`.
