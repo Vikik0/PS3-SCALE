@@ -1,0 +1,43 @@
+name: Crash Bash Web Lobby Tests
+
+on:
+  push:
+    branches: [main, crash-bash-enhanced]
+    paths:
+      - "api/**"
+      - "tests/**"
+      - "index.html"
+      - "package.json"
+      - "vercel.json"
+      - ".github/workflows/crash-bash-web.yml"
+  pull_request:
+    branches: [main, crash-bash-enhanced]
+    paths:
+      - "api/**"
+      - "tests/**"
+      - "index.html"
+      - "package.json"
+      - "vercel.json"
+      - ".github/workflows/crash-bash-web.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crash-bash-web-v2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web-tests:
+    name: Web lobby security and room-concurrency tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install web dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Run web tests
+        run: npm test
