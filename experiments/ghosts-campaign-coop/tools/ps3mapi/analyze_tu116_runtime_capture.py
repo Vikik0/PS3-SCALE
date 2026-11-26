@@ -198,7 +198,8 @@ def analyze(
     if (campaign_log is None) != (multiplayer_log is None):
         raise ValueError("provide both pad-probe logs or neither")
     if (campaign_metadata is None) != (multiplayer_metadata is None):
-        raise ValueError("provide both capture metadata files or neither")    if (campaign_input_log is None) != (multiplayer_input_log is None):
+        raise ValueError("provide both capture metadata files or neither")
+    if (campaign_input_log is None) != (multiplayer_input_log is None):
         raise ValueError("provide both DualShock Input Probe logs or neither")
 
     if campaign_log is not None:
@@ -404,7 +405,8 @@ def analyze(
 
         write_json(outputs["campaign_dump_verification.json"], campaign_verification)
         write_json(outputs["multiplayer_dump_verification.json"], multiplayer_verification)
-        write_json(outputs["campaign_runtime_strings.json"], campaign_strings)        write_json(outputs["multiplayer_runtime_strings.json"], multiplayer_strings)
+        write_json(outputs["campaign_runtime_strings.json"], campaign_strings)
+        write_json(outputs["multiplayer_runtime_strings.json"], multiplayer_strings)
         write_json(outputs["runtime_string_comparison.json"], string_comparison)
         write_json(outputs["runtime_binary_comparison.json"], binary_comparison)
         write_json(outputs["pad_probe_comparison.json"], pad_comparison)
