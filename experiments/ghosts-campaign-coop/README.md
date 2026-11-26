@@ -426,3 +426,13 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 
 **Runtime gate unchanged:** this is compiled and host-tested lifecycle logic, not a physical PS3 test. The second native Campaign Local Client and all four original shared interactions remain unproven (**0/4 ready**).
 
+
+
+### Phase 109 — strict Clockwork drill API input validation
+
+- The drill begin/finish helpers now reject undefined or out-of-range spot IDs. Finish accepts only an explicit numeric `0` or `1` completion flag; the shared completion-state setter independently validates slot and flag before mutation.
+- Owner-only completion, Stage 1 → Stage 2 sequencing, and abort-without-completion remain unchanged.
+- CI [#1619](https://github.com/Vikik0/PS3-SCALE/actions/runs/45786580232): **7/7 successful**, **581 Python tests**, **16/16 session-monitor C**, **21/21 Event Lock C**, **10/10 GSC parser**, **12/12 GSC loader**, and **10,030 host-runtime checks with 0 failures**. GSC compile/round-trip and manifest pin passed.
+- Capture kit: 57/57 files, 538,860 bytes; SHA-256 `d0ae425baa7f139b701b29e20189eddd29c7fb67b579f364dde45b66658a11b1`; artifact `15100672886`.
+
+**Runtime gate unchanged:** no physical PS3 Campaign test has been supplied. Player 2 remains `NOT_PROVEN`, and the four shared interactions remain **0/4 ready**.
