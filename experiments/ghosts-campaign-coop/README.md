@@ -473,3 +473,16 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - Report: `docs/phase112-event-lock-integrity.md` and `reports/PHASE112_REPORT_AR.md`; machine-readable summary: `reports/PHASE112_VALIDATION.json`.
 
 **Runtime gate unchanged:** CI success is not a physical PS3 Campaign result. The native second Campaign Local Client, independent Player 2 camera/HUD and four original shared mission interactions remain unproven. Player 2 remains `NOT_PROVEN`; shared interactions remain **0/4 ready**. No retail EBOOT or FastFile was modified.
+
+### Phase 113 — event-lock cleanup and stale-session query hardening
+
+- `ghc_campaign_event_lock_clear_active()` now fails when the lock state is invalid and revalidates the full invariant after aborting both player slots; an empty slot remains a normal no-op.
+- `ghc_campaign_event_lock_release()` checks session readiness and native-pair freshness before rejecting corrupt lock arrays. A stale native pair therefore still enters centralized session invalidation instead of returning early on a storage error.
+- `ghc_campaign_event_lock_is_owner()` is now a read-only current-session query: it returns false unless the session is ready, the native pair is current, the lock state is valid, and the caller maps to a valid local slot.
+- Added three regression tests for cleanup reporting, release ordering and current-pair ownership queries.
+- CI run [#1631](https://github.com/Vikik0/PS3-SCALE/actions/runs/45804585216): **7/7 jobs successful**, **596 Python tests**, **16/16 session-monitor C**, **21/21 Event Lock C**, **10/10 GSC parser**, **12/12 GSC loader**, and **10,030 host-runtime checks with 0 failures**. GSC Tool 1.6.2.364 compile/decompile and manifest pins passed.
+- Bridge source SHA-256: `3f42c0c5f992266288eee059c238c031f617e236e0207432c72467fddc40db56`; compiled GSCBIN SHA-256: `a57022f00419a91a153518058d2ecae0ee1121b601b4dff849bd0a1996efd9c3`; size: **5,545 bytes**.
+- Capture kit: **57/57 files**, **540,322 bytes**, SHA-256 `fdd29448bc9a368cd6357cd345e9c7138e21c57635aaf776dcd36c0693a79517`; artifact ID `15109335074`.
+- Report: `docs/phase113-event-lock-cleanup.md` and `reports/PHASE113_REPORT_AR.md`; machine-readable summary: `reports/PHASE113_VALIDATION.json`.
+
+**Runtime gate unchanged:** this phase hardens cleanup and ownership queries only. It does not prove physical PS3 Campaign execution or create Player 2. Native second Campaign Local Client, independent camera/HUD and original shared mission interactions remain unproven. Player 2 remains `NOT_PROVEN`; shared interactions remain **0/4 ready**.
