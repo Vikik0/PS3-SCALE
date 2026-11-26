@@ -9,12 +9,26 @@ export PORTLIBS
 TOOLCHAIN="$PS3DEV/ppu/bin"
 PREFIX="$TOOLCHAIN/powerpc64-ps3-elf-"
 WORK="${RUNNER_TEMP:-/tmp}/ps3scale-https-deps"
+PROJECT_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+CA_BUNDLE_RUNTIME_PATH="/dev_hdd0/game/PS3SCALE1/USRDIR/cacert.pem"
+
+# curl's configure probe checks the runtime path even though the bundle is
+# packaged later by Makefile. Stage the exact bundled CA file at that path
+# inside the build container so the probe and the shipped runtime agree.
+mkdir -p "$(dirname -- "$CA_BUNDLE_RUNTIME_PATH")"
+cp "$PROJECT_ROOT/pkgfiles/USRDIR/cacert.pem" "$CA_BUNDLE_RUNTIME_PATH"
+test -s "$CA_BUNDLE_RUNTIME_PATH"
 
 mkdir -p "$PORTLIBS/include" "$PORTLIBS/lib" "$WORK"
 export PATH="$TOOLCHAIN:$PATH"
 
 # Build the Apache-2.0 option of Mbed TLS for the PPU target.
-git clone --depth 1 https://github.com/bucanero/ps3libraries.git "$WORK/ps3libraries"
+PS3LIBRARIES_COMMIT="74095b14f6327420787ca2f7fe95b0c58c835cc4"
+git init "$WORK/ps3libraries"
+git -C "$WORK/ps3libraries" remote add origin https://github.com/bucanero/ps3libraries.git
+git -C "$WORK/ps3libraries" fetch --depth 1 origin "$PS3LIBRARIES_COMMIT"
+git -C "$WORK/ps3libraries" checkout --detach FETCH_HEAD
+test "$(git -C "$WORK/ps3libraries" rev-parse HEAD)" = "$PS3LIBRARIES_COMMIT"
 cd "$WORK"
 wget -q -O mbedtls-2.28.10.tar.bz2 \
   https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-2.28.10/mbedtls-2.28.10.tar.bz2

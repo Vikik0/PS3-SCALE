@@ -25,6 +25,7 @@ typedef struct ps3scale_game {
     char title[PS3SCALE_NAME_MAX];
     char title_id[PS3SCALE_ID_MAX];
     char disc_id[PS3SCALE_DISC_ID_MAX]; /* PS2 serial, e.g. SLUS_203.12 */
+    char region[20]; /* Region inferred from the exact title / disc ID. */
     char category[PS3SCALE_CAT_MAX];
     char app_ver[PS3SCALE_GAME_APP_VER_MAX];
     char path[PS3SCALE_PATH_MAX];
@@ -41,5 +42,6 @@ void ps3scale_game_list_init(ps3scale_game_list_t *list);
 int ps3scale_game_list_add(ps3scale_game_list_t *list,
                            const ps3scale_game_t *game);
 const char *ps3scale_game_kind_name(ps3scale_game_kind_t kind);
+const char *ps3scale_game_region_name(const char *id);
 
 #endif

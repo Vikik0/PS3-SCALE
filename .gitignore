@@ -1,0 +1,11 @@
+# Supabase Edge Function secrets and local runtime state
+supabase/functions/.env
+supabase/functions/.env.*
+!supabase/functions/.env.example
+supabase/.temp/
+supabase/.branches/
+
+# Local environment files
+.env
+.env.*
+!.env.example

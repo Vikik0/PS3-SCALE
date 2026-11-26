@@ -1,7 +1,7 @@
 # PS3 SCALE Online FPS / performance profiles
 # Fields: TITLE_ID, APP_VER, TITLE, EFFECT, TRUST, PATCHES, NOTES, SOURCE_URL (tab-separated).
 # PATCHES: address,expected_hex,replacement_hex; semicolon separates writes that belong to one profile.
-# Only exact Title ID + APP_VER records are included. B_COMMUNITY is community-reported, not PS3 SCALE hardware-verified.
+# Records are selected by exact Title ID, inferred region and APP_VER; no cross-region fallback is allowed. B_COMMUNITY is community-reported, not PS3 SCALE hardware-verified.
 # This catalogue is data only. Downloading it does not apply or write any game memory.
 BCUS98174	01.11	The Last of Us	60 FPS	B_COMMUNITY	1571A6F,02,01	Community MAPI report; exact version required; verify on this console before use.	https://github.com/DoSpamu/RPCS3toArtemisPatches/blob/master/MAPI_PATCHES.md
 BLUS30127	01.00	Grand Theft Auto IV	Uncapped FPS	B_COMMUNITY	F18830,3D,00	Community MAPI report; exact version required; verify on this console before use.	https://github.com/DoSpamu/RPCS3toArtemisPatches/blob/master/MAPI_PATCHES.md

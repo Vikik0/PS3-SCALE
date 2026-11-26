@@ -118,6 +118,10 @@ int main(void)
     snprintf(path, sizeof(path), "%s/PS2ISO", root); make_dir(path);
     snprintf(path, sizeof(path), "%s/PS2ISO/God of War II.iso", root);
     write_file(path);
+    snprintf(path, sizeof(path), "%s/PS2ISO/Gran Turismo 4 [SCUS_973.28].img", root);
+    write_file(path);
+    snprintf(path, sizeof(path), "%s/PS2ISO/Shadow of Rome [SLUS_206.27].mdf", root);
+    write_file(path);
     snprintf(path, sizeof(path), "%s/PS2ISO/Crash Twinsanity [SLUS_209.09].BIN.ENC", root);
     write_file(path);
 
@@ -133,12 +137,19 @@ int main(void)
     ps3scale_game_list_init(&list);
     found = ps3scale_scan_device(root, &list);
 
-    assert(found == 6);
-    assert(list.count == 6);
+    assert(found == 8);
+    assert(list.count == 8);
     assert(list.items[0].kind == PS3SCALE_GAME_PS3_FOLDER);
     assert(list.items[1].kind == PS3SCALE_GAME_PS2_CLASSIC ||
            list.items[2].kind == PS3SCALE_GAME_PS2_CLASSIC);
     assert(list.items[0].title_id[0] != '\0');
+    assert(strcmp(ps3scale_game_region_name("SLPM_654.32"), "JAPAN") == 0);
+    assert(strcmp(ps3scale_game_region_name("SLKA_123.45"), "KOREA") == 0);
+    assert(strcmp(ps3scale_game_region_name("NPKB12345"), "KOREA") == 0);
+    assert(strcmp(ps3scale_game_region_name("NPED12345"), "EUROPE") == 0);
+    assert(strcmp(ps3scale_game_region_name("NPJD12345"), "JAPAN") == 0);
+    assert(strcmp(ps3scale_game_region_name("BLAS12345"), "ASIA") == 0);
+    assert(strcmp(ps3scale_game_region_name("unmapped-id"), "UNKNOWN") == 0);
     assert(strcmp(list.items[0].app_ver, "01.04") == 0);
 
     {
@@ -148,11 +159,20 @@ int main(void)
         int saw_ps2_cover = 0;
         int saw_ps3_cover = 0;
         int saw_encrypted_ps2 = 0;
+        int saw_ps2_img = 0;
+        int saw_ps2_mdf = 0;
         for (i = 0; i < list.count; i++) {
             if (strcmp(list.items[i].title_id, "BLES12345") == 0) {
                 saw_mounted = 1;
                 assert(strcmp(list.items[i].app_ver, "01.04") == 0);
+                assert(strcmp(list.items[i].region, "EUROPE") == 0);
             }
+            if (strcmp(list.items[i].title_id, "BLUS12345") == 0)
+                assert(strcmp(list.items[i].region, "NORTH AMERICA") == 0);
+            if (strcmp(list.items[i].title_id, "PS2U10000") == 0)
+                assert(strcmp(list.items[i].region, "NORTH AMERICA") == 0);
+            if (strcmp(list.items[i].title_id, "BCES01893") == 0)
+                assert(strcmp(list.items[i].region, "EUROPE") == 0);
             if (strcmp(list.items[i].title_id, "BCES01893") == 0)
                 saw_ps3_iso_id = 1;
             if (strcmp(list.items[i].title, "Demo PS2 Classic") == 0 &&
@@ -162,14 +182,28 @@ int main(void)
                 list.items[i].cover_path[0] != '\0')
                 saw_ps3_cover = 1;
             if (list.items[i].kind == PS3SCALE_GAME_PS2_CLASSIC &&
-                strcmp(list.items[i].disc_id, "SLUS_209.09") == 0)
+                strcmp(list.items[i].disc_id, "SLUS_209.09") == 0) {
                 saw_encrypted_ps2 = 1;
+                assert(strcmp(list.items[i].region, "NORTH AMERICA") == 0);
+            }
+            if (strstr(list.items[i].path, ".img") != NULL) {
+                saw_ps2_img = 1;
+                assert(strcmp(list.items[i].disc_id, "SCUS_973.28") == 0);
+                assert(strcmp(list.items[i].region, "NORTH AMERICA") == 0);
+            }
+            if (strstr(list.items[i].path, ".mdf") != NULL) {
+                saw_ps2_mdf = 1;
+                assert(strcmp(list.items[i].disc_id, "SLUS_206.27") == 0);
+                assert(strcmp(list.items[i].region, "NORTH AMERICA") == 0);
+            }
         }
         assert(saw_mounted);
         assert(saw_ps3_iso_id);
         assert(saw_ps2_cover);
         assert(saw_ps3_cover);
         assert(saw_encrypted_ps2);
+        assert(saw_ps2_img);
+        assert(saw_ps2_mdf);
     }
 
     puts("PS3 SCALE scanner tests: PASS");

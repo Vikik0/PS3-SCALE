@@ -58,12 +58,38 @@ int main(void)
     strcpy(game.path, "/dev_usb001/PS2ISO/Crash.bin");
     expect_path(&game, "/play.ps3/dev_usb001/PS2ISO/Crash.bin");
 
+    strcpy(game.path, "/dev_usb002/PS2ISO/Gran Turismo 4 [SCUS_973.28].img");
+    expect_path(&game,
+        "/play.ps3/dev_usb002/PS2ISO/Gran%20Turismo%204%20%5BSCUS_973.28%5D.img");
+
+    strcpy(game.path, "/dev_usb003/PS2ISO/Shadow of Rome [SLUS_206.27].mdf");
+    expect_path(&game,
+        "/play.ps3/dev_usb003/PS2ISO/Shadow%20of%20Rome%20%5BSLUS_206.27%5D.mdf");
+
     strcpy(game.path, "/dev_hdd0/GAMES/Crash.iso");
     assert(ps3scale_webman_build_start_path(&game, output,
                                              sizeof(output)) != 0);
     strcpy(game.path, "/dev_hdd0/PS2ISO/Crash.bin.enc");
     assert(ps3scale_webman_build_start_path(&game, output,
                                              sizeof(output)) != 0);
+
+    assert(ps3scale_webman_build_app_start_path("NP0APOLLO", output,
+                                                  sizeof(output)) == 0);
+    assert(strcmp(output, "/play.ps3?NP0APOLLO") == 0);
+    assert(ps3scale_webman_build_app_start_path("ARTPS3001", output,
+                                                  sizeof(output)) == 0);
+    assert(strcmp(output, "/play.ps3?ARTPS3001") == 0);
+    assert(ps3scale_webman_build_app_start_path("ARTZ00001", output,
+                                                  sizeof(output)) == 0);
+    assert(strcmp(output, "/play.ps3?ARTZ00001") == 0);
+    assert(ps3scale_webman_build_app_start_path("np0apollo", output,
+                                                  sizeof(output)) != 0);
+    assert(ps3scale_webman_build_app_start_path("NP0APOLLO/evil", output,
+                                                  sizeof(output)) != 0);
+    assert(ps3scale_webman_build_app_start_path("SHORT", output,
+                                                  sizeof(output)) != 0);
+    assert(ps3scale_webman_build_app_start_path("NP0APOLLO", output, 8) != 0);
+    assert(output[0] == '\0');
 
     game.kind = PS3SCALE_GAME_PS3_HDD;
     assert(ps3scale_webman_build_start_path(&game, output, 4) != 0);

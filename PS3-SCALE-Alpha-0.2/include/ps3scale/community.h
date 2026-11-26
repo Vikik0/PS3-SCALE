@@ -24,6 +24,7 @@ typedef struct ps3scale_community_file {
     char branch[PS3SCALE_COMMUNITY_BRANCH_MAX];
     char path[PS3SCALE_COMMUNITY_PATH_MAX];
     unsigned long file_size;
+    char git_blob_sha1[41];
 } ps3scale_community_file_t;
 
 typedef struct ps3scale_community_index {
@@ -41,6 +42,12 @@ int ps3scale_community_file_matches_game(
 const char *ps3scale_community_source_label(const char *source_kind);
 const char *ps3scale_community_category_label(const char *category);
 const char *ps3scale_community_region_label(const char *title_id);
+int ps3scale_community_verify_git_blob_sha1(const char *path,
+                                             unsigned long expected_size,
+                                             const char *expected_sha1);
+int ps3scale_community_file_matches_id_version(
+    const ps3scale_community_file_t *file,
+    const ps3scale_game_t *game);
 int ps3scale_community_file_matches_exact_game(
     const ps3scale_community_file_t *file,
     const ps3scale_game_t *game);

@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,14 +20,74 @@ function cleanText(value: unknown, maxLength: number): string | null {
   return text;
 }
 
-async function sha256Hex(value: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
+async function hmacSha256Hex(secret: string, value: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
     new TextEncoder().encode(value),
   );
-  return Array.from(new Uint8Array(digest))
+  return Array.from(new Uint8Array(signature))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
+}
+
+type BoundedBodyRead =
+  | { text: string }
+  | { tooLarge: true }
+  | { invalid: true };
+
+async function readBoundedBody(
+  request: Request,
+  maxBytes: number,
+): Promise<BoundedBodyRead> {
+  if (!request.body) return { text: "" };
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        return { tooLarge: true };
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return { invalid: true };
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  try {
+    return { text: new TextDecoder("utf-8", { fatal: true }).decode(bytes) };
+  } catch {
+    return { invalid: true };
+  }
+}
+
+function isRequestId(value: string | null): value is string {
+  return value !== null &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      .test(value);
 }
 
 Deno.serve(async (request) => {
@@ -38,14 +98,33 @@ Deno.serve(async (request) => {
     return reply(405, { ok: false, error: "method_not_allowed" });
   }
 
+  const boundedBody = await readBoundedBody(request, 12 * 1024);
+  if ("tooLarge" in boundedBody) {
+    return reply(413, { ok: false, error: "request_too_large" });
+  }
+  if ("invalid" in boundedBody) {
+    return reply(400, { ok: false, error: "invalid_body_encoding" });
+  }
+
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
+    body = JSON.parse(boundedBody.text);
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return reply(400, { ok: false, error: "invalid_json_object" });
+    }
   } catch {
     return reply(400, { ok: false, error: "invalid_json" });
   }
 
-  const kind = body.kind === "feedback" ? "feedback" : "issue";
+  if (body.kind !== "issue" && body.kind !== "feedback") {
+    return reply(400, { ok: false, error: "invalid_report_kind" });
+  }
+  const kind = body.kind;
+  const requestId = cleanText(body.request_id, 36);
+  if (!isRequestId(requestId)) {
+    return reply(400, { ok: false, error: "valid_request_id_required" });
+  }
+
   const title = cleanText(body.title, 100);
   const details = cleanText(body.details, 2000);
   const model = cleanText(body.model, 80) ?? "UNKNOWN";
@@ -58,37 +137,66 @@ Deno.serve(async (request) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const rateLimitSalt = Deno.env.get("PS3SCALE_SUPPORT_RATE_LIMIT_SALT");
-  if (!supabaseUrl || !serviceRoleKey || !rateLimitSalt) {
+  const secretKeysJson = Deno.env.get("SUPABASE_SECRET_KEYS");
+  let serviceRoleKey: string | undefined;
+  try {
+    const secretKeys = JSON.parse(secretKeysJson ?? "{}") as
+      Record<string, unknown>;
+    const defaultSecret = secretKeys.default;
+    if (typeof defaultSecret === "string" && defaultSecret.length > 0) {
+      serviceRoleKey = defaultSecret;
+    }
+  } catch {
+    serviceRoleKey = undefined;
+  }
+  if (!supabaseUrl || !serviceRoleKey) {
     return reply(503, { ok: false, error: "support_service_not_configured" });
   }
 
-  const forwarded = request.headers.get("cf-connecting-ip") ??
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    "unknown";
-  const ipHash = await sha256Hex(`${rateLimitSalt}:${forwarded}`);
+  // Supabase's Cloudflare edge supplies this header. Do not trust a
+  // caller-controlled X-Forwarded-For value for the rate-limit identity.
+  const clientIp = request.headers.get("cf-connecting-ip") ?? "unknown";
+  const ipHash = await hmacSha256Hex(serviceRoleKey, clientIp);
   const admin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count, error: rateError } = await admin
+  // A retry with the same UUID returns the existing receipt and never
+  // creates a second database row or duplicate GitHub issue.
+  const { data: existing, error: existingError } = await admin
     .from("ps3scale_support_reports")
-    .select("id", { count: "exact", head: true })
-    .eq("ip_hash", ipHash)
-    .gte("created_at", since);
+    .select("id, github_issue_url")
+    .eq("request_id", requestId)
+    .maybeSingle();
 
+  if (existingError) {
+    return reply(503, { ok: false, error: "idempotency_check_failed" });
+  }
+  if (existing) {
+    return reply(200, {
+      ok: true,
+      stored: true,
+      duplicate: true,
+      report_id: existing.id,
+      github_issue_url: existing.github_issue_url,
+    });
+  }
+
+  const { data: allowed, error: rateError } = await admin.rpc(
+    "consume_ps3scale_support_rate_limit",
+    { p_ip_hash: ipHash, p_limit: 8 },
+  );
   if (rateError) {
     return reply(503, { ok: false, error: "rate_limit_check_failed" });
   }
-  if ((count ?? 0) >= 8) {
+  if (allowed !== true) {
     return reply(429, { ok: false, error: "daily_report_limit_reached" });
   }
 
   const { data: inserted, error: insertError } = await admin
     .from("ps3scale_support_reports")
-    .insert({
+    .upsert({
+      request_id: requestId,
       kind,
       title,
       details,
@@ -97,18 +205,41 @@ Deno.serve(async (request) => {
       platform,
       app_version: appVersion,
       ip_hash: ipHash,
-    })
+    }, { onConflict: "request_id", ignoreDuplicates: true })
     .select("id")
-    .single();
+    .maybeSingle();
 
-  if (insertError || !inserted) {
+  if (insertError) {
     return reply(500, { ok: false, error: "report_store_failed" });
+  }
+  if (!inserted) {
+    // A simultaneous retry may have won the unique-key race.
+    const { data: duplicate, error: duplicateError } = await admin
+      .from("ps3scale_support_reports")
+      .select("id, github_issue_url")
+      .eq("request_id", requestId)
+      .maybeSingle();
+    if (duplicateError || !duplicate) {
+      return reply(500, { ok: false, error: "report_receipt_unavailable" });
+    }
+    return reply(200, {
+      ok: true,
+      stored: true,
+      duplicate: true,
+      report_id: duplicate.id,
+      github_issue_url: duplicate.github_issue_url,
+    });
   }
 
   let issueUrl: string | null = null;
   const githubToken = Deno.env.get("PS3SCALE_GITHUB_TOKEN");
-  const repository = Deno.env.get("PS3SCALE_GITHUB_REPOSITORY") ??
+  const configuredRepository = Deno.env.get("PS3SCALE_GITHUB_REPOSITORY") ??
     "Vikik0/PS3-SCALE";
+  const repository = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(
+      configuredRepository,
+    )
+    ? configuredRepository
+    : "Vikik0/PS3-SCALE";
 
   if (githubToken) {
     const issueBody = [
@@ -118,6 +249,7 @@ Deno.serve(async (request) => {
       "**Firmware:** " + firmware,
       "**Platform:** " + platform,
       "**App version:** " + appVersion,
+      "**Request ID:** " + requestId,
       "",
       "## Details",
       details,
@@ -145,7 +277,10 @@ Deno.serve(async (request) => {
       );
       if (issueResponse.ok) {
         const issue = await issueResponse.json();
-        issueUrl = typeof issue.html_url === "string" ? issue.html_url : null;
+        issueUrl = typeof issue.html_url === "string" &&
+            issue.html_url.startsWith("https://github.com/")
+          ? issue.html_url
+          : null;
         if (issueUrl) {
           await admin
             .from("ps3scale_support_reports")
@@ -154,13 +289,14 @@ Deno.serve(async (request) => {
         }
       }
     } catch {
-      // The database record remains saved even if GitHub issue creation fails.
+      // The report remains stored even if optional GitHub issue creation fails.
     }
   }
 
   return reply(201, {
     ok: true,
     stored: true,
+    duplicate: false,
     report_id: inserted.id,
     github_issue_url: issueUrl,
   });

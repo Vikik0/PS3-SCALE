@@ -86,6 +86,11 @@ class CommunityIndexBuilderTests(unittest.TestCase):
             ("GAMEPLAY_CHEAT", "Gameplay cheat code; not a graphics enhancement."),
         )
 
+    def test_git_blob_sha1_format(self):
+        self.assertTrue(MODULE.GIT_BLOB_SHA1_RE.fullmatch("a" * 40))
+        self.assertFalse(MODULE.GIT_BLOB_SHA1_RE.fullmatch("g" * 40))
+        self.assertFalse(MODULE.GIT_BLOB_SHA1_RE.fullmatch("a" * 39))
+
     def test_source_trust_labels(self):
         self.assertEqual(
             MODULE.source_kind_for(

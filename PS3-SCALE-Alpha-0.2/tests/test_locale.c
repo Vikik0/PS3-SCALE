@@ -18,6 +18,50 @@ int main(void)
                                      translated, sizeof(translated)) == 1);
     assert(strcmp(translated, "Configuración") == 0);
 
+    /* Help and support controls, privacy warning and delivery statuses are localized. */
+    {
+        static const struct {
+            const char *source;
+            const char *arabic;
+            const char *spanish;
+        } support_samples[] = {
+            {"Help & Support", "المساعدة والدعم", "Ayuda y soporte"},
+            {"Report an Issue", "الإبلاغ عن مشكلة", "Informar de un problema"},
+            {"Send Feedback", "إرسال ملاحظات", "Enviar comentarios"},
+            {"Report Title", "عنوان البلاغ", "Título del informe"},
+            {"Never include PSN IDs, passwords or account tokens.",
+             "لا تكتب بيانات PSN أو كلمات المرور أو رموز الحساب.",
+             "No incluyas datos de PSN, contraseñas ni tokens de cuenta."},
+            {"REPORT SENT ONLINE.", "تم إرسال البلاغ عبر الإنترنت.",
+             "Informe enviado en línea."},
+            {"NO PENDING REPORTS.", "لا توجد بلاغات معلّقة.",
+             "No hay informes pendientes."}
+        };
+        size_t sample;
+        for (sample = 0; sample < sizeof(support_samples) /
+                                  sizeof(support_samples[0]); sample++) {
+            assert(ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+                support_samples[sample].source, translated,
+                sizeof(translated)) == 1);
+            assert(strcmp(translated, support_samples[sample].arabic) == 0);
+            assert(ps3scale_locale_translate(PS3SCALE_LANG_SPANISH,
+                support_samples[sample].source, translated,
+                sizeof(translated)) == 1);
+            assert(strcmp(translated, support_samples[sample].spanish) == 0);
+        }
+        assert(ps3scale_locale_translate(PS3SCALE_LANG_ARABIC,
+            "Never include PSN IDs, passwords or account tokens.",
+            translated, sizeof(translated)) == 1);
+        length = ps3scale_locale_to_glyphs(translated, glyphs, sizeof(glyphs));
+        assert(length > 0);
+        for (int glyph_index = 0; glyph_index < length; glyph_index++) {
+            unsigned char glyph = (unsigned char)glyphs[glyph_index];
+            assert(glyph == ' ' || glyph == '.' || glyph == 'X' ||
+                   glyph == 'P' || glyph == 'S' || glyph == 'N' ||
+                   ps3scale_locale_is_arabic_glyph(glyph));
+        }
+    }
+
     assert(ps3scale_locale_glyph_font_index((unsigned char)'A') == 0);
     assert(ps3scale_locale_glyph_font_index((unsigned char)'9') == 0);
     assert(ps3scale_locale_glyph_font_index(128u) == 1);

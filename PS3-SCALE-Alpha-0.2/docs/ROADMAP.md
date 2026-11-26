@@ -1,5 +1,30 @@
 # PS3 SCALE roadmap
 
+## Alpha 0.33 — support reporting reliability
+
+- [x] Extend report title/details to the backend's 100 / 2,000 character limits.
+- [x] Add bounded JSON serialization with escaping and UUIDv4 request IDs.
+- [x] Persist each report atomically as a separate JSON outbox file.
+- [x] Add pending-report recovery and a Help & Support retry action after app restart.
+- [x] Make support retries idempotent and protect the endpoint with atomic HMAC-based daily rate limiting.
+- [x] Pin the Edge Function SDK and commit the Deno dependency lock.
+- [x] Add Deno type-check, host payload tests and support security contract tests.
+- [ ] Create the isolated Supabase project in the user-confirmed organization, apply migration and deploy Edge Function.
+- [ ] Configure the project URL and publishable key, then build and test the live reporting path.
+- [ ] Validate offline/online retry behavior on physical PS3 hardware.
+
+## Alpha 0.32 — persistence and download safety
+
+- [x] Atomic settings and favorites writes using unique exclusive temp files, fsync and same-directory rename.
+- [x] Protect one-launch webMAN script creation from existing temp files and symlink targets.
+- [x] Exercise the real webMAN HTTP transport with a loopback server: 2xx launch, redirect rejection, split PS3MAPI response and bounded timeout.
+- [x] Use unique O_EXCL HTTPS download temp paths so stale files do not block future refreshes.
+- [x] Preserve pre-existing catalog, community NCL and PS2 CONFIG destinations when a download fails.
+- [x] Add host regression tests for symlink handling, atomic persistence and download failure cleanup.
+- [ ] Validate settings, favorites, network refresh and PS2 CONFIG behavior on physical PS3 hardware.
+- [ ] Deploy the optional support-report endpoint only to a dedicated PS3 SCALE Supabase project with server-side secrets.
+
+
 ## Alpha 0.1 — safe library foundation
 
 - [x] PS3 PARAM.SFO parser.
@@ -30,21 +55,27 @@
 - [x] Offline USB package discovery, library rescan and restore defaults.
 - [x] Companion Tools status detection for Apollo, Artemis and webMAN.
 - [x] Static UI contract tests included in host CI.
-- [ ] Physical smoke test of the localized UI, custom keyboard, 3D animation, startup scan and music handoff.
+- [x] Game Title ID + APP_VER revalidation runs in background workers with static scan storage, not on the controller stack.
+- [x] Safe unmodified game-launch fallback when profile arming fails for recoverable reasons; preserve selection checks and foreign webMAN scripts.
+- [x] Bound cover/preview file sizes before PNG decoding.
+- [ ] Physical smoke test of the localized UI, custom keyboard, 3D animation, startup scan, game launch and music handoff.
 
 ## Alpha 0.3 — PS2 configuration manager
 
 - [x] Restricted in-memory PS2 netemu CONFIG builder for commands 0x44/0x46, with host tests.
 - [x] Triangle-triggered PS2 ISO CONFIG preview (preview only; no writes).
-- [ ] PS2 Classics/PS2 ISO metadata enrichment.
-- [ ] Match known ps2_netemu CONFIG files by title ID and region.
-- [ ] Hash verification, backup and restore.
-- [ ] No automatic CONFIG writes until hardware tests pass.
+- [x] Scan and launch webMAN-supported PS2 ISO `.ISO` / `.BIN` / `.IMG` / `.MDF` formats; keep `.BIN.ENC` classified as PS2 Classics.
+- [x] PS2 Classics/PS2 ISO metadata enrichment: retain Title ID / disc serial and infer a conservative region label; unknown IDs remain UNKNOWN.
+- [x] Match known ps2_netemu CONFIG files by exact normalized Title ID or disc serial; IDs are region-specific and no cross-region fallback is used.
+- [x] Byte-for-byte verified backup, atomic restore and guarded replacement with retained rollback copy (host-tested).
+- [x] Reject symlinked CONFIG/backup/temp/rollback paths in host tests; use exclusive temp creation and atomic replacement on PS3 without writing through symlink destinations or deleting the current file first.
+- [x] No automatic CONFIG writes; all file changes require an explicit action in PS2 CONFIG Manager.
+- [ ] Physical validation of backup, restore and one matched CONFIG on the target PS3 Slim.
 
 ## Alpha 0.4 — PS3 title-specific patch manager
 
-- [ ] Signed online catalog/download.
-- [ ] Exact Title ID + region + game update matching.
+- [ ] Cryptographically sign the online catalog and downloads; Git blob SHA-1 verification is an integrity check, not a signature.
+- [x] Exact Title ID + inferred region + APP_VER matching for FPS profiles and community NCL installs; mismatched region or update version is rejected.
 - [ ] Patch preview, backup, apply and rollback.
 - [ ] First supported title only after repeatable hardware test.
 - [ ] CFW runtime component for game-start verification and notification.
@@ -70,3 +101,4 @@ A release is not considered console-tested until its PKG is installed, launched 
 - [x] Add host tests for locale translations, glyph conversion and keyboard layouts.
 - [ ] Verify Arabic glyph appearance, keyboard navigation, frame pacing, startup scan and settings persistence on the target PS3.
 - [ ] Complete signed online update-manifest support before any network download is considered.
+- [x] Verify community NCL downloads against the indexed GitHub Git-blob SHA-1 and exact byte size before installation.

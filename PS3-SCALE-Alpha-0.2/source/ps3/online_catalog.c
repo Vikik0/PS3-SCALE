@@ -1,10 +1,18 @@
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700
+#endif
+
 #include "ps3scale/online.h"
 
+#include <sys/time.h>
+#include <time.h>
+#include <errno.h>
 #include <curl/curl.h>
 #include <net/net.h>
 #include <net/netctl.h>
 #include <sysmodule/sysmodule.h>
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -15,10 +23,14 @@
 #define PS3SCALE_DOWNLOAD_HARD_LIMIT (2L * 1024L * 1024L)
 #define PS3SCALE_USER_AGENT "PS3SCALE/0.3"
 
+static unsigned long g_download_temp_sequence;
+
 typedef struct download_context {
     FILE *file;
     size_t bytes_written;
     size_t max_bytes;
+    volatile size_t *downloaded_bytes;
+    volatile size_t *total_bytes;
 } download_context_t;
 
 static size_t write_download_data(void *contents, size_t size,
@@ -37,7 +49,35 @@ static size_t write_download_data(void *contents, size_t size,
     if (fwrite(contents, 1, bytes, context->file) != bytes)
         return 0;
     context->bytes_written += bytes;
+    if (context->downloaded_bytes)
+        *context->downloaded_bytes = context->bytes_written;
     return bytes;
+}
+
+static int report_download_progress(void *user_data,
+                                    double download_total,
+                                    double download_now,
+                                    double upload_total,
+                                    double upload_now)
+{
+    download_context_t *context = (download_context_t *)user_data;
+    (void)upload_total;
+    (void)upload_now;
+
+    if (!context)
+        return 0;
+    if (context->total_bytes) {
+        *context->total_bytes =
+            download_total > 0.0 && download_total < 2147483647.0 ?
+            (size_t)download_total : 0;
+    }
+    if (context->downloaded_bytes && download_now >= 0.0 &&
+        download_now < 2147483647.0) {
+        size_t current = (size_t)download_now;
+        if (current > context->bytes_written)
+            *context->downloaded_bytes = current;
+    }
+    return 0;
 }
 
 static int network_modules_ready(void)
@@ -80,10 +120,12 @@ static void network_modules_shutdown(void)
     sysModuleUnload(SYSMODULE_NET);
 }
 
-int ps3scale_online_download_limited(
+int ps3scale_online_download_limited_progress(
     const char *url,
     const char *destination,
-    size_t max_bytes)
+    size_t max_bytes,
+    volatile size_t *downloaded_bytes,
+    volatile size_t *total_bytes)
 {
     CURL *curl = NULL;
     CURLcode curl_result;
@@ -91,12 +133,15 @@ int ps3scale_online_download_limited(
     FILE *file = NULL;
     download_context_t download;
     char temporary_path[512];
+    int temporary_fd = -1;
+    int temporary_created = 0;
     int result = -1;
+    unsigned int attempt;
 
     if (!url || strncmp(url, "https://", 8) != 0 ||
         !destination || !destination[0] ||
         !max_bytes || max_bytes > (size_t)PS3SCALE_DOWNLOAD_HARD_LIMIT ||
-        strlen(destination) + 6 >= sizeof(temporary_path))
+        strlen(destination) + 64 >= sizeof(temporary_path))
         return -1;
 
     if (network_modules_ready() != 0)
@@ -107,14 +152,39 @@ int ps3scale_online_download_limited(
         return -1;
     }
 
-    snprintf(temporary_path, sizeof(temporary_path), "%s.part", destination);
-    unlink(temporary_path);
-    file = fopen(temporary_path, "wb");
-    if (!file)
+    for (attempt = 0; attempt < 16u; attempt++) {
+        unsigned long sequence = ++g_download_temp_sequence;
+        int path_length = snprintf(temporary_path, sizeof(temporary_path),
+                                   "%s.part.%ld.%lu.%lu",
+                                   destination, (long)getpid(),
+                                   (unsigned long)time(NULL), sequence);
+        if (path_length < 0 ||
+            (size_t)path_length >= sizeof(temporary_path))
+            goto cleanup;
+        temporary_fd = open(temporary_path,
+                            O_WRONLY | O_CREAT | O_EXCL, 0600);
+        if (temporary_fd >= 0)
+            break;
+        if (errno != EEXIST)
+            goto cleanup;
+    }
+    if (temporary_fd < 0)
         goto cleanup;
+    temporary_created = 1;
+    file = fdopen(temporary_fd, "wb");
+    if (!file) {
+        (void)close(temporary_fd);
+        temporary_fd = -1;
+        goto cleanup;
+    }
+    temporary_fd = -1;
     memset(&download, 0, sizeof(download));
     download.file = file;
     download.max_bytes = max_bytes;
+    download.downloaded_bytes = downloaded_bytes;
+    download.total_bytes = total_bytes;
+    if (downloaded_bytes) *downloaded_bytes = 0;
+    if (total_bytes) *total_bytes = 0;
 
     curl = curl_easy_init();
     if (!curl)
@@ -124,6 +194,13 @@ int ps3scale_online_download_limited(
     curl_easy_setopt(curl, CURLOPT_USERAGENT, PS3SCALE_USER_AGENT);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_download_data);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &download);
+    /* Keep the legacy no-progress path lean for downloads that do not
+       display counters (game data, config files and support payloads). */
+    if (downloaded_bytes || total_bytes) {
+        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+        curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, report_download_progress);
+        curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &download);
+    }
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 12L);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
     curl_easy_setopt(curl, CURLOPT_MAXFILESIZE, (long)max_bytes);
@@ -152,25 +229,50 @@ cleanup:
             result = -1;
         file = NULL;
     }
+    if (temporary_fd >= 0) {
+        (void)close(temporary_fd);
+        temporary_fd = -1;
+    }
     if (curl)
         curl_easy_cleanup(curl);
     curl_global_cleanup();
     network_modules_shutdown();
 
     if (result == 0) {
-        if (rename(temporary_path, destination) != 0)
+        if (rename(temporary_path, destination) == 0)
+            temporary_created = 0;
+        else
             result = -1;
     }
-    if (result != 0)
-        unlink(temporary_path);
+    if (result != 0 && temporary_created)
+        (void)unlink(temporary_path);
 
     return result;
 }
 
+int ps3scale_online_download_limited(
+    const char *url,
+    const char *destination,
+    size_t max_bytes)
+{
+    return ps3scale_online_download_limited_progress(
+        url, destination, max_bytes, NULL, NULL);
+}
+
+int ps3scale_online_download_progress(
+    const char *url,
+    const char *destination,
+    volatile size_t *downloaded_bytes,
+    volatile size_t *total_bytes)
+{
+    return ps3scale_online_download_limited_progress(
+        url, destination, (size_t)PS3SCALE_DOWNLOAD_LIMIT,
+        downloaded_bytes, total_bytes);
+}
+
 int ps3scale_online_download(const char *url, const char *destination)
 {
-    return ps3scale_online_download_limited(
-        url, destination, (size_t)PS3SCALE_DOWNLOAD_LIMIT);
+    return ps3scale_online_download_progress(url, destination, NULL, NULL);
 }
 
 static size_t discard_post_response(void *contents, size_t size,
@@ -189,7 +291,9 @@ static size_t discard_post_response(void *contents, size_t size,
     return bytes;
 }
 
-int ps3scale_online_post_json(const char *url, const char *json,
+int ps3scale_online_post_json(const char *url,
+                              const char *publishable_api_key,
+                              const char *json,
                               size_t json_size, long *response_code)
 {
     CURL *curl = NULL;
@@ -197,12 +301,20 @@ int ps3scale_online_post_json(const char *url, const char *json,
     CURLcode curl_result;
     long status = 0;
     size_t response_bytes = 0;
+    char apikey_header[256];
+    int apikey_length;
     int result = -1;
 
     if (response_code)
         *response_code = 0;
     if (!url || strncmp(url, "https://", 8) != 0 ||
-        !json || !json_size || json_size > 4096u)
+        !publishable_api_key ||
+        strncmp(publishable_api_key, "sb_publishable_", 15) != 0 ||
+        !json || !json_size || json_size > 8192u)
+        return -1;
+    apikey_length = snprintf(apikey_header, sizeof(apikey_header),
+                             "apikey: %s", publishable_api_key);
+    if (apikey_length < 0 || (size_t)apikey_length >= sizeof(apikey_header))
         return -1;
     if (network_modules_ready() != 0)
         return -1;
@@ -221,6 +333,10 @@ int ps3scale_online_post_json(const char *url, const char *json,
             goto cleanup;
         headers = next;
         next = curl_slist_append(headers, "Accept: application/json");
+        if (!next)
+            goto cleanup;
+        headers = next;
+        next = curl_slist_append(headers, apikey_header);
         if (!next)
             goto cleanup;
         headers = next;

@@ -7,14 +7,14 @@ static int valid_title_id(const char *value)
 {
     size_t i;
 
-    if (!value)
+    if (!value || strlen(value) != 9)
         return 0;
     for (i = 0; i < 9; i++) {
         unsigned char ch = (unsigned char)value[i];
         if (!((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')))
             return 0;
     }
-    return value[9] == '\0';
+    return 1;
 }
 
 static int path_has_dot_segment(const char *path)
@@ -132,7 +132,9 @@ static int valid_ps2_iso_path(const char *path)
     if (!allowed_game_path(path) || !strstr(path, "/PS2ISO/"))
         return 0;
     return path_ends_with_ci(path, ".ISO") ||
-           path_ends_with_ci(path, ".BIN");
+           path_ends_with_ci(path, ".BIN") ||
+           path_ends_with_ci(path, ".IMG") ||
+           path_ends_with_ci(path, ".MDF");
 }
 
 int ps3scale_webman_build_start_path(const ps3scale_game_t *game,
@@ -174,6 +176,26 @@ int ps3scale_webman_build_start_path(const ps3scale_game_t *game,
         return -1;
     }
 
+    if (written < 0 || (size_t)written >= output_size) {
+        output[0] = '\0';
+        return -1;
+    }
+    return 0;
+}
+
+
+int ps3scale_webman_build_app_start_path(const char *title_id,
+                                         char *output, size_t output_size)
+{
+    int written;
+
+    if (!output || output_size == 0)
+        return -1;
+    output[0] = '\0';
+    if (!valid_title_id(title_id))
+        return -1;
+
+    written = snprintf(output, output_size, "/play.ps3?%s", title_id);
     if (written < 0 || (size_t)written >= output_size) {
         output[0] = '\0';
         return -1;

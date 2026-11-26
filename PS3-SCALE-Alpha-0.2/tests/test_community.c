@@ -18,13 +18,13 @@ static int write_index(const char *path, const char *contents)
     return fclose(file) == 0 ? 0 : -1;
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
     static const char valid[] =
         "# PS3 SCALE community index test\n"
         "BLUS30464\t01.05\tSkate 3\tHARDWARE_TESTED_FPS\t"
         "Nascar1243/PS3-FPS-Patches\tmain\t"
-        "Skate 3 BLUS30464 v01.05.ncl\t31\tGRAPHICS_FPS\tUnlock FPS\n"
+        "Skate 3 BLUS30464 v01.05.ncl\t31\tGRAPHICS_FPS\tUnlock FPS\t0000000000000000000000000000000000000000\n"
         "\t\tKirby Nightmare in Dream Land\tCOMMUNITY_CONFIRMED\t"
         "DoSpamu/RPCS3toArtemisPatches\tmaster\t"
         "PSXPlace Confirmed/Kirby Nightmare in Dream Land.ncl\t200\n"
@@ -41,7 +41,7 @@ int main(void)
         "BLES00517\t01.02\tJust Cause 2\tHARDWARE_TESTED_FPS\t"
         "Nascar1243/PS3-FPS-Patches\tmain\t"
         "Just Cause 2 BLES00517 BLUS30400 01.02.ncl\t440\t"
-        "GRAPHICS_FPS\tUnlock FPS\n";
+        "GRAPHICS_FPS\tUnlock FPS\t1111111111111111111111111111111111111111\n";
     static const char invalid[] =
         "BLUS30464\t01.05\tSkate 3\tUNKNOWN_SOURCE\t"
         "Nascar1243/PS3-FPS-Patches\tmain\t"
@@ -52,16 +52,41 @@ int main(void)
         "../outside/Skate 3.ncl\t31\n";
 
     const char *path = "/tmp/ps3scale_community_test.tsv";
+    const char *hash_path = "/tmp/ps3scale_git_blob_test.ncl";
     ps3scale_community_index_t index;
+    char large_blob[101];
     ps3scale_game_t game;
 
     memset(&index, 0, sizeof(index));
+    if (write_index(hash_path, "hello\n") != 0)
+        return 29;
+    if (ps3scale_community_verify_git_blob_sha1(
+            hash_path, 6, "ce013625030ba8dba906f756967f9e9ca394464a") != 1)
+        return 30;
+    if (write_index(hash_path, "hallo\n") != 0)
+        return 31;
+    if (ps3scale_community_verify_git_blob_sha1(
+            hash_path, 6, "ce013625030ba8dba906f756967f9e9ca394464a") != 0)
+        return 32;
+    memset(large_blob, 'a', 100);
+    large_blob[100] = '\0';
+    if (write_index(hash_path, large_blob) != 0)
+        return 33;
+    if (ps3scale_community_verify_git_blob_sha1(
+            hash_path, 100, "d690765445339443e88fd770dad129c38e3521ff") != 1)
+        return 34;
+    if (ps3scale_community_verify_git_blob_sha1(
+            hash_path, 99, "d690765445339443e88fd770dad129c38e3521ff") != -1)
+        return 35;
+    unlink(hash_path);
     if (write_index(path, valid) != 0)
         return 1;
     if (ps3scale_community_index_load(path, &index) != 6)
         return 2;
     if (index.count != 6)
         return 3;
+    if (strlen(index.items[0].git_blob_sha1) != 40)
+        return 28;
 
     memset(&game, 0, sizeof(game));
     game.kind = PS3SCALE_GAME_PS3_FOLDER;
@@ -75,8 +100,16 @@ int main(void)
     strcpy(game.title, "Skate 3");
     strcpy(game.title_id, "BLUS30464");
     strcpy(game.app_ver, "01.05");
-    if (!ps3scale_community_file_matches_exact_game(&index.items[0], &game))
+    if (!ps3scale_community_file_matches_id_version(&index.items[0], &game) ||
+        !ps3scale_community_file_matches_exact_game(&index.items[0], &game))
         return 16;
+    {
+        ps3scale_community_file_t unverified = index.items[0];
+        unverified.git_blob_sha1[0] = '\0';
+        if (!ps3scale_community_file_matches_id_version(&unverified, &game) ||
+            ps3scale_community_file_matches_exact_game(&unverified, &game))
+            return 38;
+    }
     strcpy(game.app_ver, "01.06");
     if (ps3scale_community_file_matches_exact_game(&index.items[0], &game))
         return 17;
@@ -84,9 +117,26 @@ int main(void)
     strcpy(game.title_id, "BLES30464");
     if (ps3scale_community_file_matches_exact_game(&index.items[0], &game))
         return 18;
+    /* Same title and region are not sufficient for an install: the actual
+       Title ID must be present in the indexed file identity/path metadata. */
+    strcpy(game.title_id, "BLUS30465");
+    if (ps3scale_community_file_matches_exact_game(&index.items[0], &game))
+        return 24;
     if (strcmp(ps3scale_community_region_label("BLES00016"), "EU") != 0 ||
-        strcmp(ps3scale_community_region_label("BLUS30012"), "US") != 0)
+        strcmp(ps3scale_community_region_label("BLUS30012"), "US") != 0 ||
+        strcmp(ps3scale_community_region_label("NPHA12345"), "ASIA") != 0 ||
+        strcmp(ps3scale_community_region_label("NPKS12345"), "KOREA") != 0 ||
+        strcmp(ps3scale_community_region_label("NPJA12345"), "JAPAN") != 0)
         return 19;
+
+    {
+        ps3scale_community_file_t cross_region = index.items[0];
+        strcpy(game.title_id, "BLES30464");
+        strcpy(game.app_ver, "01.05");
+        strcpy(cross_region.path, "Skate 3 BLUS30464 v01.05.ncl");
+        if (ps3scale_community_file_matches_exact_game(&cross_region, &game))
+            return 27;
+    }
 
     strcpy(game.title, "Just Cause 2");
     strcpy(game.title_id, "BLUS30400");
@@ -144,6 +194,23 @@ int main(void)
 
     ps3scale_community_index_free(&index);
     unlink(path);
+
+    if (argc > 1) {
+        ps3scale_community_index_t refreshed;
+        size_t i;
+        int loaded;
+        memset(&refreshed, 0, sizeof(refreshed));
+        loaded = ps3scale_community_index_load(argv[1], &refreshed);
+        if (loaded <= 0)
+            return 36;
+        for (i = 0; i < refreshed.count; i++) {
+            if (strlen(refreshed.items[i].git_blob_sha1) != 40) {
+                ps3scale_community_index_free(&refreshed);
+                return 37;
+            }
+        }
+        ps3scale_community_index_free(&refreshed);
+    }
     puts("PS3 SCALE community index tests: PASS");
     return 0;
 }
