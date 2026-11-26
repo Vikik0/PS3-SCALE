@@ -1,5 +1,12 @@
 # Crash Bash Online — PlayStation 3
 
+## Important: this is a PlayStation 3 package, not a browser game
+
+The Vercel page is a separate lobby preview/service; it is **not** Crash Bash and cannot run the game in a desktop browser. The actual game is launched from the **Crash Bash Online** icon on a compatible PS3 after installing the PS3 PKG.
+
+The personal game-inclusive PKG copies the user's original BIN/CUE disc dump into the package unchanged. PCSX-ReARMed runs those original disc files on the PS3, while RetroArch Netplay synchronizes the multiplayer session. The original PS1 game executable is not patched or replaced with a new game engine; online play is provided by the emulator's Netplay layer.
+
+
 **PS3 Title ID:** `CBON00001` (four letters followed by five digits; consistent across the SFO, NPDRM Content ID and installed app path).
 
 The installable release is **one unified PS3 application**. Its single XMB entry opens the native Tiny3D lobby; RetroArch and PCSX-ReARMed are embedded under the same title ID and launched by the lobby for local or online play. RetroArch Netplay handles gameplay synchronization.
