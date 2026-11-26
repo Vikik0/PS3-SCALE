@@ -1066,6 +1066,65 @@ ghc_campaign_event_lock_abort_player( player )
     return ghc_campaign_event_lock_abort_slot( var_0 );
 }
 
+
+/*
+ * Wait for one real trigger activator, validate that it is one of the two
+ * current native Campaign players, and acquire the shared event lock for
+ * that exact player. The caller is the single mission coordinator for this
+ * interaction and must release or abort the returned player on every exit.
+ */
+ghc_campaign_wait_for_owned_trigger( trigger_ent, event_id )
+{
+    if ( !isdefined( trigger_ent )
+        || !isdefined( level.ghc_campaign_session_ready )
+        || !level.ghc_campaign_session_ready
+        || !ghc_campaign_event_lock_event_id_is_valid( event_id ) )
+        return undefined;
+
+    if ( !ghc_campaign_native_pair_is_current() )
+    {
+        ghc_campaign_invalidate_local_session();
+        return undefined;
+    }
+
+    /* IW6 trigger events pass the actual activating entity as the first argument. */
+    trigger_ent waittill( "trigger", activator );
+
+    if ( !isdefined( activator ) )
+        return undefined;
+
+    /* Revalidate after the wait: a controller or local-client pair can change while suspended. */
+    if ( !ghc_campaign_native_pair_is_current() )
+    {
+        ghc_campaign_invalidate_local_session();
+        return undefined;
+    }
+
+    if ( ghc_campaign_event_lock_player_slot( activator ) < 0 )
+        return undefined;
+
+    if ( !ghc_campaign_event_lock_acquire( activator, event_id ) )
+        return undefined;
+
+    return activator;
+}
+
+ghc_campaign_release_owned_trigger( player, event_id, completed )
+{
+    if ( !isdefined( player ) )
+        return 0;
+
+    return ghc_campaign_event_lock_release( player, event_id, completed );
+}
+
+ghc_campaign_abort_owned_trigger( player )
+{
+    if ( !isdefined( player ) )
+        return 0;
+
+    return ghc_campaign_event_lock_abort_player( player );
+}
+
 ghc_campaign_event_lock_clear_active()
 {
     if ( !ghc_campaign_event_lock_state_is_valid() )

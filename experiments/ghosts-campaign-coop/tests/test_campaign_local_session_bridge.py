@@ -472,5 +472,38 @@ class CampaignLocalSessionBridgeTests(unittest.TestCase):
         )
 
 
+    def test_owned_trigger_adapter_captures_and_locks_the_actual_activator(self):
+        body = function_body(self.source, "ghc_campaign_wait_for_owned_trigger")
+        precheck = body.index("ghc_campaign_native_pair_is_current()")
+        wait = body.index('trigger_ent waittill( "trigger", activator )')
+        postcheck = body.index("ghc_campaign_native_pair_is_current()", wait)
+        slot = body.index("ghc_campaign_event_lock_player_slot( activator )")
+        acquire = body.index("ghc_campaign_event_lock_acquire( activator, event_id )")
+        result = body.index("return activator")
+        self.assertIn("level.ghc_campaign_session_ready", body)
+        self.assertIn("ghc_campaign_event_lock_event_id_is_valid( event_id )", body)
+        self.assertLess(precheck, wait)
+        self.assertLess(wait, postcheck)
+        self.assertLess(postcheck, slot)
+        self.assertLess(slot, acquire)
+        self.assertLess(acquire, result)
+        self.assertIn("ghc_campaign_invalidate_local_session()", body)
+
+    def test_owned_trigger_adapter_requires_a_registered_native_player(self):
+        body = function_body(self.source, "ghc_campaign_wait_for_owned_trigger")
+        self.assertIn("if ( !isdefined( activator ) )", body)
+        self.assertIn("ghc_campaign_event_lock_player_slot( activator ) < 0", body)
+        self.assertNotIn("level.player )", body)
+        self.assertNotIn("self )", body)
+
+    def test_owned_trigger_release_and_abort_are_explicit_player_scoped(self):
+        release = function_body(self.source, "ghc_campaign_release_owned_trigger")
+        abort = function_body(self.source, "ghc_campaign_abort_owned_trigger")
+        self.assertIn("ghc_campaign_event_lock_release( player, event_id, completed )", release)
+        self.assertIn("ghc_campaign_event_lock_abort_player( player )", abort)
+        self.assertIn("if ( !isdefined( player ) )", release)
+        self.assertIn("if ( !isdefined( player ) )", abort)
+
+
 if __name__ == "__main__":
     unittest.main()
