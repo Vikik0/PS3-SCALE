@@ -133,6 +133,40 @@ int ps3scale_ps2_config_store_is_generated(const char *path,
     return valid ? 1 : 0;
 }
 
+int ps3scale_ps2_config_store_read(const char *path, void *buffer,
+                                   size_t capacity, size_t max_bytes,
+                                   size_t *file_size)
+{
+    FILE *file;
+    size_t actual_size = 0;
+    int state;
+    int ok;
+
+    if (file_size)
+        *file_size = 0;
+    if (!path || !buffer || !file_size || capacity == 0 ||
+        max_bytes == 0 || capacity > max_bytes)
+        return -1;
+
+    state = ps3scale_ps2_config_store_probe(path, max_bytes, &actual_size);
+    if (state != 1)
+        return state;
+    if (actual_size > capacity)
+        return -2;
+
+    file = fopen(path, "rb");
+    if (!file)
+        return -3;
+    ok = fread(buffer, 1, actual_size, file) == actual_size;
+    if (fclose(file) != 0)
+        ok = 0;
+    if (!ok)
+        return -4;
+
+    *file_size = actual_size;
+    return 0;
+}
+
 static int files_equal(const char *left, const char *right, size_t max_bytes)
 {
     FILE *a = NULL;

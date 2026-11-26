@@ -89,7 +89,15 @@ int main(void)
             PS3SCALE_PS2_CFG_ENABLE_L2H, &generated_size) == 0);
         assert(ps3scale_ps2_config_store_stage(
             staged, generated_config, generated_size, TEST_LIMIT) == 0);
+        unsigned char readback[64];
+        size_t readback_size = 0;
+
         assert(ps3scale_ps2_config_store_is_generated(staged, TEST_LIMIT) == 1);
+        assert(ps3scale_ps2_config_store_read(
+            staged, readback, sizeof(readback), TEST_LIMIT,
+            &readback_size) == 0);
+        assert(readback_size == generated_size);
+        assert(memcmp(readback, generated_config, generated_size) == 0);
         assert(unlink(staged) == 0);
 
         assert(ps3scale_ps2_config_store_stage(
