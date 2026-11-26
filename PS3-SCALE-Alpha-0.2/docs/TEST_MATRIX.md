@@ -161,9 +161,13 @@ Host CI verifies:
 - Help & Support exposes a Retry Pending action; successful server responses remove only the sent pending file.
 - The public support endpoint validates input, enforces idempotency and uses atomic HMAC-based daily rate limiting.
 - RLS and explicit grants prevent public/authenticated reads of support reports.
+- Static Edge Function contract checks require a bounded 12 KiB streaming body reader, cancellation above the limit and rejection of invalid UTF-8.
+- Locale tests cover Help & Support labels, the PSN privacy warning and delivery statuses in Arabic and Spanish.
 
 Physical PS3 checks still required:
 - Create a support report while offline, exit/relaunch, reconnect, and retry from Help & Support.
 - Confirm a successful send removes the matching pending JSON file and does not resend it.
 - Confirm a failed send leaves the pending JSON file intact.
 - Confirm the endpoint returns a rate-limit message after the daily quota is reached.
+- After deployment, confirm an oversized request returns HTTP 413 and malformed UTF-8 returns HTTP 400 before any report is stored.
+- Submit the same request UUID twice and confirm the second response is marked duplicate without creating another report.
