@@ -54,6 +54,18 @@ The PS2 Enhancer screen now provides:
 
 For ISO files the target remains `<game.iso>.CONFIG` beside the ISO. No bytes are written into the ISO itself. PS2 Classics ENC files continue to use the existing webMAN PS2CONFIG directory and exact catalogue matching; the local plaintext builder is intentionally disabled for Classics.
 
+## First game-specific FPS patch proof of concept
+
+The first candidate is **Ed, Edd n Eddy: The Mis-Edventures (NTSC-U)** from the PCSX2 patch repository:
+- Serial: `SLUS_212.60`
+- PCSX2 ELF hash: `B0AE2D8A`
+- Patch: `patch=1,EE,00161860,word,2C620000`
+- The source patch is pinned to [PCSX2 patch repository commit 1fd9810](https://github.com/PCSX2/pcsx2_patches/blob/1fd98102b8e2fffe3e0c29aab55339d48af0ffe5/patches/SLUS-21260_B0AE2D8A.pnach).
+
+PCSX2's patch filename hash is not standard CRC32: its game ELF hash is the XOR of little-endian 32-bit words across the boot ELF. PS3 SCALE now extracts the root-level BOOT/BOOT2 ELF from SYSTEM.CNF, computes this same hash, and reads the original word only from a file-backed executable MIPS ELF segment. The converter can then create a netemu `0x0A` replacement entry with the exact original word as a guard.
+
+This is a proof-of-concept conversion path, not yet a hardware-verified PS3 patch. The patch must be tested on the target PS3 Slim for actual frame rate, timing, audio, cutscenes and stability before being marked verified.
+
 ## Next stage: game-specific FPS patch catalogue
 
 1. Add a PS2 executable reader for ISO9660 and ELF load segments.
