@@ -241,19 +241,6 @@ static uint16_t read_le16(const unsigned char *p)
     return (uint16_t)p[0] | ((uint16_t)p[1] << 8);
 }
 
-static int iso_name_equal_ci(const unsigned char *name, size_t name_len,
-                             const char *wanted)
-{
-    size_t wanted_len;
-
-    if (!name || !wanted)
-        return 0;
-    wanted_len = strlen(wanted);
-    if (name_len != wanted_len)
-        return 0;
-    return equal_ci_n((const char *)name, wanted, wanted_len);
-}
-
 static int iso_component_equal_ci(const unsigned char *name, size_t name_len,
                                   const char *wanted)
 {
