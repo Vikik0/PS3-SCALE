@@ -20,12 +20,12 @@ If the temporary URL expires or is consumed before the workflow downloads it, ge
 
 ## Private decryption
 
-The matching private key was generated and delivered separately as `Crash-Bash-Personal-Build-Key-Package.zip`. Keep `Crash-Bash-Personal-Build-Private-Key.key` offline and private; it is not stored in GitHub or Dropbox. The public certificate is committed at `keys/personal-build-public.pem`.
+The matching private key is provided separately to the project owner as `Crash-Bash-Personal-Build-Key-Package.zip`. Keep `Crash-Bash-Personal-Build-Private-Key.key` offline and private; it is not stored in GitHub or Dropbox. The public certificate is committed at `keys/personal-build-public.pem`.
 
 Certificate SHA-256 fingerprint:
 
 ```text
-02d9fa8058313b3c0b55a32036308248c82fbe837b28003d673c069d1557088c
+d31cc3af70d4a049ba395f9bcd6dce6cd7f6a0e1120e13a7b5fc905168ae14f0
 ```
 
 After downloading the encrypted artifact, decrypt it locally with the matching key:
