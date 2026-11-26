@@ -17,7 +17,7 @@ h1{font-size:20px;letter-spacing:.08em;margin:0} .sub{color:var(--muted);font-si
 .stat{display:flex;flex-direction:column;justify-content:space-between;min-height:205px}.stat strong{font-size:35px;letter-spacing:-.04em}.stat small{color:var(--muted)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.panel h3{margin:0 0 7px;font-size:18px}.hint{color:var(--muted);font-size:13px;margin:0 0 18px}
 .field{display:flex;gap:9px;margin:12px 0}.field input{min-width:0;flex:1;background:#07141d;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:13px 14px;font:inherit;outline:none}.field input:focus{border-color:var(--mint)}
-button{border:0;border-radius:12px;padding:12px 16px;font:700 13px inherit;cursor:pointer;transition:.15s}button:disabled{opacity:.45;cursor:not-allowed}.primary{background:var(--mint);color:#06151b}.secondary{background:#1b3341;color:var(--text);border:1px solid #2b4b59}.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}.warn{color:var(--orange)}
+button{border:0;border-radius:12px;padding:12px 16px;font:700 13px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;cursor:pointer;transition:.15s}button:focus-visible,input:focus-visible{outline:2px solid var(--mint);outline-offset:3px}button:disabled{opacity:.45;cursor:not-allowed}.primary{background:var(--mint);color:#06151b}.secondary{background:#1b3341;color:var(--text);border:1px solid #2b4b59}.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}.warn{color:var(--orange)}
 .check{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:13px;margin:12px 0 16px}.check input{accent-color:var(--mint)}
 .rooms{display:flex;flex-direction:column;gap:9px}.room{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px;border:1px solid var(--line);border-radius:13px;background:#0a1720}.room b{letter-spacing:.12em}.room small{display:block;color:var(--muted)}
 .empty{padding:24px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px}
@@ -49,45 +49,46 @@ footer{color:#647d89;text-align:center;font-size:12px;margin-top:30px}.footerlin
   <main class="grid">
     <section class="panel">
       <h3>Create a room</h3><p class="hint">Start a private or public four-player room.</p>
-      <div class="field"><input id="displayName" maxlength="20" placeholder="Your player name" value="Guest"></div>
+      <div class="field"><input id="displayName" maxlength="20" placeholder="Your player name" aria-label="Your player name" value="Guest"></div>
       <label class="check"><input id="privateRoom" type="checkbox"> Private room (hidden from public list)</label>
       <button id="createBtn" class="primary" onclick="createRoom()">CREATE ROOM</button>
     </section>
     <section class="panel">
       <h3>Join a room</h3><p class="hint">Enter a six-character invite code, or join any open public battle.</p>
-      <div class="field"><input id="joinCode" maxlength="6" placeholder="ABC234" autocomplete="off"><button id="joinBtn" class="secondary" onclick="joinRoom()">BATTLE BY CODE</button></div><button id="anyBtn" class="primary" onclick="anyBattle()">ANY BATTLE</button>
+      <div class="field"><input id="joinCode" maxlength="6" placeholder="ABC234" aria-label="Six-character invite code" autocomplete="off"><button id="joinBtn" class="secondary" onclick="joinRoom()">BATTLE BY CODE</button></div><button id="anyBtn" class="primary" onclick="anyBattle()">ANY BATTLE</button>
       <p class="hint" id="joinHint">Room codes use six letters and numbers.</p>
     </section>
   </main>
 
   <section class="panel" style="margin-top:18px">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><div><h3 style="margin:0">Public rooms</h3><p class="hint" style="margin:4px 0 0">Public rooms with at least one open seat.</p></div><button class="ghost" onclick="loadRooms()">REFRESH</button></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px"><div><h3 style="margin:0">Public rooms</h3><p class="hint" style="margin:4px 0 0">Public rooms with at least one open seat.</p></div><button id="refreshRoomsBtn" class="ghost" onclick="loadRooms()">REFRESH</button></div>
     <div id="roomsList" class="rooms"><div class="empty">Loading rooms…</div></div>
   </section>
 
   <section id="roomView" class="panel room-view">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
       <div><div class="eyebrow">YOUR ROOM</div><h3 id="roomTitle" style="font-size:26px;letter-spacing:.12em;margin:3px 0">------</h3><p class="hint" style="margin:0">Share this code with your friend.</p></div>
-      <button class="secondary" onclick="copyCode()">COPY INVITE CODE</button>
+      <button class="secondary" data-room-action onclick="copyCode()">COPY INVITE CODE</button>
     </div>
     <div id="slots" class="slots"></div>
-    <div class="actions"><button id="readyBtn" class="primary" onclick="toggleReady()">I'M READY</button><button class="ghost" onclick="refreshRoom()">REFRESH ROOM</button><button class="ghost" onclick="leaveRoom()">LEAVE ROOM</button></div>
-    <div id="roomNotice" class="notice warnbox">Waiting for players. The room lobby is not connected to a game session.</div>
+    <div class="actions" role="group" aria-label="Room controls"><button id="readyBtn" data-room-action class="primary" onclick="toggleReady()">I'M READY</button><button data-room-action class="ghost" onclick="refreshRoom()">REFRESH ROOM</button><button data-room-action class="ghost" onclick="leaveRoom()">LEAVE ROOM</button></div>
+    <div id="roomNotice" class="notice warnbox" role="status" aria-live="polite">Waiting for players. The room lobby is not connected to a game session.</div>
   </section>
 
   <div class="footerline"></div>
   <footer>CRASH BASH ENHANCED · INDEPENDENT ONLINE IDENTITY · NOT AN OFFICIAL ACTIVISION OR SONY PRODUCT</footer>
 </div>
 <script>
-const state={token:"",code:"",player:null,room:null,ready:false,poll:null,heartbeat:null,cursor:0};
+const state={token:"",code:"",player:null,room:null,ready:false,poll:null,heartbeat:null,roomsLoading:false};
 const $=id=>document.getElementById(id);
 function setHealth(ok,text,detail){$("healthDot").className="dot"+(ok?" ok":"");$("healthText").textContent=text;$("serviceStatus").textContent=ok?"ONLINE":"OFFLINE";$("serviceDetail").textContent=detail;}
+function setRoomNotice(message,warn=true){$("roomNotice").textContent=message;$("roomNotice").className="notice"+(warn?" warnbox":"");}
 async function api(path,method="GET",body=null,auth=true){
   const headers={"Content-Type":"application/json"};
   if(auth&&state.token)headers.Authorization="Bearer "+state.token;
   const response=await fetch(path,{method,headers,body:body?JSON.stringify(body):undefined,cache:"no-store"});
   const data=await response.json().catch(()=>({error:"Invalid server response"}));
-  if(!response.ok)throw new Error(data.error||"Request failed");
+  if(!response.ok){const error=new Error(typeof data.error==="string"?data.error:"Request failed");error.status=response.status;throw error;}
   return data;
 }
 async function checkHealth(){
@@ -95,10 +96,30 @@ async function checkHealth(){
   catch(e){setHealth(false,"SERVICE OFFLINE",e.message);}
 }
 function displayName(){return $("displayName").value.trim().slice(0,20)||"Guest";}
+function clearRoomSession(message=""){
+  clearInterval(state.poll);clearInterval(state.heartbeat);
+  state.token="";state.code="";state.player=null;state.room=null;state.ready=false;
+  sessionStorage.removeItem("cb_token");sessionStorage.removeItem("cb_code");sessionStorage.removeItem("cb_player");
+  $("roomView").classList.remove("active");
+  if(message)$("joinHint").textContent=message;
+}
+function handleRoomError(error){
+  if([401,403,404].includes(error.status)){
+    clearRoomSession("Your room seat expired. Join or create a room again.");
+    loadRooms();
+    return;
+  }
+  setRoomNotice(error.message,true);
+}
+function startRoomTimers(){
+  clearInterval(state.poll);clearInterval(state.heartbeat);
+  state.poll=setInterval(()=>refreshRoom(),5000);
+  state.heartbeat=setInterval(()=>sendHeartbeat(),20000);
+}
 async function createRoom(){
   $("createBtn").disabled=true;
   try{const data=await api("/api/rooms","POST",{action:"create",displayName:displayName(),isPrivate:$("privateRoom").checked},false);enterRoom(data);}
-  catch(e){alert(e.message);}
+  catch(e){$("joinHint").textContent=e.message;}
   finally{$("createBtn").disabled=false;}
 }
 async function anyBattle(){
@@ -114,59 +135,105 @@ async function joinRoom(){
   finally{$("joinBtn").disabled=false;}
 }
 function enterRoom(data){
-  state.token=data.token;state.code=data.room.code;state.player=data.player;state.ready=false;state.cursor=0;
-  sessionStorage.setItem("cb_token",state.token);sessionStorage.setItem("cb_code",state.code);
-  $("roomView").classList.add("active");$("roomTitle").textContent=state.code;$("roomNotice").textContent="Room created. Waiting for up to three more players. Game-session transport is not connected.";
-  refreshRoom();
-  clearInterval(state.poll);
-  state.poll=setInterval(refreshRoom,5000);
-  clearInterval(state.heartbeat);
-  state.heartbeat=setInterval(()=>api("/api/rooms","POST",{action:"heartbeat",ready:state.ready}).catch(()=>{}),20000);
+  if(!data?.token||!data?.room?.code||!data?.player?.id){$("joinHint").textContent="The server returned an incomplete room session.";return;}
+  state.token=data.token;state.code=data.room.code;state.player=data.player;state.ready=false;state.room=null;
+  sessionStorage.setItem("cb_token",state.token);sessionStorage.setItem("cb_code",state.code);sessionStorage.setItem("cb_player",state.player.id);
+  $("roomView").classList.add("active");$("roomTitle").textContent=state.code;
+  setRoomNotice("Room created. Waiting for players. This is a lobby; it does not start or synchronize a game session.",true);
   $("roomView").scrollIntoView({behavior:"smooth",block:"center"});
+  refreshRoom().finally(()=>{if(state.token)startRoomTimers();});
 }
 async function refreshRoom(){
-  if(!state.token||!state.code)return;
+  if(!state.token||!state.code)return false;
   try{
     const data=await api("/api/rooms?code="+encodeURIComponent(state.code));
-    state.room=data.room;renderRoom();
-  }catch(e){$("roomNotice").textContent=e.message;}
+    state.room=data.room;
+    const me=(state.room.players||[]).find(p=>p.id===state.player?.id);
+    if(me)state.ready=Boolean(me.ready);
+    renderRoom();return true;
+  }catch(e){handleRoomError(e);return false;}
+}
+async function sendHeartbeat(){
+  if(!state.token)return;
+  try{
+    const data=await api("/api/rooms","POST",{action:"heartbeat",ready:state.ready});
+    if(state.room)state.room.players=data.players||[];
+    const me=(data.players||[]).find(p=>p.id===state.player?.id);
+    if(me)state.ready=Boolean(me.ready);
+    renderRoom();
+  }catch(e){handleRoomError(e);}
 }
 function renderRoom(){
   const room=state.room;if(!room)return;
-  $("slots").innerHTML="";
+  const players=Array.isArray(room.players)?room.players:[];
+  $("slots").replaceChildren();
   for(let i=0;i<(room.maxPlayers||4);i++){
-    const p=room.players[i];
-    const node=document.createElement("div");node.className="slot";
-    node.innerHTML='<div class="num">PLAYER '+(i+1)+'</div><strong></strong><small></small>';
-    node.querySelector("strong").textContent=p?p.name:"Waiting for player…";
-    node.querySelector("small").textContent=p?(p.ready?"READY":"NOT READY"):"Invite a friend to join";
-    $("slots").appendChild(node);
+    const p=players[i];const node=document.createElement("div");node.className="slot";
+    const number=document.createElement("div");number.className="num";number.textContent="PLAYER "+(i+1);
+    const strong=document.createElement("strong");strong.textContent=p?p.name:"Waiting for player…";
+    const small=document.createElement("small");small.textContent=p?(p.ready?"READY":"NOT READY"):"Invite a friend to join";
+    node.append(number,strong,small);$("slots").appendChild(node);
   }
-  const allReady=room.players.length===(room.maxPlayers||4)&&room.players.every(p=>p.ready);
-  $("roomNotice").textContent=allReady?"All seats are ready. This lobby still needs a compatible game-session transport.":room.players.length>1?"Players joined. Mark ready when prepared.":"Waiting for more players.";
-  $("roomNotice").className="notice"+(allReady?"":" warnbox");
+  const allReady=players.length>=2&&players.every(p=>p.ready);
+  setRoomNotice(allReady?"All active players are ready. The browser page remains a lobby; game transport is not connected.":players.length>1?"Players joined. Mark ready when prepared.":"Waiting for more players.",!allReady);
   $("readyBtn").textContent=state.ready?"CANCEL READY":"I'M READY";
 }
 async function toggleReady(){
-  state.ready=!state.ready;
-  try{const data=await api("/api/rooms","POST",{action:"heartbeat",ready:state.ready});if(state.room)state.room.players=data.players;renderRoom();}
-  catch(e){state.ready=!state.ready;alert(e.message);}
+  const nextReady=!state.ready;
+  try{
+    const data=await api("/api/rooms","POST",{action:"heartbeat",ready:nextReady});
+    state.ready=nextReady;if(state.room)state.room.players=data.players||[];renderRoom();
+  }catch(e){handleRoomError(e);}
 }
 async function leaveRoom(){
-  try{await api("/api/rooms","POST",{action:"leave"});}catch{}
-  clearInterval(state.poll);clearInterval(state.heartbeat);
-  state.token="";state.code="";state.room=null;state.player=null;state.ready=false;
-  sessionStorage.removeItem("cb_token");sessionStorage.removeItem("cb_code");
-  $("roomView").classList.remove("active");loadRooms();
+  try{if(state.token)await api("/api/rooms","POST",{action:"leave"});}catch{}
+  clearRoomSession();loadRooms();
 }
-async function copyCode(){try{await navigator.clipboard.writeText(state.code);$("roomNotice").textContent="Invite code copied: "+state.code;}catch{$("roomNotice").textContent="Room code: "+state.code;}}
+async function copyCode(){
+  try{await navigator.clipboard.writeText(state.code);setRoomNotice("Invite code copied: "+state.code,false);}
+  catch{setRoomNotice("Room code: "+state.code,false);}
+}
 async function loadRooms(){
-  try{const data=await api("/api/rooms", "GET", null, false);const root=$("roomsList");root.innerHTML="";
-    if(!data.rooms.length){root.innerHTML='<div class="empty">No public rooms yet. Create one and invite a friend.</div>';return;}
-    for(const r of data.rooms){const row=document.createElement("div");row.className="room";const info=document.createElement("div");const b=document.createElement("b");b.textContent=r.code;const small=document.createElement("small");small.textContent=r.host+" · "+r.players+"/"+r.maxPlayers+" players";info.append(b,small);const btn=document.createElement("button");btn.className="secondary";btn.textContent="JOIN";btn.onclick=()=>{$("joinCode").value=r.code;joinRoom();};row.append(info,btn);root.appendChild(row);}
-  }catch(e){$("roomsList").innerHTML='<div class="empty">'+e.message+'</div>';}
+  if(state.roomsLoading)return;
+  state.roomsLoading=true;$("refreshRoomsBtn").disabled=true;
+  const root=$("roomsList");
+  try{
+    const data=await api("/api/rooms","GET",null,false);root.replaceChildren();
+    if(!data.rooms.length){const empty=document.createElement("div");empty.className="empty";empty.textContent="No public rooms yet. Create one and invite a friend.";root.appendChild(empty);return;}
+    for(const r of data.rooms){
+      const row=document.createElement("div");row.className="room";
+      const info=document.createElement("div");const b=document.createElement("b");b.textContent=r.code;
+      const small=document.createElement("small");small.textContent=r.host+" · "+r.players+"/"+r.maxPlayers+" players";
+      info.append(b,small);
+      const btn=document.createElement("button");btn.className="secondary";btn.textContent="JOIN";btn.onclick=()=>{$("joinCode").value=r.code;joinRoom();};
+      row.append(info,btn);root.appendChild(row);
+    }
+  }catch(e){
+    const errorNode=document.createElement("div");errorNode.className="empty";errorNode.textContent=e.message;root.replaceChildren(errorNode);
+  }finally{state.roomsLoading=false;$("refreshRoomsBtn").disabled=false;}
 }
-(async()=>{await checkHealth();await loadRooms();const token=sessionStorage.getItem("cb_token");const code=sessionStorage.getItem("cb_code");if(token&&code){state.token=token;state.code=code;state.player={name:displayName()};$("roomView").classList.add("active");$("roomTitle").textContent=code;refreshRoom();state.poll=setInterval(refreshRoom,3000);state.heartbeat=setInterval(()=>api("/api/rooms","POST",{action:"heartbeat",ready:state.ready}).catch(()=>{}),20000);}})();
+document.addEventListener("keydown",event=>{
+  if(!$("roomView").classList.contains("active"))return;
+  if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(event.key))return;
+  const target=event.target;if(target&&["INPUT","TEXTAREA","SELECT"].includes(target.tagName))return;
+  const buttons=Array.from($("roomView").querySelectorAll("button[data-room-action]:not(:disabled)"));
+  if(!buttons.length)return;
+  const current=buttons.indexOf(document.activeElement);
+  const forward=event.key==="ArrowRight"||event.key==="ArrowDown";
+  const next=current<0?(forward?0:buttons.length-1):(current+(forward?1:buttons.length-1))%buttons.length;
+  buttons[next].focus();event.preventDefault();
+});
+$("joinCode").addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();joinRoom();}});
+$("displayName").addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();createRoom();}});
+(async()=>{
+  await checkHealth();await loadRooms();
+  const token=sessionStorage.getItem("cb_token"),code=sessionStorage.getItem("cb_code"),playerId=sessionStorage.getItem("cb_player");
+  if(token&&code&&playerId){
+    state.token=token;state.code=code;state.player={id:playerId,name:displayName()};
+    $("roomView").classList.add("active");$("roomTitle").textContent=code;
+    await refreshRoom();if(state.token)startRoomTimers();
+  }else if(token||code||playerId){clearRoomSession("An incomplete saved room session was cleared. Join again.");}
+})();
 </script>
 </body>
 </html>

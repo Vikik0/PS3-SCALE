@@ -1,0 +1,41 @@
+name: Crash Bash Web Lobby Tests
+
+on:
+  push:
+    branches: [crash-bash-enhanced]
+    paths:
+      - "Crash-Bash-Enhanced/web/**"
+      - ".github/workflows/crash-bash-web-tests.yml"
+  pull_request:
+    branches: [crash-bash-enhanced]
+    paths:
+      - "Crash-Bash-Enhanced/web/**"
+      - ".github/workflows/crash-bash-web-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web-tests:
+    name: Web lobby API and UI regression tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check API and browser script syntax
+        run: |
+          node --check Crash-Bash-Enhanced/web/api/rooms.js
+          node --check Crash-Bash-Enhanced/web/api/_lib/netplay.js
+          python3 - <<'PY'
+          from pathlib import Path
+          html = Path("Crash-Bash-Enhanced/web/index.html").read_text(encoding="utf-8")
+          start = html.index("<script>") + len("<script>")
+          end = html.index("</script>", start)
+          Path("/tmp/crash-bash-lobby-inline.js").write_text(html[start:end], encoding="utf-8")
+          PY
+          node --check /tmp/crash-bash-lobby-inline.js
+      - name: Run web and RetroArch lobby tests
+        run: node --test Crash-Bash-Enhanced/web/tests/*.test.js

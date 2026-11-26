@@ -2,12 +2,8 @@
 
 const crypto = require("node:crypto");
 const { get, put, list, del } = require("@vercel/blob");
-const {
-  signGuestToken,
-  verifyGuestToken,
-  cleanDisplayName,
-  bearerToken
-} = require("./_lib/security");
+const { verifyGuestToken, signGuestToken, cleanDisplayName, bearerToken } = require("./_lib/security");
+const { lookupRetroArchHost } = require("./_lib/netplay");
 
 const ACCESS = "private";
 const PREFIX = "cb-rooms/";
@@ -21,96 +17,109 @@ function reply(res, status, data) {
   res.setHeader("X-Content-Type-Options", "nosniff");
   return res.status(status).json(data);
 }
-
 function makeCode() {
   const bytes = crypto.randomBytes(6);
   let result = "";
   for (let i = 0; i < 6; i += 1) result += CODE_CHARS[bytes[i] % CODE_CHARS.length];
   return result;
 }
-
-function pathFor(code) {
-  return PREFIX + code + ".json";
-}
-
+function pathFor(code) { return PREFIX + code + ".json"; }
 async function readRoom(code) {
   const result = await get(pathFor(code), { access: ACCESS });
   if (!result || result.statusCode !== 200 || !result.stream) return null;
-  return {
-    room: JSON.parse(await new Response(result.stream).text()),
-    etag: result.blob.etag
-  };
+  return { room: JSON.parse(await new Response(result.stream).text()), etag: result.blob.etag };
 }
-
 async function createRoom(code, room) {
-  await put(pathFor(code), JSON.stringify(room), {
-    access: ACCESS,
-    addRandomSuffix: false,
-    contentType: "application/json"
-  });
+  await put(pathFor(code), JSON.stringify(room), { access: ACCESS, addRandomSuffix: false, contentType: "application/json" });
 }
-
 async function saveRoom(code, room, expectedEtag) {
   if (!expectedEtag) throw new Error("Missing room version for conditional write");
-  await put(pathFor(code), JSON.stringify(room), {
-    access: ACCESS,
-    allowOverwrite: true,
-    ifMatch: expectedEtag,
-    contentType: "application/json"
-  });
+  await put(pathFor(code), JSON.stringify(room), { access: ACCESS, allowOverwrite: true, ifMatch: expectedEtag, contentType: "application/json" });
 }
-
-function tokenClaims(req) {
-  const claims = verifyGuestToken(bearerToken(req));
-  if (!claims) return null;
-  return claims;
+function tokenClaims(req) { return verifyGuestToken(bearerToken(req)); }
+function activePlayers(room, now = Date.now()) {
+  return (room.players || []).filter((player) => Number.isFinite(Number(player.lastSeen)) && now - Number(player.lastSeen) <= PLAYER_TTL_MS);
 }
-
-function publicRoom(room) {
-  const now = Date.now();
-  const active = (room.players || []).filter((p) => now - p.lastSeen <= PLAYER_TTL_MS);
+function discState(players) {
+  const selected = players.map((player) => String(player.discFingerprint || "")).filter((value) => /^[A-F0-9]{16}$/.test(value));
+  const distinct = new Set(selected);
   return {
-    code: room.code,
-    host: room.players?.[0]?.name || "Guest",
-    players: active.length,
-    maxPlayers: MAX_PLAYERS,
-    createdAt: room.createdAt,
-    status: room.status
+    count: selected.length,
+    match: players.length >= 2 && selected.length === players.length && distinct.size === 1,
+    mismatch: distinct.size > 1
   };
 }
+function roomReady(players) { return players.length >= 2 && players.every((player) => player.ready === true); }
+function roomSummary(room, now = Date.now()) {
+  const players = activePlayers(room, now);
+  const discs = discState(players);
+  return {
+    code: room.code,
+    status: roomReady(players) ? "ready" : "waiting",
+    isPrivate: Boolean(room.isPrivate),
+    hostPlayerId: room.hostPlayerId || "",
+    netplayId: room.netplayId || "",
+    gameStarted: Boolean(room.gameStarted),
+    discSelectionCount: discs.count,
+    discMatch: discs.match,
+    discMismatch: discs.mismatch,
+    players: players.map(({ id, name, ready, discFingerprint }) => ({ id, name, ready: Boolean(ready), discFingerprint: discFingerprint || "" })),
+    maxPlayers: MAX_PLAYERS
+  };
+}
+function publicRoom(room, now = Date.now()) {
+  const players = activePlayers(room, now);
+  return { code: room.code, host: players[0]?.name || "Guest", players: players.length, maxPlayers: MAX_PLAYERS, createdAt: room.createdAt, status: roomReady(players) ? "ready" : "waiting" };
+}
+function invalidateMatch(room, { clearDisc = false, clearReady = false } = {}) {
+  room.gameStarted = false;
+  room.gameStartedAt = 0;
+  room.netplayId = "";
+  for (const player of room.players || []) {
+    if (clearDisc) player.discFingerprint = "";
+    if (clearReady) player.ready = false;
+  }
+}
+function findPlayer(room, playerId) { return (room.players || []).find((player) => player.id === playerId); }
 
 async function listRooms() {
-  const page = await list({ prefix: PREFIX, limit: 100 });
   const output = [];
-  for (const blob of (page.blobs || []).slice(0, 40)) {
-    const code = blob.pathname.slice(PREFIX.length).replace(/\.json$/, "");
-    if (!/^[A-Z2-9]{6}$/.test(code)) continue;
-    try {
-      const record = await readRoom(code);
-      if (!record) continue;
-      const room = record.room;
-      const active = (room.players || []).filter((p) => Date.now() - p.lastSeen <= PLAYER_TTL_MS);
-      if (Date.now() - room.updatedAt > ROOM_TTL_MS || active.length === 0) {
-        await del(pathFor(code), { access: ACCESS });
-        continue;
-      }
-      if (!room.isPrivate && room.status === "waiting" && active.length < MAX_PLAYERS) {
-        output.push(publicRoom(room));
-      }
-    } catch {}
-  }
+  const seen = new Set();
+  let cursor = null;
+  do {
+    const options = { prefix: PREFIX, limit: 100 };
+    if (cursor) options.cursor = cursor;
+    const page = await list(options);
+    const blobs = page.blobs || [];
+    for (let offset = 0; offset < blobs.length; offset += 20) {
+      const batch = await Promise.all(blobs.slice(offset, offset + 20).map(async (blob) => {
+        const code = blob.pathname.slice(PREFIX.length).replace(/\.json$/, "");
+        if (!/^[A-Z2-9]{6}$/.test(code) || seen.has(code)) return null;
+        seen.add(code);
+        try {
+          const record = await readRoom(code);
+          if (!record) return null;
+          const room = record.room;
+          const now = Date.now();
+          const players = activePlayers(room, now);
+          const updatedAt = Number(room.updatedAt);
+          if (!Number.isFinite(updatedAt) || now - updatedAt > ROOM_TTL_MS || players.length === 0) {
+            await del(pathFor(code), { access: ACCESS }).catch(() => {});
+            return null;
+          }
+          if (!room.isPrivate && !room.gameStarted && !roomReady(players) && players.length < MAX_PLAYERS) return publicRoom(room, now);
+        } catch {}
+        return null;
+      }));
+      output.push(...batch.filter(Boolean));
+    }
+    cursor = page.cursor || null;
+  } while (cursor);
   return output.sort((a, b) => b.createdAt - a.createdAt);
 }
 
-function findPlayer(room, playerId) {
-  return (room.players || []).find((p) => p.id === playerId);
-}
-
 module.exports = async function handler(req, res) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN || !process.env.CB_TOKEN_SECRET) {
-    return reply(res, 503, { error: "Lobby storage is not configured yet." });
-  }
-
+  if (!process.env.BLOB_READ_WRITE_TOKEN || !process.env.CB_TOKEN_SECRET) return reply(res, 503, { error: "Lobby storage is not configured yet." });
   try {
     if (req.method === "GET") {
       const code = String(req.query?.code || "").toUpperCase();
@@ -120,28 +129,16 @@ module.exports = async function handler(req, res) {
       if (!claims || claims.room !== code) return reply(res, 401, { error: "A valid room guest token is required." });
       const record = await readRoom(code);
       if (!record) return reply(res, 404, { error: "Room not found." });
-      const room = record.room;
-      const player = findPlayer(room, claims.sub);
-      if (!player) return reply(res, 403, { error: "You are no longer in this room." });
-      const active = (room.players || []).filter((p) => Date.now() - p.lastSeen <= PLAYER_TTL_MS);
-      return reply(res, 200, {
-        room: {
-          code: room.code,
-          status: room.status,
-          isPrivate: room.isPrivate,
-          players: active.map(({ id, name, ready }) => ({ id, name, ready })),
-          maxPlayers: MAX_PLAYERS,
-          createdAt: room.createdAt,
-          updatedAt: room.updatedAt
-        }
-      });
+      const now = Date.now();
+      const player = findPlayer(record.room, claims.sub);
+      if (!player || now - Number(player.lastSeen) > PLAYER_TTL_MS) return reply(res, 403, { error: "Your room seat expired. Join the room again." });
+      return reply(res, 200, { room: roomSummary(record.room, now) });
     }
 
     if (req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
       return reply(res, 405, { error: "Method not allowed." });
     }
-
     const body = req.body && typeof req.body === "object" ? req.body : {};
     const action = String(body.action || "");
     const name = cleanDisplayName(body.displayName);
@@ -152,23 +149,15 @@ module.exports = async function handler(req, res) {
         const playerId = crypto.randomUUID();
         const now = Date.now();
         const room = {
-          code,
-          status: "waiting",
-          isPrivate: Boolean(body.isPrivate),
-          maxPlayers: MAX_PLAYERS,
-          createdAt: now,
-          updatedAt: now,
-          players: [{ id: playerId, name, ready: false, joinedAt: now, lastSeen: now }],
-          signals: [],
-          nextSignalId: 1
+          code, status: "waiting", isPrivate: Boolean(body.isPrivate), maxPlayers: MAX_PLAYERS,
+          createdAt: now, updatedAt: now, hostPlayerId: playerId, netplayId: "",
+          gameStarted: false, gameStartedAt: 0,
+          players: [{ id: playerId, name, ready: false, discFingerprint: "", joinedAt: now, lastSeen: now }],
+          signals: [], nextSignalId: 1
         };
         try {
           await createRoom(code, room);
-          return reply(res, 201, {
-            room: publicRoom(room),
-            player: { id: playerId, name },
-            token: signGuestToken({ sub: playerId, room: code })
-          });
+          return reply(res, 201, { room: publicRoom(room, now), player: { id: playerId, name }, token: signGuestToken({ sub: playerId, room: code }) });
         } catch (error) {
           if (attempt === 4) throw error;
         }
@@ -181,19 +170,16 @@ module.exports = async function handler(req, res) {
         const record = await readRoom(candidate.code);
         if (!record) continue;
         const room = record.room;
-        room.players = (room.players || []).filter((p) => Date.now() - p.lastSeen <= PLAYER_TTL_MS);
-        if (room.isPrivate || room.status !== "waiting" || room.players.length >= MAX_PLAYERS) continue;
-        const playerId = crypto.randomUUID();
         const now = Date.now();
-        room.players.push({ id: playerId, name, ready: false, joinedAt: now, lastSeen: now });
+        room.players = activePlayers(room, now);
+        if (room.isPrivate || room.gameStarted || roomReady(room.players) || room.players.length >= MAX_PLAYERS) continue;
+        const playerId = crypto.randomUUID();
+        room.players.push({ id: playerId, name, ready: false, discFingerprint: "", joinedAt: now, lastSeen: now });
+        invalidateMatch(room, { clearDisc: true, clearReady: true });
         room.updatedAt = now;
         try {
           await saveRoom(candidate.code, room, record.etag);
-          return reply(res, 200, {
-            room: publicRoom(room),
-            player: { id: playerId, name },
-            token: signGuestToken({ sub: playerId, room: candidate.code })
-          });
+          return reply(res, 200, { room: publicRoom(room, now), player: { id: playerId, name }, token: signGuestToken({ sub: playerId, room: candidate.code }) });
         } catch (error) {
           if (error?.name !== "BlobPreconditionFailedError") throw error;
         }
@@ -204,22 +190,26 @@ module.exports = async function handler(req, res) {
     if (action === "join") {
       const code = String(body.code || "").toUpperCase();
       if (!/^[A-Z2-9]{6}$/.test(code)) return reply(res, 400, { error: "Enter a valid six-character room code." });
-      const record = await readRoom(code);
-      if (!record) return reply(res, 404, { error: "Room not found." });
-      const room = record.room;
-      room.players = (room.players || []).filter((p) => Date.now() - p.lastSeen <= PLAYER_TTL_MS);
-      if (room.players.length < MAX_PLAYERS) room.status = "waiting";
-      if (room.status !== "waiting" || room.players.length >= MAX_PLAYERS) return reply(res, 409, { error: "Room is full or already playing." });
-      const playerId = crypto.randomUUID();
-      const now = Date.now();
-      room.players.push({ id: playerId, name, ready: false, joinedAt: now, lastSeen: now });
-      room.updatedAt = now;
-      await saveRoom(code, room, record.etag);
-      return reply(res, 200, {
-        room: publicRoom(room),
-        player: { id: playerId, name },
-        token: signGuestToken({ sub: playerId, room: code })
-      });
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const record = await readRoom(code);
+        if (!record) return reply(res, 404, { error: "Room not found." });
+        const room = record.room;
+        const now = Date.now();
+        room.players = activePlayers(room, now);
+        if (room.gameStarted) return reply(res, 409, { error: "Room has already started the match." });
+        if (room.players.length >= MAX_PLAYERS) return reply(res, 409, { error: "Room is full." });
+        const playerId = crypto.randomUUID();
+        room.players.push({ id: playerId, name, ready: false, discFingerprint: "", joinedAt: now, lastSeen: now });
+        invalidateMatch(room, { clearDisc: true, clearReady: true });
+        room.updatedAt = now;
+        try {
+          await saveRoom(code, room, record.etag);
+          return reply(res, 200, { room: publicRoom(room, now), player: { id: playerId, name }, token: signGuestToken({ sub: playerId, room: code }) });
+        } catch (error) {
+          if (error?.name !== "BlobPreconditionFailedError" || attempt === 2) throw error;
+        }
+      }
+      return reply(res, 409, { error: "Room changed while joining. Refresh and retry." });
     }
 
     const claims = tokenClaims(req);
@@ -228,18 +218,86 @@ module.exports = async function handler(req, res) {
     const record = await readRoom(code);
     if (!record) return reply(res, 404, { error: "Room not found." });
     const room = record.room;
-    const player = findPlayer(room, claims.sub);
-    if (!player) return reply(res, 403, { error: "You are not a member of this room." });
     const now = Date.now();
+    const player = findPlayer(room, claims.sub);
+    if (!player || now - Number(player.lastSeen) > PLAYER_TTL_MS) return reply(res, 403, { error: "Your room seat expired. Join the room again." });
 
-    if (action === "heartbeat") {
+    if (action === "heartbeat" || action === "set_ready") {
+      if (action === "set_ready" && typeof body.ready !== "boolean") return reply(res, 400, { error: "READY state must be true or false." });
       player.lastSeen = now;
-      if (typeof body.ready === "boolean") player.ready = body.ready;
-      const activePlayers = room.players.filter((p) => now - p.lastSeen <= PLAYER_TTL_MS);
-      room.status = activePlayers.length === MAX_PLAYERS && activePlayers.every((p) => p.ready) ? "ready" : "waiting";
+      if (typeof body.ready === "boolean" && player.ready !== body.ready) {
+        player.ready = body.ready;
+        invalidateMatch(room, { clearDisc: true });
+      }
+      room.updatedAt = now;
+      const summary = roomSummary(room, now);
+      await saveRoom(code, room, record.etag);
+      return reply(res, 200, { ok: true, ...summary });
+    }
+
+    if (action === "set_disc") {
+      const fingerprint = String(body.fingerprint || "");
+      if (!/^[A-F0-9]{16}$/.test(fingerprint)) return reply(res, 400, { error: "Disc fingerprint must be 16 uppercase hexadecimal characters." });
+      if (room.gameStarted) return reply(res, 409, { error: "Match has already started." });
+      const players = activePlayers(room, now);
+      if (!roomReady(players) || !player.ready) return reply(res, 409, { error: "Every active player must be READY before disc confirmation." });
+      player.lastSeen = now;
+      player.discFingerprint = fingerprint;
+      invalidateMatch(room);
       room.updatedAt = now;
       await saveRoom(code, room, record.etag);
-      return reply(res, 200, { ok: true, players: room.players.map(({ id, name, ready }) => ({ id, name, ready })) });
+      return reply(res, 200, { ok: true });
+    }
+
+    if (action === "clear_disc") {
+      player.lastSeen = now;
+      player.discFingerprint = "";
+      invalidateMatch(room);
+      room.updatedAt = now;
+      await saveRoom(code, room, record.etag);
+      return reply(res, 200, { ok: true });
+    }
+
+    if (action === "game_start") {
+      const players = activePlayers(room, now);
+      if (player.id !== room.hostPlayerId) return reply(res, 403, { error: "Only the room host can start the match." });
+      if (!roomReady(players)) return reply(res, 409, { error: "Every active player must be READY before launch." });
+      const discs = discState(players);
+      if (discs.mismatch) return reply(res, 409, { error: "Disc fingerprints do not match." });
+      if (!discs.match) return reply(res, 409, { error: "Every active player must confirm the same disc before launch." });
+      if (!room.gameStarted) {
+        room.gameStarted = true;
+        room.gameStartedAt = now;
+        room.netplayId = crypto.randomBytes(8).toString("hex").toUpperCase();
+        room.updatedAt = now;
+        await saveRoom(code, room, record.etag);
+      }
+      return reply(res, 200, { ok: true });
+    }
+
+    if (action === "game_start_cancel") {
+      if (player.id !== room.hostPlayerId) return reply(res, 403, { error: "Only the room host can cancel the launch." });
+      if (room.gameStarted && now - Number(room.gameStartedAt || 0) > 120000) return reply(res, 409, { error: "The launch lock has expired; refresh the room instead." });
+      invalidateMatch(room);
+      room.updatedAt = now;
+      await saveRoom(code, room, record.etag);
+      return reply(res, 200, { ok: true });
+    }
+
+    if (action === "netplay") {
+      const players = activePlayers(room, now);
+      if (!roomReady(players)) return reply(res, 409, { error: "Every active player must be READY before Netplay discovery." });
+      const discs = discState(players);
+      if (discs.mismatch) return reply(res, 200, { ready: false, state: "disc_mismatch" });
+      if (!discs.match) return reply(res, 200, { ready: false, state: "waiting_for_disc_selection" });
+      if (!room.gameStarted || !room.netplayId || player.id === room.hostPlayerId) return reply(res, 200, { ready: false, state: "waiting_for_host_start" });
+      try {
+        const nickname = "CB-" + String(room.netplayId).slice(0, 12) + "-HOST";
+        return reply(res, 200, await lookupRetroArchHost(nickname, { timeoutMs: 5000 }));
+      } catch (error) {
+        console.warn("RetroArch lobby lookup failed:", error?.message || error);
+        return reply(res, 200, { ready: false, state: "waiting_for_host_start" });
+      }
     }
 
     if (action === "signal") {
@@ -249,12 +307,9 @@ module.exports = async function handler(req, res) {
       if (Buffer.byteLength(payload, "utf8") > 12000) return reply(res, 413, { error: "Signal payload too large." });
       const targetPlayerId = String(body.toPlayerId || "");
       if (!targetPlayerId) return reply(res, 400, { error: "A target player ID is required for room signaling." });
-      const target = room.players.find((p) =>
-        p.id === targetPlayerId &&
-        p.id !== player.id &&
-        now - p.lastSeen <= PLAYER_TTL_MS
-      );
+      const target = room.players.find((candidate) => candidate.id === targetPlayerId && candidate.id !== player.id && now - candidate.lastSeen <= PLAYER_TTL_MS);
       if (!target) return reply(res, 404, { error: "Target player is not an active member of this room." });
+      room.signals = room.signals || [];
       room.signals.push({ id: room.nextSignalId++, from: player.id, to: target.id, type, payload: JSON.parse(payload), createdAt: now });
       room.signals = room.signals.slice(-32);
       room.updatedAt = now;
@@ -264,16 +319,19 @@ module.exports = async function handler(req, res) {
 
     if (action === "poll") {
       const since = Number.isInteger(body.since) && body.since >= 0 ? body.since : 0;
-      const signals = (room.signals || []).filter((s) => s.to === player.id && s.id > since);
+      const signals = (room.signals || []).filter((signal) => signal.to === player.id && signal.id > since);
       return reply(res, 200, { signals, cursor: signals.length ? signals[signals.length - 1].id : since });
     }
 
     if (action === "leave") {
-      room.players = room.players.filter((p) => p.id !== player.id);
-      room.signals = (room.signals || []).filter((s) => s.from !== player.id && s.to !== player.id);
-      room.status = "waiting";
-      if (room.players.length === 0) await del(pathFor(code), { access: ACCESS });
-      else {
+      const wasHost = player.id === room.hostPlayerId;
+      room.players = (room.players || []).filter((candidate) => candidate.id !== player.id);
+      room.signals = (room.signals || []).filter((signal) => signal.from !== player.id && signal.to !== player.id);
+      if (room.players.length === 0) {
+        await del(pathFor(code), { access: ACCESS });
+      } else {
+        if (wasHost) room.hostPlayerId = room.players[0].id;
+        invalidateMatch(room, { clearDisc: true, clearReady: true });
         room.updatedAt = now;
         await saveRoom(code, room, record.etag);
       }
@@ -283,9 +341,7 @@ module.exports = async function handler(req, res) {
     return reply(res, 400, { error: "Unknown action." });
   } catch (error) {
     console.error("Crash Bash room API error:", error?.message || error);
-    if (error?.name === "BlobPreconditionFailedError") {
-      return reply(res, 409, { error: "The room changed at the same time. Refresh and retry." });
-    }
+    if (error?.name === "BlobPreconditionFailedError") return reply(res, 409, { error: "The room changed at the same time. Refresh and retry." });
     return reply(res, 500, { error: "Lobby request failed. Retry in a moment." });
   }
 };

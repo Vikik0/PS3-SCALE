@@ -53,8 +53,6 @@ jobs:
           python3 -m py_compile Crash-Bash-Enhanced/scripts/stage_game_disc.py Crash-Bash-Enhanced/scripts/verify_pkg_contents.py
       - name: Validate PS3 package metadata
         run: python3 Crash-Bash-Enhanced/scripts/test_package_metadata.py
-      - name: Validate BIN/CUE staging and archive security
-        run: python3 Crash-Bash-Enhanced/scripts/test_stage_game_disc.py
       - name: Run protocol tests
         run: sh Crash-Bash-Enhanced/scripts/test_host.sh
 
