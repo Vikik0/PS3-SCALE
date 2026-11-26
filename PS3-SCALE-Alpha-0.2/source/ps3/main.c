@@ -268,6 +268,7 @@ static int g_extended_font_ready = 0;
 static unsigned char g_extended_font_bitmap[PS3SCALE_FONT_RAW_SIZE];
 static ps3scale_hardware_info_t g_hardware_info;
 static int g_hardware_info_valid = 0;
+static int ps2_netemu_iso_supported(void);
 static unsigned char g_extended_glyph_min_x[256];
 static unsigned char g_extended_glyph_ink_width[256];
 static int g_ui_font_width = 14;
