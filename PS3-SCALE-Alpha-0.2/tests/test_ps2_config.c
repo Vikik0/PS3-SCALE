@@ -77,8 +77,15 @@ int main(void)
     {
         uint8_t base[64];
         uint8_t merged[128];
+        uint8_t patch_base[64];
+        uint8_t patch_merged[128];
         size_t base_size = 0;
         size_t merged_size = 0;
+        size_t patch_base_size = 0;
+        size_t patch_merged_size = 0;
+        ps3scale_ps2_code_patch_t second_patch = {
+            0x00161864u, 0x11223344u, 0x55667788u
+        };
 
         assert(ps3scale_ps2_config_build(
             base, sizeof(base), PS3SCALE_PS2_CFG_ENABLE_L2H,
@@ -93,6 +100,22 @@ int main(void)
         assert(ps3scale_ps2_config_append_patches(
             merged, merged_size, &patch, 1, base, sizeof(base),
             &base_size) == -3);
+
+        assert(ps3scale_ps2_config_build_with_patches(
+            patch_base, sizeof(patch_base), PS3SCALE_PS2_CFG_ENABLE_L2H,
+            &patch, 1, &patch_base_size) == 0);
+        assert(ps3scale_ps2_config_append_patches(
+            patch_base, patch_base_size, &second_patch, 1,
+            patch_merged, sizeof(patch_merged), &patch_merged_size) == 0);
+        assert(patch_merged_size == patch_base_size + 12u);
+        assert(ps3scale_ps2_config_validate_generated(
+            patch_merged, patch_merged_size) == 0);
+        assert(patch_merged[12] == 0x0A && patch_merged[16] == 0x02);
+        assert(patch_merged[20] == 0x60 && patch_merged[21] == 0x18);
+        assert(patch_merged[32] == 0x64 && patch_merged[33] == 0x18);
+        assert(ps3scale_ps2_config_append_patches(
+            patch_merged, patch_merged_size, &second_patch, 1,
+            patch_base, sizeof(patch_base), &patch_base_size) == -3);
 
         {
             uint8_t title_id_config[64] = {

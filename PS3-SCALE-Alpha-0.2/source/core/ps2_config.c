@@ -226,7 +226,7 @@ int ps3scale_ps2_config_append_patches(
 
     payload_size = base_size - 4u;
 
-    /* A Title ID / multidisc command must remain the final command. */
+    /* Preserve the Title ID / multidisc footer as the final command. */
     for (i = sizeof(ps2_config_header); i + 13u <= payload_size; i += 4u) {
         size_t id_length;
         if (read_u32_le(base + i) == 0) {
@@ -236,10 +236,88 @@ int ps3scale_ps2_config_append_patches(
                     return -2;
             }
         }
-        if (read_u32_le(base + i) == 0x0Au)
-            return -3;
+        if (read_u32_le(base + i) == 0x0Au) {
+            ps3scale_ps2_code_patch_t merged[PS3SCALE_PS2_CONFIG_MAX_CODE_PATCHES];
+            size_t pos = sizeof(ps2_config_header);
+            size_t command_end = base_size - 4u;
+            size_t old_count;
+            size_t old_patch_size;
+            size_t new_count;
+            size_t new_patch_size;
+            size_t old_patch_end;
+            size_t j;
+
+            /*
+             * Only merge a CONFIG whose complete command stream is in the
+             * allow-listed generated subset. Unknown community commands are
+             * left untouched by append-only installs, but are not rewritten.
+             */
+            if (ps3scale_ps2_config_validate_generated(base, base_size) != 0)
+                return -3;
+
+            while (pos < command_end && pos != i) {
+                uint32_t command = read_u32_le(base + pos);
+                if (command == 0x44u || command == 0x46u || command == 0x50u)
+                    pos += 4u;
+                else if (command == 0x48u)
+                    pos += 12u;
+                else
+                    return -3;
+            }
+            if (pos != i || command_end - i < 8u)
+                return -3;
+
+            old_count = read_u32_le(base + i + 4u);
+            if (old_count == 0 ||
+                old_count > PS3SCALE_PS2_CONFIG_MAX_CODE_PATCHES ||
+                patch_count > PS3SCALE_PS2_CONFIG_MAX_CODE_PATCHES - old_count)
+                return -4;
+
+            old_patch_size = 8u + old_count * 12u;
+            old_patch_end = i + old_patch_size;
+            if (old_patch_end > command_end)
+                return -3;
+
+            for (j = 0; j < old_count; ++j) {
+                size_t entry = i + 8u + j * 12u;
+                merged[j].ee_address = read_u32_le(base + entry);
+                merged[j].original_word = read_u32_le(base + entry + 4u);
+                merged[j].replacement_word = read_u32_le(base + entry + 8u);
+            }
+
+            for (j = 0; j < patch_count; ++j) {
+                size_t k;
+                for (k = 0; k < old_count + j; ++k) {
+                    if (merged[k].ee_address == patches[j].ee_address)
+                        return -3;
+                }
+                merged[old_count + j] = patches[j];
+            }
+
+            new_count = old_count + patch_count;
+            new_patch_size = 8u + new_count * 12u;
+            needed = base_size - old_patch_size + new_patch_size;
+            if (needed > capacity ||
+                needed > PS3SCALE_PS2_CONFIG_MAX_BYTES)
+                return -4;
+
+            memcpy(out, base, i);
+            if (write_patch_command(out + i, capacity - i,
+                    merged, new_count, &patch_size) != 0 ||
+                patch_size != new_patch_size)
+                return -5;
+            memcpy(out + i + patch_size, base + old_patch_end,
+                   base_size - old_patch_end);
+            *out_size = needed;
+            if (ps3scale_ps2_config_validate_generated(out, *out_size) != 0) {
+                *out_size = 0;
+                return -5;
+            }
+            return 0;
+        }
     }
 
+    /* No existing EE patch: append one new 0x0A command before the terminator. */
     patch_size = 8u + patch_count * 12u;
     needed = payload_size + patch_size + 4u;
     if (needed > capacity || needed > PS3SCALE_PS2_CONFIG_MAX_BYTES)

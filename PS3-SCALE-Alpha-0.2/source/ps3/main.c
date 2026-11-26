@@ -3580,7 +3580,7 @@ static void apply_ps2_game_patch(ps3scale_ps2_patch_kind_t patch_kind)
         }
         if (result == -3) {
             snprintf(g_ps2_config_manager_message, sizeof(g_ps2_config_manager_message),
-                     "CONFIG ALREADY CONTAINS AN EE CODE PATCH. NO DUPLICATE ADDED.");
+                     "CONFIG HAS A DUPLICATE OR UNSUPPORTED EE PATCH. NO FILE WAS CHANGED.");
             goto cleanup;
         }
         if (result != 0) {

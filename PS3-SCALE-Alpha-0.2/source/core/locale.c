@@ -342,7 +342,7 @@ static const locale_entry_t locale_entries[] = {
     {"PATCH ADDRESS IS NOT IN A FILE-BACKED EXECUTABLE ELF SEGMENT.", "عنوان التعديل ليس ضمن مقطع تنفيذي صالح في ELF.", "La dirección del parche no pertenece a un segmento ejecutable válido del ELF."},
     {"EXISTING CONFIG FORMAT CANNOT BE MERGED SAFELY.", "تنسيق الإعداد الحالي لا يسمح بالدمج الآمن.", "El formato CONFIG actual no permite una combinación segura."},
     {"TITLE ID / MULTIDISC CONFIG CANNOT BE REORDERED SAFELY.", "لا يمكن إعادة ترتيب إعداد Title ID أو تعدد الأقراص بأمان.", "No se puede reordenar de forma segura el CONFIG de Title ID o multidisco."},
-    {"CONFIG ALREADY CONTAINS AN EE CODE PATCH. NO DUPLICATE ADDED.", "الإعداد يحتوي مسبقاً على تعديل EE؛ لم تتم إضافة نسخة مكررة.", "El CONFIG ya contiene un parche EE; no se añadió un duplicado."},
+    {"CONFIG HAS A DUPLICATE OR UNSUPPORTED EE PATCH. NO FILE WAS CHANGED.", "يحتوي الإعداد على تعديل EE مكرر أو غير مدعوم. لم يتغير أي ملف.", "El CONFIG contiene un parche EE duplicado o no compatible. No se modificó ningún archivo."},
     {"CONFIG CANNOT BE MERGED SAFELY. NO FILE WAS CHANGED.", "تعذر دمج الإعداد بأمان. لم يتغير أي ملف.", "No se pudo combinar el CONFIG de forma segura. No se modificó ningún archivo."},
     {"FPS PATCH CONFIG BUILD FAILED. NO FILE WAS CHANGED.", "فشل إنشاء إعداد تعديل FPS. لم يتغير أي ملف.", "Falló la creación del CONFIG del parche FPS. No se modificó ningún archivo."},
     {"COULD NOT STAGE FPS PATCH CONFIG. CHECK TEMP FILES.", "تعذر تجهيز إعداد تعديل FPS. افحص الملفات المؤقتة.", "No se pudo preparar el CONFIG FPS. Revisa los archivos temporales."},
