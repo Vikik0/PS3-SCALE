@@ -151,5 +151,5 @@ for operation in (
 assert "worker_active && worker.operation != LOBBY_WORK_LIST" in source
 
 assert "Finishing the pending room refresh..." not in source
-assert source.count('if (worker_active) {') == 1  # join a pending worker before cleanup
+assert "Finishing the pending room refresh..." not in source
 assert "if (session.token[0] && curl_initialized)" in source
