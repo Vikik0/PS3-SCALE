@@ -40,7 +40,7 @@ int cb_online_heartbeat(CBOnlineSession *session, CBOnlineRoomView *view, char *
 int cb_online_set_disc_fingerprint(CBOnlineSession *session, const char *fingerprint, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_clear_disc_fingerprint(CBOnlineSession *session, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_get_netplay_endpoint(CBOnlineSession *session, CBOnlineNetplayEndpoint *endpoint, char *error, size_t error_size);
-int cb_online_mark_game_started(CBOnlineSession *session, char *error, size_t error_size);
+int cb_online_mark_game_started(CBOnlineSession *session, CBOnlineRoomView *view, char *error, size_t error_size);
 int cb_online_cancel_game_start(CBOnlineSession *session, char *error, size_t error_size);
 int cb_online_leave_room(CBOnlineSession *session, char *error, size_t error_size);
 #endif

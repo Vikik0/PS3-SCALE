@@ -441,7 +441,7 @@ static void make_netplay_nickname(char *output, size_t output_size,
     }
     {
         const char *room_id = view->netplay_id[0] ? view->netplay_id : session->code;
-        if (is_host) snprintf(output, output_size, "CB-%.12s-HOST", room_id);
+        if (is_host) snprintf(output, output_size, "CB-%.16s-HOST", room_id);
         else snprintf(output, output_size, "CB-%.12s-P%d", room_id, player_number);
     }
 }
@@ -999,10 +999,10 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                     snprintf(status, status_size, "Room changed. All active players must be READY again.");
                 } else if (view.disc_match) {
                     host_disc_waiting = 0;
-                    make_netplay_nickname(netplay_nickname, sizeof(netplay_nickname), &session, &view, 1);
-                    if (cb_online_mark_game_started(&session, error, sizeof(error)) != 0) {
+                    if (cb_online_mark_game_started(&session, &view, error, sizeof(error)) != 0) {
                         snprintf(status, status_size, "Could not lock the room for launch: %.100s", error);
                     } else {
+                        make_netplay_nickname(netplay_nickname, sizeof(netplay_nickname), &session, &view, 1);
                         launch_result = cb_launch_game(discs[launch_disc].path, 1, netplay_nickname, NULL, error, sizeof(error));
                         if (launch_result < 0) {
                             char launch_error[160];

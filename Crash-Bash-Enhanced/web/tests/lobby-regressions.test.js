@@ -24,6 +24,15 @@ test("room list errors are rendered as text",()=>{
  assert.match(html,/errorNode\.textContent=e\.message/);
  assert.doesNotMatch(html,/innerHTML=.*e\.message/);
 });
+test("host Netplay nickname is derived from the server-issued launch identity",()=>{
+ const native=fs.readFileSync(path.join(root,"source","online_menu.c"),"utf8");
+ assert.match(api,/String\(room\.netplayId\)\.slice\(0, 16\)/);
+ assert.match(native,/CB-%\.16s-HOST/);
+ const start=native.indexOf("cb_online_mark_game_started(&session, &view");
+ const nickname=native.indexOf("make_netplay_nickname",start);
+ const launch=native.indexOf("cb_launch_game(discs[launch_disc].path, 1",nickname);
+ assert.ok(start>=0&&nickname>start&&launch>nickname,"host must use the server-issued identity before launching RetroArch");
+});
 test("native PS3 protocol actions are implemented",()=>{
  for(const action of ["set_ready","set_disc","clear_disc","game_start","game_start_cancel","netplay"])assert.ok(api.includes('action === "'+action+'"'),"missing "+action);
  assert.match(api,/lookupRetroArchHost\(nickname/);

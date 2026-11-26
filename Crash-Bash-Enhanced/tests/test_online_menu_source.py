@@ -91,7 +91,7 @@ assert re.search(
     source,
 ), "Client launch must pass the selected disc and client role."
 assert "if ((screen == SCREEN_ROOM || screen == SCREEN_DISC_SELECT)" in source
-assert "CB-%.12s-HOST" in source
+assert "CB-%.16s-HOST" in source
 assert "No built-in or external CUE file was found." in source
 assert '"/dev_hdd0/game/CBON00001/USRDIR/PSXISO"' in disc_source
 assert '"/dev_hdd0/PSXISO"' in disc_source
@@ -100,7 +100,9 @@ assert 'argv[used++] = "--connect";' in launch_args
 assert 'argv[used++] = "--mitm-session";' in launch_args
 assert "endpoint->mitm_session[0]" in launch_args
 assert "cb_online_get_netplay_endpoint(&session, &endpoint" in source
-assert "cb_online_mark_game_started(&session" in source
+assert "cb_online_mark_game_started(&session, &view" in source
+host_start = source[source.index("} else if (view.disc_match)"):source.index("} else if (view.disc_mismatch)", source.index("} else if (view.disc_match)"))]
+assert host_start.index("cb_online_mark_game_started(&session, &view") < host_start.index("make_netplay_nickname")
 assert "cb_disc_fingerprint(" in source
 assert "cb_online_set_disc_fingerprint(" in source
 assert "host_disc_waiting" in source
@@ -113,7 +115,7 @@ assert "HOST: CROSS CONFIRMS DISC; LAUNCHES WHEN ALL MATCH." in source
 assert "CLIENT: CROSS CONFIRMS DISC; THEN WAITS FOR HOST." in source
 assert "cb_online_cancel_game_start(&session" in source
 assert "NETPLAY_DISCOVERY_MAX_ATTEMPTS" in source
-assert "CB-%.12s-HOST" in source
+assert "CB-%.16s-HOST" in source
 assert "Netplay Host List" not in source
 assert "CB_GAME_NETPLAY_PORT" in launch_args
 assert "host_player_id" in online_source

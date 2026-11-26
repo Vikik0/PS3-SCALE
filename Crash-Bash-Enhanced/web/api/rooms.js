@@ -38,7 +38,10 @@ async function saveRoom(code, room, expectedEtag) {
 }
 function tokenClaims(req) { return verifyGuestToken(bearerToken(req)); }
 function activePlayers(room, now = Date.now()) {
-  return (room.players || []).filter((player) => Number.isFinite(Number(player.lastSeen)) && now - Number(player.lastSeen) <= PLAYER_TTL_MS);
+  return (room.players || []).filter((player) => {
+    const lastSeen = Number(player.lastSeen);
+    return Number.isFinite(lastSeen) && lastSeen <= now && now - lastSeen <= PLAYER_TTL_MS;
+  });
 }
 function discState(players) {
   const selected = players.map((player) => String(player.discFingerprint || "")).filter((value) => /^[A-F0-9]{16}$/.test(value));
@@ -57,7 +60,9 @@ function roomSummary(room, now = Date.now()) {
     code: room.code,
     status: roomReady(players) ? "ready" : "waiting",
     isPrivate: Boolean(room.isPrivate),
-    hostPlayerId: room.hostPlayerId || "",
+    hostPlayerId: room.gameStarted
+      ? (room.hostPlayerId || "")
+      : (players.find((player) => player.id === room.hostPlayerId)?.id || players[0]?.id || ""),
     netplayId: room.netplayId || "",
     gameStarted: Boolean(room.gameStarted),
     discSelectionCount: discs.count,
@@ -69,7 +74,8 @@ function roomSummary(room, now = Date.now()) {
 }
 function publicRoom(room, now = Date.now()) {
   const players = activePlayers(room, now);
-  return { code: room.code, host: players[0]?.name || "Guest", players: players.length, maxPlayers: MAX_PLAYERS, createdAt: room.createdAt, status: roomReady(players) ? "ready" : "waiting" };
+  const host = players.find((player) => player.id === room.hostPlayerId) || players[0];
+  return { code: room.code, host: host?.name || "Guest", players: players.length, maxPlayers: MAX_PLAYERS, createdAt: room.createdAt, status: roomReady(players) ? "ready" : "waiting" };
 }
 function invalidateMatch(room, { clearDisc = false, clearReady = false } = {}) {
   room.gameStarted = false;
@@ -79,6 +85,24 @@ function invalidateMatch(room, { clearDisc = false, clearReady = false } = {}) {
     if (clearDisc) player.discFingerprint = "";
     if (clearReady) player.ready = false;
   }
+}
+function reconcileRoom(room, now = Date.now()) {
+  if (room.gameStarted) return false;
+  const previous = Array.isArray(room.players) ? room.players : [];
+  const active = activePlayers(room, now);
+  const membershipChanged = previous.length !== active.length ||
+    previous.some((player, index) => player.id !== active[index]?.id);
+  room.players = active;
+  const hostMissing = Boolean(room.hostPlayerId) &&
+    !active.some((player) => player.id === room.hostPlayerId);
+  const hostUnset = !room.hostPlayerId && active.length > 0;
+  if (hostMissing || hostUnset) room.hostPlayerId = active[0]?.id || "";
+  const changed = membershipChanged || hostMissing || hostUnset;
+  if (changed) {
+    invalidateMatch(room, { clearDisc: true, clearReady: true });
+    room.updatedAt = now;
+  }
+  return changed;
 }
 function findPlayer(room, playerId) { return (room.players || []).find((player) => player.id === playerId); }
 
@@ -171,8 +195,9 @@ module.exports = async function handler(req, res) {
         if (!record) continue;
         const room = record.room;
         const now = Date.now();
-        room.players = activePlayers(room, now);
-        if (room.isPrivate || room.gameStarted || roomReady(room.players) || room.players.length >= MAX_PLAYERS) continue;
+        if (room.gameStarted) continue;
+        reconcileRoom(room, now);
+        if (room.isPrivate || roomReady(room.players) || room.players.length >= MAX_PLAYERS) continue;
         const playerId = crypto.randomUUID();
         room.players.push({ id: playerId, name, ready: false, discFingerprint: "", joinedAt: now, lastSeen: now });
         invalidateMatch(room, { clearDisc: true, clearReady: true });
@@ -195,8 +220,8 @@ module.exports = async function handler(req, res) {
         if (!record) return reply(res, 404, { error: "Room not found." });
         const room = record.room;
         const now = Date.now();
-        room.players = activePlayers(room, now);
         if (room.gameStarted) return reply(res, 409, { error: "Room has already started the match." });
+        reconcileRoom(room, now);
         if (room.players.length >= MAX_PLAYERS) return reply(res, 409, { error: "Room is full." });
         const playerId = crypto.randomUUID();
         room.players.push({ id: playerId, name, ready: false, discFingerprint: "", joinedAt: now, lastSeen: now });
@@ -219,13 +244,17 @@ module.exports = async function handler(req, res) {
     if (!record) return reply(res, 404, { error: "Room not found." });
     const room = record.room;
     const now = Date.now();
-    const player = findPlayer(room, claims.sub);
+    let player = findPlayer(room, claims.sub);
     if (!player || now - Number(player.lastSeen) > PLAYER_TTL_MS) return reply(res, 403, { error: "Your room seat expired. Join the room again." });
+    if (!room.gameStarted && action !== "poll" && action !== "netplay") reconcileRoom(room, now);
+    player = findPlayer(room, claims.sub);
+    if (!player) return reply(res, 403, { error: "Your room seat expired. Join the room again." });
 
     if (action === "heartbeat" || action === "set_ready") {
+      if (action === "set_ready" && room.gameStarted) return reply(res, 409, { error: "The match has already started; READY is locked." });
       if (action === "set_ready" && typeof body.ready !== "boolean") return reply(res, 400, { error: "READY state must be true or false." });
       player.lastSeen = now;
-      if (typeof body.ready === "boolean" && player.ready !== body.ready) {
+      if (!room.gameStarted && typeof body.ready === "boolean" && player.ready !== body.ready) {
         player.ready = body.ready;
         invalidateMatch(room, { clearDisc: true });
       }
@@ -250,6 +279,7 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === "clear_disc") {
+      if (room.gameStarted) return reply(res, 409, { error: "Match has already started; disc confirmation is locked." });
       player.lastSeen = now;
       player.discFingerprint = "";
       invalidateMatch(room);
@@ -272,12 +302,13 @@ module.exports = async function handler(req, res) {
         room.updatedAt = now;
         await saveRoom(code, room, record.etag);
       }
-      return reply(res, 200, { ok: true });
+      return reply(res, 200, { ok: true, room: roomSummary(room, now) });
     }
 
     if (action === "game_start_cancel") {
       if (player.id !== room.hostPlayerId) return reply(res, 403, { error: "Only the room host can cancel the launch." });
-      if (room.gameStarted && now - Number(room.gameStartedAt || 0) > 120000) return reply(res, 409, { error: "The launch lock has expired; refresh the room instead." });
+      if (!room.gameStarted) return reply(res, 409, { error: "There is no active launch lock to cancel." });
+      if (now - Number(room.gameStartedAt || 0) > 30000) return reply(res, 409, { error: "The 30-second launch recovery window has expired; the match remains locked." });
       invalidateMatch(room);
       room.updatedAt = now;
       await saveRoom(code, room, record.etag);
@@ -292,7 +323,7 @@ module.exports = async function handler(req, res) {
       if (!discs.match) return reply(res, 200, { ready: false, state: "waiting_for_disc_selection" });
       if (!room.gameStarted || !room.netplayId || player.id === room.hostPlayerId) return reply(res, 200, { ready: false, state: "waiting_for_host_start" });
       try {
-        const nickname = "CB-" + String(room.netplayId).slice(0, 12) + "-HOST";
+        const nickname = "CB-" + String(room.netplayId).slice(0, 16) + "-HOST";
         return reply(res, 200, await lookupRetroArchHost(nickname, { timeoutMs: 5000 }));
       } catch (error) {
         console.warn("RetroArch lobby lookup failed:", error?.message || error);
@@ -324,6 +355,7 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === "leave") {
+      if (room.gameStarted) return reply(res, 409, { error: "The match is locked. Close the game before leaving its room." });
       const wasHost = player.id === room.hostPlayerId;
       room.players = (room.players || []).filter((candidate) => candidate.id !== player.id);
       room.signals = (room.signals || []).filter((signal) => signal.from !== player.id && signal.to !== player.id);

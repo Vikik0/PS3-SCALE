@@ -346,6 +346,7 @@ int cb_online_leave_room(CBOnlineSession *session, char *error, size_t error_siz
 
 static int post_room_game_start_action(CBOnlineSession *session,
                                           const char *action,
+                                          CBOnlineRoomView *view,
                                           char *error, size_t error_size) {
     char body[64], response[CB_HTTP_BUFFER];
     cb_json_token tokens[CB_JSON_TOKEN_COUNT];
@@ -368,18 +369,27 @@ static int post_room_game_start_action(CBOnlineSession *session,
         set_error(error, error_size, "Room launch action was not accepted");
         return -1;
     }
+    if (view && parse_room_view(response, view) < 0) {
+        set_error(error, error_size, "Room launch response did not include the updated room identity");
+        return -1;
+    }
     if (error && error_size) error[0] = '\0';
     return 0;
 }
 
 int cb_online_mark_game_started(CBOnlineSession *session,
+                                CBOnlineRoomView *view,
                                 char *error, size_t error_size) {
-    return post_room_game_start_action(session, "game_start", error, error_size);
+    if (!view) {
+        set_error(error, error_size, "Room view is required to start Netplay");
+        return -1;
+    }
+    return post_room_game_start_action(session, "game_start", view, error, error_size);
 }
 
 int cb_online_cancel_game_start(CBOnlineSession *session,
                                 char *error, size_t error_size) {
-    return post_room_game_start_action(session, "game_start_cancel", error, error_size);
+    return post_room_game_start_action(session, "game_start_cancel", NULL, error, error_size);
 }
 
 int cb_online_get_netplay_endpoint(CBOnlineSession *session,
