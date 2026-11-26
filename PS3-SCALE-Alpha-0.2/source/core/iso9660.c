@@ -25,6 +25,234 @@ typedef struct {
     unsigned char flags;
 } iso_file_t;
 
+static int find_root_file(const unsigned char *root, size_t root_size,
+                          const char *wanted, size_t max_size,
+                          iso_file_t *file, unsigned char *flags);
+static int read_iso_file(FILE *fp, const iso_file_t *file,
+                         unsigned char *out, size_t capacity);
+
+static uint32_t read_le32(const unsigned char *p)
+{
+    return (uint32_t)p[0] |
+           ((uint32_t)p[1] << 8) |
+           ((uint32_t)p[2] << 16) |
+           ((uint32_t)p[3] << 24);
+}
+
+static int read_at(FILE *fp, uint64_t offset, void *dst, size_t bytes)
+{
+    if (!fp || !dst || offset > (uint64_t)LONG_MAX) return -1;
+    if (fseek(fp, (long)offset, SEEK_SET) != 0) return -1;
+    return fread(dst, 1, bytes, fp) == bytes ? 0 : -1;
+}
+
+static int equal_ci_n(const char *a, const char *b, size_t n)
+{
+    size_t i;
+    for (i = 0; i < n; i++) {
+        if (tolower((unsigned char)a[i]) !=
+            tolower((unsigned char)b[i])) return 0;
+    }
+    return 1;
+}
+
+static int serial_at(const unsigned char *p, size_t left,
+                     char *out, size_t out_size)
+{
+    size_t i;
+    if (!p || !out || out_size < 12) return -1;
+
+    for (i = 0; i + 11 <= left; i++) {
+        size_t j;
+        int valid = 1;
+
+        for (j = 0; j < 4; j++) {
+            if (!isalpha((unsigned char)p[i + j])) {
+                valid = 0;
+                break;
+            }
+        }
+        if (!valid || p[i + 4] != '_') continue;
+        for (j = 5; j < 8; j++) {
+            if (!isdigit((unsigned char)p[i + j])) {
+                valid = 0;
+                break;
+            }
+        }
+        if (!valid || p[i + 8] != '.') continue;
+        if (!isdigit((unsigned char)p[i + 9]) ||
+            !isdigit((unsigned char)p[i + 10])) continue;
+
+        for (j = 0; j < 11; j++)
+            out[j] = (char)toupper((unsigned char)p[i + j]);
+        out[11] = '\0';
+        return 0;
+    }
+    return -1;
+}
+
+int ps3scale_ps2_iso_read_serial(const char *iso_path,
+                                 char *out, size_t out_size)
+{
+    FILE *fp = NULL;
+    unsigned char pvd[ISO_SECTOR_SIZE];
+    unsigned char *root = NULL;
+    unsigned char *system_cnf = NULL;
+    iso_file_t cnf_file;
+    unsigned char cnf_flags = 0;
+    uint32_t root_lba;
+    uint32_t root_size;
+    int result = -1;
+
+    if (!iso_path || !out || out_size < 12u)
+        return -1;
+    out[0] = '\0';
+
+    fp = fopen(iso_path, "rb");
+    if (!fp)
+        return -2;
+
+    if (read_at(fp, (uint64_t)ISO_PVD_LBA * ISO_SECTOR_SIZE,
+                pvd, sizeof(pvd)) != 0)
+        goto cleanup;
+    if (pvd[0] != 1u || memcmp(pvd + 1u, "CD001", 5u) != 0 ||
+        pvd[6] != 1u || pvd[156] < 34u)
+        goto cleanup;
+
+    root_lba = read_le32(pvd + 158u);
+    root_size = read_le32(pvd + 166u);
+    if (!root_lba || root_size == 0u || root_size > ISO_MAX_ROOT_BYTES)
+        goto cleanup;
+
+    root = (unsigned char *)malloc(root_size);
+    if (!root)
+        goto cleanup;
+    if (read_at(fp, (uint64_t)root_lba * ISO_SECTOR_SIZE,
+                root, root_size) != 0)
+        goto cleanup;
+
+    if (find_root_file(root, root_size, "SYSTEM.CNF;1",
+                       ISO_MAX_SYSTEM_CNF, &cnf_file, &cnf_flags) != 0 ||
+        (cnf_flags & 0x02u) != 0u || cnf_file.total_size == 0u)
+        goto cleanup;
+
+    system_cnf = (unsigned char *)malloc(cnf_file.total_size);
+    if (!system_cnf)
+        goto cleanup;
+    if (read_iso_file(fp, &cnf_file, system_cnf, cnf_file.total_size) != 0)
+        goto cleanup;
+
+    result = serial_at(system_cnf, cnf_file.total_size, out, out_size);
+
+cleanup:
+    free(system_cnf);
+    free(root);
+    if (fp)
+        fclose(fp);
+    if (result != 0)
+        out[0] = '\0';
+    return result;
+}
+
+int ps3scale_title_id_from_filename(const char *filename,
+                                    char *out, size_t out_size)
+{
+    const char *p;
+    size_t i;
+
+    if (!filename || !out || out_size < 10) return -1;
+    out[0] = '\0';
+
+    for (p = filename; *p; p++) {
+        int valid = 1;
+        if (strlen(p) < 9) break;
+        for (i = 0; i < 9; i++) {
+            unsigned char c = (unsigned char)p[i];
+            if (!c) { valid = 0; break; }
+            if (i < 4) {
+                if (!isalpha(c)) { valid = 0; break; }
+            } else if (!isdigit(c)) {
+                valid = 0;
+                break;
+            }
+        }
+        if (valid) {
+            for (i = 0; i < 9; i++)
+                out[i] = (char)toupper((unsigned char)p[i]);
+            out[9] = '\0';
+            return 0;
+        }
+    }
+    return -1;
+}
+
+int ps3scale_ps2_serial_from_filename(const char *filename,
+                                      char *out, size_t out_size)
+{
+    const char *p;
+    size_t i;
+
+    if (!filename || !out || out_size < 12) return -1;
+    out[0] = '\0';
+
+    for (p = filename; *p; p++) {
+        int valid = 1;
+        if (strlen(p) < 11) break;
+        for (i = 0; i < 11; i++) {
+            unsigned char c = (unsigned char)p[i];
+            if (!c) { valid = 0; break; }
+            if (i < 4) {
+                if (!isalpha(c)) { valid = 0; break; }
+            } else if (i == 4) {
+                if (c != '_') { valid = 0; break; }
+            } else if (i < 8 || i > 8) {
+                if (!isdigit(c)) { valid = 0; break; }
+            } else if (c != '.') {
+                valid = 0;
+                break;
+            }
+        }
+        if (valid) {
+            for (i = 0; i < 11; i++)
+                out[i] = (char)toupper((unsigned char)p[i]);
+            out[11] = '\0';
+            return 0;
+        }
+    }
+    return -1;
+}
+
+#define ISO_MAX_BOOT_ELF_BYTES (32u * 1024u * 1024u)
+
+static uint16_t read_le16(const unsigned char *p)
+{
+    return (uint16_t)p[0] | ((uint16_t)p[1] << 8);
+}
+
+static int iso_component_equal_ci(const unsigned char *name, size_t name_len,
+                                  const char *wanted)
+{
+    size_t wanted_len;
+
+    if (!name || !wanted)
+        return 0;
+
+    wanted_len = strlen(wanted);
+    if (name_len == wanted_len)
+        return equal_ci_n((const char *)name, wanted, wanted_len);
+
+    /* ISO9660 ;1 version identifiers may be present or omitted in either source. */
+    if (name_len == wanted_len + 2u &&
+        name[name_len - 2u] == ';' && name[name_len - 1u] == '1')
+        return equal_ci_n((const char *)name, wanted, wanted_len);
+
+    if (wanted_len == name_len + 2u &&
+        wanted[wanted_len - 2u] == ';' && wanted[wanted_len - 1u] == '1')
+        return equal_ci_n((const char *)name, wanted, name_len);
+
+    return 0;
+}
+
 static int next_directory_record(const unsigned char *directory,
                                  size_t directory_size, size_t *position,
                                  const unsigned char **record,
