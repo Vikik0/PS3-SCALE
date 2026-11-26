@@ -5982,8 +5982,10 @@ static void draw_support_form(void)
     }
     set_ui_font_size(7, 11);
     draw_text(44.0f, 388.0f, 0x77718fff,
-              "Device model, firmware and app version are added automatically.");
-    draw_text(44.0f, 408.0f, 0x77718fff, g_support_status);
+              "Model, firmware, platform and app version are added automatically.");
+    draw_text(44.0f, 400.0f, 0xa35b34ff,
+              "Never include PSN IDs, passwords or account tokens.");
+    draw_text(44.0f, 414.0f, 0x77718fff, g_support_status);
     draw_text(24.0f, PS3SCALE_UI_FOOTER_SINGLE_Y, 0x77718fff,
               "UP / DOWN: MOVE   |   CROSS: EDIT / SAVE   |   CIRCLE: BACK");
     set_ui_font_size(14, 22);
