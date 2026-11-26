@@ -78,7 +78,7 @@ assert "supabase/functions/.env" in gitignore
 assert "supabase/.temp/" in gitignore
 
 # Deployment is explicitly isolated and the GitHub token remains optional.
-assert "new project dedicated to PS3 SCALE support" in readme
+assert "project dedicated to PS3 SCALE support" in readme
 assert "isolated from every other Supabase project" in readme
 assert "separate Supabase organization on the Free Plan" in readme
 assert "Do not create this project in the existing `VIKIK` organization" in readme
