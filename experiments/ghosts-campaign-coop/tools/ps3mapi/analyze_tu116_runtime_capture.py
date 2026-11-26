@@ -26,6 +26,7 @@ from tools.ps3mapi.scan_runtime_strings import scan as scan_runtime_strings
 from tools.ps3mapi.verify_tu116_dump import verify as verify_dump
 from tools.ps3mapi.verify_capture_metadata import verify_capture_metadata
 from tools.ps3mapi.validate_campaign_player_pair_capture import validate_capture as validate_campaign_player_pair_capture
+from tools.ps3mapi.campaign_capture_binding import bind_capture_to_campaign_self
 from tools.run_ghidra_ppu_inventory import _validate_opd_pair, generate_inventories
 
 DEFAULT_MAP = Path(__file__).with_name("SELF_MEMORY_MAP_TU116.json")
@@ -197,8 +198,7 @@ def analyze(
     if (campaign_log is None) != (multiplayer_log is None):
         raise ValueError("provide both pad-probe logs or neither")
     if (campaign_metadata is None) != (multiplayer_metadata is None):
-        raise ValueError("provide both capture metadata files or neither")
-    if (campaign_input_log is None) != (multiplayer_input_log is None):
+        raise ValueError("provide both capture metadata files or neither")    if (campaign_input_log is None) != (multiplayer_input_log is None):
         raise ValueError("provide both DualShock Input Probe logs or neither")
 
     if campaign_log is not None:
@@ -218,12 +218,19 @@ def analyze(
         "evidence_authenticity": "NOT_AUTHENTICATED_BY_THIS_TOOL",
         "stable_pair_observation_validated": False,
         "auto_rebind_cycle_observed_in_supplied_data": False,
+        "campaign_self_binding": {
+            "status": "NOT_PROVIDED",
+            "capture_bound_to_analyzer_self": False,
+        },
     }
     if campaign_player_capture is not None:
         campaign_player_capture = Path(campaign_player_capture)
         _require_file(campaign_player_capture, "Campaign native player-pair capture")
         player_pair_data = json.loads(campaign_player_capture.read_text(encoding="utf-8"))
         player_pair_validation = validate_campaign_player_pair_capture(player_pair_data)
+        player_pair_validation["campaign_self_binding"] = bind_capture_to_campaign_self(
+            player_pair_data, campaign_self
+        )
         player_pair_validation["input_sha256"] = sha256_file(campaign_player_capture)
 
     capture_metadata = {"status": "NOT_PROVIDED", "both_modes_validated": False}
@@ -397,8 +404,7 @@ def analyze(
 
         write_json(outputs["campaign_dump_verification.json"], campaign_verification)
         write_json(outputs["multiplayer_dump_verification.json"], multiplayer_verification)
-        write_json(outputs["campaign_runtime_strings.json"], campaign_strings)
-        write_json(outputs["multiplayer_runtime_strings.json"], multiplayer_strings)
+        write_json(outputs["campaign_runtime_strings.json"], campaign_strings)        write_json(outputs["multiplayer_runtime_strings.json"], multiplayer_strings)
         write_json(outputs["runtime_string_comparison.json"], string_comparison)
         write_json(outputs["runtime_binary_comparison.json"], binary_comparison)
         write_json(outputs["pad_probe_comparison.json"], pad_comparison)
@@ -477,11 +483,13 @@ def analyze(
                 "controller_to_player_two_mapping": False,
                 "independent_camera_and_hud": False,
                 "structural_capture_status": player_pair_validation.get("status"),
+                "campaign_self_binding_status": player_pair_validation.get("campaign_self_binding", {}).get("status", "NOT_PROVIDED"),
                 "capture_source_authenticated": False,
                 "reason": (
                     "These require verified runtime call-path and player-state evidence. "
                     "Pad visibility, strings, or changed binary blocks are not sufficient. "
-                    "A structurally valid JSON pair capture is still unauthenticated and does not upgrade this gate."
+                    "A matching Campaign SELF hash binds the JSON to the analyzed file but does not authenticate "
+                    "the capture source or upgrade this gate."
                 ),
             },
             "input_sha256": input_hashes,
