@@ -1072,6 +1072,11 @@ assert "ps3scale_ps2_elf_read_exec_word" in src
 assert "ps3scale_ps2_fps_patch_find" in src
 assert "ps3scale_ps2_config_append_patches" in src
 assert "apply_ps2_fps_patch();" in src
+local_profile = section("static void apply_ps2_local_profile(void)",
+                        "static void apply_ps2_fps_patch(void)")
+assert "if (had_existing_config)" in local_profile
+assert "LOCAL PROFILE WILL NOT OVERWRITE IT." in local_profile
+assert "ps3scale_ps2_config_store_is_generated" not in local_profile
 assert "g_ps2_enhancer_guide_open = 1" in src
 ps2_input = section("} else if (g_screen == SCREEN_PS2_CONFIG) {",
                     "} else if (g_screen == SCREEN_FPS_CONTROL) {")
