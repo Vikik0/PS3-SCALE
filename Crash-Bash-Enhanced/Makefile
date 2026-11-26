@@ -6,12 +6,13 @@ TITLE := Crash Bash Online
 APPID := CBON00001
 CONTENTID := UP0001-$(APPID)_00-0000000000000001
 ICON0 := $(CURDIR)/pkgfiles/ICON0.PNG
-PKGFILES := $(CURDIR)/pkgfiles
+TARGET := crashbash
+BUILD := build
+PKGFILES_SOURCE := $(CURDIR)/pkgfiles
+PKGFILES := $(CURDIR)/$(BUILD)/pkgfiles
 CA_BUNDLE := $(PKGFILES)/USRDIR/cacert.pem
 SFOXML := $(CURDIR)/sfo.xml
 include $(PSL1GHT)/ppu_rules
-TARGET := crashbash
-BUILD := build
 SOURCES := source
 INCLUDES := include source
 LIBDIRS := $(PORTLIBS)
@@ -19,7 +20,7 @@ LIBS := -lcurl -lya2d -lfont3d -ltiny3d -lsimdmath -lgcm_sys -lrsx -lio -lsysuti
 CFLAGS = -O2 -Wall -Wextra -std=gnu99 -mcpu=cell $(MACHDEP) $(INCLUDE)
 CXXFLAGS = $(CFLAGS)
 LDFLAGS = $(MACHDEP) -Wl,-Map,$(notdir $@).map
-.PHONY: all pkg clean info host-test ca-bundle
+.PHONY: all pkg clean info host-test pkgfiles-stage ca-bundle
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 export OUTPUT := $(CURDIR)/$(TARGET)
 export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
@@ -53,7 +54,14 @@ $(OUTPUT).self: $(OUTPUT).elf
 $(OUTPUT).elf: $(OFILES)
 -include $(DEPENDS)
 endif
-ca-bundle:
+pkgfiles-stage:
+	@rm -rf "$(PKGFILES)"
+	@mkdir -p "$(PKGFILES)"
+	@cp -a "$(PKGFILES_SOURCE)/." "$(PKGFILES)/"
+	@rm -f "$(PKGFILES)/ICON0.PNG.b64"
+	@test -s "$(PKGFILES)/ICON0.PNG"
+	@test ! -e "$(PKGFILES)/ICON0.PNG.b64"
+ca-bundle: pkgfiles-stage
 	@mkdir -p "$(dir $(CA_BUNDLE))"
 	@if [ ! -s "$(CA_BUNDLE)" ]; then python3 -c 'import urllib.request; urllib.request.urlretrieve("https://curl.se/ca/cacert.pem", "$(CA_BUNDLE)")'; fi
 	@test -s "$(CA_BUNDLE)"

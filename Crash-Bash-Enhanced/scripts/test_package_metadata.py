@@ -35,6 +35,11 @@ assert "TITLE := Crash Bash Online" in makefile
 assert "APPID := CBON00001" in makefile
 assert "CONTENTID := UP0001-$(APPID)_00-0000000000000001" in makefile
 assert "SFOXML := $(CURDIR)/sfo.xml" in makefile
+assert "PKGFILES_SOURCE := $(CURDIR)/pkgfiles" in makefile
+assert "PKGFILES := $(CURDIR)/$(BUILD)/pkgfiles" in makefile
+assert "pkgfiles-stage:" in makefile
+assert 'rm -f "$(PKGFILES)/ICON0.PNG.b64"' in makefile
+assert "ca-bundle: pkgfiles-stage" in makefile
 assert "APPID := CBEN00001" not in makefile
 assert "/dev_hdd0/game/CBON00001/USRDIR/cacert.pem" in online
 assert '#define CB_GAME_EBOOT "/dev_hdd0/game/CBON00001/USRDIR/retroarch/EBOOT.BIN"' in launcher
