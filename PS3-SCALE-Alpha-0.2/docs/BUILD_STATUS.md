@@ -18,15 +18,18 @@
 - Supabase reports and rate-limit tables have RLS enabled, public/authenticated access revoked, and service-role-only database grants.
 - Supabase JS SDK is pinned to `2.119.2`; the Deno lockfile is committed and the Edge Function is type-checked in CI.
 - The PS3 app includes only the public publishable-key placeholder; secret keys remain server-side.
+- The public Edge Function reads request bodies incrementally, cancels streams above 12 KiB, and rejects invalid UTF-8 before JSON parsing.
+- The Help & Support form warns against including PSN IDs, passwords or account tokens; its labels and delivery/error states are localized in Arabic and Spanish.
+- GitHub Actions uses per-branch concurrency so newer runs cancel stale duplicate push/PR builds.
 - Supabase project creation/deployment is pending creation of a separate Free Plan organization. The connected Supabase account currently exposes only VIKIK (Pro); no project has been created. Never create this backend under VIKIK. The URL and publishable key remain placeholders, so live report submission is intentionally disabled.
-- GitHub Actions run #885 on the current PR head: **PASS** — Host-side tests, support Edge Function Deno type-check, and PS3 ELF/SELF/standard PKG/GNPDRM PKG build and package validation all passed.
-- Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/45788779990
-- Artifact: `PS3-SCALE-Alpha-0.33-build-with-embedded-theme` (25,365,352 bytes).
-- ELF: SHA-256 `509f96e299a21d89d703924088f26fd44414d4539cfd3cc62582da85f2b6ca8c`.
-- SELF: SHA-256 `774e933fdc18a613e7ebfc3c81d6a160fbeb7b18596b9cb637b2bd3ab760833e`.
-- Standard PKG: SHA-256 `2adebc359b4751ce355884f708d71ed82be27ecdfb75da7e92dd0094e2740417`.
-- GNPDRM PKG: SHA-256 `1cfffd81a714cc1ebf682eb4c2dde915c398f5f8bd2ceb00a93e6a0c4c55352d`.
-- Artifact ZIP SHA-256: `2efbf07803011f1e39844b6a36a2eb4a06285707fafa29d067f5b8046cadb620`.
+- GitHub Actions run #903 on commit `59f2fd42046def62ecb571f0ead1bfc8777a2c6c`: **PASS** — Host-side tests, support Edge Function Deno type-check, Arabic/Spanish locale tests, and PS3 ELF/SELF/standard PKG/GNPDRM PKG build and package validation all passed.
+- Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/45801455025
+- Artifact: `PS3-SCALE-Alpha-0.33-build-with-embedded-theme` (25,376,710 bytes).
+- ELF: SHA-256 `f4fb9118dc440bc3d2c04bb1ce939c5adc17439ce977a47f3b8562ffb691017e`.
+- SELF: SHA-256 `7972f418ae19e276e8f95f6462ba4d237dbb77844b16f81e36b484175f462650`.
+- Standard PKG: SHA-256 `d3f02a12d8148569afc8de1fab445595a05575a64ee1ea53a623659f35746183`.
+- GNPDRM PKG: SHA-256 `99e76a7c70b10fb5f52676e03a47aeff014070e73cd1eb063f4e76c116b71ddf`.
+- Artifact ZIP SHA-256: `d3e0d4895411a4a0b0232b47179b831a7bb6b04573ad87c67f864e15b87a03a6`.
 - Physical PS3 validation of offline queue recovery and online submission remains pending.
 
 ## Alpha 0.32 — atomic persistence and download hardening
