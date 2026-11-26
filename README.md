@@ -53,7 +53,7 @@ The latest Alpha 0.33 GitHub Actions run #865 passed host tests, the support Edg
 - Support reports are saved as atomic JSON outbox files with stable UUIDs.
 - Pending reports survive app restarts and can be retried from Help & Support.
 - Server responses are mapped to retry guidance; successful sends remove only the matching pending file.
-- The dedicated Supabase migration and Edge Function are prepared, but live reporting stays disabled until the isolated project is created and its public key/URL are configured.
+- The dedicated Supabase migration and Edge Function are prepared, but live reporting stays disabled until a separate Supabase Free Plan organization is created, the isolated project is deployed, and its publishable key/URL are configured. Do not create it under the existing VIKIK Pro organization.
 
 ### Persistence and download safety — Alpha 0.33
 - Settings and favorites are saved through unique exclusive temporary files, fsync and atomic rename.
@@ -68,7 +68,7 @@ The latest Alpha 0.33 GitHub Actions run #865 passed host tests, the support Edg
 - Git-blob SHA-1 is an integrity check, not a cryptographic signature. Signed catalogue/update manifests remain future work.
 - There is no universal AI upscaler, frame generation, or guaranteed 60 FPS.
 - Genuine Before/After screenshot pairs are not bundled for every title; the app does not substitute concept art for missing captures.
-- The online support-report endpoint is intentionally disabled until a separate PS3 SCALE Supabase project is deployed and configured. Reports can still be saved to the console's local outbox. Existing unrelated Supabase projects must not be reused.
+- The online support-report endpoint is intentionally disabled until a dedicated PS3 SCALE project is deployed inside a separate Supabase Free Plan organization. The connected account currently exposes only VIKIK (Pro), so no project has been created. Reports can still be saved to the console's local outbox. Existing unrelated projects must not be reused.
 - Physical PS3 validation is still required for installation, UI navigation, music, webMAN/PS3MAPI behavior, Artemis NCL loading, PS2 CONFIG behavior and real game stability.
 
 ## Build and test
