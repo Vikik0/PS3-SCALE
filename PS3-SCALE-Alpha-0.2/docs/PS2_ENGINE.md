@@ -36,7 +36,7 @@ There is no safe universal switch that turns every PS2 game into native 60 FPS. 
 
 The PS3 netemu CONFIG format does include command `0x0A` (`EE_INSN_REPLACE32`), which can replace exact 32-bit EE instructions and is documented as netemu-only with a maximum list count of 32. Each entry contains an EE offset, expected original 32-bit word and replacement word. The builder supports only aligned mode-0 EE addresses below `0x10000000` and rejects duplicates or unverified address modes. This is a plausible foundation for carefully curated per-game code patches. It is not a generic FPS unlock: a valid patch needs the exact game serial, region, revision, EE address/mode, original opcode and replacement opcode. A wrong address or expected opcode can break the title.
 
-PCSX2 `.pnach` files are not drop-in PS3 CONFIG files. Some entries are runtime data writes, some target code, and some depend on emulator-specific behavior. PS3 SCALE now has a deliberately narrow converter for eight pinned proof-of-concept patch records. It extracts the root-level boot ELF, matches the PCSX2 serial + XOR ELF hash, maps the EE address through an executable `PT_LOAD` segment, reads the original 32-bit word, and creates a guarded netemu `0x0A` entry. It does not import arbitrary `.pnach` files, accept unsupported patch types, or guess offsets.
+PCSX2 `.pnach` files are not drop-in PS3 CONFIG files. Some entries are runtime data writes, some target code, and some depend on emulator-specific behavior. PS3 SCALE now has a deliberately narrow converter for eight pinned proof-of-concept patch records. It resolves root-level or nested ISO9660 boot paths, extracts the boot ELF, and matches the PCSX2 serial + XOR ELF hash, maps the EE address through an executable `PT_LOAD` segment, reads the original 32-bit word, and creates a guarded netemu `0x0A` entry. It does not import arbitrary `.pnach` files, accept unsupported patch types, or guess offsets.
 
 Artemis PS3 is not treated as a generic runtime cheat injector for a PS2 game inside `ps2_netemu`. The current catalogue contains eight experimental 60 FPS candidates. The user must select the Enhancer action to apply a patch; games are not silently modified during launch. The catalogue does not promise a working 60 FPS result until tested on the actual PS3 Slim, and it does not convert arbitrary PCSX2 cheats.
 
@@ -91,7 +91,7 @@ The pinned PCSX2 commit also contains simple word-only 480p sections for three P
 
 Only `word` writes are converted; files using `extended`, byte writes or conditional runtime codes are excluded. This selects a 480p game mode where the title supports it; the PS3 XMB upscaler can then scale the output to the selected display mode. It is not a native 720p/1080p renderer, and some titles may show offset or FMV issues, so test per title and restore the backup if needed.
 
-PCSX2's patch filename hash is not standard CRC32: its game ELF hash is the XOR of little-endian 32-bit words across the boot ELF. PS3 SCALE now extracts the root-level BOOT/BOOT2 ELF from SYSTEM.CNF, computes this same hash, and reads the original word only from a file-backed executable MIPS ELF segment. The converter can then create a netemu `0x0A` replacement entry with the exact original word as a guard.
+PCSX2's patch filename hash is not standard CRC32: its game ELF hash is the XOR of little-endian 32-bit words across the boot ELF. PS3 SCALE resolves the BOOT/BOOT2 path from SYSTEM.CNF through nested ISO9660 directories, computes this same hash, and reads the original word only from a file-backed executable MIPS ELF segment. The converter can then create a netemu `0x0A` replacement entry with the exact original word as a guard.
 
 The current experimental catalogue contains eight exact serial + ELF-hash candidates from the same pinned PCSX2 patch commit:
 
@@ -108,9 +108,11 @@ The current experimental catalogue contains eight exact serial + ELF-hash candid
 
 Each source file's `[60 FPS]` section contains a single `patch=1,EE,...,word,...` replacement. The catalogue deliberately excludes PCSX2 extended writes, mode-2 addresses and patches whose notes require EE overclocking. These remain candidates, not hardware-verified PS3 patches. Every candidate must be tested on the target PS3 Slim for actual frame rate, timing, audio, cutscenes and stability before being marked verified.
 
+Nested ISO9660 boot paths are covered by host fixtures, including optional directory `;1` versions and traversal rejection. Multi-extent files remain intentionally unsupported and fail closed.
+
 ## Next stage: broaden PS2 game enhancement coverage
 
-1. Extend boot-ELF extraction beyond root-level ISO paths and add multi-extent / nested-directory support.
+1. Add multi-extent ISO file support. Nested BOOT/BOOT2 paths are now resolved with bounded directory traversal; split files are rejected rather than partially read.
 2. Add only source-pinned, exact serial + ELF-hash FPS, widescreen and 480p patches that map safely to netemu `0x0A`; reject runtime writes, extended codes and emulator-specific behavior.
 3. Build a per-title validation matrix for 60 FPS, 16:9, 480p/Y-fix, FMV playback and controller behavior.
 4. Test each candidate on the actual PS3 Slim; record frame rate, output mode, gameplay timing, audio, cutscenes and stability.

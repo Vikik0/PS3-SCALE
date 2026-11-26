@@ -274,7 +274,8 @@ static int find_root_file(const unsigned char *root, size_t root_size,
         }
 
         rec_len = root[pos];
-        if (rec_len < 34u || pos + rec_len > root_size)
+        if (rec_len < 34u || pos + rec_len > root_size ||
+            rec_len > ISO_SECTOR_SIZE - (pos % ISO_SECTOR_SIZE))
             return -1;
 
         rec = root + pos;
@@ -283,6 +284,9 @@ static int find_root_file(const unsigned char *root, size_t root_size,
             !(name_len == 1u && (rec[33] == 0 || rec[33] == 1)) &&
             iso_name_equal_ci(rec + 33, name_len, wanted) &&
             (rec[25] & 0x02u) == 0) {
+            /* Never silently read only the first extent of a split file. */
+            if (rec[25] & 0x80u)
+                return -1;
             *lba = read_le32(rec + 2u);
             *file_size = read_le32(rec + 10u);
             return (*lba && *file_size) ? 0 : -1;
@@ -294,12 +298,161 @@ static int find_root_file(const unsigned char *root, size_t root_size,
     return -1;
 }
 
+static int iso_component_equal_ci(const unsigned char *name, size_t name_len,
+                                  const char *wanted)
+{
+    size_t wanted_len;
+
+    if (!name || !wanted)
+        return 0;
+
+    wanted_len = strlen(wanted);
+    if (name_len == wanted_len)
+        return equal_ci_n((const char *)name, wanted, wanted_len);
+
+    /* ISO9660 directory identifiers may carry an optional ;1 version. */
+    if (name_len == wanted_len + 2u &&
+        name[wanted_len] == ';' && name[wanted_len + 1u] == '1')
+        return equal_ci_n((const char *)name, wanted, wanted_len);
+
+    return 0;
+}
+
+static int find_directory_entry(const unsigned char *directory,
+                                size_t directory_size,
+                                const char *component,
+                                uint32_t *lba, uint32_t *entry_size,
+                                unsigned char *entry_flags)
+{
+    size_t pos = 0;
+
+    if (!directory || !component || !component[0] ||
+        !lba || !entry_size || !entry_flags)
+        return -1;
+
+    while (pos < directory_size) {
+        unsigned int rec_len;
+        unsigned int name_len;
+        const unsigned char *rec;
+
+        if (directory[pos] == 0) {
+            pos = ((pos / ISO_SECTOR_SIZE) + 1u) * ISO_SECTOR_SIZE;
+            continue;
+        }
+
+        rec_len = directory[pos];
+        if (rec_len < 34u || pos + rec_len > directory_size ||
+            rec_len > ISO_SECTOR_SIZE - (pos % ISO_SECTOR_SIZE))
+            return -1;
+
+        rec = directory + pos;
+        name_len = rec[32];
+        if (name_len > 0u && 33u + name_len <= rec_len &&
+            !(name_len == 1u && (rec[33] == 0u || rec[33] == 1u)) &&
+            iso_component_equal_ci(rec + 33u, name_len, component)) {
+            /* Multi-extent chains are deliberately rejected until supported. */
+            if (rec[25] & 0x80u)
+                return -1;
+            *lba = read_le32(rec + 2u);
+            *entry_size = read_le32(rec + 10u);
+            *entry_flags = rec[25];
+            return (*lba && *entry_size) ? 0 : -1;
+        }
+
+        pos += rec_len;
+    }
+
+    return -1;
+}
+
+static int find_iso_path(FILE *fp, uint32_t root_lba, uint32_t root_size,
+                         const char *path, uint32_t *file_lba,
+                         uint32_t *file_size)
+{
+    char path_copy[128];
+    char *component;
+    uint32_t directory_lba = root_lba;
+    uint32_t directory_size = root_size;
+    unsigned int depth = 0;
+    size_t path_len;
+
+    if (!fp || !path || !file_lba || !file_size ||
+        !root_lba || !root_size || root_size > ISO_MAX_ROOT_BYTES)
+        return -1;
+
+    path_len = strlen(path);
+    if (path_len == 0u || path_len >= sizeof(path_copy))
+        return -1;
+    memcpy(path_copy, path, path_len + 1u);
+
+    /* SYSTEM.CNF paths are relative to the disc root after cdrom0:. */
+    if (path_copy[0] == '/' || path_copy[0] == '\\\\')
+        return -1;
+
+    component = path_copy;
+    while (component && component[0]) {
+        char *separator = strchr(component, '/');
+        int is_last = separator == NULL;
+        unsigned char *directory;
+        unsigned char flags = 0;
+        uint32_t next_lba = 0;
+        uint32_t next_size = 0;
+        int lookup_result;
+
+        if (separator)
+            *separator = '\\0';
+        if (!component[0] || strcmp(component, ".") == 0 ||
+            strcmp(component, "..") == 0 || strchr(component, ':') ||
+            strchr(component, '\\\\') || ++depth > 16u)
+            return -1;
+
+        if (directory_size == 0u ||
+            directory_size > ISO_MAX_ROOT_BYTES)
+            return -1;
+
+        directory = (unsigned char *)malloc(directory_size);
+        if (!directory)
+            return -1;
+        if (read_at(fp, (uint64_t)directory_lba * ISO_SECTOR_SIZE,
+                    directory, directory_size) != 0) {
+            free(directory);
+            return -1;
+        }
+
+        lookup_result = find_directory_entry(
+            directory, directory_size, component,
+            &next_lba, &next_size, &flags);
+        free(directory);
+        if (lookup_result != 0)
+            return -1;
+
+        if (is_last) {
+            if (flags & 0x02u)
+                return -1;
+            *file_lba = next_lba;
+            *file_size = next_size;
+            return 0;
+        }
+
+        if (!(flags & 0x02u) || next_size > ISO_MAX_ROOT_BYTES)
+            return -1;
+
+        directory_lba = next_lba;
+        directory_size = next_size;
+        component = separator + 1u;
+        if (!component[0])
+            return -1;
+    }
+
+    return -1;
+}
+
 static int boot_filename_from_cnf(const unsigned char *data, size_t size,
                                   char *out, size_t out_size)
 {
     size_t pos = 0;
 
-    if (!data || !out || out_size < 4u)
+    if (!data || !out || out_size < 8u)
         return -1;
     out[0] = '\0';
 
@@ -312,7 +465,9 @@ static int boot_filename_from_cnf(const unsigned char *data, size_t size,
         size_t value_end;
         size_t colon;
         size_t i;
-        size_t name_len;
+        size_t output_len = 0;
+        size_t component_start = 0;
+        unsigned int depth = 0;
         int is_boot_key;
 
         while (pos < size && data[pos] != '\n' && data[pos] != '\r')
@@ -367,23 +522,56 @@ static int boot_filename_from_cnf(const unsigned char *data, size_t size,
         if (value_start >= value_end)
             return -1;
 
-        /* This first implementation only supports root-level boot ELFs. */
+        /*
+         * Keep the full relative path. Separators are normalized to '/',
+         * while absolute paths, empty components and traversal are rejected.
+         */
         for (i = value_start; i < value_end; ++i) {
-            if (data[i] == '\\' || data[i] == '/')
-                return -2;
+            unsigned char ch = data[i];
+            if (ch == '\\' || ch == '/') {
+                if (output_len == 0u || out[output_len - 1u] == '/')
+                    return -1;
+                if (output_len + 1u >= out_size)
+                    return -1;
+                out[output_len++] = '/';
+            } else {
+                if (ch == ':' || ch < 0x20u || ch == 0x7Fu ||
+                    output_len + 1u >= out_size)
+                    return -1;
+                out[output_len++] = (char)toupper(ch);
+            }
         }
 
-        name_len = value_end - value_start;
-        if (name_len + 3u >= out_size)
+        if (output_len == 0u || out[output_len - 1u] == '/')
             return -1;
-        for (i = 0; i < name_len; ++i)
-            out[i] = (char)toupper((unsigned char)data[value_start + i]);
-        out[name_len] = '\0';
+        out[output_len] = '\0';
 
-        if (strchr(out, ';') == NULL) {
-            out[name_len++] = ';';
-            out[name_len++] = '1';
-            out[name_len] = '\0';
+        for (i = 0; i <= output_len; ++i) {
+            if (i == output_len || out[i] == '/') {
+                size_t component_len = i - component_start;
+                if (component_len == 0u ||
+                    (component_len == 1u && out[component_start] == '.') ||
+                    (component_len == 2u && out[component_start] == '.' &&
+                     out[component_start + 1u] == '.'))
+                    return -1;
+                if (++depth > 16u)
+                    return -1;
+                component_start = i + 1u;
+            }
+        }
+
+        /* Add ISO9660's common ;1 file version only to the final component. */
+        {
+            const char *last_separator = strrchr(out, '/');
+            size_t final_start = last_separator
+                ? (size_t)(last_separator - out) + 1u : 0u;
+            if (memchr(out + final_start, ';', output_len - final_start) == NULL) {
+                if (output_len + 3u > out_size)
+                    return -1;
+                out[output_len++] = ';';
+                out[output_len++] = '1';
+                out[output_len] = '\0';
+            }
         }
         return 0;
     }
@@ -470,8 +658,8 @@ int ps3scale_ps2_iso_load_boot_elf(const char *iso_path,
                                boot_name, sizeof(boot_name)) != 0)
         goto cleanup;
 
-    if (find_root_file(root, root_size, boot_name,
-                       &elf_lba, &boot_size) != 0 ||
+    if (find_iso_path(fp, root_lba, root_size, boot_name,
+                      &elf_lba, &boot_size) != 0 ||
         boot_size < 52u || boot_size > ISO_MAX_BOOT_ELF_BYTES)
         goto cleanup;
 

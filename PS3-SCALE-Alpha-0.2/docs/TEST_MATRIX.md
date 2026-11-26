@@ -84,7 +84,8 @@ Host CI also runs the actual local HTTP transport against a loopback webMAN mock
 
 ## PS2 Enhancer — Alpha 0.34
 
-1. On a PS2 ISO, confirm L2H is selected by default and that the original ISO hash and size do not change after applying a profile.
+1. Probe a root-level BOOT/BOOT2 path and a nested ISO9660 path in host fixtures; reject parent traversal, malformed directory records and multi-extent boot ELFs without returning partial hashes.
+2. On a PS2 ISO, confirm L2H is selected by default and that the original ISO hash and size do not change after applying a profile.
 2. Apply L2H only (`0x46`); launch the same title and record loading, frame pacing, audio and any rendering differences.
 3. Enable sharper pixels (`0x44`) only; compare XMB smoothing On/Off separately and record aliasing/softness.
 4. Enable conservative frame pacing (`0x48`, mode 1, delay 20,000) only; record stutter, audio and timing. If any regression occurs, restore the saved CONFIG.

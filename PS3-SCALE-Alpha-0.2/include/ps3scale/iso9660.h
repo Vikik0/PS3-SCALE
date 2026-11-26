@@ -13,7 +13,8 @@ int ps3scale_ps2_iso_read_serial(const char *iso_path,
                                  char *out, size_t out_size);
 
 /*
- * Load the root-level BOOT/BOOT2 ELF referenced by SYSTEM.CNF.
+ * Load the BOOT/BOOT2 ELF referenced by SYSTEM.CNF, including nested
+ * ISO9660 directory paths. Multi-extent boot files are rejected safely.
  * The caller owns *elf_data and must free it. The returned hash matches
  * PCSX2's ELF hash used in <serial>_<hash>.pnach filenames.
  */

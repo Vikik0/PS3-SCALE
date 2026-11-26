@@ -81,9 +81,11 @@
 - [x] Stage generated CONFIG data with exclusive file creation, fsync and size verification before atomic install.
 - [x] Keep PS2 Classics on the exact encrypted ENC catalogue route; no plaintext CONFIG is written into a Classics package.
 - [x] Document that XMB upscaling is separate and that no generic 60 FPS unlock exists.
+- [x] Resolve root-level and nested ISO9660 BOOT/BOOT2 paths with bounded traversal; reject `.` / `..`, malformed paths and multi-extent boot files.
 - [ ] Validate 0x44, 0x46 and 0x48 individually on the target PS3 Slim and representative games.
-- [ ] Build the per-game EE instruction patch pipeline around exact `0x0A` CONFIG entries; no guessed offsets.
-- [ ] Add a verified PS2 60 FPS patch catalogue only after per-title hardware tests.
+- [x] Build the per-game EE instruction patch pipeline around exact `0x0A` CONFIG entries; no guessed offsets.
+- [x] Seed a source-pinned experimental PS2 FPS / widescreen / 480p catalogue with exact serial + ELF-hash matching.
+- [ ] Validate each candidate on physical hardware before calling it a working or verified enhancement.
 
 ## Alpha 0.4 — PS3 title-specific patch manager
 
