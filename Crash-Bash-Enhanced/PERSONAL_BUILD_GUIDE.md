@@ -20,20 +20,25 @@ If the temporary URL expires or is consumed before the workflow downloads it, ge
 
 ## Private decryption
 
-The workflow encrypts the PKG to the public certificate at `Crash-Bash-Enhanced/keys/personal-build-public.pem`. Keep the matching private key offline and never commit it to GitHub or Dropbox shared folders.
+The matching private key was generated and delivered separately as `Crash-Bash-Personal-Build-Key-Package.zip`. Keep `Crash-Bash-Personal-Build-Private-Key.key` offline and private; it is not stored in GitHub or Dropbox. The public certificate is committed at `keys/personal-build-public.pem`.
 
-After downloading the encrypted artifact, decrypt it locally with the matching private certificate and key:
+Certificate SHA-256 fingerprint:
+
+```text
+9ba2aaf245b0f19d5d0e9ee023d4d9c96291437b7a26e4c7d9d1cf65c2770bcd
+```
+
+After downloading the encrypted artifact, decrypt it locally with the matching key:
 
 ```bash
 openssl cms -decrypt -binary -inform DER \
   -in Crash-Bash-Online-Personal-PS3.pkg.cms \
   -recip personal-build-public.pem \
-  -inkey personal-build-private.key \
+  -inkey Crash-Bash-Personal-Build-Private-Key.key \
   -out Crash-Bash-Online-Personal-PS3.pkg
 ```
 
-Replace the private-key filename with the actual local filename. Verify the decrypted PKG SHA-256 against the `PKG SHA256` line in `PERSONAL-BUILD-MANIFEST.txt`.
-
+Verify the decrypted PKG SHA-256 against the `PKG SHA-256` line in `PERSONAL-BUILD-MANIFEST.txt`. The private key must never be committed, uploaded as a GitHub Secret, or shared with other people.
 ## Package and hardware limits
 
 The build uses the RGUI menu and keeps the embedded runtime below the PSL1GHT 1,024-entry PKG cap. Before finalization, the package file table is listed and compared against every staged file and directory; missing entries or truncation fail the build.
