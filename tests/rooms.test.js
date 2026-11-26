@@ -991,6 +991,34 @@ test("READY changes are rejected after the host starts the match", async () => {
   assert.equal(room.body.room.players.find((player) => player.id === guest.body.player.id).ready, true);
 });
 
+test("game_start returns the full room identity required by the native launch path", async () => {
+  const host = await call("POST", { action: "create", displayName: "Launch Host" });
+  const guest = await call("POST", {
+    action: "join",
+    code: host.body.room.code,
+    displayName: "Launch Guest"
+  });
+  await call("POST", { action: "set_ready", ready: true }, host.body.token);
+  await call("POST", { action: "set_ready", ready: true }, guest.body.token);
+  await confirmMatchingDisc(host.body.token, guest.body.token);
+
+  const started = await call("POST", { action: "game_start" }, host.body.token);
+  assert.equal(started.statusCode, 200);
+  assert.equal(started.body.room.code, host.body.room.code);
+  assert.equal(started.body.room.hostPlayerId, host.body.player.id);
+  assert.equal(started.body.room.selfPlayerId, host.body.player.id);
+  assert.equal(started.body.room.gameStarted, true);
+  assert.equal(started.body.room.status, "ready");
+  assert.equal(started.body.room.discMatch, true);
+  assert.equal(started.body.room.players.length, 2);
+  assert.match(started.body.room.netplayId, /^[A-F0-9]{12}$/);
+
+  const cancelled = await call("POST", { action: "game_start_cancel" }, host.body.token);
+  assert.equal(cancelled.statusCode, 200);
+  assert.equal(cancelled.body.room.gameStarted, false);
+  assert.equal(cancelled.body.room.hostPlayerId, host.body.player.id);
+});
+
 test("only the host can start Netplay and a started room rejects late joins", async () => {
   const host = await call("POST", { action: "create", displayName: "Host", isPrivate: false });
   const guest = await call("POST", { action: "join", code: host.body.room.code, displayName: "Guest" });
