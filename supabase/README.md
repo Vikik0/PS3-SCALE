@@ -9,37 +9,45 @@ This backend is isolated from every other Supabase project. It must be deployed 
 - The app sends only report kind, title, details, model, firmware, platform, app version and request ID.
 - The public Edge Function validates the payload, enforces a 12 KiB request limit and a maximum of 100 title characters / 2,000 detail characters.
 - An HMAC-SHA-256 hash of the Cloudflare-provided client IP, keyed with the server-side Supabase secret, is used for an atomic limit of 8 reports per UTC day. Raw IP addresses are never stored.
-- Reports and rate-limit state have RLS enabled. Public and authenticated clients have no table access; only the Edge Function's server-side service role can access them.
+- Reports and rate-limit state have RLS enabled. Public and authenticated clients have no table access; only the Edge Function's server-side secret key can access them.
 - A GitHub Issue integration is optional. It is disabled unless a fine-grained GitHub token is deliberately configured as a server-side secret. By default, reports stay in the dedicated Supabase database.
 
-## Create and deploy
+## Free-plan deployment
 
-The current Supabase CLI v3 defaults database commands to the local stack. Always pass `--remote=<project-ref>` for hosted database operations and `--yes` for unattended hosted changes; never rely on a local default when applying production migrations.
+The deployment must remain on Supabase's Free Plan. Do not create this project in the existing `VIKIK` organization: that organization is on the Pro Plan, and Supabase quoted approximately $10/month for an additional project there. A Pro organization cannot mix free and paid projects.
 
-
-1. Create a **new Supabase project** named `ps3scale-support` in the VIKIK organization. Do not reuse `Vikik-Winter-Fit`, `BRKNDA-Workspace`, or any other existing project.
-2. Prefer the Frankfurt region (`eu-central-1`) for Jordan/Europe access.
-3. Install the current Supabase CLI (v3) and authenticate:
+1. Create a **separate Supabase organization on the Free Plan** from the Supabase Dashboard. Do not upgrade it and do not add paid project add-ons.
+2. In that Free Plan organization, create a new project named `ps3scale-support`. Do not reuse `Vikik-Winter-Fit`, `BRKNDA-Workspace`, or any other existing project.
+3. Select Frankfurt (`eu-central-1`) for Jordan/Europe access. Keep the default Free/Nano compute.
+4. Confirm the new organization is still on the Free Plan and the project is using Nano compute before deployment. If the Dashboard shows any nonzero project cost, stop; do not confirm or create it.
+5. Install the current Supabase CLI (v3) and authenticate:
    ```sh
    supabase login
    ```
-4. From the repository root, link only the newly created project:
+6. From the repository root, link only the new Free Plan project:
    ```sh
    supabase link <NEW_PROJECT_REF>
    ```
-5. Apply the isolated database migration:
+7. Apply the isolated database migration:
    ```sh
    supabase db push --remote=<NEW_PROJECT_REF> --yes
    ```
-6. Deploy the public, rate-limited Edge Function (it validates its own payload and uses only server-side credentials):
+8. Deploy the public, rate-limited Edge Function (it validates its own payload and uses only server-side credentials):
    ```sh
    supabase functions deploy ps3scale-support --yes
    ```
-7. The function URL is:
+9. The function URL is:
    ```
    https://<NEW_PROJECT_REF>.supabase.co/functions/v1/ps3scale-support
    ```
-9. Only after the migration and function are verified, replace the `YOUR_PROJECT` placeholder in `PS3SCALE_SUPPORT_URL` in `PS3-SCALE-Alpha-0.2/source/ps3/main.c`, bump the app version, and build a new PKG.
+10. Only after the migration and function are verified, replace the `YOUR_PROJECT` placeholder in `PS3SCALE_SUPPORT_URL` in `PS3-SCALE-Alpha-0.2/source/ps3/main.c`, replace `YOUR_PUBLISHABLE_KEY` with that project's publishable key, bump the app version, and build a new PKG.
+
+### Free-plan limits and trade-offs
+
+- The Free Plan includes up to two active free projects per eligible organization and uses Nano compute at $0/month.
+- The support backend must stay within the Free Plan quotas (including database size, storage, Edge Function invocations and egress). Do not enable paid add-ons or upgrade the organization.
+- Free projects can be paused after a period of low activity. If Supabase pauses this support project, restore it from the Dashboard; do not upgrade to Pro just to avoid pausing.
+- If the new Free organization cannot be created or its free-project quota is exhausted, stop and resolve that separately. Never fall back to creating the project in `VIKIK`.
 
 ## Optional GitHub Issues
 
@@ -57,6 +65,6 @@ The token stays in Supabase Edge Function secrets and is never embedded in the P
 - The app does not send any report until the local atomic outbox write succeeds.
 - Pending JSON files are stored separately under `/dev_hdd0/game/PS3SCALE1/USRDIR/support/outbox/`; the Help & Support screen can retry them after a restart using the same request ID.
 - Public callers cannot read reports or rate-limit rows. The Edge Function uses a server-side secret key supplied by the Supabase runtime.
-- The database function that increments the daily counter is atomic and executable only by `service_role`.
+- The database function that increments the daily counter is atomic and executable only by the server-side role.
 - The endpoint returns only a receipt ID and optional GitHub issue URL, never the stored report body.
 - GitHub mirroring is opt-in because it sends report text to a second service.
