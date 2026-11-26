@@ -59,7 +59,7 @@ jobs:
           test -s "$CERT"
           openssl x509 -in "$CERT" -noout -checkend 0
           ACTUAL_CERT_SHA256="$(openssl x509 -in "$CERT" -noout -fingerprint -sha256 | sed 's/.*=//; s/://g' | tr '[:upper:]' '[:lower:]')"
-          EXPECTED_CERT_SHA256="daa037faba26572197f47a427ea22da064942779a1036bbec561a60076cbf9da"
+          EXPECTED_CERT_SHA256="9ba2aaf245b0f19d5d0e9ee023d4d9c96291437b7a26e4c7d9d1cf65c2770bcd"
           test "$ACTUAL_CERT_SHA256" = "$EXPECTED_CERT_SHA256"
           printf 'Crash Bash personal package preflight\n' > /tmp/cb-preflight.txt
           openssl cms -encrypt -binary -stream -aes-256-cbc \
