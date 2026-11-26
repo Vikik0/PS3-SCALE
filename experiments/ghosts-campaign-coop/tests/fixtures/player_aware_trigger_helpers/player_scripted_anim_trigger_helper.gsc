@@ -14,7 +14,9 @@ waittill_trigger_for_player( player, var_0, var_1, var_2, var_3, var_4, var_5 )
 
 _trigger_handle_triggering( player, var_0 )
 {
-    self waittill( "trigger" );
+    self waittill( "trigger", var_7 );
+    if ( !isdefined( var_7 ) || var_7 != player )
+        continue;
     if ( !player ismeleeing() )
         self notify( "valid_trigger" );
 }

@@ -151,6 +151,16 @@ def patch_player_scripted_anim_source(source: str) -> str:
         "_trigger_handle_triggering( player, var_0 )",
         1,
     ).replace("level.player", "player")
+    trigger_wait = '        self waittill( "trigger" );'
+    if trigger_helper.count(trigger_wait) != 1:
+        raise PatchError("expected one trigger event wait in _trigger_handle_triggering")
+    trigger_helper = trigger_helper.replace(
+        trigger_wait,
+        '        self waittill( "trigger", var_7 );\\n'
+        '        if ( !isdefined( var_7 ) || var_7 != player )\\n'
+        '            continue;',
+        1,
+    )
 
     params = "var_0, var_1, var_2, var_3, var_4, var_5"
     wrapper = (
@@ -168,6 +178,9 @@ def patch_player_scripted_anim_source(source: str) -> str:
         result, "waittill_trigger_for_player"
     ):
         raise PatchError("player argument was not propagated to trigger callback")
+    callback = extract_function(result, "_trigger_handle_triggering")
+    if 'self waittill( "trigger", var_7 );' not in callback or "var_7 != player" not in callback:
+        raise PatchError("trigger callback does not reject other player activators")
     return result
 
 
@@ -221,6 +234,7 @@ def build_bundle(
             "legacy waittill_trigger wrappers continue to use level.player",
             "new waittill_trigger_for_player helpers use the explicit player argument",
             "player_scripted_anim_util propagates the same player into _trigger_handle_triggering",
+            "trigger callback captures the trigger-event activator and ignores events from another player",
             "no original mission handler or signed FastFile is modified",
         ],
     }

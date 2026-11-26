@@ -155,6 +155,8 @@ jobs:
           gsc-tool --mode decomp --game iw6 --system ps3 compiled/iw6/player_scripted_anim_trigger_helper.gscbin
           grep -q '_trigger_handle_triggering' decompiled/iw6/player_scripted_anim_trigger_helper.gsc
           grep -q 'waittill_trigger_for_player' decompiled/iw6/player_scripted_anim_trigger_helper.gsc
+          grep -q 'self waittill( "trigger", var_2 );' decompiled/iw6/player_scripted_anim_trigger_helper.gsc
+          grep -q 'var_2 != var_0' decompiled/iw6/player_scripted_anim_trigger_helper.gsc
           gsc-tool --mode comp --game iw6 --system ps3 decompiled/iw6/player_scripted_anim_trigger_helper.gsc
           cmp /tmp/player-scripted-anim-trigger-helper.gscbin compiled/iw6/player_scripted_anim_trigger_helper.gscbin
       - name: Compile and round-trip standalone player-aware trigger adapter fixture
