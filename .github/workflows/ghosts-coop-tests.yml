@@ -138,6 +138,25 @@ jobs:
           grep -q 'getweaponammoclip' decompiled/iw6/clockwork_stage56_toolchain.gsc
           gsc-tool --mode comp --game iw6 --system ps3 decompiled/iw6/clockwork_stage56_toolchain.gsc
           test -s compiled/iw6/clockwork_stage56_toolchain.gscbin
+      - name: Compile and round-trip explicit-player trigger helper fixtures
+        working-directory: experiments/ghosts-campaign-coop
+        run: |
+          cd tests/fixtures/player_aware_trigger_helpers
+          gsc-tool --mode comp --game iw6 --system ps3 black_ice_trigger_helper.gsc
+          test -s compiled/iw6/black_ice_trigger_helper.gscbin
+          cp compiled/iw6/black_ice_trigger_helper.gscbin /tmp/black-ice-trigger-helper.gscbin
+          gsc-tool --mode decomp --game iw6 --system ps3 compiled/iw6/black_ice_trigger_helper.gscbin
+          grep -q 'waittill_trigger_for_player' decompiled/iw6/black_ice_trigger_helper.gsc
+          gsc-tool --mode comp --game iw6 --system ps3 decompiled/iw6/black_ice_trigger_helper.gsc
+          cmp /tmp/black-ice-trigger-helper.gscbin compiled/iw6/black_ice_trigger_helper.gscbin
+          gsc-tool --mode comp --game iw6 --system ps3 player_scripted_anim_trigger_helper.gsc
+          test -s compiled/iw6/player_scripted_anim_trigger_helper.gscbin
+          cp compiled/iw6/player_scripted_anim_trigger_helper.gscbin /tmp/player-scripted-anim-trigger-helper.gscbin
+          gsc-tool --mode decomp --game iw6 --system ps3 compiled/iw6/player_scripted_anim_trigger_helper.gscbin
+          grep -q '_trigger_handle_triggering' decompiled/iw6/player_scripted_anim_trigger_helper.gsc
+          grep -q 'waittill_trigger_for_player' decompiled/iw6/player_scripted_anim_trigger_helper.gsc
+          gsc-tool --mode comp --game iw6 --system ps3 decompiled/iw6/player_scripted_anim_trigger_helper.gsc
+          cmp /tmp/player-scripted-anim-trigger-helper.gscbin compiled/iw6/player_scripted_anim_trigger_helper.gscbin
       - name: Compile and round-trip standalone player-aware trigger adapter fixture
         working-directory: experiments/ghosts-campaign-coop
         run: |
