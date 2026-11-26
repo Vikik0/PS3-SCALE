@@ -45,6 +45,7 @@ cc -std=c99 -Wall -Wextra -Werror \
 
 cc -std=c99 -D_XOPEN_SOURCE=700 -DPS3SCALE_HOST_TEST=1 -Wall -Wextra -Werror \
   -I"$ROOT/include" \
+  "$ROOT/source/core/ps2_config.c" \
   "$ROOT/source/core/ps2_config_store.c" \
   "$ROOT/tests/test_ps2_config_store.c" \
   -o "$OUT/test_ps2_config_store"
