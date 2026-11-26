@@ -6164,9 +6164,9 @@ static void draw_ps2_config_manager(void)
     draw_text(48.0f, 220.0f, local_profile_supported ? 0x26794bff : 0xb27b35ff,
               can_generate ?
               (netemu_supported ?
-               "NETEMU-ONLY OPTIONS: SUPPORTED HARDWARE CONFIRMED." :
-               "NETEMU-ONLY OPTIONS DISABLED: HARDWARE NOT CONFIRMED AS SLIM / SUPER SLIM.") :
-              "LOCAL PROFILES AND CODE PATCHES REQUIRE A PS2 ISO.");
+               "NETEMU OPTIONS ENABLED FOR THIS DEVICE." :
+               "NETEMU OPTIONS DISABLED: SLIM / SUPER SLIM REQUIRED.") :
+              "LOCAL PROFILES AND PATCHES REQUIRE A PS2 ISO.");
 
     draw_soft_card(48.0f, 232.0f, 352.0f, 38.0f,
                    g_ps2_config_manager_selection == 0);
