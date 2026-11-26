@@ -1,6 +1,5 @@
 import copy
 import unittest
-from pathlib import Path
 
 from tools.ps3mapi.validate_campaign_player_pair_capture import validate_capture
 
@@ -57,6 +56,7 @@ class CampaignPlayerPairCaptureTests(unittest.TestCase):
         self.assertTrue(result["controller_to_player_mapping_fields_consistent"])
         self.assertTrue(result["independent_camera_hud_fields_consistent"])
         self.assertEqual(result["best_stable_run"], 5)
+        self.assertFalse(result["explicit_pair_loss_observed"])
         self.assertFalse(result["auto_rebind_cycle_observed_in_supplied_data"])
         self.assertEqual(result["evidence_authenticity"], "NOT_AUTHENTICATED_BY_THIS_TOOL")
         self.assertEqual(result["evidence_source"], "synthetic-unit-test")
@@ -68,7 +68,24 @@ class CampaignPlayerPairCaptureTests(unittest.TestCase):
         ]
         result = validate_capture(data)
         self.assertTrue(result["stable_pair_observation_validated"])
+        self.assertTrue(result["explicit_pair_loss_observed"])
+        self.assertEqual(result["reconnect_stable_run_after_pair_loss"], 5)
         self.assertTrue(result["auto_rebind_cycle_observed_in_supplied_data"])
+
+    def test_structural_error_does_not_falsely_claim_disconnect_and_reconnect(self):
+        data = valid_capture()
+        malformed = observation(1250)
+        malformed["players"][1]["camera_owner_entity_id"] = "wrong-owner"
+        data["observations"] = (
+            [observation(i * 250) for i in range(5)]
+            + [malformed]
+            + [observation(1500 + i * 250) for i in range(5)]
+        )
+        result = validate_capture(data)
+        self.assertTrue(result["stable_pair_observation_validated"])
+        self.assertFalse(result["explicit_pair_loss_observed"])
+        self.assertFalse(result["auto_rebind_cycle_observed_in_supplied_data"])
+        self.assertIn("camera_owner_mismatch", [x["reason"] for x in result["rejected_observations"]])
 
     def test_four_stable_samples_are_incomplete(self):
         data = valid_capture()
@@ -84,6 +101,52 @@ class CampaignPlayerPairCaptureTests(unittest.TestCase):
         data["observations"][2]["players"][1]["hud_owner_entity_id"] = "entity-replaced"
         result = validate_capture(data)
         self.assertFalse(result["stable_pair_observation_validated"])
+
+    def test_samples_farther_apart_than_limit_do_not_form_a_stable_run(self):
+        data = valid_capture()
+        data["observations"] = [observation(i * 1500) for i in range(5)]
+        result = validate_capture(data)
+        self.assertFalse(result["stable_pair_observation_validated"])
+        self.assertEqual(result["best_stable_run"], 1)
+        self.assertEqual(len(result["continuity_breaks"]), 4)
+        self.assertEqual(result["max_sample_gap_ms"], 1000)
+
+    def test_operator_can_raise_sample_gap_limit_explicitly(self):
+        data = valid_capture()
+        data["observations"] = [observation(i * 1500) for i in range(5)]
+        result = validate_capture(data, max_sample_gap_ms=1500)
+        self.assertTrue(result["stable_pair_observation_validated"])
+        self.assertEqual(result["best_stable_run"], 5)
+        self.assertEqual(result["continuity_breaks"], [])
+
+    def test_controller_port_mapping_is_reported_without_assuming_port_order(self):
+        data = valid_capture()
+        for sample in data["observations"]:
+            sample["players"][0]["controller_port"] = 1
+            sample["players"][1]["controller_port"] = 0
+        result = validate_capture(data)
+        self.assertTrue(result["stable_pair_observation_validated"])
+        self.assertEqual(
+            result["best_pair_mapping"],
+            [
+                {
+                    "local_client_index": 0,
+                    "controller_port": 1,
+                    "entity_id": "entity-0",
+                    "role": "PRIMARY",
+                },
+                {
+                    "local_client_index": 1,
+                    "controller_port": 0,
+                    "entity_id": "entity-1",
+                    "role": "SECONDARY",
+                },
+            ],
+        )
+
+    def test_invalid_sample_gap_limit_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "max_sample_gap_ms"):
+            validate_capture(valid_capture(), max_sample_gap_ms=0)
 
     def test_wrong_title_id_is_rejected(self):
         data = valid_capture()
@@ -115,6 +178,7 @@ class CampaignPlayerPairCaptureTests(unittest.TestCase):
         result = validate_capture(data)
         self.assertFalse(result["stable_pair_observation_validated"])
         self.assertIn("player_array_count_mismatch", [x["reason"] for x in result["rejected_observations"]])
+        self.assertFalse(result["explicit_pair_loss_observed"])
 
     def test_duplicate_local_client_index_is_rejected(self):
         data = valid_capture()
