@@ -117,7 +117,7 @@ assert "START JOIN MATCH  SQUARE REFRESH  CIRCLE BACK" in source
 assert '"HOST" : "CLIENT"' in source
 assert "HOST: CROSS CONFIRMS DISC; LAUNCHES WHEN ALL MATCH." in source
 assert "CLIENT: CROSS CONFIRMS DISC; THEN WAITS FOR HOST." in source
-assert "cb_online_cancel_game_start(&session" in source
+assert "cb_online_cancel_game_start(&task->session" in source
 assert "NETPLAY_DISCOVERY_MAX_ATTEMPTS" in source
 assert "CB-%.16s-HOST" in source
 assert "Netplay Host List" not in source
