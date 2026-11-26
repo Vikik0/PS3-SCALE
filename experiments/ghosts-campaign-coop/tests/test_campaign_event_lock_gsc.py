@@ -178,6 +178,33 @@ class CampaignEventLockTests(unittest.TestCase):
             bind.index("level.ghc_campaign_session_ready = 1"),
         )
 
+    def test_clear_active_fails_closed_and_revalidates_after_abort(self):
+        body = function_body(self.source, "ghc_campaign_event_lock_clear_active")
+        self.assertIn("if ( !ghc_campaign_event_lock_state_is_valid() )", body)
+        self.assertLess(
+            body.index("ghc_campaign_event_lock_state_is_valid()"),
+            body.index("ghc_campaign_event_lock_abort_slot( 0 )"),
+        )
+        self.assertIn("return ghc_campaign_event_lock_state_is_valid()", body)
+
+    def test_release_checks_native_pair_before_rejecting_corrupt_lock_arrays(self):
+        body = function_body(self.source, "ghc_campaign_event_lock_release")
+        self.assertLess(
+            body.index("ghc_campaign_native_pair_is_current()"),
+            body.index("ghc_campaign_event_lock_state_is_valid()"),
+        )
+        self.assertIn("ghc_campaign_invalidate_local_session()", body)
+
+    def test_owner_query_requires_a_ready_current_native_pair(self):
+        body = function_body(self.source, "ghc_campaign_event_lock_is_owner")
+        self.assertIn("level.ghc_campaign_session_ready", body)
+        self.assertIn("ghc_campaign_native_pair_is_current()", body)
+        self.assertIn("ghc_campaign_event_lock_state_is_valid()", body)
+        self.assertLess(
+            body.index("ghc_campaign_native_pair_is_current()"),
+            body.index("ghc_campaign_event_lock_state_is_valid()"),
+        )
+
     def test_event_lock_never_creates_players_or_polls_controller_input(self):
         source = self.source.lower()
         for token in (
