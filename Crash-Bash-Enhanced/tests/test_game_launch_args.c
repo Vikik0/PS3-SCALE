@@ -20,10 +20,9 @@ int main(void)
     assert(strcmp(argv[5], "55435") == 0);
     assert(argv[6] == NULL);
 
-    assert(cb_game_build_argv(content, 0, "LocalPlayer", NULL, argv, CB_GAME_LAUNCH_ARGV_CAPACITY) == 6);
-    assert(strcmp(argv[1], "--menu") == 0);
-    assert(strcmp(argv[3], "LocalPlayer") == 0);
-    assert(argv[6] == NULL);
+    assert(cb_game_build_argv(content, 0, "LocalPlayer", NULL, argv, CB_GAME_LAUNCH_ARGV_CAPACITY) == 1);
+    assert(strcmp(argv[0], content) == 0);
+    assert(argv[1] == NULL);
 
     snprintf(endpoint.address, sizeof(endpoint.address), "madrid.relay.retroarch.com");
     snprintf(endpoint.port, sizeof(endpoint.port), "55435");
