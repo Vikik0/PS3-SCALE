@@ -28,7 +28,8 @@ The private Dropbox ZIP was inspected before dispatch:
 - The CUE references the matching BIN and uses 2352-byte sectors.
 - The BIN contains a valid Mode 2 / 2352-byte ISO9660 data track; the primary volume descriptor and root directory parse correctly.
 - `SYSTEM.CNF` identifies the boot executable as `SCUS_945.70;1`, and the referenced executable begins with the genuine `PS-X EXE` signature (432,128 bytes, load address `0x80010000`).
-- `CRASHBSH/CRASHBSH.DAT` was read from the ISO9660 filesystem (73,220,096 bytes); all 992 DAT index entries were checked for overlap and out-of-range offsets, then reconstructed byte-for-byte with a matching SHA-256.
+- `CRASHBSH/CRASHBSH.DAT` was read from the ISO9660 filesystem (73,220,096 bytes; SHA-256 `3a02b477ab48ae99010e1a9db3b0d591c79e800b43d10779945ca18ab788acb7`); all 992 DAT index entries were checked for overlap and out-of-range offsets, then reconstructed byte-for-byte with the same SHA-256.
+- The boot executable SHA-256 is `fd5727a18feb2a2d5a6359a55966f0266284d1e50f64ee9b8a127a97091bd516`.
 - The staging script passed all eight security/regression cases and staged this exact archive successfully.
 
 The workflow repeats ZIP integrity, exact-member, file-size, BIN/CUE SHA-256 and CUE-to-BIN linkage checks inside GitHub Actions before it downloads the runtime or starts the expensive PS3 build. It then parses the ISO9660 filesystem, confirms the `SCUS_945.70` boot executable and verifies the 992-entry DAT table with byte-identical reconstruction. The checks are pinned to the verified dump hashes above. This preflight does not replace the final PS3 PKG build or physical-console testing.
