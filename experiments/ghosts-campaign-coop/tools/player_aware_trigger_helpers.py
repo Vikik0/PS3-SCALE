@@ -172,7 +172,8 @@ def patch_player_scripted_anim_source(source: str) -> str:
 
 
 def verify_shared_source_pair(carrier_data: bytes, cornered_data: bytes) -> None:
-    verify_shared_source_pair(carrier_data, cornered_data)
+    if carrier_data != cornered_data:
+        raise PatchError("Carrier and Cornered shared player_scripted_anim_util sources differ")
 
 
 def build_bundle(
@@ -191,8 +192,7 @@ def build_bundle(
     cornered_hash = verify_pinned_source(
         cornered_data, EXPECTED_PLAYER_SCRIPTED_ANIM_UTIL_SHA256, "Cornered player-scripted-animation utility"
     )
-    if carrier_data != cornered_data:
-        raise PatchError("Carrier and Cornered shared player_scripted_anim_util sources differ")
+    verify_shared_source_pair(carrier_data, cornered_data)
 
     black_text = black_data.decode("utf-8")
     shared_text = carrier_data.decode("utf-8")
