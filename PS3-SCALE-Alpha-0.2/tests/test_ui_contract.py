@@ -1063,7 +1063,7 @@ for token in ("PS2 ENHANCER", "L2H PERFORMANCE (0x46)",
               "APPLY 480P OUTPUT PATCH",
               "DOWNLOAD EXACT GAME CONFIG", "BACK UP CURRENT CONFIG",
               "RESTORE SAVED BACKUP",
-              "Game patches require exact serial + ELF hash.",
+              "PATCH MATCH: FPS %s | 16:9 %s | 480P %s",
               "TRIANGLE: DISPLAY GUIDE"):
     assert token in ps2_enhancer_ui, f"Missing PS2 enhancer UI token: {token}"
 assert "ps2_config_ensure_backup" in src
@@ -1072,6 +1072,10 @@ assert "PS3SCALE_PS2_CFG_FRAME_PACING" in src
 assert "ps3scale_ps2_iso_load_boot_elf" in src
 assert "ps3scale_ps2_elf_read_exec_word" in src
 assert "ps3scale_ps2_game_patch_find" in src
+assert "refresh_ps2_patch_availability();" in src
+assert "g_ps2_patch_fps_available" in src
+assert "g_ps2_patch_widescreen_available" in src
+assert "g_ps2_patch_480p_available" in src
 assert "ps3scale_ps2_config_append_patches" in src
 assert "apply_ps2_game_patch(PS3SCALE_PS2_PATCH_FPS);" in src
 assert "apply_ps2_game_patch(PS3SCALE_PS2_PATCH_WIDESCREEN);" in src

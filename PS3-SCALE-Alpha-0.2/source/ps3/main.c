@@ -224,6 +224,10 @@ static int g_details_cache_valid = 0;
 static int g_details_ps2_config_exists = 0;
 static int g_ps2_config_manager_selection=0,g_ps2_config_manager_target_state=0,g_ps2_config_manager_backup_state=0,g_ps2_config_manager_rollback_state=0;
 static int g_ps2_enhancer_guide_open=0;
+static int g_ps2_patch_probe_valid=0;
+static int g_ps2_patch_fps_available=0;
+static int g_ps2_patch_widescreen_available=0;
+static int g_ps2_patch_480p_available=0;
 static unsigned int g_ps2_enhancement_flags = PS3SCALE_PS2_CFG_ENABLE_L2H;
 static size_t g_ps2_config_manager_target_size=0,g_ps2_config_manager_backup_size=0,g_ps2_config_manager_max_bytes=PS3SCALE_PS2_CONFIG_MAX_BYTES;
 static char g_ps2_config_manager_message[128]="SELECT AN ACTION.";
@@ -363,6 +367,7 @@ static void refresh_details_cache(void);
 static void service_ps2_config_download(void);
 static void start_ps2_config_download(void);
 static void refresh_ps2_config_manager_cache(void);
+static void refresh_ps2_patch_availability(void);
 static void perform_ps2_config_manager_action(void);
 static void service_community_download(void);
 static void start_community_file_download(const ps3scale_community_file_t *entry,
@@ -1499,6 +1504,38 @@ static const ps3scale_game_t *selected_game(void)
     if (count == 0) return NULL;
     if (g_selected < 0 || (size_t)g_selected >= count) return NULL;
     return library_game_at((size_t)g_selected);
+}
+
+static void refresh_ps2_patch_availability(void)
+{
+    const ps3scale_game_t *game = selected_game();
+    unsigned char *elf_data = NULL;
+    size_t elf_size = 0;
+    uint32_t elf_hash = 0;
+    char serial[16];
+
+    g_ps2_patch_probe_valid = 0;
+    g_ps2_patch_fps_available = 0;
+    g_ps2_patch_widescreen_available = 0;
+    g_ps2_patch_480p_available = 0;
+    if (!game || game->kind != PS3SCALE_GAME_PS2_ISO)
+        return;
+
+    g_ps2_patch_probe_valid = -1;
+    if (ps3scale_ps2_iso_load_boot_elf(game->path, &elf_data, &elf_size,
+            serial, sizeof(serial), &elf_hash) == 0) {
+        g_ps2_patch_probe_valid = 1;
+        g_ps2_patch_fps_available =
+            ps3scale_ps2_game_patch_find(serial, elf_hash,
+                PS3SCALE_PS2_PATCH_FPS) != NULL;
+        g_ps2_patch_widescreen_available =
+            ps3scale_ps2_game_patch_find(serial, elf_hash,
+                PS3SCALE_PS2_PATCH_WIDESCREEN) != NULL;
+        g_ps2_patch_480p_available =
+            ps3scale_ps2_game_patch_find(serial, elf_hash,
+                PS3SCALE_PS2_PATCH_480P) != NULL;
+    }
+    free(elf_data);
 }
 
 static void clamp_selection(void)
@@ -5982,6 +6019,18 @@ static void draw_ps2_config_manager(void)
     const ps3scale_ps2_config_entry_t *entry = ps2_config_for_game(game);
     const int can_generate =
         game && game->kind == PS3SCALE_GAME_PS2_ISO;
+    const char *fps_patch_label = !can_generate ? "ISO PATCH ONLY" :
+        (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
+         (g_ps2_patch_fps_available ? "APPLY EXPERIMENTAL 60 FPS PATCH" :
+                                      "NO EXACT 60 FPS PATCH"));
+    const char *widescreen_patch_label = !can_generate ? "ISO PATCH ONLY" :
+        (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
+         (g_ps2_patch_widescreen_available ? "APPLY 16:9 WIDESCREEN PATCH" :
+                                             "NO EXACT 16:9 PATCH"));
+    const char *p480_patch_label = !can_generate ? "ISO PATCH ONLY" :
+        (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
+         (g_ps2_patch_480p_available ? "APPLY 480P OUTPUT PATCH" :
+                                       "NO EXACT 480P PATCH"));
     const char *config_state =
         g_ps2_config_manager_target_state == 1 ? "PRESENT" :
         (g_ps2_config_manager_target_state == 0 ? "MISSING" :
@@ -6038,8 +6087,17 @@ static void draw_ps2_config_manager(void)
         snprintf(line, sizeof(line), "Target: %.52s", target_name);
         draw_text(48.0f, 204.0f, 0x514b69ff, line);
     }
-    draw_text(430.0f, 204.0f, 0xb27b35ff,
-              "Game patches require exact serial + ELF hash.");
+    if (can_generate && g_ps2_patch_probe_valid == 1) {
+        snprintf(line, sizeof(line), "PATCH MATCH: FPS %s | 16:9 %s | 480P %s",
+                 g_ps2_patch_fps_available ? "YES" : "NO",
+                 g_ps2_patch_widescreen_available ? "YES" : "NO",
+                 g_ps2_patch_480p_available ? "YES" : "NO");
+    } else {
+        snprintf(line, sizeof(line), can_generate ?
+                 "PATCH MATCH: BOOT ELF CHECK FAILED" :
+                 "PATCH MATCH: PS2 ISO REQUIRED");
+    }
+    draw_text(430.0f, 204.0f, 0xb27b35ff, line);
 
     draw_soft_card(48.0f, 232.0f, 352.0f, 38.0f,
                    g_ps2_config_manager_selection == 0);
@@ -6088,17 +6146,17 @@ static void draw_ps2_config_manager(void)
     draw_soft_button(430.0f, 218.0f, 350.0f, 22.0f,
                      can_generate ?
                      (g_ps2_config_manager_target_state == 1 ?
-                      "RESTORE BACKUP FIRST" : "APPLY LOCAL PROFILE") :
+                      "EXISTING CONFIG PRESERVED" : "APPLY LOCAL PROFILE") :
                      "ISO PROFILE ONLY",
                      g_ps2_config_manager_selection == 4);
     draw_soft_button(430.0f, 246.0f, 350.0f, 22.0f,
-                     can_generate ? "APPLY EXPERIMENTAL 60 FPS PATCH" : "ISO PATCH ONLY",
+                     fps_patch_label,
                      g_ps2_config_manager_selection == 5);
     draw_soft_button(430.0f, 274.0f, 350.0f, 22.0f,
-                     can_generate ? "APPLY 16:9 WIDESCREEN PATCH" : "ISO PATCH ONLY",
+                     widescreen_patch_label,
                      g_ps2_config_manager_selection == 6);
     draw_soft_button(430.0f, 302.0f, 350.0f, 22.0f,
-                     can_generate ? "APPLY 480P OUTPUT PATCH" : "ISO PATCH ONLY",
+                     p480_patch_label,
                      g_ps2_config_manager_selection == 7);
     draw_soft_button(430.0f, 330.0f, 350.0f, 22.0f,
                      entry ? "DOWNLOAD EXACT GAME CONFIG" : "NO EXACT GAME CONFIG",
@@ -7700,6 +7758,7 @@ int main(int argc, char *argv[])
                         snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),
                                  "L2H IS ON BY DEFAULT. SELECT OPTIONS THEN APPLY.");
                         refresh_ps2_config_manager_cache();
+                        refresh_ps2_patch_availability();
                         g_screen = SCREEN_PS2_CONFIG;
                     }
                 }
