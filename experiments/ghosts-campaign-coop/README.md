@@ -512,3 +512,15 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - يحدد الدليل الملفات المطلوبة، أوامر PS3MAPI، سجلات المقارنة، وملفات JSON التي يجب مشاركتها.
 - هذا هو بوابة الانتقال التالية: إثبات Native Campaign Local Client الثاني على الجهاز الفعلي قبل تعديل أي FastFile.
 - See `docs/phase116-ps3-runtime-capture-quickstart-ar.md`.
+
+### Phase 117 — player-command owned-event adapter
+
+- Added `ghc_campaign_wait_for_owned_player_command(player, command, event_id)` for interactions driven by `notifyonplayercommand`, not world-entity trigger events.
+- It validates the explicit native player before and after `player waittill(command)`, then acquires the event lock for that same player. The mission must register the command notification first and release/abort the returned ownership.
+- This covers the event shape used by Carrier's rope-cut interaction (`"cut"` from melee commands), but the original mission handler has not been migrated.
+- CI run [#1646](https://github.com/Vikik0/PS3-SCALE/actions/runs/45865170243): **7/7 jobs successful**, **607 Python tests**, bridge GSC compile/decompile passed.
+- Bridge source SHA-256: `b2377f0cd7b8d1455e323555da28954b0d53a990a418efe408864956bfb247f6`; compiled GSCBIN SHA-256: `85f7ddd1d91a1fa8e3a1d06bee3104d80c72937473433465b65b27153b6e04ed`; size **5,903 bytes**.
+- Capture kit: **57/57 files**, **541,248 bytes**, SHA-256 `7e680b92e451895e75f4dbe7a5324f62cce032da26cf808eacbf2f3971e91d29`; artifact ID `15140641180`.
+- See `docs/phase117-player-command-adapter.md` and `reports/PHASE117_REPORT_AR.md`.
+
+**Runtime and mission integration gate unchanged:** the Carrier rope-cut handler and all other original mission call sites remain unmigrated. Player 2 remains `NOT_PROVEN`; shared interactions remain **0/4 ready**. No physical PS3 Campaign execution or retail EBOOT/SELF/FastFile modification is claimed.

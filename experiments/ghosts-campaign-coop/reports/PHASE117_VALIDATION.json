@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "phase": 117,
+  "title": "Player-command owned-event adapter",
+  "ci": {
+    "run": 1646,
+    "run_id": 45865170243,
+    "status": "7/7 PASS",
+    "python_tests": "607/607",
+    "session_bridge_compile_decompile": "PASS",
+    "prx_probe_protocol_jobs": "PASS"
+  },
+  "bridge": {
+    "source_sha256": "b2377f0cd7b8d1455e323555da28954b0d53a990a418efe408864956bfb247f6",
+    "compiled_gscbin_sha256": "85f7ddd1d91a1fa8e3a1d06bee3104d80c72937473433465b65b27153b6e04ed",
+    "compiled_gscbin_bytes": 5903
+  },
+  "capture_kit": {
+    "files": "57/57",
+    "bytes": 541248,
+    "sha256": "7e680b92e451895e75f4dbe7a5324f62cce032da26cf808eacbf2f3971e91d29",
+    "artifact_id": 15140641180,
+    "url": "https://github.com/Vikik0/PS3-SCALE/actions/runs/45865170243/artifacts/15140641180"
+  },
+  "integration": {
+    "carrier_rope_cut_uses_notifyonplayercommand": true,
+    "original_mission_callsites_migrated": 0,
+    "shared_interactions_ready": "0/4"
+  },
+  "runtime_boundary": {
+    "physical_ps3_tested": false,
+    "native_second_campaign_local_client_proven": false,
+    "player_two": "NOT_PROVEN",
+    "retail_eboot_self_fastfile_modified": false
+  }
+}
