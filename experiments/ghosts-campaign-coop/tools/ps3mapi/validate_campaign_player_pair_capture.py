@@ -16,6 +16,7 @@ from typing import Any
 
 EXPECTED_TITLE_ID = "BLUS31270"
 EXPECTED_TITLE_UPDATE = "01.16"
+DEFAULT_MAX_SAMPLE_GAP_MS = 1000
 ADDRESS_RE = re.compile(r"^0x[0-9a-fA-F]{8,16}$")
 REQUIRED_PLAYER_FIELDS = (
     "entity_id",
@@ -38,6 +39,25 @@ def _address(value: Any) -> bool:
         isinstance(value, str)
         and ADDRESS_RE.fullmatch(value) is not None
         and int(value, 16) != 0
+    )
+
+
+def _is_explicit_pair_loss(observation: dict[str, Any]) -> bool:
+    """Return true only for an observed split-screen loss or sub-two-player array.
+
+    A malformed pointer, alias mismatch, or other structural validation error
+    is not evidence that the native pair disconnected and must not be used to
+    claim a reconnect/rebind cycle.
+    """
+    if observation.get("split_screen") is False:
+        return True
+    players = observation.get("players")
+    count = observation.get("player_array_count")
+    return (
+        type(count) is int
+        and count < 2
+        and isinstance(players, list)
+        and len(players) < 2
     )
 
 
@@ -123,7 +143,11 @@ def _valid_observation(observation: dict[str, Any]) -> tuple[bool, str, tuple | 
     return True, "valid_native_pair", signature
 
 
-def validate_capture(data: dict[str, Any], required_stable_samples: int = 5) -> dict[str, Any]:
+def validate_capture(
+    data: dict[str, Any],
+    required_stable_samples: int = 5,
+    max_sample_gap_ms: int = DEFAULT_MAX_SAMPLE_GAP_MS,
+) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError("capture root must be a JSON object")
     if data.get("schema_version") != 1:
@@ -140,6 +164,8 @@ def validate_capture(data: dict[str, Any], required_stable_samples: int = 5) -> 
         raise ValueError("evidence_source is required")
     if type(required_stable_samples) is not int or required_stable_samples < 2:
         raise ValueError("required_stable_samples must be an integer >= 2")
+    if type(max_sample_gap_ms) is not int or max_sample_gap_ms < 1:
+        raise ValueError("max_sample_gap_ms must be a positive integer")
 
     observations = data.get("observations")
     if not isinstance(observations, list) or not observations:
@@ -150,10 +176,11 @@ def validate_capture(data: dict[str, Any], required_stable_samples: int = 5) -> 
     current_run = 0
     best_run = 0
     best_signature = None
-    saw_gap = False
+    saw_explicit_pair_loss = False
     reconnect_run = 0
     reconnect_signature = None
     rejected = []
+    continuity_breaks = []
 
     for index, observation in enumerate(observations):
         if not isinstance(observation, dict):
@@ -163,6 +190,20 @@ def validate_capture(data: dict[str, Any], required_stable_samples: int = 5) -> 
             raise ValueError(f"observation {index} timestamp_ms must be a non-negative integer")
         if timestamp <= previous_timestamp:
             raise ValueError("observation timestamps must be strictly increasing")
+
+        if previous_timestamp >= 0:
+            sample_gap = timestamp - previous_timestamp
+            if sample_gap > max_sample_gap_ms:
+                continuity_breaks.append({
+                    "index": index,
+                    "timestamp_ms": timestamp,
+                    "gap_ms": sample_gap,
+                    "reason": "sample_gap_exceeded",
+                })
+                current_signature = None
+                current_run = 0
+                reconnect_signature = None
+                reconnect_run = 0
         previous_timestamp = timestamp
 
         if type(observation.get("split_screen")) is not bool:
@@ -176,8 +217,14 @@ def validate_capture(data: dict[str, Any], required_stable_samples: int = 5) -> 
 
         valid, reason, signature = _valid_observation(observation)
         if not valid:
-            rejected.append({"index": index, "timestamp_ms": timestamp, "reason": reason})
-            saw_gap = True
+            rejected.append({
+                "index": index,
+                "timestamp_ms": timestamp,
+                "reason": reason,
+                "explicit_pair_loss": _is_explicit_pair_loss(observation),
+            })
+            if _is_explicit_pair_loss(observation):
+                saw_explicit_pair_loss = True
             current_signature = None
             current_run = 0
             reconnect_signature = None
@@ -193,7 +240,7 @@ def validate_capture(data: dict[str, Any], required_stable_samples: int = 5) -> 
             best_run = current_run
             best_signature = signature
 
-        if saw_gap:
+        if saw_explicit_pair_loss:
             if signature == reconnect_signature:
                 reconnect_run += 1
             else:
@@ -202,6 +249,16 @@ def validate_capture(data: dict[str, Any], required_stable_samples: int = 5) -> 
 
     stable = best_run >= required_stable_samples
     reconnect = reconnect_run >= required_stable_samples
+    best_pair_mapping = []
+    if best_signature is not None:
+        for row in best_signature:
+            best_pair_mapping.append({
+                "local_client_index": row[0],
+                "controller_port": row[1],
+                "entity_id": row[2],
+                "role": "PRIMARY" if row[8] else "SECONDARY",
+            })
+
     return {
         "status": "PASS_STRUCTURAL_CAPTURE_VALIDATION" if stable else "INCOMPLETE_PAIR_OBSERVATION_DATA",
         "capture_id": data["capture_id"],
@@ -212,19 +269,26 @@ def validate_capture(data: dict[str, Any], required_stable_samples: int = 5) -> 
         "mode": data["mode"],
         "observation_count": len(observations),
         "required_stable_samples": required_stable_samples,
+        "max_sample_gap_ms": max_sample_gap_ms,
         "best_stable_run": best_run,
         "stable_pair_observation_validated": stable,
+        "explicit_pair_loss_observed": saw_explicit_pair_loss,
+        "reconnect_stable_run_after_pair_loss": reconnect_run,
         "auto_rebind_cycle_observed_in_supplied_data": reconnect,
         "native_local_client_fields_consistent": stable,
         "controller_to_player_mapping_fields_consistent": stable,
         "independent_camera_hud_fields_consistent": stable,
         "campaign_alias_fields_consistent": stable,
         "best_pair_signature": best_signature,
+        "best_pair_mapping": best_pair_mapping,
         "rejected_observations": rejected,
+        "continuity_breaks": continuity_breaks,
         "limitations": [
             "The validator checks supplied observations; it does not read PS3 memory or authenticate the operator's capture source.",
+            "A structural validation error is not treated as proof of a disconnect; reconnect requires an explicit split-screen loss or sub-two-player array observation.",
+            "Stable samples must be no more than max_sample_gap_ms apart; widely separated snapshots cannot be combined into one stable run.",
             "A passing pair capture does not by itself prove that the original mission handlers are safe to patch.",
-            "A reconnect cycle is reported separately and requires a gap followed by a new stable run.",
+            "A reconnect cycle is reported separately and requires an explicit pair-loss observation followed by a new stable run.",
         ],
     }
 
@@ -233,10 +297,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--capture", type=Path, required=True)
     parser.add_argument("--required-stable-samples", type=int, default=5)
+    parser.add_argument("--max-sample-gap-ms", type=int, default=DEFAULT_MAX_SAMPLE_GAP_MS)
     args = parser.parse_args(argv)
     try:
         data = json.loads(args.capture.read_text(encoding="utf-8"))
-        result = validate_capture(data, args.required_stable_samples)
+        result = validate_capture(
+            data,
+            required_stable_samples=args.required_stable_samples,
+            max_sample_gap_ms=args.max_sample_gap_ms,
+        )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
