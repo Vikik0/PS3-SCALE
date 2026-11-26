@@ -319,6 +319,7 @@ int main(void)
     assert(elf_hash == 0u);
     assert(serial[0] == '\0');
 
+    write_sector(path, 21, cnf_root, sizeof(cnf_root) - 1u);
     /* Root-level multi-extent BOOT ELF is assembled in directory-record order. */
     assert(loaded_elf == NULL);
     assert(ps3scale_ps2_iso_load_boot_elf(
