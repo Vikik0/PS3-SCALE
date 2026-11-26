@@ -69,7 +69,7 @@ class CampaignEventLockModelTests(unittest.TestCase):
         self.assertIn("level.ghc_campaign_session_ready", acquire)
         self.assertIn("ghc_campaign_native_pair_is_current()", acquire)
         self.assertIn("ghc_campaign_invalidate_local_session()", acquire)
-        self.assertIn("event_id < 0 || event_id > 15", acquire)
+        self.assertIn("ghc_campaign_event_lock_event_id_is_valid( event_id )", acquire)
         self.assertIn("event_lock_owner[event_id] != -1", acquire)
         self.assertIn("event_lock_active[var_0] != -1", acquire)
         self.assertIn("event_lock_complete[event_id]", acquire)
