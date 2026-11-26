@@ -134,9 +134,8 @@ int ps3scale_ps2_iso_read_serial(const char *iso_path,
         if (name_len > 0 && 33u + name_len <= rec_len) {
             name = rec + 33;
             if (!(name_len == 1 && (name[0] == 0 || name[0] == 1)) &&
-                name_len >= 11 &&
-                equal_ci_n((const char *)name, "SYSTEM.CNF", 10) &&
-                (name_len == 10 || name[10] == ';')) {
+                (name_len == 10 || (name_len > 10 && name[10] == ';')) &&
+                equal_ci_n((const char *)name, "SYSTEM.CNF", 10)) {
                 /* Ignore directory records; SYSTEM.CNF must be a file. */
                 if ((rec[25] & 0x02u) == 0) {
                     cnf_lba = read_le32(rec + 2);
