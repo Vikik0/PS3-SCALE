@@ -47,6 +47,11 @@ assert "to service_role" in migration
 # The public function validates bounded input and stable request IDs.
 assert 'request.method !== "POST"' in edge
 assert "12 * 1024" in edge
+assert "async function readBoundedBody" in edge
+assert "request.body.getReader()" in edge
+assert "await reader.cancel()" in edge
+assert 'new TextDecoder("utf-8", { fatal: true })' in edge
+assert "request.text()" not in edge
 assert "invalid_report_kind" in edge
 assert "valid_request_id_required" in edge
 assert "request_id" in edge
