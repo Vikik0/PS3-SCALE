@@ -1056,18 +1056,25 @@ ps2_enhancer_ui = section("static void draw_ps2_config_manager(void)",
                           "static void draw_fps_control(void)")
 for token in ("PS2 ENHANCER", "L2H PERFORMANCE (0x46)",
               "SHARPER PIXELS (0x44)", "FRAME PACING (0x48)",
-              "APPLY LOCAL PROFILE", "DOWNLOAD EXACT GAME CONFIG",
-              "BACK UP CURRENT CONFIG", "RESTORE SAVED BACKUP",
-              "60 FPS requires an exact per-game code patch",
+              "APPLY LOCAL PROFILE", "APPLY EXPERIMENTAL 60 FPS PATCH",
+              "DOWNLOAD EXACT GAME CONFIG", "BACK UP CURRENT CONFIG",
+              "RESTORE SAVED BACKUP",
+              "FPS patch needs exact serial + ELF hash.",
+              "60 FPS patch is experimental; it is not verified on hardware.",
               "XMB upscaler / smoothing are separate display settings."):
     assert token in ps2_enhancer_ui, f"Missing PS2 enhancer UI token: {token}"
 assert "ps2_config_ensure_backup" in src
 assert "ps3scale_ps2_config_store_stage" in src
 assert "PS3SCALE_PS2_CFG_FRAME_PACING" in src
+assert "ps3scale_ps2_iso_load_boot_elf" in src
+assert "ps3scale_ps2_elf_read_exec_word" in src
+assert "ps3scale_ps2_fps_patch_find" in src
+assert "ps3scale_ps2_config_append_patches" in src
+assert "apply_ps2_fps_patch();" in src
 ps2_input = section("} else if (g_screen == SCREEN_PS2_CONFIG) {",
                     "} else if (g_screen == SCREEN_FPS_CONTROL) {")
-assert "(g_ps2_config_manager_selection + 6) % 7" in ps2_input
-assert "(g_ps2_config_manager_selection + 1) % 7" in ps2_input
+assert "(g_ps2_config_manager_selection + 7) % 8" in ps2_input
+assert "(g_ps2_config_manager_selection + 1) % 8" in ps2_input
 assert "perform_ps2_config_manager_action();" in ps2_input
 assert "draw_rounded_rect(544.0f, 376.0f, 272.0f, 4.0f" in details_ui
 tools_ui = section("static void draw_tools(void)",
