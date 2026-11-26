@@ -396,3 +396,33 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - CI [#1594](https://github.com/Vikik0/PS3-SCALE/actions/runs/45724340069): **7/7 successful**, **561 Python tests**, **21/21 Event Lock C**, **10/10 parser C**, **12/12 loader C**, **14/14 session-monitor C**. Capture kit: 57/57 files, 538,042 bytes; artifact `15074350328`.
 
 **Runtime gate unchanged:** no real Campaign player-pair capture has been supplied. Native Player 2 and the four original shared interactions remain unproven (**0/4 ready**).
+
+
+### Phase 106 — harden Campaign player-pair evidence continuity
+
+- Reconnect evidence now requires an explicit split-screen loss or a player array with fewer than two entries; malformed pointers/aliases no longer count as disconnects.
+- Stable observations must be no more than 1,000 ms apart by default. The validator reports continuity breaks and the observed controller-port/local-client mapping.
+- CI [#1602](https://github.com/Vikik0/PS3-SCALE/actions/runs/45783029265): **7/7 successful**, **570 Python tests**, **16/16 session-monitor C**, **21/21 Event Lock C**, **10/10 parser C**, **12/12 loader C**. Capture kit: 57/57 files, 538,015 bytes; artifact `15098789457`.
+
+**Runtime gate unchanged:** no real Campaign player-pair capture has been supplied; Player 2 and the four original shared interactions remain unproven (**0/4 ready**).
+
+
+
+### Phase 107 — bind player-pair evidence to the exact Campaign SELF
+
+- Added `campaign_self_sha256` to the player-pair capture template and a binding helper that compares it with the exact Campaign `default.self` passed to the analyzer.
+- A mismatch fails before ELF reconstruction; a missing hash is reported as `NOT_PROVIDED`. A matching hash binds the file but does not authenticate capture provenance or advance the Player 2 gate.
+- CI [#1611](https://github.com/Vikik0/PS3-SCALE/actions/runs/45783943444): **7/7 successful**, **577 Python tests**, GSC compile/decompile, PRX bootstrap and capture metadata intake successful. Capture kit: 57/57 files, 538,015 bytes; artifact `15098789457`.
+
+**Runtime gate unchanged:** the native second Campaign Local Client remains unproven (**0/4 shared interactions ready**).
+
+
+
+### Phase 108 — serialize Campaign monitor shutdown and restart
+
+- Fixed a stop/restart race: `main()` no longer cancels a stop request after the watcher may already have exited its loop. It waits up to 2 seconds for the current watcher to finish and invalidate the session before touching aliases or rebinding; timeout returns fail-closed.
+- The start helper refuses to create a second watcher while the old one is stopping. The C state model now mirrors this and verifies that active locks are released while completed-event history is preserved.
+- CI [#1614](https://github.com/Vikik0/PS3-SCALE/actions/runs/45784597522): **7/7 successful**, **577 Python tests**, **16/16 session-monitor C**, **21/21 Event Lock C**, **10/10 parser C**, **12/12 loader C**, and **10,030 host-runtime checks with 0 failures**. Capture kit: 57/57 files, 538,149 bytes; SHA-256 `67244545d292af929b87b5dc841f3e605e1f95ed0220e6622e12e7a7bfa470e4`; artifact `15099792589`.
+
+**Runtime gate unchanged:** this is compiled and host-tested lifecycle logic, not a physical PS3 test. The second native Campaign Local Client and all four original shared interactions remain unproven (**0/4 ready**).
+
