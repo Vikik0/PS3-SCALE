@@ -12,6 +12,7 @@ from tools.player_aware_trigger_helpers import (
     patch_black_ice_source,
     patch_player_scripted_anim_source,
     verify_pinned_source,
+    verify_shared_source_pair,
     write_bundle,
 )
 
@@ -93,17 +94,11 @@ waittill_trigger( var_0, var_1, var_2, var_3, var_4, var_5, var_6 )
             verify_pinned_source(data, EXPECTED_PLAYER_SCRIPTED_ANIM_UTIL_SHA256, "fixture")
         self.assertEqual(len(hashlib.sha256(data).hexdigest()), 64)
 
-    def test_bundle_rejects_mismatched_carrier_cornered_helpers(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            black = root / "black_ice_util.gsc"
-            carrier = root / "carrier_player_scripted_anim_util.gsc"
-            cornered = root / "cornered_player_scripted_anim_util.gsc"
-            black.write_text(BLACK_ICE_FIXTURE)
-            carrier.write_text(PLAYER_SCRIPTED_ANIM_FIXTURE)
-            cornered.write_text(PLAYER_SCRIPTED_ANIM_FIXTURE + "// changed\n")
-            with self.assertRaises(PatchError):
-                build_bundle(black, carrier, cornered)
+    def test_shared_helper_pair_requires_identical_source_bytes(self):
+        source = b"same pinned helper"
+        verify_shared_source_pair(source, source)
+        with self.assertRaises(PatchError):
+            verify_shared_source_pair(source, source + b"changed")
 
     def test_write_bundle_creates_manifest_and_distinct_mission_outputs(self):
         with tempfile.TemporaryDirectory() as temp:

@@ -171,6 +171,10 @@ def patch_player_scripted_anim_source(source: str) -> str:
     return result
 
 
+def verify_shared_source_pair(carrier_data: bytes, cornered_data: bytes) -> None:
+    verify_shared_source_pair(carrier_data, cornered_data)
+
+
 def build_bundle(
     black_ice_util_path: Path,
     carrier_player_scripted_anim_path: Path,
