@@ -36,9 +36,16 @@ PLAYER_SCRIPTED_ANIM_FIXTURE = """waittill_trigger( var_0, var_1, var_2, var_3, 
 
 _trigger_handle_triggering( var_0 )
 {
-    self waittill( "trigger" );
-    if ( !level.player ismeleeing() )
-        self notify( "valid_trigger" );
+    self endon( "death" );
+
+    for (;;)
+    {
+        self waittill( "trigger" );
+        if ( !level.player ismeleeing() )
+            break;
+    }
+
+    self notify( "valid_trigger" );
 }
 """
 
