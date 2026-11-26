@@ -155,3 +155,5 @@ assert "worker_active && worker.operation != LOBBY_WORK_LIST" in source
 assert "Finishing the pending room refresh..." not in source
 assert "Finishing the pending room refresh..." not in source
 assert "if (session.token[0] && curl_initialized)" in source
+assert "cb_online_mark_game_started(&session, error" not in source
+assert source.count("cb_online_mark_game_started(&session, &view, error") == 2
