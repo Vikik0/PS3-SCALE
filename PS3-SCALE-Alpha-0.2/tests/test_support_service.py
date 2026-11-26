@@ -88,7 +88,7 @@ assert "Do not create this project in the existing `VIKIK` organization" in read
 assert "Nano compute at $0/month" in readme
 assert "Never fall back to creating the project in `VIKIK`." in readme
 assert "separate Supabase Free Plan organization" in root_readme
-assert "separate Supabase Free Plan organization" in arabic_readme
+assert "مؤسسة Supabase منفصلة على الخطة المجانية Free Plan" in arabic_readme
 assert "separate Free Plan organization" in build_status
 assert "Never create this backend under VIKIK." in build_status
 assert "Do not reuse" in readme
