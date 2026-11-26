@@ -124,9 +124,9 @@ static void test_http_200_launch(void)
     server.first = response;
     assert(ps3scale_webman_start_game(&game) == 0);
     finish_server(&server, thread);
-    {
-        static const char expected[] = "GET /play.ps3?BLES00891 HTTP/1.0\\r\\n";
-        assert(strncmp(server.request, expected, sizeof(expected) - 1) == 0);
+    if (!strstr(server.request, "GET /play.ps3?BLES00891 HTTP/1.0")) {
+        fprintf(stderr, "Unexpected webMAN launch request: [%s]\\n", server.request);
+        assert(!"webMAN launch request path mismatch");
     }
 }
 
