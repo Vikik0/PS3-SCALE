@@ -386,7 +386,7 @@ static int find_iso_path(FILE *fp, uint32_t root_lba, uint32_t root_size,
     memcpy(path_copy, path, path_len + 1u);
 
     /* SYSTEM.CNF paths are relative to the disc root after cdrom0:. */
-    if (path_copy[0] == '/' || path_copy[0] == '\\\\')
+    if (path_copy[0] == '/' || path_copy[0] == '\\')
         return -1;
 
     component = path_copy;
@@ -403,7 +403,7 @@ static int find_iso_path(FILE *fp, uint32_t root_lba, uint32_t root_size,
             *separator = '\\0';
         if (!component[0] || strcmp(component, ".") == 0 ||
             strcmp(component, "..") == 0 || strchr(component, ':') ||
-            strchr(component, '\\\\') || ++depth > 16u)
+            strchr(component, '\\') || ++depth > 16u)
             return -1;
 
         if (directory_size == 0u ||
