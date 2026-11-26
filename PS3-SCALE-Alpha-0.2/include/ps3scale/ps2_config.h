@@ -12,6 +12,13 @@
 
 #define PS3SCALE_PS2_CFG_VSYNC_MODE_NO_IPU 1u
 #define PS3SCALE_PS2_CFG_VSYNC_DELAY_20MS  20000u
+#define PS3SCALE_PS2_CONFIG_MAX_CODE_PATCHES 32u
+
+typedef struct {
+    uint32_t ee_address;
+    uint32_t original_word;
+    uint32_t replacement_word;
+} ps3scale_ps2_code_patch_t;
 
 /*
  * Build a conservative ps2_netemu CONFIG template in memory.
@@ -32,6 +39,14 @@
  */
 int ps3scale_ps2_config_build(uint8_t *out, size_t capacity,
                               unsigned flags, size_t *out_size);
+int ps3scale_ps2_config_build_with_patches(
+    uint8_t *out, size_t capacity, unsigned flags,
+    const ps3scale_ps2_code_patch_t *patches, size_t patch_count,
+    size_t *out_size);
+int ps3scale_ps2_config_append_patches(
+    const uint8_t *base, size_t base_size,
+    const ps3scale_ps2_code_patch_t *patches, size_t patch_count,
+    uint8_t *out, size_t capacity, size_t *out_size);
 
 /* Validates only the restricted CONFIG format emitted by the builder above. */
 int ps3scale_ps2_config_validate_generated(const uint8_t *data, size_t size);
