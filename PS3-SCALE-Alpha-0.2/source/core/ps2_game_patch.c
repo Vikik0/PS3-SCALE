@@ -38,6 +38,69 @@ static const ps3scale_ps2_patch_word_t p480_george_jungle[]={
  {0x0038665Cu,0x24110000u},{0x00386660u,0x24120050u},{0x0038666Cu,0x24130001u}};
 static const ps3scale_ps2_patch_word_t p480_syberia[]={
  {0x001E6314u,0x24060050u}};
+
+/* Additional source-pinned 16:9 widescreen candidates. */
+static const ps3scale_ps2_patch_word_t ws_7sins[]={
+ {0x00226ABCu,0x3C02402Au},{0x00226AC0u,0x3442AAABu},
+ {0x00226AC4u,0x44820800u},{0x00226AE4u,0x080BF5C4u},
+ {0x002FD710u,0x46000803u},{0x002FD714u,0x3C013F40u},
+ {0x002FD718u,0x4481F000u},{0x002FD71Cu,0x461E0002u},
+ {0x002FD720u,0x08089ABAu}};
+static const ps3scale_ps2_patch_word_t ws_shadow_hearts[]={
+ {0x0028D4F0u,0x3C043F40u},{0x00282394u,0x3C023F40u},
+ {0x0039FE08u,0x3C023F40u},{0x003D5704u,0x3C023F40u},
+ {0x003EEC44u,0x3C023F40u}};
+static const ps3scale_ps2_patch_word_t ws_tmnt_battle_nexus[]={
+ {0x00234710u,0x460D6302u},{0x00234714u,0x460D6B42u}};
+static const ps3scale_ps2_patch_word_t ws_obscure[]={
+ {0x00249790u,0x3C023F19u},{0x00249794u,0x34428000u},
+ {0x00249798u,0x44820000u},{0x001C0794u,0x3C033F2Bu},
+ {0x0030FE74u,0x24067100u},{0x0030FECCu,0x24058F00u}};
+static const ps3scale_ps2_patch_word_t ws_armored_core3[]={
+ {0x002E8C7Cu,0x3C013F40u},{0x002E8C88u,0x44810000u},
+ {0x002E8C8Cu,0x4600C602u},{0x0026DBCCu,0x3C0143D6u}};
+static const ps3scale_ps2_patch_word_t ws_bionicle[]={
+ {0x0010C248u,0x3C014370u},{0x0010C088u,0x3C013FAAu}};
+static const ps3scale_ps2_patch_word_t ws_splinter_cell_da[]={
+ {0x001F483Cu,0x3C0D3F40u}};
+static const ps3scale_ps2_patch_word_t ws_lapucelle[]={
+ {0x00108994u,0x3C013F40u},{0x00108998u,0x44810000u},
+ {0x001089A0u,0x4600C602u},{0x00136728u,0x3C033FC0u},
+ {0x0013673Cu,0x3C023FC0u},{0x00136750u,0x3C023FC0u},
+ {0x00136764u,0x3C063FC0u}};
+
+/* Additional source-pinned 480p progressive-output candidates. */
+static const ps3scale_ps2_patch_word_t p480_crash_titans_pal_m[]={
+ {0x0057E904u,0x3C050000u},{0x0057E90Cu,0x3C060050u},
+ {0x0057E914u,0x3C070001u}};
+static const ps3scale_ps2_patch_word_t p480_moh_european_pal_m[]={
+ {0x0044200Cu,0x24110000u},{0x00442010u,0x24120050u},
+ {0x0044201Cu,0x24130001u}};
+static const ps3scale_ps2_patch_word_t p480_spongebob_bfbb_pal[]={
+ {0x0026435Cu,0x24050000u},{0x00264360u,0x24060050u},
+ {0x002636A8u,0x24060050u},{0x002636ACu,0x24050000u},
+ {0x00102254u,0x3C090010u}};
+static const ps3scale_ps2_patch_word_t p480_star_wars_iii_pal[]={
+ {0x00110704u,0x24110000u},{0x00110708u,0x24120050u},
+ {0x00110714u,0x24130001u}};
+static const ps3scale_ps2_patch_word_t p480_commandos[]={
+ {0x00100DA0u,0x34050050u},{0x00100DA4u,0x24030002u},
+ {0x00100DA8u,0x0000000Cu},{0x00100DACu,0x03E00008u}};
+static const ps3scale_ps2_patch_word_t p480_punisher_pal_si[]={
+ {0x001A0C14u,0x3C050000u},{0x001A0C1Cu,0x3C060050u},
+ {0x001A0C24u,0x3C070001u}};
+static const ps3scale_ps2_patch_word_t p480_driver_parallel_lines[]={
+ {0x004B5790u,0x00000002u},{0x004B03C8u,0x00000003u},
+ {0x00403588u,0x00000000u}};
+static const ps3scale_ps2_patch_word_t p480_killswitch[]={
+ {0x003513A4u,0x10620005u},{0x0029E8D4u,0x24050280u},
+ {0x0029E8D8u,0x240601C0u}};
+static const ps3scale_ps2_patch_word_t p480_space_chimps[]={
+ {0x004213B4u,0x24110000u},{0x004213B8u,0x24120050u},
+ {0x004213C4u,0x24130001u}};
+static const ps3scale_ps2_patch_word_t p480_cold_fear[]={
+ {0x0025FA24u,0x10620005u},{0x001449C8u,0x240301C0u}};
+
 #define PATCH(s,h,t,f,k,w) {s,h,t,PCSX2_PATCH_URL(f),k,w,sizeof(w)/sizeof((w)[0])}
 static const ps3scale_ps2_game_patch_t g_patches[]={
  PATCH("SLUS_212.60",0xB0AE2D8Au,"Ed, Edd n Eddy: The Mis-Edventures (NTSC-U)","SLUS-21260_B0AE2D8A.pnach",PS3SCALE_PS2_PATCH_FPS,fps_ed),
@@ -57,7 +120,28 @@ static const ps3scale_ps2_game_patch_t g_patches[]={
  PATCH("SLUS_206.96",0xFCC09959u,"Jimmy Neutron: Jet Fusion (NTSC-U)","SLUS-20696_FCC09959.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_jimmy),
  PATCH("SLES_548.43",0xAEFD7D25u,"Crash of the Titans (PAL-R)","SLES-54843_AEFD7D25.pnach",PS3SCALE_PS2_PATCH_480P,p480_crash_titans),
  PATCH("SLES_549.75",0x278B7BEAu,"George of the Jungle (PAL-M)","SLES-54975_278B7BEA.pnach",PS3SCALE_PS2_PATCH_480P,p480_george_jungle),
- PATCH("SLES_513.93",0xD1ACD489u,"Syberia (PAL)","SLES-51393_D1ACD489.pnach",PS3SCALE_PS2_PATCH_480P,p480_syberia)
+ PATCH("SLES_513.93",0xD1ACD489u,"Syberia (PAL)","SLES-51393_D1ACD489.pnach",PS3SCALE_PS2_PATCH_480P,p480_syberia),
+ /* 16:9 widescreen — pinned PCSX2 word-only sections. */
+ PATCH("SLES_532.80",0x52DEB87Bu,"7 Sins (PAL-M)","SLES-53280_52DEB87B.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_7sins),
+ PATCH("SLUS_203.47",0x8BE3D7B2u,"Shadow Hearts (NTSC-U)","SLUS-20347_8BE3D7B2.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_shadow_hearts),
+ PATCH("SLES_530.17",0xC7375C85u,"Teenage Mutant Ninja Turtles 2: Battle Nexus (PAL-M5)","SLES-53017_C7375C85.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_tmnt_battle_nexus),
+ PATCH("SLUS_207.77",0xA06047D6u,"Obscure (NTSC-U)","SLUS-20777_A06047D6.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_obscure),
+ PATCH("SLES_513.99",0xDE5AF9A8u,"Armored Core 3 (PAL-E)","SLES-51399_DE5AF9A8.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_armored_core3),
+ PATCH("SLUS_208.18",0x8371B27Bu,"Bionicle (NTSC-U)","SLUS-20818_8371B27B.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_bionicle),
+ PATCH("SLES_538.27",0x6BD0E9C2u,"Tom Clancy's Splinter Cell: Double Agent (PAL-M3)","SLES-53827_6BD0E9C2.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_splinter_cell_da),
+ PATCH("SLES_529.78",0x474EC389u,"La Pucelle: Tactics (PAL)","SLES-52978_474EC389.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_lapucelle),
+ /* 480p progressive output — separate from FPS and widescreen. */
+ PATCH("SLES_548.41",0xECA6BFC5u,"Crash of the Titans (PAL-M)","SLES-54841_ECA6BFC5.pnach",PS3SCALE_PS2_PATCH_480P,p480_crash_titans_pal_m),
+ PATCH("SLES_533.32",0xBB70FFB9u,"Medal of Honor: European Assault (PAL-M)","SLES-53332_BB70FFB9.pnach",PS3SCALE_PS2_PATCH_480P,p480_moh_european_pal_m),
+ PATCH("SLES_536.23",0x9ADA98B4u,"SpongeBob SquarePants: Battle for Bikini Bottom (PAL-F)","SLES-53623_9ADA98B4.pnach",PS3SCALE_PS2_PATCH_480P,p480_spongebob_bfbb_pal),
+ PATCH("SLES_531.55",0x99AD19EEu,"Star Wars: Episode III - Revenge of the Sith (PAL-M3)","SLES-53155_99AD19EE.pnach",PS3SCALE_PS2_PATCH_480P,p480_star_wars_iii_pal),
+ PATCH("SLES_527.68",0x5E1161DFu,"Commandos: Strike Force (PAL-M)","SLES-52768_5E1161DF.pnach",PS3SCALE_PS2_PATCH_480P,p480_commandos),
+ PATCH("SLES_530.49",0x5AC5D875u,"The Punisher (PAL-S-I)","SLES-53049_5AC5D875.pnach",PS3SCALE_PS2_PATCH_480P,p480_punisher_pal_si),
+ PATCH("SLES_540.27",0xD720770Du,"Driver: Parallel Lines (PAL-M)","SLES-54027_D720770D.pnach",PS3SCALE_PS2_PATCH_480P,p480_driver_parallel_lines),
+ PATCH("SCES_521.24",0x91A65EAEu,"kill.switch (PAL-M)","SCES-52124_91A65EAE.pnach",PS3SCALE_PS2_PATCH_480P,p480_killswitch),
+ PATCH("SLES_553.40",0xC423A2DCu,"Space Chimps (PAL-M)","SLES-55340_C423A2DC.pnach",PS3SCALE_PS2_PATCH_480P,p480_space_chimps),
+ PATCH("SLES_531.58",0xE38A0AB6u,"Cold Fear (PAL-M)","SLES-53158_E38A0AB6.pnach",PS3SCALE_PS2_PATCH_480P,p480_cold_fear)
+
 };
 const ps3scale_ps2_game_patch_t *ps3scale_ps2_game_patch_find(
  const char *serial,uint32_t hash,ps3scale_ps2_patch_kind_t kind)

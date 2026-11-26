@@ -69,7 +69,7 @@ The first FPS candidate is **Ed, Edd n Eddy: The Mis-Edventures (NTSC-U)** from 
 - Patch: `patch=1,EE,00161860,word,2C620000`
 - The source patch is pinned to [PCSX2 patch repository commit 1fd9810](https://github.com/PCSX2/pcsx2_patches/blob/1fd98102b8e2fffe3e0c29aab55339d48af0ffe5/patches/SLUS-21260_B0AE2D8A.pnach).
 
-The pinned PCSX2 source files also contain exact 16:9 widescreen sections for four of these games. SCALE converts only their `patch=1,EE,...,word,...` entries into guarded netemu `0x0A` lists, reading every original word from the exact matched boot ELF:
+The pinned PCSX2 source files also contain exact 16:9 widescreen sections for twelve titles. SCALE converts only their `patch=1,EE,...,word,...` entries into guarded netemu `0x0A` lists, reading every original word from the exact matched boot ELF:
 
 | PS2 title | Serial | ELF hash | 16:9 writes |
 |---|---|---:|---:|
@@ -77,20 +77,38 @@ The pinned PCSX2 source files also contain exact 16:9 widescreen sections for fo
 | Teen Titans | SLUS_211.83 | E1F17139 | 13 |
 | Disney's Kim Possible - What's the Switch | SLUS_214.37 | 86B490D1 | 7 |
 | Jimmy Neutron: Jet Fusion | SLUS_206.96 | FCC09959 | 3 |
+| 7 Sins (PAL-M) | SLES_532.80 | 52DEB87B | 9 |
+| Shadow Hearts (NTSC-U) | SLUS_203.47 | 8BE3D7B2 | 5 |
+| Teenage Mutant Ninja Turtles 2: Battle Nexus (PAL-M5) | SLES_530.17 | C7375C85 | 2 |
+| Obscure (NTSC-U) | SLUS_207.77 | A06047D6 | 6 |
+| Armored Core 3 (PAL-E) | SLES_513.99 | DE5AF9A8 | 4 |
+| Bionicle (NTSC-U) | SLUS_208.18 | 8371B27B | 2 |
+| Tom Clancy's Splinter Cell: Double Agent (PAL-M3) | SLES_538.27 | 6BD0E9C2 | 1 |
+| La Pucelle: Tactics (PAL) | SLES_529.78 | 474EC389 | 7 |
 
 These are aspect-ratio/game-camera patches, not HD texture replacements or native-resolution upscaling. They remain experimental until tested on the target PS3; the ISO is never rewritten.
 
 ### 480p progressive-output patches
 
-The pinned PCSX2 commit also contains simple word-only 480p sections for three PAL titles. SCALE adds these as a separate exact-match patch type:
+The pinned PCSX2 commit also contains simple word-only 480p sections for thirteen PAL titles. SCALE adds these as a separate exact-match patch type:
 
 | PS2 title | Serial | ELF hash | EE word writes |
 |---|---|---:|---:|
 | Crash of the Titans (PAL-R) | SLES_548.43 | AEFD7D25 | 3 |
 | George of the Jungle (PAL-M) | SLES_549.75 | 278B7BEA | 3 |
 | Syberia (PAL) | SLES_513.93 | D1ACD489 | 1 |
+| Crash of the Titans (PAL-M) | SLES_548.41 | ECA6BFC5 | 3 |
+| Medal of Honor: European Assault (PAL-M) | SLES_533.32 | BB70FFB9 | 3 |
+| SpongeBob SquarePants: Battle for Bikini Bottom (PAL-F) | SLES_536.23 | 9ADA98B4 | 5 |
+| Star Wars: Episode III - Revenge of the Sith (PAL-M3) | SLES_531.55 | 99AD19EE | 3 |
+| Commandos: Strike Force (PAL-M) | SLES_527.68 | 5E1161DF | 4 |
+| The Punisher (PAL-S-I) | SLES_530.49 | 5AC5D875 | 3 |
+| Driver: Parallel Lines (PAL-M) | SLES_540.27 | D720770D | 3 |
+| kill.switch (PAL-M) | SCES_521.24 | 91A65EAE | 3 |
+| Space Chimps (PAL-M) | SLES_553.40 | C423A2DC | 3 |
+| Cold Fear (PAL-M) | SLES_531.58 | E38A0AB6 | 2 |
 
-Only `word` writes are converted; files using `extended`, byte writes or conditional runtime codes are excluded. This selects a 480p game mode where the title supports it; the PS3 XMB upscaler can then scale the output to the selected display mode. It is not a native 720p/1080p renderer, and some titles may show offset or FMV issues, so test per title and restore the backup if needed.
+Only `word` writes are converted; files using `extended`, byte writes or conditional runtime codes are excluded. The kill.switch source notes that FMVs remain PAL even when the 480p startup mode is selected. This selects a 480p game mode where the title supports it; the PS3 XMB upscaler can then scale the output to the selected display mode. It is not a native 720p/1080p renderer, and some titles may show offset or FMV issues, so test per title and restore the backup if needed.
 
 PCSX2's patch filename hash is not standard CRC32: its game ELF hash is the XOR of little-endian 32-bit words across the boot ELF. PS3 SCALE resolves the BOOT/BOOT2 path from SYSTEM.CNF through nested ISO9660 directories, computes this same hash, and reads the original word only from a file-backed executable MIPS ELF segment. The converter can then create a netemu `0x0A` replacement entry with the exact original word as a guard.
 
@@ -125,13 +143,14 @@ Physical-console acceptance criteria and the per-title result register are maint
 1. Build a per-title validation matrix for 60 FPS, 16:9, 480p/Y-fix, FMV playback and controller behavior.
 2. Add only source-pinned, exact serial + ELF-hash FPS, widescreen and 480p patches that map safely to netemu `0x0A`; reject runtime writes, extended codes and emulator-specific behavior.
 3. Test each candidate on the actual PS3 Slim; record frame rate, output mode, gameplay timing, audio, cutscenes and stability.
-5. Expand the catalogue only after physical-console testing, and keep unsupported revisions disabled.
-6. Never advertise 60 FPS unless the game itself sustains the target rate without broken physics, audio, cutscenes or timing.
+4. Expand the catalogue only after physical-console testing, and keep unsupported revisions disabled.
+5. Never advertise 60 FPS unless the game itself sustains the target rate without broken physics, audio, cutscenes or timing.
 
 ## References
 
 - [PS3 Developer Wiki — PS2 Emulation](https://www.psdevwiki.com/ps3/PS2_Emulation)
 - [PS3 Developer Wiki — PS2 CONFIG command reference](https://www.psdevwiki.com/ps3/PS2_Emulation/PS2_Config_Commands)
+- [webMAN MOD — ps2_netemu CONFIG command details](https://github.com/aldostools/webMAN-MOD/blob/6bd4425229544e60c5c8cfdcadb664dfb163d9f3/_Projects_/tools/ps2_netemu_config_commands.html)
 - [PS3 Developer Wiki — official PS2 CONFIG examples](https://www.psdevwiki.com/ps3/PS2_Official_Configs)
 - [PS3 Classics — CONFIG guide](https://github.com/ps3classics/ps2/blob/main/config-guide.html)
 - [PS3 Classics — compatibility resources](https://ps3classics.github.io/ps2/)

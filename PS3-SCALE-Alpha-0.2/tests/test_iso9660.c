@@ -311,6 +311,49 @@ int main(void)
         patch=ps3scale_ps2_game_patch_find("SLES_513.93",0xD1ACD489u,PS3SCALE_PS2_PATCH_480P);
         assert(patch && patch->word_count == 1u);
         assert(ps3scale_ps2_game_patch_find("SLES_548.43",0xAEFD7D24u,PS3SCALE_PS2_PATCH_480P)==NULL);
+
+        /* New source-pinned 16:9 catalogue entries. */
+        patch=ps3scale_ps2_game_patch_find("SLES_532.80",0x52DEB87Bu,PS3SCALE_PS2_PATCH_WIDESCREEN);
+        assert(patch && patch->word_count==9u);
+        patch=ps3scale_ps2_game_patch_find("SLUS_203.47",0x8BE3D7B2u,PS3SCALE_PS2_PATCH_WIDESCREEN);
+        assert(patch && patch->word_count==5u);
+        patch=ps3scale_ps2_game_patch_find("SLES_530.17",0xC7375C85u,PS3SCALE_PS2_PATCH_WIDESCREEN);
+        assert(patch && patch->word_count==2u);
+        patch=ps3scale_ps2_game_patch_find("SLUS_207.77",0xA06047D6u,PS3SCALE_PS2_PATCH_WIDESCREEN);
+        assert(patch && patch->word_count==6u);
+        patch=ps3scale_ps2_game_patch_find("SLES_513.99",0xDE5AF9A8u,PS3SCALE_PS2_PATCH_WIDESCREEN);
+        assert(patch && patch->word_count==4u);
+        patch=ps3scale_ps2_game_patch_find("SLUS_208.18",0x8371B27Bu,PS3SCALE_PS2_PATCH_WIDESCREEN);
+        assert(patch && patch->word_count==2u);
+        patch=ps3scale_ps2_game_patch_find("SLES_538.27",0x6BD0E9C2u,PS3SCALE_PS2_PATCH_WIDESCREEN);
+        assert(patch && patch->word_count==1u);
+        patch=ps3scale_ps2_game_patch_find("SLES_529.78",0x474EC389u,PS3SCALE_PS2_PATCH_WIDESCREEN);
+        assert(patch && patch->word_count==7u);
+        assert(ps3scale_ps2_game_patch_find("SLES_532.80",0x52DEB87Cu,PS3SCALE_PS2_PATCH_WIDESCREEN)==NULL);
+
+        /* New source-pinned 480p catalogue entries. */
+        patch=ps3scale_ps2_game_patch_find("SLES_548.41",0xECA6BFC5u,PS3SCALE_PS2_PATCH_480P);
+        assert(patch && patch->word_count==3u);
+        patch=ps3scale_ps2_game_patch_find("SLES_533.32",0xBB70FFB9u,PS3SCALE_PS2_PATCH_480P);
+        assert(patch && patch->word_count==3u);
+        patch=ps3scale_ps2_game_patch_find("SLES_536.23",0x9ADA98B4u,PS3SCALE_PS2_PATCH_480P);
+        assert(patch && patch->word_count==5u);
+        patch=ps3scale_ps2_game_patch_find("SLES_531.55",0x99AD19EEu,PS3SCALE_PS2_PATCH_480P);
+        assert(patch && patch->word_count==3u);
+        patch=ps3scale_ps2_game_patch_find("SLES_527.68",0x5E1161DFu,PS3SCALE_PS2_PATCH_480P);
+        assert(patch && patch->word_count==4u);
+        patch=ps3scale_ps2_game_patch_find("SLES_530.49",0x5AC5D875u,PS3SCALE_PS2_PATCH_480P);
+        assert(patch && patch->word_count==3u);
+        patch=ps3scale_ps2_game_patch_find("SLES_540.27",0xD720770Du,PS3SCALE_PS2_PATCH_480P);
+        assert(patch && patch->word_count==3u);
+        patch=ps3scale_ps2_game_patch_find("SCES_521.24",0x91A65EAEu,PS3SCALE_PS2_PATCH_480P);
+        assert(patch && patch->word_count==3u);
+        patch=ps3scale_ps2_game_patch_find("SLES_553.40",0xC423A2DCu,PS3SCALE_PS2_PATCH_480P);
+        assert(patch && patch->word_count==3u);
+        patch=ps3scale_ps2_game_patch_find("SLES_531.58",0xE38A0AB6u,PS3SCALE_PS2_PATCH_480P);
+        assert(patch && patch->word_count==2u);
+        assert(ps3scale_ps2_game_patch_find("SLES_548.41",0xECA6BFC4u,PS3SCALE_PS2_PATCH_480P)==NULL);
+
         assert(ps3scale_ps2_game_patch_find("SLUS_203.49",0x10B1F370u,(ps3scale_ps2_patch_kind_t)99)==NULL);
     }
     free(loaded_elf);
