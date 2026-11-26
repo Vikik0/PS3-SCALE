@@ -119,7 +119,7 @@ body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#343
         <section id="battleMenu" class="menu-screen" hidden>
           <div class="group">
             <div class="group-label">JOIN</div>
-            <button class="menu-option" onclick="anyBattle()">ANY BATTLE</button>
+            <button id="anyBattleBtn" class="menu-option" onclick="anyBattle()">ANY BATTLE</button>
             <button class="menu-option" onclick="focusCode()">BATTLE BY CODE</button>
             <div class="code-row"><input id="joinCode" maxlength="6" placeholder="ABC234" autocomplete="off" aria-label="Six-character battle code"><button id="joinBtn" class="small-button" onclick="joinRoom()">JOIN</button></div>
             <div id="joinHint" class="muted" role="status" aria-live="polite" style="font-size:11px;text-align:center">Enter the six-character code from your friend.</div>
@@ -175,7 +175,7 @@ body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#343
 <input id="privateRoom" type="checkbox" hidden>
 
 <script>
-const state={token:"",code:"",player:null,room:null,ready:false,poll:null,heartbeat:null,heartbeatInFlight:false,sessionEpoch:0,refreshInFlight:null,refreshQueued:false,roomsRequestId:0,screen:"main",menuIndex:0};
+const state={token:"",code:"",player:null,room:null,ready:false,poll:null,heartbeat:null,heartbeatInFlight:false,entryInFlight:false,sessionEpoch:0,refreshInFlight:null,refreshQueued:false,roomsRequestId:0,screen:"main",menuIndex:0};
 const $=id=>document.getElementById(id);
 const screenIds={main:"mainMenu",battle:"battleMenu",options:"optionsMenu"};
 function setHealth(ok,text){$("healthDot").className="dot"+(ok?" ok":"");$("healthText").textContent=text;}
@@ -244,6 +244,10 @@ document.addEventListener("keydown",event=>{
   }
 });
 function displayName(){return $("displayName").value.trim().slice(0,20)||"Guest";}
+function setEntryBusy(busy){
+  state.entryInFlight=busy;
+  ["anyBattleBtn","joinBtn","publicBtn","privateBtn"].forEach(id=>{const button=$(id);if(button)button.disabled=busy;});
+}
 async function api(path,method="GET",body=null,auth=true,authToken=state.token){
   const headers={"Content-Type":"application/json"};
   if(auth&&authToken)headers.Authorization="Bearer "+authToken;
@@ -263,20 +267,25 @@ async function checkHealth(){
 function createPublicRoom(){$("privateRoom").checked=false;createRoom();}
 function createPrivateRoom(){$("privateRoom").checked=true;createRoom();}
 async function createRoom(){
-  $("publicBtn").disabled=true;$("privateBtn").disabled=true;
+  if(state.entryInFlight)return;
+  setEntryBusy(true);
   try{const data=await api("/api/rooms","POST",{action:"create",displayName:displayName(),isPrivate:$("privateRoom").checked},false);enterRoom(data);}
   catch(e){showNotice("Could not create battle: "+e.message,true);}
-  finally{$("publicBtn").disabled=false;$("privateBtn").disabled=false;}
+  finally{setEntryBusy(false);}
 }
 async function anyBattle(){
+  if(state.entryInFlight)return;
+  setEntryBusy(true);
   try{const data=await api("/api/rooms","POST",{action:"any",displayName:displayName()},false);enterRoom(data);}
   catch(e){$("joinHint").textContent=e.message;}
+  finally{setEntryBusy(false);}
 }
 async function joinRoom(){
-  $("joinBtn").disabled=true;
+  if(state.entryInFlight)return;
+  setEntryBusy(true);
   try{const code=$("joinCode").value.trim().toUpperCase();const data=await api("/api/rooms","POST",{action:"join",code,displayName:displayName()},false);enterRoom(data);}
   catch(e){$("joinHint").textContent=e.message;}
-  finally{$("joinBtn").disabled=false;}
+  finally{setEntryBusy(false);}
 }
 function clearRoomTimers(){
   clearInterval(state.poll);clearInterval(state.heartbeat);
