@@ -35,13 +35,12 @@ int cb_game_build_argv(const char *content_path, int is_host,
         }
         argv[used++] = "--nick";
         argv[used++] = nickname;
-    } else {
-        argv[used++] = "--menu";
-        argv[used++] = "--nick";
-        argv[used++] = nickname;
-        argv[used++] = "--port";
-        argv[used++] = CB_GAME_NETPLAY_PORT;
     }
+    /*
+     * Local single-player launch: argv[0] is the CUE path. Do not pass
+     * --menu here; RetroArch's --menu option intentionally starts without
+     * loading content, which would leave Crash Bash unopened.
+     */
 
     if (used >= capacity) return -1;
     argv[used] = NULL;
