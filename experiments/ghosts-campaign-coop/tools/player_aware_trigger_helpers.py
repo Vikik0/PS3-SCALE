@@ -156,8 +156,8 @@ def patch_player_scripted_anim_source(source: str) -> str:
         raise PatchError("expected one trigger event wait in _trigger_handle_triggering")
     trigger_helper = trigger_helper.replace(
         trigger_wait,
-        '        self waittill( "trigger", var_7 );\\n'
-        '        if ( !isdefined( var_7 ) || var_7 != player )\\n'
+        '        self waittill( "trigger", var_7 );\n'
+        '        if ( !isdefined( var_7 ) || var_7 != player )\n'
         '            continue;',
         1,
     )
