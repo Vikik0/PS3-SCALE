@@ -48,6 +48,7 @@ The PS2 Enhancer screen now provides:
 - `0x44` smoothing-disable / sharper-pixel toggle (off by default).
 - Optional conservative `0x48` frame-pacing toggle (off by default and explicitly experimental).
 - Optional `0x50` pressure-sensitive controls toggle (off by default).
+- Exact-match 480p progressive-output patches for three PAL titles; unsupported patch types are rejected.
 - Local CONFIG generation for PS2 ISO sidecars only; PS2 Classics require an exact matching encrypted ENC file.
 - Refuse to replace any existing CONFIG with a minimal local profile, preserving community and previously installed settings. The separate game-patch path can append to compatible CONFIGs without discarding their commands.
 - Append exact-match experimental `0x0A` code-patch commands to compatible CONFIGs for one-word FPS candidates or curated multi-word 16:9 widescreen patches; preserve existing commands and refuse configs with an existing code-patch command or a trailing Title ID / multidisc enforcer.
@@ -76,6 +77,18 @@ The pinned PCSX2 source files also contain exact 16:9 widescreen sections for fo
 | Jimmy Neutron: Jet Fusion | SLUS_206.96 | FCC09959 | 3 |
 
 These are aspect-ratio/game-camera patches, not HD texture replacements or native-resolution upscaling. They remain experimental until tested on the target PS3; the ISO is never rewritten.
+
+### 480p progressive-output patches
+
+The pinned PCSX2 commit also contains simple word-only 480p sections for three PAL titles. SCALE adds these as a separate exact-match patch type:
+
+| PS2 title | Serial | ELF hash | EE word writes |
+|---|---|---:|---:|
+| Crash of the Titans (PAL-R) | SLES_548.43 | AEFD7D25 | 3 |
+| George of the Jungle (PAL-M) | SLES_549.75 | 278B7BEA | 3 |
+| Syberia (PAL) | SLES_513.93 | D1ACD489 | 1 |
+
+Only `word` writes are converted; files using `extended`, byte writes or conditional runtime codes are excluded. This selects a 480p game mode where the title supports it; the PS3 XMB upscaler can then scale the output to the selected display mode. It is not a native 720p/1080p renderer, and some titles may show offset or FMV issues, so test per title and restore the backup if needed.
 
 PCSX2's patch filename hash is not standard CRC32: its game ELF hash is the XOR of little-endian 32-bit words across the boot ELF. PS3 SCALE now extracts the root-level BOOT/BOOT2 ELF from SYSTEM.CNF, computes this same hash, and reads the original word only from a file-backed executable MIPS ELF segment. The converter can then create a netemu `0x0A` replacement entry with the exact original word as a guard.
 

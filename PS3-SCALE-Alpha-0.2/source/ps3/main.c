@@ -3475,6 +3475,7 @@ static void apply_ps2_game_patch(ps3scale_ps2_patch_kind_t patch_kind)
     uint8_t output_config[PS3SCALE_PS2_CONFIG_MAX_BYTES];
     int result;
     const int is_fps = patch_kind == PS3SCALE_PS2_PATCH_FPS;
+    const int is_widescreen = patch_kind == PS3SCALE_PS2_PATCH_WIDESCREEN;
 
     if (g_network_task_running || g_ps2_config_download_running ||
         g_ps2_config_download_done || g_ps2_config_download_thread_started) {
@@ -3499,7 +3500,9 @@ static void apply_ps2_game_patch(ps3scale_ps2_patch_kind_t patch_kind)
         snprintf(g_ps2_config_manager_message, sizeof(g_ps2_config_manager_message),
                  is_fps ?
                  "NO EXACT 60 FPS PATCH MATCH FOR THIS GAME SERIAL / ELF HASH." :
-                 "NO EXACT 16:9 PATCH MATCH FOR THIS GAME SERIAL / ELF HASH.");
+                 (is_widescreen ?
+                  "NO EXACT 16:9 PATCH MATCH FOR THIS GAME SERIAL / ELF HASH." :
+                  "NO EXACT 480P PATCH MATCH FOR THIS GAME SERIAL / ELF HASH."));
         goto cleanup;
     }
     for (i = 0; i < catalog_patch->word_count; ++i) {
@@ -3580,7 +3583,9 @@ static void apply_ps2_game_patch(ps3scale_ps2_patch_kind_t patch_kind)
         snprintf(g_ps2_config_manager_message, sizeof(g_ps2_config_manager_message),
                  is_fps ?
                  "EXPERIMENTAL FPS PATCH INSTALLED. ORIGINAL ISO WAS NOT CHANGED." :
-                 "EXPERIMENTAL 16:9 PATCH INSTALLED. ORIGINAL ISO WAS NOT CHANGED.");
+                 (is_widescreen ?
+                  "EXPERIMENTAL 16:9 PATCH INSTALLED. ORIGINAL ISO WAS NOT CHANGED." :
+                  "EXPERIMENTAL 480P PATCH INSTALLED. ORIGINAL ISO WAS NOT CHANGED."));
         g_details_cache_valid = 0;
     } else {
         (void)unlink(g_ps2_config_manager_download_temp);
@@ -3763,6 +3768,11 @@ static void perform_ps2_config_manager_action(void)
     }
 
     if (g_ps2_config_manager_selection == 7) {
+        apply_ps2_game_patch(PS3SCALE_PS2_PATCH_480P);
+        return;
+    }
+
+    if (g_ps2_config_manager_selection == 8) {
         if (!entry) {
             snprintf(g_ps2_config_manager_message,
                      sizeof(g_ps2_config_manager_message),
@@ -3774,7 +3784,7 @@ static void perform_ps2_config_manager_action(void)
         return;
     }
 
-    if (g_ps2_config_manager_selection == 8) {
+    if (g_ps2_config_manager_selection == 9) {
         result = ps3scale_ps2_config_store_backup(
             g_ps2_config_manager_target,
             g_ps2_config_manager_backup,
@@ -3796,7 +3806,7 @@ static void perform_ps2_config_manager_action(void)
             snprintf(g_ps2_config_manager_message,
                      sizeof(g_ps2_config_manager_message),
                      "BACKUP FAILED. NO ORIGINAL FILE WAS CHANGED.");
-    } else if (g_ps2_config_manager_selection == 9) {
+    } else if (g_ps2_config_manager_selection == 10) {
         result = ps3scale_ps2_config_store_restore(
             g_ps2_config_manager_target,
             g_ps2_config_manager_backup,
@@ -6075,32 +6085,32 @@ static void draw_ps2_config_manager(void)
               (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_PRESSURE) ?
               "ON" : "OFF");
 
-    draw_soft_button(430.0f, 230.0f, 350.0f, 26.0f,
+    draw_soft_button(430.0f, 218.0f, 350.0f, 22.0f,
                      can_generate ?
                      (g_ps2_config_manager_target_state == 1 ?
                       "RESTORE BACKUP FIRST" : "APPLY LOCAL PROFILE") :
                      "ISO PROFILE ONLY",
                      g_ps2_config_manager_selection == 4);
-    draw_soft_button(430.0f, 260.0f, 350.0f, 26.0f,
+    draw_soft_button(430.0f, 246.0f, 350.0f, 22.0f,
                      can_generate ? "APPLY EXPERIMENTAL 60 FPS PATCH" : "ISO PATCH ONLY",
                      g_ps2_config_manager_selection == 5);
-    draw_soft_button(430.0f, 290.0f, 350.0f, 26.0f,
+    draw_soft_button(430.0f, 274.0f, 350.0f, 22.0f,
                      can_generate ? "APPLY 16:9 WIDESCREEN PATCH" : "ISO PATCH ONLY",
                      g_ps2_config_manager_selection == 6);
-    draw_soft_button(430.0f, 320.0f, 350.0f, 26.0f,
-                     entry ? "DOWNLOAD EXACT GAME CONFIG" : "NO EXACT GAME CONFIG",
+    draw_soft_button(430.0f, 302.0f, 350.0f, 22.0f,
+                     can_generate ? "APPLY 480P OUTPUT PATCH" : "ISO PATCH ONLY",
                      g_ps2_config_manager_selection == 7);
-    draw_soft_button(430.0f, 350.0f, 350.0f, 26.0f,
-                     "BACK UP CURRENT CONFIG",
+    draw_soft_button(430.0f, 330.0f, 350.0f, 22.0f,
+                     entry ? "DOWNLOAD EXACT GAME CONFIG" : "NO EXACT GAME CONFIG",
                      g_ps2_config_manager_selection == 8);
-    draw_soft_button(430.0f, 380.0f, 350.0f, 26.0f,
-                     "RESTORE SAVED BACKUP",
+    draw_soft_button(430.0f, 358.0f, 350.0f, 22.0f,
+                     "BACK UP CURRENT CONFIG",
                      g_ps2_config_manager_selection == 9);
+    draw_soft_button(430.0f, 386.0f, 350.0f, 22.0f,
+                     "RESTORE SAVED BACKUP",
+                     g_ps2_config_manager_selection == 10);
 
     set_ui_font_size(7, 11);
-    draw_text(430.0f, 405.0f, 0xb27b35ff,
-              "Exact game match required. Original ISO stays unchanged.");
-
     if (g_ps2_config_download_running) {
         unsigned int percent = 0;
         unsigned long downloaded_kb =
@@ -7741,10 +7751,10 @@ int main(int argc, char *argv[])
             } else {
                 if (up && !old_up)
                     g_ps2_config_manager_selection =
-                        (g_ps2_config_manager_selection + 9) % 10;
+                        (g_ps2_config_manager_selection + 10) % 11;
                 if (down && !old_down)
                     g_ps2_config_manager_selection =
-                        (g_ps2_config_manager_selection + 1) % 10;
+                        (g_ps2_config_manager_selection + 1) % 11;
                 if (cross && !old_cross) perform_ps2_config_manager_action();
             }
         } else if (g_screen == SCREEN_FPS_CONTROL) {

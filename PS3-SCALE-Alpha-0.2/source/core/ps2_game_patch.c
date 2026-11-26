@@ -28,6 +28,12 @@ static const ps3scale_ps2_patch_word_t ws_kim[]={
  {0x001CA964u,0x461E0343u}};
 static const ps3scale_ps2_patch_word_t ws_jimmy[]={
  {0x002338A4u,0x3C023F1Du},{0x00233900u,0x3C03BFAAu},{0x00232018u,0x3C023F2Bu}};
+static const ps3scale_ps2_patch_word_t p480_crash_titans[]={
+ {0x0057E9D4u,0x3C050000u},{0x0057E9DCu,0x3C060050u},{0x0057E9E4u,0x3C070001u}};
+static const ps3scale_ps2_patch_word_t p480_george_jungle[]={
+ {0x0038665Cu,0x24110000u},{0x00386660u,0x24120050u},{0x0038666Cu,0x24130001u}};
+static const ps3scale_ps2_patch_word_t p480_syberia[]={
+ {0x001E6314u,0x24060050u}};
 #define PATCH(s,h,t,f,k,w) {s,h,t,PCSX2_PATCH_URL(f),k,w,sizeof(w)/sizeof((w)[0])}
 static const ps3scale_ps2_game_patch_t g_patches[]={
  PATCH("SLUS_212.60",0xB0AE2D8Au,"Ed, Edd n Eddy: The Mis-Edventures (NTSC-U)","SLUS-21260_B0AE2D8A.pnach",PS3SCALE_PS2_PATCH_FPS,fps_ed),
@@ -41,13 +47,16 @@ static const ps3scale_ps2_game_patch_t g_patches[]={
  PATCH("SLUS_203.49",0x10B1F370u,"Scooby-Doo! Night of 100 Frights (NTSC-U)","SLUS-20349_10B1F370.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_scooby),
  PATCH("SLUS_211.83",0xE1F17139u,"Teen Titans (NTSC-U)","SLUS-21183_E1F17139.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_titans),
  PATCH("SLUS_214.37",0x86B490D1u,"Disney's Kim Possible - What's the Switch (NTSC-U)","SLUS-21437_86B490D1.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_kim),
- PATCH("SLUS_206.96",0xFCC09959u,"Jimmy Neutron: Jet Fusion (NTSC-U)","SLUS-20696_FCC09959.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_jimmy)
+ PATCH("SLUS_206.96",0xFCC09959u,"Jimmy Neutron: Jet Fusion (NTSC-U)","SLUS-20696_FCC09959.pnach",PS3SCALE_PS2_PATCH_WIDESCREEN,ws_jimmy),
+ PATCH("SLES_548.43",0xAEFD7D25u,"Crash of the Titans (PAL-R)","SLES-54843_AEFD7D25.pnach",PS3SCALE_PS2_PATCH_480P,p480_crash_titans),
+ PATCH("SLES_549.75",0x278B7BEAu,"George of the Jungle (PAL-M)","SLES-54975_278B7BEA.pnach",PS3SCALE_PS2_PATCH_480P,p480_george_jungle),
+ PATCH("SLES_513.93",0xD1ACD489u,"Syberia (PAL)","SLES-51393_D1ACD489.pnach",PS3SCALE_PS2_PATCH_480P,p480_syberia)
 };
 const ps3scale_ps2_game_patch_t *ps3scale_ps2_game_patch_find(
  const char *serial,uint32_t hash,ps3scale_ps2_patch_kind_t kind)
 {
  size_t i;
- if(!serial||!serial[0]||(kind!=PS3SCALE_PS2_PATCH_FPS&&kind!=PS3SCALE_PS2_PATCH_WIDESCREEN))return NULL;
+ if(!serial||!serial[0]||(kind!=PS3SCALE_PS2_PATCH_FPS&&kind!=PS3SCALE_PS2_PATCH_WIDESCREEN&&kind!=PS3SCALE_PS2_PATCH_480P))return NULL;
  for(i=0;i<sizeof(g_patches)/sizeof(g_patches[0]);++i)
   if(g_patches[i].kind==kind&&strcmp(serial,g_patches[i].serial)==0&&hash==g_patches[i].pcsx2_elf_hash)return &g_patches[i];
  return NULL;

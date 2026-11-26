@@ -170,6 +170,13 @@ int main(void)
         assert(patch && patch->word_count == 7u);
         patch=ps3scale_ps2_game_patch_find("SLUS_206.96",0xFCC09959u,PS3SCALE_PS2_PATCH_WIDESCREEN);
         assert(patch && patch->word_count == 3u);
+        patch=ps3scale_ps2_game_patch_find("SLES_548.43",0xAEFD7D25u,PS3SCALE_PS2_PATCH_480P);
+        assert(patch && patch->word_count == 3u);
+        patch=ps3scale_ps2_game_patch_find("SLES_549.75",0x278B7BEAu,PS3SCALE_PS2_PATCH_480P);
+        assert(patch && patch->word_count == 3u);
+        patch=ps3scale_ps2_game_patch_find("SLES_513.93",0xD1ACD489u,PS3SCALE_PS2_PATCH_480P);
+        assert(patch && patch->word_count == 1u);
+        assert(ps3scale_ps2_game_patch_find("SLES_548.43",0xAEFD7D24u,PS3SCALE_PS2_PATCH_480P)==NULL);
         assert(ps3scale_ps2_game_patch_find("SLUS_203.49",0x10B1F370u,(ps3scale_ps2_patch_kind_t)99)==NULL);
     }
     free(loaded_elf);

@@ -1060,6 +1060,7 @@ for token in ("PS2 ENHANCER", "L2H PERFORMANCE (0x46)",
               "APPLY LOCAL PROFILE", "RESTORE BACKUP FIRST",
               "APPLY EXPERIMENTAL 60 FPS PATCH",
               "APPLY 16:9 WIDESCREEN PATCH",
+              "APPLY 480P OUTPUT PATCH",
               "DOWNLOAD EXACT GAME CONFIG", "BACK UP CURRENT CONFIG",
               "RESTORE SAVED BACKUP",
               "Game patches require exact serial + ELF hash.",
@@ -1076,6 +1077,7 @@ assert "ps3scale_ps2_game_patch_find" in src
 assert "ps3scale_ps2_config_append_patches" in src
 assert "apply_ps2_game_patch(PS3SCALE_PS2_PATCH_FPS);" in src
 assert "apply_ps2_game_patch(PS3SCALE_PS2_PATCH_WIDESCREEN);" in src
+assert "apply_ps2_game_patch(PS3SCALE_PS2_PATCH_480P);" in src
 local_profile = section("static void apply_ps2_local_profile(void)",
                         "static void apply_ps2_game_patch(")
 assert "if (had_existing_config)" in local_profile
@@ -1085,8 +1087,8 @@ assert "g_ps2_enhancer_guide_open = 1" in src
 ps2_input = section("} else if (g_screen == SCREEN_PS2_CONFIG) {",
                     "} else if (g_screen == SCREEN_FPS_CONTROL) {")
 assert "triangle && !old_triangle" in ps2_input
-assert "(g_ps2_config_manager_selection + 9) % 10" in ps2_input
-assert "(g_ps2_config_manager_selection + 1) % 10" in ps2_input
+assert "(g_ps2_config_manager_selection + 10) % 11" in ps2_input
+assert "(g_ps2_config_manager_selection + 1) % 11" in ps2_input
 assert "perform_ps2_config_manager_action();" in ps2_input
 assert "draw_rounded_rect(544.0f, 376.0f, 272.0f, 4.0f" in details_ui
 tools_ui = section("static void draw_tools(void)",

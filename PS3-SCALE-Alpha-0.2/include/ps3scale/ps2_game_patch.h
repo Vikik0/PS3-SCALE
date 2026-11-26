@@ -2,7 +2,11 @@
 #define PS3SCALE_PS2_GAME_PATCH_H
 #include <stddef.h>
 #include <stdint.h>
-typedef enum { PS3SCALE_PS2_PATCH_FPS=1, PS3SCALE_PS2_PATCH_WIDESCREEN=2 } ps3scale_ps2_patch_kind_t;
+typedef enum {
+ PS3SCALE_PS2_PATCH_FPS=1,
+ PS3SCALE_PS2_PATCH_WIDESCREEN=2,
+ PS3SCALE_PS2_PATCH_480P=3
+} ps3scale_ps2_patch_kind_t;
 typedef struct { uint32_t ee_address; uint32_t replacement_word; } ps3scale_ps2_patch_word_t;
 typedef struct {
  const char *serial; uint32_t pcsx2_elf_hash; const char *title;
