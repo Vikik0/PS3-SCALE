@@ -26,6 +26,8 @@ The private Dropbox ZIP was inspected before dispatch:
 - BIN SHA-256: `a1d6b967a2311f1444482f4af91dff2d75e083ed538419f25d57d77dd5a4d7fd`.
 - CUE SHA-256: `de7f3b62c2703f3a1ee76a5d10e5fb27cc386dea26b196807e5eec5e04a8fce9`.
 - The CUE references the matching BIN and uses 2352-byte sectors.
+- The BIN contains a valid Mode 2 / 2352-byte ISO9660 data track; the primary volume descriptor and root directory parse correctly.
+- `SYSTEM.CNF` identifies the boot executable as `SCUS_945.70;1`, and the referenced executable begins with the genuine `PS-X EXE` signature (432,128 bytes, load address `0x80010000`).
 - The staging script passed all eight security/regression cases and staged this exact archive successfully.
 
 The workflow repeats ZIP integrity, exact-member, file-size, BIN/CUE SHA-256 and CUE-to-BIN linkage checks inside GitHub Actions before it downloads the runtime or starts the expensive PS3 build. The checks are pinned to the verified dump hashes above. This local preflight does not replace the final PS3 PKG build or physical-console testing.
