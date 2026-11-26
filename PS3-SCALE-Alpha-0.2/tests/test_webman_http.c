@@ -124,8 +124,10 @@ static void test_http_200_launch(void)
     server.first = response;
     assert(ps3scale_webman_start_game(&game) == 0);
     finish_server(&server, thread);
-    assert(strncmp(server.request,
-                   "GET /play.ps3?BLES00891 HTTP/1.0\r\n", 36) == 0);
+    {
+        static const char expected[] = "GET /play.ps3?BLES00891 HTTP/1.0\\r\\n";
+        assert(strncmp(server.request, expected, sizeof(expected) - 1) == 0);
+    }
 }
 
 static void test_redirect_is_not_launch_success(void)
