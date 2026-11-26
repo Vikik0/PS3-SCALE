@@ -307,12 +307,13 @@ static int boot_filename_from_cnf(const unsigned char *data, size_t size,
         size_t line_start = pos;
         size_t line_end;
         size_t key_start;
+        size_t key_len;
         size_t value_start;
         size_t value_end;
         size_t colon;
-        size_t base_start;
         size_t i;
         size_t name_len;
+        int is_boot_key;
 
         while (pos < size && data[pos] != '\n' && data[pos] != '\r')
             ++pos;
@@ -324,9 +325,17 @@ static int boot_filename_from_cnf(const unsigned char *data, size_t size,
         while (key_start < line_end &&
                (data[key_start] == ' ' || data[key_start] == '\t'))
             ++key_start;
-        if (line_end - key_start < 4u ||
-            !(equal_ci_n((const char *)data + key_start, "BOOT2", 5u) ||
-              equal_ci_n((const char *)data + key_start, "BOOT", 4u)))
+        key_len = line_end - key_start;
+        is_boot_key =
+            (key_len >= 5u &&
+             equal_ci_n((const char *)data + key_start, "BOOT2", 5u) &&
+             (key_len == 5u || data[key_start + 5u] == ' ' ||
+              data[key_start + 5u] == '\t' || data[key_start + 5u] == '=')) ||
+            (key_len >= 4u &&
+             equal_ci_n((const char *)data + key_start, "BOOT", 4u) &&
+             (key_len == 4u || data[key_start + 4u] == ' ' ||
+              data[key_start + 4u] == '\t' || data[key_start + 4u] == '='));
+        if (!is_boot_key)
             continue;
 
         while (key_start < line_end && data[key_start] != '=')
@@ -355,32 +364,26 @@ static int boot_filename_from_cnf(const unsigned char *data, size_t size,
                (data[value_end - 1u] == ' ' ||
                 data[value_end - 1u] == '\t'))
             --value_end;
+        if (value_start >= value_end)
+            return -1;
 
-        base_start = value_start;
+        /* This first implementation only supports root-level boot ELFs. */
         for (i = value_start; i < value_end; ++i) {
             if (data[i] == '\\' || data[i] == '/')
-                base_start = i + 1u;
+                return -2;
         }
-        if (base_start == value_end)
-            return -1;
 
-        name_len = value_end - base_start;
+        name_len = value_end - value_start;
         if (name_len + 3u >= out_size)
             return -1;
-        for (i = 0; i < name_len; ++i) {
-            if (data[base_start + i] == ';')
-                break;
-            out[i] = (char)toupper((unsigned char)data[base_start + i]);
-        }
-        out[i] = '\0';
-        if (i == 0)
-            return -1;
+        for (i = 0; i < name_len; ++i)
+            out[i] = (char)toupper((unsigned char)data[value_start + i]);
+        out[name_len] = '\0';
+
         if (strchr(out, ';') == NULL) {
-            if (i + 2u >= out_size)
-                return -1;
-            out[i++] = ';';
-            out[i++] = '1';
-            out[i] = '\0';
+            out[name_len++] = ';';
+            out[name_len++] = '1';
+            out[name_len] = '\0';
         }
         return 0;
     }
