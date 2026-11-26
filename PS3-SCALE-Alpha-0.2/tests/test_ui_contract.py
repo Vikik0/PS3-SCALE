@@ -1050,6 +1050,25 @@ assert "profile_script_state_for_game(game, profile)" not in details_ui
 assert "CIRCLE / SELECT / LEFT: BACK" in details_ui
 assert "g_ps2_config_download_running" in details_ui
 assert "PS2 CONFIG: %u%%" in details_ui
+
+# PS2 Enhancer uses only reviewed netemu CONFIG options and keeps the ISO read-only.
+ps2_enhancer_ui = section("static void draw_ps2_config_manager(void)",
+                          "static void draw_fps_control(void)")
+for token in ("PS2 ENHANCER", "L2H PERFORMANCE (0x46)",
+              "SHARPER PIXELS (0x44)", "FRAME PACING (0x48)",
+              "APPLY LOCAL PROFILE", "DOWNLOAD EXACT GAME CONFIG",
+              "BACK UP CURRENT CONFIG", "RESTORE SAVED BACKUP",
+              "60 FPS requires an exact per-game code patch",
+              "XMB upscaler / smoothing are separate display settings."):
+    assert token in ps2_enhancer_ui, f"Missing PS2 enhancer UI token: {token}"
+assert "ps2_config_ensure_backup" in src
+assert "ps3scale_ps2_config_store_stage" in src
+assert "PS3SCALE_PS2_CFG_FRAME_PACING" in src
+ps2_input = section("} else if (g_screen == SCREEN_PS2_CONFIG) {",
+                    "} else if (g_screen == SCREEN_FPS_CONTROL) {")
+assert "(g_ps2_config_manager_selection + 6) % 7" in ps2_input
+assert "(g_ps2_config_manager_selection + 1) % 7" in ps2_input
+assert "perform_ps2_config_manager_action();" in ps2_input
 assert "draw_rounded_rect(544.0f, 376.0f, 272.0f, 4.0f" in details_ui
 tools_ui = section("static void draw_tools(void)",
                    "static void draw_help(void)")

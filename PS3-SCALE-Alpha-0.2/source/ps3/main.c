@@ -221,6 +221,7 @@ static char g_details_message[128] = "NO VERIFIED GRAPHICS PROFILE FOR THIS VERS
 static int g_details_cache_valid = 0;
 static int g_details_ps2_config_exists = 0;
 static int g_ps2_config_manager_selection=0,g_ps2_config_manager_target_state=0,g_ps2_config_manager_backup_state=0,g_ps2_config_manager_rollback_state=0;
+static unsigned int g_ps2_enhancement_flags = PS3SCALE_PS2_CFG_ENABLE_L2H;
 static size_t g_ps2_config_manager_target_size=0,g_ps2_config_manager_backup_size=0,g_ps2_config_manager_max_bytes=PS3SCALE_PS2_CONFIG_MAX_BYTES;
 static char g_ps2_config_manager_message[128]="SELECT AN ACTION.";
 static char g_ps2_config_manager_target[PS3SCALE_PATH_MAX],g_ps2_config_manager_backup[PS3SCALE_PATH_MAX];
@@ -3270,18 +3271,181 @@ static int ps2_config_paths_for_game(const ps3scale_game_t *game,
  n=snprintf(restore_temp,restore_temp_size,"%s.ps3scale.restore.tmp",target);if(n<0||(size_t)n>=restore_temp_size)return -1;
  n=snprintf(download_temp,download_temp_size,"%s.ps3scale.tmp",target);if(n<0||(size_t)n>=download_temp_size)return -1;return 0;
 }
-static void refresh_ps2_config_manager_cache(void){
- const ps3scale_game_t *game=selected_game();
- g_ps2_config_manager_target_state=g_ps2_config_manager_backup_state=g_ps2_config_manager_rollback_state=-1;
- g_ps2_config_manager_target_size=g_ps2_config_manager_backup_size=0;g_ps2_config_manager_max_bytes=PS3SCALE_PS2_CONFIG_MAX_BYTES;
- if(ps2_config_paths_for_game(game,g_ps2_config_manager_target,sizeof(g_ps2_config_manager_target),
- g_ps2_config_manager_backup,sizeof(g_ps2_config_manager_backup),g_ps2_config_manager_backup_temp,sizeof(g_ps2_config_manager_backup_temp),
- g_ps2_config_manager_rollback,sizeof(g_ps2_config_manager_rollback),g_ps2_config_manager_restore_temp,sizeof(g_ps2_config_manager_restore_temp),
- g_ps2_config_manager_download_temp,sizeof(g_ps2_config_manager_download_temp),&g_ps2_config_manager_max_bytes)!=0){g_ps2_config_manager_message[0]='\0';return;}
- g_ps2_config_manager_target_state=ps3scale_ps2_config_store_probe(g_ps2_config_manager_target,g_ps2_config_manager_max_bytes,&g_ps2_config_manager_target_size);
- g_ps2_config_manager_backup_state=ps3scale_ps2_config_store_probe(g_ps2_config_manager_backup,g_ps2_config_manager_max_bytes,&g_ps2_config_manager_backup_size);
- g_ps2_config_manager_rollback_state=ps3scale_ps2_config_store_probe(g_ps2_config_manager_rollback,g_ps2_config_manager_max_bytes,NULL);
+static void refresh_ps2_config_manager_cache(void)
+{
+    const ps3scale_game_t *game = selected_game();
+
+    g_ps2_config_manager_target_state = -1;
+    g_ps2_config_manager_backup_state = -1;
+    g_ps2_config_manager_rollback_state = -1;
+    g_ps2_config_manager_target_size = 0;
+    g_ps2_config_manager_backup_size = 0;
+    g_ps2_config_manager_max_bytes = PS3SCALE_PS2_CONFIG_MAX_BYTES;
+
+    if (ps2_config_paths_for_game(
+            game,
+            g_ps2_config_manager_target,
+            sizeof(g_ps2_config_manager_target),
+            g_ps2_config_manager_backup,
+            sizeof(g_ps2_config_manager_backup),
+            g_ps2_config_manager_backup_temp,
+            sizeof(g_ps2_config_manager_backup_temp),
+            g_ps2_config_manager_rollback,
+            sizeof(g_ps2_config_manager_rollback),
+            g_ps2_config_manager_restore_temp,
+            sizeof(g_ps2_config_manager_restore_temp),
+            g_ps2_config_manager_download_temp,
+            sizeof(g_ps2_config_manager_download_temp),
+            &g_ps2_config_manager_max_bytes) != 0) {
+        g_ps2_config_manager_message[0] = '\0';
+        return;
+    }
+
+    g_ps2_config_manager_target_state = ps3scale_ps2_config_store_probe(
+        g_ps2_config_manager_target, g_ps2_config_manager_max_bytes,
+        &g_ps2_config_manager_target_size);
+    g_ps2_config_manager_backup_state = ps3scale_ps2_config_store_probe(
+        g_ps2_config_manager_backup, g_ps2_config_manager_max_bytes,
+        &g_ps2_config_manager_backup_size);
+    g_ps2_config_manager_rollback_state = ps3scale_ps2_config_store_probe(
+        g_ps2_config_manager_rollback, g_ps2_config_manager_max_bytes, NULL);
 }
+
+/*
+ * Preserve the original before any replacement. A pre-existing backup is
+ * accepted only when it is byte-identical to the current CONFIG.
+ */
+static int ps2_config_ensure_backup(const char *target, const char *backup,
+                                    const char *backup_temp, size_t max_bytes)
+{
+    int target_state = ps3scale_ps2_config_store_probe(
+        target, max_bytes, NULL);
+    int backup_state;
+
+    if (target_state == 0)
+        return 0;
+    if (target_state != 1)
+        return -1;
+
+    backup_state = ps3scale_ps2_config_store_probe(backup, max_bytes, NULL);
+    if (backup_state < 0)
+        return -2;
+
+    if (backup_state == 0) {
+        if (ps3scale_ps2_config_store_probe(
+                backup_temp, max_bytes, NULL) != 0)
+            return -3;
+        if (ps3scale_ps2_config_store_backup(
+                target, backup, backup_temp, max_bytes) != 0)
+            return -4;
+    }
+
+    return ps3scale_ps2_config_store_can_replace(
+        target, backup, max_bytes) == 1 ? 0 : -5;
+}
+
+static void apply_ps2_local_profile(void)
+{
+    uint8_t config_data[64];
+    size_t config_size = 0;
+    const ps3scale_game_t *game = selected_game();
+    int result;
+
+    if (g_network_task_running || g_ps2_config_download_running ||
+        g_ps2_config_download_done || g_ps2_config_download_thread_started) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "WAIT FOR THE CURRENT PS2 CONFIG TASK TO FINISH.");
+        return;
+    }
+
+    if (!game || game->kind != PS3SCALE_GAME_PS2_ISO) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "LOCAL PROFILES REQUIRE A PS2 ISO; CLASSICS NEED AN EXACT ENC CONFIG.");
+        return;
+    }
+
+    if (g_ps2_enhancement_flags == 0) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "SELECT AT LEAST ONE ENHANCEMENT OPTION.");
+        return;
+    }
+
+    refresh_ps2_config_manager_cache();
+    if (g_ps2_config_manager_target_state < 0) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "CONFIG PATH IS INVALID OR THE FILE EXCEEDS THE SAFE SIZE LIMIT.");
+        return;
+    }
+
+    result = ps2_config_ensure_backup(
+        g_ps2_config_manager_target,
+        g_ps2_config_manager_backup,
+        g_ps2_config_manager_backup_temp,
+        g_ps2_config_manager_max_bytes);
+    if (result != 0) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "BACKUP FAILED OR DOES NOT MATCH CURRENT CONFIG. NO FILE WAS CHANGED.");
+        refresh_ps2_config_manager_cache();
+        return;
+    }
+
+    if (ps3scale_ps2_config_build(
+            config_data, sizeof(config_data),
+            g_ps2_enhancement_flags, &config_size) != 0 ||
+        ps3scale_ps2_config_validate_generated(
+            config_data, config_size) != 0) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "CONFIG BUILD FAILED. NO FILE WAS CHANGED.");
+        return;
+    }
+
+    result = ps3scale_ps2_config_store_stage(
+        g_ps2_config_manager_download_temp, config_data, config_size,
+        g_ps2_config_manager_max_bytes);
+    if (result != 0) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "COULD NOT STAGE CONFIG. CHECK TEMP FILES AND FREE SPACE.");
+        refresh_ps2_config_manager_cache();
+        return;
+    }
+
+    result = ps3scale_ps2_config_store_install(
+        g_ps2_config_manager_download_temp,
+        g_ps2_config_manager_target,
+        g_ps2_config_manager_backup,
+        g_ps2_config_manager_rollback,
+        g_ps2_config_manager_max_bytes);
+    if (result == 0) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "PS2 ENHANCEMENT CONFIG INSTALLED. ORIGINAL CONFIG BACKED UP.");
+    } else {
+        (void)unlink(g_ps2_config_manager_download_temp);
+        if (result == -2)
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "BACKUP CHANGED. NO CONFIG WAS REPLACED.");
+        else if (result == -3)
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "ROLLBACK FILE EXISTS OR IS INVALID. NO FILE WAS OVERWRITTEN.");
+        else
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "CONFIG INSTALL FAILED. ORIGINAL FILE WAS PRESERVED.");
+    }
+
+    refresh_ps2_config_manager_cache();
+    g_details_cache_valid = 0;
+}
+
 static void ps2_config_download_worker(void *arg)
 {
     unsigned char *data = NULL;
@@ -3358,8 +3522,8 @@ static void start_ps2_config_download(void){
  if(strcmp(entry->type,"ENC")==0){struct stat st;if(stat(PS3SCALE_PS2_CLASSICS_CONFIG_DIR,&st)!=0||!S_ISDIR(st.st_mode)){set_details_message("INSTALL THE WEBMAN PS2CONFIG PACKAGE FOR ENC FILES.");goto copy_message;}}
  state=ps3scale_ps2_config_store_probe(target,max_bytes,NULL);
  if(state<0){set_details_message("EXISTING CONFIG IS INVALID OR EXCEEDS THE SAFE SIZE LIMIT.");goto copy_message;}
- if(state==1&&ps3scale_ps2_config_store_can_replace(target,backup,max_bytes)!=1){set_details_message("BACK UP THE CURRENT CONFIG FIRST. IT WILL NOT BE OVERWRITTEN.");goto copy_message;}
  if(ps3scale_ps2_config_store_probe(temporary,max_bytes,NULL)!=0){set_details_message("A PS3 SCALE TEMP FILE ALREADY EXISTS. CHECK THE CONFIG FOLDER.");goto copy_message;}
+ if(state==1&&ps2_config_ensure_backup(target,backup,backup_temp,max_bytes)!=0){set_details_message("AUTOMATIC BACKUP FAILED OR DOES NOT MATCH. NO REPLACEMENT WAS MADE.");goto copy_message;}
  snprintf(g_ps2_config_download_url,sizeof(g_ps2_config_download_url),"%s",url);
  snprintf(g_ps2_config_download_path,sizeof(g_ps2_config_download_path),"%s",target);
  snprintf(g_ps2_config_download_temp_path,sizeof(g_ps2_config_download_temp_path),"%s",temporary);
@@ -3373,30 +3537,132 @@ static void start_ps2_config_download(void){
 copy_message:
  snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),"%s",g_details_message);
 }
-static void perform_ps2_config_manager_action(void){
- int result;const ps3scale_game_t *game=selected_game();const ps3scale_ps2_config_entry_t *entry=ps2_config_for_game(game);
- if(g_network_task_running||g_ps2_config_download_running||g_ps2_config_download_done||g_ps2_config_download_thread_started){
-  snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),"WAIT FOR THE CURRENT PS2 CONFIG TASK TO FINISH.");
-  return;
- }
- refresh_ps2_config_manager_cache();
- if(g_ps2_config_manager_target_state<0){snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),"CONFIG PATH IS INVALID OR THE FILE EXCEEDS THE SAFE SIZE LIMIT.");return;}
- if(g_ps2_config_manager_selection==0){
-  result=ps3scale_ps2_config_store_backup(g_ps2_config_manager_target,g_ps2_config_manager_backup,g_ps2_config_manager_backup_temp,g_ps2_config_manager_max_bytes);
-  if(result==0)snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),"BACKUP CREATED AND VERIFIED BYTE-FOR-BYTE.");
-  else if(result==-2)snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),"BACKUP ALREADY EXISTS. IT WAS NOT OVERWRITTEN.");
-  else if(result==-4)snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),"NO VALID CONFIG FILE EXISTS TO BACK UP.");
-  else snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),"BACKUP FAILED. NO ORIGINAL FILE WAS CHANGED.");
- }else if(g_ps2_config_manager_selection==1){
-  result=ps3scale_ps2_config_store_restore(g_ps2_config_manager_target,g_ps2_config_manager_backup,g_ps2_config_manager_rollback,g_ps2_config_manager_restore_temp,g_ps2_config_manager_max_bytes);
-  if(result==0)snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),"BACKUP RESTORED. PREVIOUS CONFIG KEPT AS ROLLBACK.");
-  else if(result==1)snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),"CURRENT CONFIG ALREADY MATCHES THE SAVED BACKUP.");
-  else if(result==-2)snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),"NO VALID BACKUP EXISTS FOR THIS GAME.");
-  else if(result==-3)snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),"ROLLBACK OR TEMP FILE EXISTS. NO FILE WAS OVERWRITTEN.");
-  else snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),"RESTORE FAILED. THE CURRENT CONFIG WAS PRESERVED.");
- }else if(!entry)snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),"NO EXACT PS2 CONFIG MATCH IS AVAILABLE TO DOWNLOAD.");
- else start_ps2_config_download();
- refresh_ps2_config_manager_cache();
+static void perform_ps2_config_manager_action(void)
+{
+    int result;
+    const ps3scale_game_t *game = selected_game();
+    const ps3scale_ps2_config_entry_t *entry = ps2_config_for_game(game);
+
+    if (g_network_task_running || g_ps2_config_download_running ||
+        g_ps2_config_download_done || g_ps2_config_download_thread_started) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "WAIT FOR THE CURRENT PS2 CONFIG TASK TO FINISH.");
+        return;
+    }
+
+    refresh_ps2_config_manager_cache();
+    if (g_ps2_config_manager_target_state < 0) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "CONFIG PATH IS INVALID OR THE FILE EXCEEDS THE SAFE SIZE LIMIT.");
+        return;
+    }
+
+    if (g_ps2_config_manager_selection <= 2) {
+        unsigned flag = g_ps2_config_manager_selection == 0 ?
+            PS3SCALE_PS2_CFG_ENABLE_L2H :
+            (g_ps2_config_manager_selection == 1 ?
+             PS3SCALE_PS2_CFG_DISABLE_SMOOTHING :
+             PS3SCALE_PS2_CFG_FRAME_PACING);
+
+        if (!game || game->kind != PS3SCALE_GAME_PS2_ISO) {
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "LOCAL PROFILES REQUIRE A PS2 ISO; CLASSICS NEED AN EXACT ENC CONFIG.");
+            return;
+        }
+
+        g_ps2_enhancement_flags ^= flag;
+        if (flag == PS3SCALE_PS2_CFG_ENABLE_L2H)
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     (g_ps2_enhancement_flags & flag) ?
+                     "L2H PERFORMANCE ENABLED." : "L2H PERFORMANCE DISABLED.");
+        else if (flag == PS3SCALE_PS2_CFG_DISABLE_SMOOTHING)
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     (g_ps2_enhancement_flags & flag) ?
+                     "SHARPER PIXELS ENABLED." : "SHARPER PIXELS DISABLED.");
+        else
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     (g_ps2_enhancement_flags & flag) ?
+                     "FRAME PACING ENABLED (EXPERIMENTAL)." :
+                     "FRAME PACING DISABLED.");
+        return;
+    }
+
+    if (g_ps2_config_manager_selection == 3) {
+        apply_ps2_local_profile();
+        return;
+    }
+
+    if (g_ps2_config_manager_selection == 4) {
+        if (!entry) {
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "NO EXACT PS2 CONFIG MATCH IS AVAILABLE TO DOWNLOAD.");
+        } else {
+            start_ps2_config_download();
+        }
+        refresh_ps2_config_manager_cache();
+        return;
+    }
+
+    if (g_ps2_config_manager_selection == 5) {
+        result = ps3scale_ps2_config_store_backup(
+            g_ps2_config_manager_target,
+            g_ps2_config_manager_backup,
+            g_ps2_config_manager_backup_temp,
+            g_ps2_config_manager_max_bytes);
+        if (result == 0)
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "BACKUP CREATED AND VERIFIED BYTE-FOR-BYTE.");
+        else if (result == -2)
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "BACKUP ALREADY EXISTS. IT WAS NOT OVERWRITTEN.");
+        else if (result == -4)
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "NO VALID CONFIG FILE EXISTS TO BACK UP.");
+        else
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "BACKUP FAILED. NO ORIGINAL FILE WAS CHANGED.");
+    } else if (g_ps2_config_manager_selection == 6) {
+        result = ps3scale_ps2_config_store_restore(
+            g_ps2_config_manager_target,
+            g_ps2_config_manager_backup,
+            g_ps2_config_manager_rollback,
+            g_ps2_config_manager_restore_temp,
+            g_ps2_config_manager_max_bytes);
+        if (result == 0)
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "BACKUP RESTORED. PREVIOUS CONFIG KEPT AS ROLLBACK.");
+        else if (result == 1)
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "CURRENT CONFIG ALREADY MATCHES THE SAVED BACKUP.");
+        else if (result == -2)
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "NO VALID BACKUP EXISTS FOR THIS GAME.");
+        else if (result == -3)
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "ROLLBACK OR TEMP FILE EXISTS. NO FILE WAS OVERWRITTEN.");
+        else
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "RESTORE FAILED. THE CURRENT CONFIG WAS PRESERVED.");
+    }
+
+    refresh_ps2_config_manager_cache();
+    g_details_cache_valid = 0;
 }
 
 static int community_extension_is(const char *extension, const char *expected)
@@ -5488,13 +5754,13 @@ static void draw_details(void)
                   "No matched before/after images are available.");
     } else if (!game_is_ps3(game) && ps2_config) {
         draw_text(544.0f, 285.0f, 0x26794bff,
-                  "PS2 CONFIGURATION AVAILABLE");
+                  "PS2 CONFIG / ENHANCEMENT AVAILABLE");
         draw_text(544.0f, 304.0f, 0x514b69ff,
-                  "Compatibility settings are game-specific.");
+                  "Game-specific timing and compatibility fixes.");
         draw_text(544.0f, 323.0f, 0x514b69ff,
-                  "This is NOT an HD texture replacement.");
+                  "No universal 60 FPS or HD texture unlock.");
         draw_text(544.0f, 342.0f, 0x875be8ff,
-                  "No matched before/after images are available.");
+                  "XMB upscaler is a separate display setting.");
     } else {
         draw_text(544.0f, 290.0f, 0xb27b35ff,
                   "NO VERIFIED ENHANCEMENT AVAILABLE");
@@ -5511,7 +5777,7 @@ static void draw_details(void)
                      1);
     draw_soft_button(282.0f, 400.0f, 250.0f, 44.0f,
                      game_is_ps3(game) ? "SQUARE: FPS CONTROL" :
-                                         "PS2 CONFIGURATION", 0);
+                                         "SQUARE: PS2 ENHANCER", 0);
     draw_soft_button(544.0f, 400.0f, 290.0f, 44.0f,
                      (game_is_ps3(game) && profile) ?
                       ((strcmp(profile->trust, "B_COMMUNITY") == 0 &&
@@ -5532,45 +5798,163 @@ static void draw_details(void)
 }
 
 
-static void draw_ps2_config_manager(void){
- char line[192];const ps3scale_game_t *game=selected_game();const ps3scale_ps2_config_entry_t *entry=ps2_config_for_game(game);
- const char *ts=g_ps2_config_manager_target_state==1?"PRESENT":g_ps2_config_manager_target_state==0?"MISSING":"INVALID / TOO LARGE";
- const char *bs=g_ps2_config_manager_backup_state==1?"SAVED":g_ps2_config_manager_backup_state==0?"NOT SAVED":"INVALID";
- const char *rs=g_ps2_config_manager_rollback_state==1?"AVAILABLE":g_ps2_config_manager_rollback_state==0?"NONE":"INVALID";
- const char *target_name=strrchr(g_ps2_config_manager_target,'/');
- target_name=target_name?target_name+1:g_ps2_config_manager_target;
- draw_page_header("PS2 CONFIG MANAGER","Reversible per-title CONFIG files; the original ISO / game package stays untouched.");
- draw_soft_card(24.0f,92.0f,806.0f,340.0f,0);set_ui_font_size(10,16);
- snprintf(line,sizeof(line),"Game: %.48s",game?game->title:"No PS2 game selected");draw_text(48.0f,120.0f,0x29243fff,line);set_ui_font_size(7,11);
- snprintf(line,sizeof(line),"CONFIG file: %s",ts);draw_text(48.0f,154.0f,g_ps2_config_manager_target_state==1?0x26794bff:0xb27b35ff,line);
- snprintf(line,sizeof(line),"Saved backup: %s",bs);draw_text(48.0f,176.0f,g_ps2_config_manager_backup_state==1?0x26794bff:0x77718fff,line);
- snprintf(line,sizeof(line),"Previous version: %s",rs);draw_text(48.0f,198.0f,g_ps2_config_manager_rollback_state==1?0x26794bff:0x77718fff,line);
- if(g_ps2_config_manager_target_state==1){snprintf(line,sizeof(line),"Current file size: %lu bytes",(unsigned long)g_ps2_config_manager_target_size);draw_text(470.0f,154.0f,0x514b69ff,line);}
- if(g_ps2_config_manager_backup_state==1){snprintf(line,sizeof(line),"Backup size: %lu bytes",(unsigned long)g_ps2_config_manager_backup_size);draw_text(470.0f,176.0f,0x514b69ff,line);}
- snprintf(line,sizeof(line),"Target: %.54s",target_name&&target_name[0]?target_name:"Unavailable");draw_text(48.0f,220.0f,0x514b69ff,line);
- snprintf(line,sizeof(line),"Match: %.40s",entry?entry->title:"NO EXACT MATCH");draw_text(470.0f,198.0f,entry?0x26794bff:0xb27b35ff,line);
- snprintf(line,sizeof(line),"ID: %s | Type: %s",entry?entry->title_id:"--",entry?entry->type:"--");draw_text(470.0f,220.0f,0x514b69ff,line);
- draw_soft_button(48.0f,248.0f,226.0f,46.0f,"BACK UP CURRENT CONFIG",g_ps2_config_manager_selection==0);
- draw_soft_button(300.0f,248.0f,226.0f,46.0f,"RESTORE SAVED BACKUP",g_ps2_config_manager_selection==1);
- draw_soft_button(552.0f,248.0f,226.0f,46.0f,entry?"DOWNLOAD / REPLACE CONFIG":"NO MATCHED DOWNLOAD",g_ps2_config_manager_selection==2);
- set_ui_font_size(7,11);draw_text(48.0f,326.0f,0x514b69ff,"Replacing an existing file requires a byte-matching backup.");
- draw_text(48.0f,348.0f,0x514b69ff,"Restore keeps the replaced file as a separate rollback copy.");
- if(g_ps2_config_download_running){
-  unsigned long downloaded_kb=(unsigned long)((g_ps2_config_downloaded+1023u)/1024u);
-  unsigned long total_kb=(unsigned long)((g_ps2_config_download_total+1023u)/1024u);
-  float progress=0.12f;
-  if(g_ps2_config_download_total>0){
-   unsigned int percent=(unsigned int)(g_ps2_config_downloaded>=g_ps2_config_download_total?100u:(g_ps2_config_downloaded*100u)/g_ps2_config_download_total);
-   snprintf(line,sizeof(line),"DOWNLOAD: %u%%  %lu/%lu KB",percent,downloaded_kb,total_kb);
-   progress=(float)g_ps2_config_downloaded/(float)g_ps2_config_download_total;
-   if(progress>1.0f)progress=1.0f;
-  }else snprintf(line,sizeof(line),"DOWNLOAD: %lu KB RECEIVED",downloaded_kb);
-  draw_text(48.0f,374.0f,0x875be8ff,line);
-  draw_rounded_rect(48.0f,386.0f,730.0f,5.0f,2.0f,0xe4deefff);
-  if(progress>0.0f)draw_rounded_rect(48.0f,386.0f,730.0f*progress,5.0f,2.0f,0x9568edff);
- }else draw_text(48.0f,386.0f,0x875be8ff,g_ps2_config_manager_message);
- draw_text(24.0f,PS3SCALE_UI_FOOTER_SINGLE_Y,0x77718fff,"UP/DOWN: SELECT ACTION | CROSS: EXECUTE | CIRCLE / SELECT / LEFT: BACK");set_ui_font_size(14,22);
+static void draw_ps2_config_manager(void)
+{
+    char line[192];
+    const ps3scale_game_t *game = selected_game();
+    const ps3scale_ps2_config_entry_t *entry = ps2_config_for_game(game);
+    const int can_generate =
+        game && game->kind == PS3SCALE_GAME_PS2_ISO;
+    const char *config_state =
+        g_ps2_config_manager_target_state == 1 ? "PRESENT" :
+        (g_ps2_config_manager_target_state == 0 ? "MISSING" :
+                                                  "INVALID / TOO LARGE");
+    const char *backup_state =
+        g_ps2_config_manager_backup_state == 1 ? "SAVED" :
+        (g_ps2_config_manager_backup_state == 0 ? "NOT SAVED" : "INVALID");
+    const char *rollback_state =
+        g_ps2_config_manager_rollback_state == 1 ? "AVAILABLE" :
+        (g_ps2_config_manager_rollback_state == 0 ? "NONE" : "INVALID");
+    const char *target_name = strrchr(g_ps2_config_manager_target, '/');
+
+    target_name = target_name ? target_name + 1 :
+                                 g_ps2_config_manager_target;
+
+    draw_page_header(
+        "PS2 ENHANCER",
+        "Per-game netemu CONFIG tools; ISO remains untouched.");
+    draw_soft_card(24.0f, 92.0f, 806.0f, 340.0f, 0);
+
+    set_ui_font_size(10, 16);
+    snprintf(line, sizeof(line), "Game: %.48s",
+             game ? game->title : "No PS2 game selected");
+    draw_text(48.0f, 112.0f, 0x29243fff, line);
+    set_ui_font_size(7, 11);
+
+    snprintf(line, sizeof(line), "CONFIG file: %s", config_state);
+    draw_text(48.0f, 142.0f,
+              g_ps2_config_manager_target_state == 1 ?
+              0x26794bff : 0xb27b35ff, line);
+    snprintf(line, sizeof(line), "Saved backup: %s", backup_state);
+    draw_text(48.0f, 162.0f,
+              g_ps2_config_manager_backup_state == 1 ?
+              0x26794bff : 0x77718fff, line);
+    snprintf(line, sizeof(line), "Rollback: %s", rollback_state);
+    draw_text(48.0f, 182.0f,
+              g_ps2_config_manager_rollback_state == 1 ?
+              0x26794bff : 0x77718fff, line);
+
+    snprintf(line, sizeof(line), "Match: %.42s",
+             entry ? entry->title : "NO EXACT GAME CONFIG");
+    draw_text(430.0f, 142.0f,
+              entry ? 0x26794bff : 0xb27b35ff, line);
+    snprintf(line, sizeof(line), "ID: %s | Type: %s",
+             entry ? entry->title_id : "--",
+             entry ? entry->type : "--");
+    draw_text(430.0f, 162.0f, 0x514b69ff, line);
+    if (g_ps2_config_manager_target_state == 1) {
+        snprintf(line, sizeof(line), "CONFIG size: %lu bytes",
+                 (unsigned long)g_ps2_config_manager_target_size);
+        draw_text(430.0f, 182.0f, 0x514b69ff, line);
+    }
+    if (target_name && target_name[0]) {
+        snprintf(line, sizeof(line), "Target: %.52s", target_name);
+        draw_text(48.0f, 204.0f, 0x514b69ff, line);
+    }
+
+    draw_soft_card(48.0f, 232.0f, 352.0f, 38.0f,
+                   g_ps2_config_manager_selection == 0);
+    draw_text(62.0f, 238.0f, 0x29243fff, "L2H PERFORMANCE (0x46)");
+    draw_text(62.0f, 253.0f, 0x77718fff,
+              "May help titles using L2H downloads.");
+    draw_text(350.0f, 244.0f,
+              (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_L2H) ?
+              0x26794bff : 0x77718fff,
+              (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_ENABLE_L2H) ?
+              "ON" : "OFF");
+
+    draw_soft_card(48.0f, 275.0f, 352.0f, 38.0f,
+                   g_ps2_config_manager_selection == 1);
+    draw_text(62.0f, 281.0f, 0x29243fff, "SHARPER PIXELS (0x44)");
+    draw_text(62.0f, 296.0f, 0x77718fff,
+              "Disables smoothing; aliasing may increase.");
+    draw_text(350.0f, 287.0f,
+              (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_DISABLE_SMOOTHING) ?
+              0x26794bff : 0x77718fff,
+              (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_DISABLE_SMOOTHING) ?
+              "ON" : "OFF");
+
+    draw_soft_card(48.0f, 318.0f, 352.0f, 38.0f,
+                   g_ps2_config_manager_selection == 2);
+    draw_text(62.0f, 324.0f, 0x29243fff, "FRAME PACING (0x48)");
+    draw_text(62.0f, 339.0f, 0x77718fff,
+              "Conservative VSYNC timing; experimental.");
+    draw_text(350.0f, 330.0f,
+              (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_FRAME_PACING) ?
+              0xb27b35ff : 0x77718fff,
+              (g_ps2_enhancement_flags & PS3SCALE_PS2_CFG_FRAME_PACING) ?
+              "ON" : "OFF");
+
+    draw_soft_button(430.0f, 232.0f, 350.0f, 34.0f,
+                     can_generate ? "APPLY LOCAL PROFILE" : "ISO PROFILE ONLY",
+                     g_ps2_config_manager_selection == 3);
+    draw_soft_button(430.0f, 271.0f, 350.0f, 34.0f,
+                     entry ? "DOWNLOAD EXACT GAME CONFIG" :
+                             "NO EXACT GAME CONFIG",
+                     g_ps2_config_manager_selection == 4);
+    draw_soft_button(430.0f, 310.0f, 350.0f, 34.0f,
+                     "BACK UP CURRENT CONFIG",
+                     g_ps2_config_manager_selection == 5);
+    draw_soft_button(430.0f, 349.0f, 350.0f, 34.0f,
+                     "RESTORE SAVED BACKUP",
+                     g_ps2_config_manager_selection == 6);
+
+    set_ui_font_size(7, 11);
+    draw_text(48.0f, 374.0f, 0x514b69ff,
+              "XMB upscaler / smoothing are separate display settings.");
+    draw_text(48.0f, 392.0f, 0xb27b35ff,
+              "60 FPS requires an exact per-game code patch; these options do not unlock it.");
+
+    if (g_ps2_config_download_running) {
+        unsigned int percent = 0;
+        unsigned long downloaded_kb =
+            (unsigned long)((g_ps2_config_downloaded + 1023u) / 1024u);
+        unsigned long total_kb =
+            (unsigned long)((g_ps2_config_download_total + 1023u) / 1024u);
+        float progress = 0.12f;
+
+        if (g_ps2_config_download_total > 0) {
+            percent = (unsigned int)(
+                g_ps2_config_downloaded >= g_ps2_config_download_total ?
+                100u :
+                (g_ps2_config_downloaded * 100u) /
+                g_ps2_config_download_total);
+            progress = (float)g_ps2_config_downloaded /
+                       (float)g_ps2_config_download_total;
+            if (progress > 1.0f)
+                progress = 1.0f;
+            snprintf(line, sizeof(line), "DOWNLOAD: %u%%  %lu/%lu KB",
+                     percent, downloaded_kb, total_kb);
+        } else {
+            snprintf(line, sizeof(line), "DOWNLOAD: %lu KB RECEIVED",
+                     downloaded_kb);
+        }
+        draw_text(48.0f, 410.0f, 0x875be8ff, line);
+        draw_rounded_rect(48.0f, 422.0f, 730.0f, 4.0f, 2.0f,
+                          0xe4deefff);
+        if (progress > 0.0f)
+            draw_rounded_rect(48.0f, 422.0f, 730.0f * progress, 4.0f,
+                              2.0f, 0x9568edff);
+    } else {
+        draw_text(48.0f, 410.0f, 0x875be8ff,
+                  g_ps2_config_manager_message);
+    }
+
+    draw_text(24.0f, PS3SCALE_UI_FOOTER_SINGLE_Y, 0x77718fff,
+              "UP/DOWN: SELECT | CROSS: TOGGLE / RUN | CIRCLE / SELECT: BACK");
+    set_ui_font_size(14, 22);
 }
+
 static void draw_fps_control(void)
 {
     char line[192];
@@ -7085,7 +7469,7 @@ int main(int argc, char *argv[])
                                game->kind == PS3SCALE_GAME_PS2_CLASSIC) {
                         g_ps2_config_manager_selection = 0;
                         snprintf(g_ps2_config_manager_message,sizeof(g_ps2_config_manager_message),
-                                 "BACK UP BEFORE REPLACING AN EXISTING CONFIG.");
+                                 "L2H IS ON BY DEFAULT. SELECT OPTIONS THEN APPLY.");
                         refresh_ps2_config_manager_cache();
                         g_screen = SCREEN_PS2_CONFIG;
                     }
@@ -7129,8 +7513,12 @@ int main(int argc, char *argv[])
                 g_screen = SCREEN_DETAILS;
                 g_details_cache_valid = 0;
             } else {
-                if (up && !old_up) g_ps2_config_manager_selection=(g_ps2_config_manager_selection+2)%3;
-                if (down && !old_down) g_ps2_config_manager_selection=(g_ps2_config_manager_selection+1)%3;
+                if (up && !old_up)
+                    g_ps2_config_manager_selection =
+                        (g_ps2_config_manager_selection + 6) % 7;
+                if (down && !old_down)
+                    g_ps2_config_manager_selection =
+                        (g_ps2_config_manager_selection + 1) % 7;
                 if (cross && !old_cross) perform_ps2_config_manager_action();
             }
         } else if (g_screen == SCREEN_FPS_CONTROL) {
