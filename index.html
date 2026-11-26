@@ -175,7 +175,7 @@ body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#343
 <input id="privateRoom" type="checkbox" hidden>
 
 <script>
-const state={token:"",code:"",player:null,room:null,ready:false,poll:null,heartbeat:null,heartbeatInFlight:false,screen:"main",menuIndex:0};
+const state={token:"",code:"",player:null,room:null,ready:false,poll:null,heartbeat:null,heartbeatInFlight:false,sessionEpoch:0,refreshInFlight:null,refreshQueued:false,roomsRequestId:0,screen:"main",menuIndex:0};
 const $=id=>document.getElementById(id);
 const screenIds={main:"mainMenu",battle:"battleMenu",options:"optionsMenu"};
 function setHealth(ok,text){$("healthDot").className="dot"+(ok?" ok":"");$("healthText").textContent=text;}
@@ -244,9 +244,9 @@ document.addEventListener("keydown",event=>{
   }
 });
 function displayName(){return $("displayName").value.trim().slice(0,20)||"Guest";}
-async function api(path,method="GET",body=null,auth=true){
+async function api(path,method="GET",body=null,auth=true,authToken=state.token){
   const headers={"Content-Type":"application/json"};
-  if(auth&&state.token)headers.Authorization="Bearer "+state.token;
+  if(auth&&authToken)headers.Authorization="Bearer "+authToken;
   const response=await fetch(path,{method,headers,body:body?JSON.stringify(body):undefined,cache:"no-store"});
   const data=await response.json().catch(()=>({error:"Invalid server response"}));
   if(!response.ok){
@@ -281,6 +281,7 @@ async function joinRoom(){
 function clearRoomTimers(){
   clearInterval(state.poll);clearInterval(state.heartbeat);
   state.poll=null;state.heartbeat=null;state.heartbeatInFlight=false;
+  state.refreshQueued=false;
 }
 function clearSavedRoomSession(){
   sessionStorage.removeItem("cb_token");
@@ -288,6 +289,9 @@ function clearSavedRoomSession(){
   sessionStorage.removeItem("cb_player_id");
 }
 function expireRoomSession(message){
+  state.sessionEpoch++;
+  state.refreshInFlight=null;
+  state.refreshQueued=false;
   clearRoomTimers();
   state.token="";state.code="";state.room=null;state.player=null;state.ready=false;
   clearSavedRoomSession();
@@ -301,6 +305,10 @@ function startRoomTimers(pollMs=5000){
   state.heartbeat=setInterval(()=>{sendHeartbeat();},20000);
 }
 async function enterRoom(data){
+  state.sessionEpoch++;
+  const epoch=state.sessionEpoch;
+  clearRoomTimers();
+  state.refreshInFlight=null;state.refreshQueued=false;
   state.token=data.token;state.code=data.room.code;state.player=data.player;state.ready=Boolean(data.player.ready);
   sessionStorage.setItem("cb_token",state.token);
   sessionStorage.setItem("cb_code",state.code);
@@ -309,12 +317,16 @@ async function enterRoom(data){
   $("roomNotice").textContent="Room created. Waiting for up to three more players. Game-session transport is not connected.";
   $("roomView").scrollIntoView({behavior:"smooth",block:"center"});
   await refreshRoom();
-  if(state.token)startRoomTimers(5000);
+  if(epoch===state.sessionEpoch&&state.token)startRoomTimers(5000);
 }
 async function refreshRoom(){
   if(!state.token||!state.code)return false;
+  const epoch=state.sessionEpoch,token=state.token,code=state.code;
+  if(state.refreshInFlight===epoch){state.refreshQueued=true;return false;}
+  state.refreshInFlight=epoch;
   try{
-    const data=await api("/api/rooms?code="+encodeURIComponent(state.code));
+    const data=await api("/api/rooms?code="+encodeURIComponent(code),"GET",null,true,token);
+    if(epoch!==state.sessionEpoch||token!==state.token||code!==state.code)return false;
     state.room=data.room;
     const playerId=state.player?.id||data.room.selfPlayerId||sessionStorage.getItem("cb_player_id");
     const me=data.room.players.find(player=>player.id===playerId);
@@ -328,12 +340,19 @@ async function refreshRoom(){
     renderRoom();
     return true;
   }catch(e){
+    if(epoch!==state.sessionEpoch||token!==state.token||code!==state.code)return false;
     if([401,403,404,410].includes(e.status)){
       expireRoomSession(e.message||"Your room session expired. Join or create another battle.");
     }else{
       $("roomNotice").textContent="Connection issue: "+e.message+" — retrying automatically.";
     }
     return false;
+  }finally{
+    if(state.refreshInFlight===epoch)state.refreshInFlight=null;
+    if(state.refreshQueued&&epoch===state.sessionEpoch&&token===state.token){
+      state.refreshQueued=false;
+      Promise.resolve().then(()=>{if(epoch===state.sessionEpoch&&token===state.token)refreshRoom();});
+    }
   }
 }
 function renderRoom(){
@@ -362,10 +381,12 @@ function renderRoom(){
 }
 async function updateRoomPresence(action,ready){
   if(!state.token||!state.code||state.heartbeatInFlight||(action==="set_ready"&&state.room?.gameStarted))return false;
+  const epoch=state.sessionEpoch,token=state.token;
   state.heartbeatInFlight=true;
   try{
     const payload=action==="set_ready"?{action,ready}:{action};
-    const data=await api("/api/rooms","POST",payload);
+    const data=await api("/api/rooms","POST",payload,true,token);
+    if(epoch!==state.sessionEpoch||token!==state.token)return false;
     state.room={...(state.room||{}),...data,players:data.players};
     const me=data.players.find(player=>player.id===state.player?.id);
     if(!me){
@@ -377,6 +398,7 @@ async function updateRoomPresence(action,ready){
     renderRoom();
     return true;
   }catch(e){
+    if(epoch!==state.sessionEpoch||token!==state.token)return false;
     if(e.status===409&&action==="set_ready"){
       await refreshRoom();
       return false;
@@ -388,7 +410,7 @@ async function updateRoomPresence(action,ready){
     }
     return false;
   }finally{
-    state.heartbeatInFlight=false;
+    if(epoch===state.sessionEpoch&&token===state.token)state.heartbeatInFlight=false;
   }
 }
 async function sendHeartbeat(){
@@ -398,19 +420,25 @@ async function toggleReady(){
   return updateRoomPresence("set_ready",!state.ready);
 }
 async function leaveRoom(){
-  try{await api("/api/rooms","POST",{action:"leave"});}catch{}
+  const token=state.token;
+  state.sessionEpoch++;
+  state.refreshInFlight=null;state.refreshQueued=false;
   clearRoomTimers();
   state.token="";state.code="";state.room=null;state.player=null;state.ready=false;
   clearSavedRoomSession();
   $("roomView").classList.remove("active");showScreen("battle");
+  if(token){try{await api("/api/rooms","POST",{action:"leave"},true,token);}catch{}}
 }
 async function copyCode(){
   try{await navigator.clipboard.writeText(state.code);$("roomNotice").textContent="Invite code copied: "+state.code;}
   catch{$("roomNotice").textContent="Room code: "+state.code;}
 }
 async function loadRooms(){
+  const requestId=++state.roomsRequestId;
   try{
-    const data=await api("/api/rooms","GET",null,false);const root=$("roomsList");root.innerHTML="";
+    const data=await api("/api/rooms","GET",null,false);
+    if(requestId!==state.roomsRequestId||state.screen!=="battle"||state.room)return;
+    const root=$("roomsList");root.innerHTML="";
     if(!data.rooms.length){root.innerHTML='<div class="empty">No public battles are waiting. Create one and invite a friend.</div>';return;}
     for(const r of data.rooms){
       const row=document.createElement("div");row.className="room-row";const info=document.createElement("div");
@@ -419,7 +447,10 @@ async function loadRooms(){
       const btn=document.createElement("button");btn.className="action-button";btn.textContent="JOIN";
       btn.onclick=()=>{$("joinCode").value=r.code;joinRoom();};row.append(info,btn);root.appendChild(row);
     }
-  }catch(e){const empty=document.createElement("div");empty.className="empty";empty.textContent=e.message;$("roomsList").replaceChildren(empty);}
+  }catch(e){
+    if(requestId!==state.roomsRequestId||state.screen!=="battle"||state.room)return;
+    const empty=document.createElement("div");empty.className="empty";empty.textContent=e.message;$("roomsList").replaceChildren(empty);
+  }
 }
 (async()=>{
   await checkHealth();
