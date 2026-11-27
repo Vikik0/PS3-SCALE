@@ -195,6 +195,13 @@ def build_capture_kit(
             phase120_doc,
             root / "Docs" / "PHASE120_PLAYER_PAIR_CAPTURE_VALIDATOR_HARDENING.md",
         )
+        phase121_doc = project_root / "docs" / "phase121-cross-platform-kit-import-shim.md"
+        if not phase121_doc.is_file():
+            raise FileNotFoundError(f"missing Phase 121 import shim document: {phase121_doc}")
+        shutil.copy2(
+            phase121_doc,
+            root / "Docs" / "PHASE121_CROSS_PLATFORM_KIT_IMPORT_SHIM.md",
+        )
 
         quickstart = (
             project_root / "docs" / "phase116-ps3-runtime-capture-quickstart-ar.md"
@@ -231,6 +238,17 @@ def build_capture_kit(
         if not ghidra_sources.is_dir():
             raise FileNotFoundError(f"missing Ghidra script directory: {ghidra_sources}")
         _copy_tree(ghidra_sources, root / "Tools" / "ghidra")
+
+        # Python imports use lowercase "tools.*"; keep the display folder as "Tools"
+        # while making the package portable to case-sensitive filesystems.
+        import_package = root / "tools"
+        import_package.mkdir(parents=True, exist_ok=True)
+        (import_package / "__init__.py").write_text(
+            '"""Case-sensitive import shim for the packaged Tools directory."""\\n'
+            "from pathlib import Path\\n"
+            '__path__ = [str(Path(__file__).resolve().parent.parent / "Tools")]\\n',
+            encoding="utf-8",
+        )
 
         # Keep the two dump scripts at the documented PS3 root paths too.
         for filename in ("dump_campaign_tu116.bat", "dump_multiplayer_tu116.bat"):
@@ -272,6 +290,8 @@ def build_capture_kit(
             "PHASE119_VALIDATION.json",
             "PHASE120_REPORT_AR.md",
             "PHASE120_VALIDATION.json",
+            "PHASE121_REPORT_AR.md",
+            "PHASE121_VALIDATION.json",
         ):
             source = project_root / "reports" / filename
             if source.is_file():
@@ -307,7 +327,7 @@ The Phase 118 call-site inventory is validated with:
 - Campaign and Multiplayer probe mode files.
 - PS3MAPI memory-dump scripts and TU1.16 runtime analyzers.
 - Experimental GSC source and GSCBIN under Experimental_GSC_Not_Installed only.
-- Selected Phase 84–90 and Phase 112–120 reports, event-lock map, activator-lineage audit, mission refactor graph, complete Campaign/Multiplayer analyzer dependency set, native player-pair capture template/validator, Arabic runtime capture quick start, validated trigger call-site inventory and MANIFEST.json with per-file SHA-256 checksums.
+- Selected Phase 84–90 and Phase 112–121 reports, event-lock map, activator-lineage audit, mission refactor graph, complete Campaign/Multiplayer analyzer dependency set, native player-pair capture template/validator, cross-platform Python import shim, Arabic runtime capture quick start, validated trigger call-site inventory and MANIFEST.json with per-file SHA-256 checksums.
 
 ## Recommended offline test
 
@@ -332,6 +352,10 @@ Fill the template only with measured PS3 runtime values, calculate campaign_self
     python Tools/ps3mapi/validate_campaign_player_pair_capture.py --capture campaign_player_pair_capture.json
 
 The combined analyzer checks the SELF hash binding when the capture is supplied. Structural validation does not authenticate the operator or prove a physical PS3 capture; Player 2 remains NOT_PROVEN until genuine runtime evidence is reviewed.
+
+## Phase 121 cross-platform imports
+
+The lowercase tools/__init__.py shim maps Python's tools.* imports to the user-facing Tools directory. This keeps the ZIP layout readable while allowing the combined analyzer to start on case-sensitive filesystems.
 
 ## Not yet proven
 
