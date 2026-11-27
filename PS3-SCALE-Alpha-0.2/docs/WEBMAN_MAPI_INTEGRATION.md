@@ -81,3 +81,16 @@ The webMAN batch command language exposes Title ID and in-game conditions, but n
 - webMAN MOD Web Commands: https://github.com/aldostools/webMAN-MOD/wiki/Web-Commands
 - webMAN MOD project: https://github.com/aldostools/webMAN-MOD
 - PS3MAPI overview: https://consolemods.org/wiki/PS3%3AMAPI
+
+## PS2 ISO mount and emulator selection
+
+PS2 ISO launch is a two-request flow:
+
+1. Mount with `/mount_ps3/<URL-encoded-path>?emu=ps2_netemu.self`. webMAN's documented `emu=` selector sets the PS2 emulator to netemu before the ISO mount.
+2. After the mount request succeeds, request `/play.ps3` to launch the mounted disc.
+
+This is deliberate: PS2 SCALE's EE replacement command `0x0A` is documented as netemu-only. A generic `/play.ps3<path>` request could otherwise inherit webMAN's saved emulator selection and silently bypass the intended CONFIG command.
+
+For USB images, webMAN caches the ISO under `/dev_hdd0/PS2ISO/<filename>`. The matching CONFIG must be beside that cached image. PS3 SCALE writes the sidecar at the cache location and compares any existing same-name cache with the selected source by size, boot serial and PCSX2 ELF hash. A mismatch blocks writes until the stale cache is removed.
+
+References: [webMAN mount route and `emu=` parameter](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount.h#L45-L60), [selector parsing](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount.h#L255-L270), [PS2 ISO cache and mount logic](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount_cobra.h#L245-L315).
