@@ -1,6 +1,8 @@
 import hashlib
 import json
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 import zipfile
@@ -37,34 +39,24 @@ def write_gsc_manifest(directory: Path, name: str, *, include_source=True):
 
 
 def make_project(root: Path):
+    source_root = Path(__file__).resolve().parents[1]
     ps3mapi = root / "tools" / "ps3mapi"
     ps3mapi.mkdir(parents=True)
     for filename in PS3MAPI_FILES:
-        (ps3mapi / filename).write_text(f"tool {filename}\n", encoding="utf-8")
+        shutil.copy2(source_root / "tools" / "ps3mapi" / filename, ps3mapi / filename)
     for filename in (
         "compare_pad_probe_logs.py",
         "compare_pad_input_probe_logs.py",
         "verify_capture_kit.py",
-    ):
-        (root / "tools" / filename).write_text(f"# {filename}\n", encoding="utf-8")
-    source_root = Path(__file__).resolve().parents[1]
-    shutil.copy2(
-        source_root / "tools" / "verify_mission_event_lock_map.py",
-        root / "tools" / "verify_mission_event_lock_map.py",
-    )
-    shutil.copy2(
-        source_root / "tools" / "mission_event_activator_audit.py",
-        root / "tools" / "mission_event_activator_audit.py",
-    )
-    for filename in ("verify_capture_kit.py", "verify_phase118_trigger_inventory.py"):
-        shutil.copy2(source_root / "tools" / filename, root / "tools" / filename)
-    for filename in (
+        "verify_mission_event_lock_map.py",
+        "mission_event_activator_audit.py",
+        "verify_phase118_trigger_inventory.py",
         "compare_ppu_function_inventories.py",
         "compare_splitscreen_builtin_xrefs.py",
         "ps3_elf_inspect.py",
         "run_ghidra_ppu_inventory.py",
     ):
-        (root / "tools" / filename).write_text(f"# {filename}\\n", encoding="utf-8")
+        shutil.copy2(source_root / "tools" / filename, root / "tools" / filename)
     ghidra = root / "tools" / "ghidra"
     ghidra.mkdir()
     for filename in (
@@ -72,7 +64,8 @@ def make_project(root: Path):
         "FindGhostsSplitScreenBuiltins.java",
         "SeedGhostsOpdFunctions.java",
     ):
-        (ghidra / filename).write_text(f"// {filename}\\n", encoding="utf-8")
+        shutil.copy2(source_root / "tools" / "ghidra" / filename, ghidra / filename)
+
     reports = root / "reports"
     reports.mkdir(parents=True, exist_ok=True)
     for filename in (
@@ -90,57 +83,38 @@ def make_project(root: Path):
         "PHASE119_VALIDATION.json",
         "PHASE120_REPORT_AR.md",
         "PHASE120_VALIDATION.json",
+        "PHASE121_REPORT_AR.md",
+        "PHASE121_VALIDATION.json",
     ):
         shutil.copy2(source_root / "reports" / filename, reports / filename)
     docs = root / "docs"
     docs.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(
-        source_root / "docs" / "phase116-ps3-runtime-capture-quickstart-ar.md",
-        docs / "phase116-ps3-runtime-capture-quickstart-ar.md",
-    )
-    shutil.copy2(
-        source_root / "docs" / "phase118-trigger-callsite-inventory.md",
-        docs / "phase118-trigger-callsite-inventory.md",
-    )
-    shutil.copy2(
-        source_root / "docs" / "phase119-inventory-validation-gate.md",
-        docs / "phase119-inventory-validation-gate.md",
-    )
-    shutil.copy2(
-        source_root / "docs" / "phase120-player-pair-capture-validator-hardening.md",
-        docs / "phase120-player-pair-capture-validator-hardening.md",
-    )
+    for filename in (
+        "phase116-ps3-runtime-capture-quickstart-ar.md",
+        "phase118-trigger-callsite-inventory.md",
+        "phase119-inventory-validation-gate.md",
+        "phase120-player-pair-capture-validator-hardening.md",
+        "phase121-cross-platform-kit-import-shim.md",
+    ):
+        shutil.copy2(source_root / "docs" / filename, docs / filename)
     for filename in (
         "PHASE118_REPORT_AR.md",
         "PHASE118_TRIGGER_CALLSITE_INVENTORY.json",
         "PHASE118_VALIDATION.json",
+        "PHASE88_MISSION_EVENT_LOCK_MAP.json",
+        "PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json",
+        "PHASE89_REPORT_AR.md",
+        "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json",
+        "PHASE90_REPORT_AR.md",
     ):
         shutil.copy2(source_root / "reports" / filename, reports / filename)
-    shutil.copy2(
-        source_root / "reports" / "PHASE88_MISSION_EVENT_LOCK_MAP.json",
-        reports / "PHASE88_MISSION_EVENT_LOCK_MAP.json",
-    )
-    shutil.copy2(
-        source_root / "reports" / "PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json",
-        reports / "PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json",
-    )
-    shutil.copy2(
-        source_root / "reports" / "PHASE89_REPORT_AR.md",
-        reports / "PHASE89_REPORT_AR.md",
-    )
-    shutil.copy2(
-        source_root / "reports" / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json",
-        reports / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json",
-    )
-    shutil.copy2(
-        source_root / "reports" / "PHASE90_REPORT_AR.md",
-        reports / "PHASE90_REPORT_AR.md",
-    )
+
     gsc = root / "client" / "ps3" / "gsc"
     gsc.mkdir(parents=True)
     (gsc / "ghc_campaign_player_registry.gsc").write_text(
-        "ghc_campaign_player_registry_init() { return 1; }\n", encoding="utf-8"
+        "ghc_campaign_player_registry_init() { return 1; }\\n", encoding="utf-8"
     )
+
 
 
 def make_artifacts(root: Path, project: Path):
@@ -215,6 +189,7 @@ class CaptureKitBuilderTests(unittest.TestCase):
                 self.assertTrue(any(name.endswith("/Tools/ps3mapi/campaign_capture_binding.py") for name in names))
                 self.assertTrue(any(name.endswith("/Tools/ps3mapi/CAMPAIGN_NATIVE_PLAYER_CAPTURE_TEMPLATE.json") for name in names))
                 self.assertTrue(any(name.endswith("/Tools/ps3mapi/analyze_tu116_runtime_capture.py") for name in names))
+                self.assertTrue(any(name.endswith("/tools/__init__.py") for name in names))
                 self.assertTrue(any(name.endswith("/Tools/run_ghidra_ppu_inventory.py") for name in names))
                 self.assertTrue(any(name.endswith("/Tools/ghidra/ExportGhostsPpuFunctionInventory.java") for name in names))
                 self.assertTrue(any(name.endswith("/Reports/PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json") for name in names))
@@ -230,7 +205,27 @@ class CaptureKitBuilderTests(unittest.TestCase):
                 self.assertTrue(any(name.endswith("/Reports/PHASE120_REPORT_AR.md") for name in names))
                 self.assertTrue(any(name.endswith("/Reports/PHASE120_VALIDATION.json") for name in names))
                 self.assertTrue(any(name.endswith("/Docs/PHASE120_PLAYER_PAIR_CAPTURE_VALIDATOR_HARDENING.md") for name in names))
+                self.assertTrue(any(name.endswith("/Reports/PHASE121_REPORT_AR.md") for name in names))
+                self.assertTrue(any(name.endswith("/Reports/PHASE121_VALIDATION.json") for name in names))
+                self.assertTrue(any(name.endswith("/Docs/PHASE121_CROSS_PLATFORM_KIT_IMPORT_SHIM.md") for name in names))
                 self.assertEqual(sum(name.endswith("/Docs/PS3_RUNTIME_CAPTURE_QUICKSTART_AR.md") for name in names), 1)
+
+            with tempfile.TemporaryDirectory() as extracted:
+                with zipfile.ZipFile(output) as archive:
+                    archive.extractall(extracted)
+                package_root = Path(extracted) / "Ghosts_TU116_Development_Capture_Kit"
+                smoke = subprocess.run(
+                    [
+                        sys.executable,
+                        str(package_root / "Tools" / "ps3mapi" / "analyze_tu116_runtime_capture.py"),
+                        "--help",
+                    ],
+                    cwd=package_root,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertEqual(smoke.returncode, 0, smoke.stderr)
 
     def test_missing_ci_artifact_payload_fails_closed(self):
         with tempfile.TemporaryDirectory() as temp:
