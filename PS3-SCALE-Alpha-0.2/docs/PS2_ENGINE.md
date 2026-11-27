@@ -45,13 +45,14 @@ Artemis PS3 is not treated as a generic runtime cheat injector for a PS2 game in
 The PS2 Enhancer screen now provides:
 - Probe the selected ISO boot ELF on entry and show the exact boot serial + PCSX2 ELF hash, alongside FPS, 16:9 and 480p match availability; these actions are gated behind confirmed Slim / Super Slim netemu hardware.
 - Validate every candidate patch address against a file-backed executable ELF segment before showing it as available; the apply path repeats this check.
-- Require a two-step CROSS confirmation before writing any experimental EE code patch. CIRCLE or changing the selected row cancels the pending action without changing CONFIG.
+- Require a two-step CROSS confirmation before writing any experimental EE code patch. The review overlay lists every EE address, original word read from the selected boot ELF, replacement word, exact title, serial, hash and write count. CIRCLE or changing the selected row cancels the pending action without changing CONFIG.
+- Re-read every original opcode immediately before writing and refuse the install if any opcode differs from the review preview, even if the serial/hash still appears to match.
 
 - `0x46` L2H performance toggle (on by default).
 - `0x44` smoothing-disable / sharper-pixel toggle (off by default).
 - Optional conservative `0x48` frame-pacing toggle (off by default and explicitly experimental).
 - Optional `0x50` pressure-sensitive controls toggle (off by default).
-- Exact-match 480p progressive-output patches for three PAL titles; unsupported patch types are rejected.
+- Exact-match 480p progressive-output patches for thirteen PAL titles; unsupported patch types are rejected.
 - Local netemu CONFIG generation for PS2 ISO sidecars only on confirmed Slim / Super Slim hardware; PS2 Classics require an exact matching encrypted ENC file.
 - Refuse to replace any existing CONFIG with a minimal local profile, preserving community and previously installed settings. The separate game-patch path can append to compatible CONFIGs without discarding their commands.
 - Append or safely merge exact-match experimental `0x0A` code-patch entries for FPS, widescreen and 480p. Existing patch lists are merged only when the complete CONFIG uses the validated allow-listed command subset; unknown command streams and Title ID / multidisc footers are refused.
@@ -112,7 +113,7 @@ The pinned PCSX2 commit also contains simple word-only 480p sections for thirtee
 
 Only `word` writes are converted; files using `extended`, byte writes or conditional runtime codes are excluded. PCSX2-only `gsinterlacemode=1` metadata is not copied into netemu CONFIG; only the game's EE instruction writes are imported. The actual 480p signal must therefore be confirmed on a physical PS3 and display, rather than inferred from a successful CONFIG write. The kill.switch source notes that FMVs remain PAL even when the 480p startup mode is selected. This selects a 480p game mode where the title supports it; the PS3 XMB upscaler can then scale the output to the selected display mode. It is not a native 720p/1080p renderer, and some titles may show offset or FMV issues, so test per title and restore the backup if needed.
 
-PCSX2's patch filename hash is not standard CRC32: its game ELF hash is the XOR of little-endian 32-bit words across the boot ELF. PS3 SCALE resolves the BOOT/BOOT2 path from SYSTEM.CNF through nested ISO9660 directories, computes this same hash, and reads the original word only from a file-backed executable MIPS ELF segment. The converter can then create a netemu `0x0A` replacement entry with the exact original word as a guard.
+PCSX2's patch filename hash is not standard CRC32: its game ELF hash is the XOR of little-endian 32-bit words across the boot ELF, matching PCSX2's `ElfObject::ReadAndGetCRC` implementation in [Elfheader.cpp](https://github.com/PCSX2/pcsx2/blob/51e3036bdb7cad7ae7e25ad8caa438b06f538c4e/pcsx2/Elfheader.cpp#L259-L289). PS3 SCALE resolves the BOOT/BOOT2 path from SYSTEM.CNF through nested ISO9660 directories, computes this same hash, and reads the original word only from a file-backed executable MIPS ELF segment. The converter can then create a netemu `0x0A` replacement entry with the exact original word as a guard.
 
 The current experimental catalogue contains eleven exact serial + ELF-hash candidates from the same pinned PCSX2 patch commit:
 
