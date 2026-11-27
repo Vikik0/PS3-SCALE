@@ -181,7 +181,7 @@ static char g_cover_path[PS3SCALE_PATH_MAX] = "";
 /* Replace with the URL of the separate PS3 SCALE Supabase project after deployment. */
 #define PS3SCALE_SUPPORT_URL "https://YOUR_PROJECT.supabase.co/functions/v1/ps3scale-support"
 #define PS3SCALE_SUPPORT_API_KEY "YOUR_PUBLISHABLE_KEY"
-#define PS3SCALE_APP_VERSION "ALPHA 0.34"
+#define PS3SCALE_APP_VERSION "ALPHA 0.35"
 #define PS3SCALE_PS2_CONFIG_INDEX_PATH "/dev_hdd0/game/PS3SCALE1/USRDIR/ps2_config_index.tsv"
 #define PS3SCALE_PS2_CLASSICS_CONFIG_DIR "/dev_hdd0/game/PS2CONFIG/USRDIR/CONFIG/ENC"
 #define PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT (PS3SCALE_PS2_CONFIG_MAX_BYTES * 2u)
@@ -230,6 +230,8 @@ static int g_ps2_patch_widescreen_available=0;
 static int g_ps2_patch_480p_available=0;
 static char g_ps2_patch_serial[16] = "";
 static uint32_t g_ps2_patch_elf_hash = 0;
+static uint32_t g_ps2_patch_preview_original[3][PS3SCALE_PS2_CONFIG_MAX_CODE_PATCHES];
+static size_t g_ps2_patch_preview_count[3] = {0, 0, 0};
 static int g_ps2_patch_confirm_pending = 0;
 static ps3scale_ps2_patch_kind_t g_ps2_patch_confirm_kind = PS3SCALE_PS2_PATCH_FPS;
 static unsigned int g_ps2_enhancement_flags = PS3SCALE_PS2_CFG_ENABLE_L2H;
@@ -1511,6 +1513,39 @@ static const ps3scale_game_t *selected_game(void)
     return library_game_at((size_t)g_selected);
 }
 
+static int cache_ps2_patch_preview(ps3scale_ps2_patch_kind_t patch_kind,
+                                   const char *serial, uint32_t elf_hash,
+                                   const unsigned char *elf_data,
+                                   size_t elf_size)
+{
+    const ps3scale_ps2_game_patch_t *patch;
+    size_t index;
+    size_t i;
+
+    if (patch_kind < PS3SCALE_PS2_PATCH_FPS ||
+        patch_kind > PS3SCALE_PS2_PATCH_480P || !serial || !elf_data)
+        return 0;
+
+    index = (size_t)patch_kind - 1u;
+    patch = ps3scale_ps2_game_patch_find(serial, elf_hash, patch_kind);
+    if (!patch || !patch->words || !patch->word_count ||
+        patch->word_count > PS3SCALE_PS2_CONFIG_MAX_CODE_PATCHES ||
+        !ps3scale_ps2_game_patch_elf_addresses_valid(
+            patch, elf_data, elf_size))
+        return 0;
+
+    for (i = 0; i < patch->word_count; ++i) {
+        if (ps3scale_ps2_elf_read_exec_word(
+                elf_data, elf_size, patch->words[i].ee_address,
+                &g_ps2_patch_preview_original[index][i]) != 0) {
+            g_ps2_patch_preview_count[index] = 0;
+            return 0;
+        }
+    }
+    g_ps2_patch_preview_count[index] = patch->word_count;
+    return 1;
+}
+
 static void refresh_ps2_patch_availability(void)
 {
     const ps3scale_game_t *game = selected_game();
@@ -1525,6 +1560,9 @@ static void refresh_ps2_patch_availability(void)
     g_ps2_patch_480p_available = 0;
     g_ps2_patch_serial[0] = '\0';
     g_ps2_patch_elf_hash = 0;
+    g_ps2_patch_preview_count[0] = 0;
+    g_ps2_patch_preview_count[1] = 0;
+    g_ps2_patch_preview_count[2] = 0;
     g_ps2_patch_confirm_pending = 0;
     if (!game || game->kind != PS3SCALE_GAME_PS2_ISO)
         return;
@@ -1540,18 +1578,12 @@ static void refresh_ps2_patch_availability(void)
         g_ps2_patch_probe_valid = 1;
         snprintf(g_ps2_patch_serial, sizeof(g_ps2_patch_serial), "%s", serial);
         g_ps2_patch_elf_hash = elf_hash;
-        g_ps2_patch_fps_available =
-            ps3scale_ps2_game_patch_elf_addresses_valid(
-                ps3scale_ps2_game_patch_find(serial, elf_hash,
-                    PS3SCALE_PS2_PATCH_FPS), elf_data, elf_size);
-        g_ps2_patch_widescreen_available =
-            ps3scale_ps2_game_patch_elf_addresses_valid(
-                ps3scale_ps2_game_patch_find(serial, elf_hash,
-                    PS3SCALE_PS2_PATCH_WIDESCREEN), elf_data, elf_size);
-        g_ps2_patch_480p_available =
-            ps3scale_ps2_game_patch_elf_addresses_valid(
-                ps3scale_ps2_game_patch_find(serial, elf_hash,
-                    PS3SCALE_PS2_PATCH_480P), elf_data, elf_size);
+        g_ps2_patch_fps_available = cache_ps2_patch_preview(
+            PS3SCALE_PS2_PATCH_FPS, serial, elf_hash, elf_data, elf_size);
+        g_ps2_patch_widescreen_available = cache_ps2_patch_preview(
+            PS3SCALE_PS2_PATCH_WIDESCREEN, serial, elf_hash, elf_data, elf_size);
+        g_ps2_patch_480p_available = cache_ps2_patch_preview(
+            PS3SCALE_PS2_PATCH_480P, serial, elf_hash, elf_data, elf_size);
     }
     free(elf_data);
 }
@@ -3588,6 +3620,16 @@ static void apply_ps2_game_patch(ps3scale_ps2_patch_kind_t patch_kind)
                 catalog_patch->words[i].ee_address, &original_word) != 0) {
             snprintf(g_ps2_config_manager_message, sizeof(g_ps2_config_manager_message),
                      "PATCH ADDRESS IS NOT IN A FILE-BACKED EXECUTABLE ELF SEGMENT.");
+            goto cleanup;
+        }
+        if (g_ps2_patch_preview_count[(size_t)patch_kind - 1u] != 0 &&
+            (g_ps2_patch_preview_count[(size_t)patch_kind - 1u] !=
+                 catalog_patch->word_count ||
+             g_ps2_patch_preview_original[(size_t)patch_kind - 1u][i] !=
+                 original_word)) {
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "BOOT ELF CHANGED SINCE REVIEW. REOPEN THE ENHANCER.");
             goto cleanup;
         }
         code_patches[i].ee_address = catalog_patch->words[i].ee_address;
@@ -6128,6 +6170,59 @@ static void draw_details(void)
 }
 
 
+static void draw_ps2_patch_review(void)
+{
+    const size_t index = (size_t)g_ps2_patch_confirm_kind - 1u;
+    const ps3scale_ps2_game_patch_t *patch =
+        ps3scale_ps2_game_patch_find(g_ps2_patch_serial,
+            g_ps2_patch_elf_hash, g_ps2_patch_confirm_kind);
+    char line[192];
+    size_t i;
+    const char *kind_label =
+        g_ps2_patch_confirm_kind == PS3SCALE_PS2_PATCH_FPS ? "60 FPS" :
+        (g_ps2_patch_confirm_kind == PS3SCALE_PS2_PATCH_WIDESCREEN ?
+         "16:9 WIDESCREEN" : "480P OUTPUT");
+
+    draw_rounded_rect(24.0f, 92.0f, 806.0f, 340.0f, 14.0f, 0xfaf8ffff);
+    draw_rounded_outline(24.0f, 92.0f, 806.0f, 340.0f, 14.0f, 0xd9d1eaff);
+    set_ui_font_size(10, 16);
+    draw_text(48.0f, 116.0f, 0x29243fff, "REVIEW EXPERIMENTAL PS2 PATCH");
+    set_ui_font_size(7, 11);
+
+    if (!patch || index >= 3u ||
+        g_ps2_patch_preview_count[index] != patch->word_count) {
+        draw_text(48.0f, 160.0f, 0xb27b35ff,
+                  "PATCH PREVIEW IS UNAVAILABLE. NO FILE HAS BEEN CHANGED.");
+        draw_text(48.0f, 406.0f, 0x875be8ff,
+                  "CIRCLE: CANCEL");
+        set_ui_font_size(14, 22);
+        return;
+    }
+
+    snprintf(line, sizeof(line), "Game: %.68s", patch->title);
+    draw_text(48.0f, 142.0f, 0x514b69ff, line);
+    snprintf(line, sizeof(line), "Type: %s | Serial: %.15s | ELF: %08lX | Writes: %lu",
+             kind_label, g_ps2_patch_serial,
+             (unsigned long)g_ps2_patch_elf_hash,
+             (unsigned long)patch->word_count);
+    draw_text(48.0f, 162.0f, 0x514b69ff, line);
+    draw_text(48.0f, 184.0f, 0x514b69ff,
+              "EE ADDRESS          ORIGINAL WORD       REPLACEMENT WORD");
+    for (i = 0; i < patch->word_count && i < PS3SCALE_PS2_CONFIG_MAX_CODE_PATCHES; ++i) {
+        snprintf(line, sizeof(line), "%02lu  %08lX           %08lX          %08lX",
+                 (unsigned long)(i + 1u),
+                 (unsigned long)patch->words[i].ee_address,
+                 (unsigned long)g_ps2_patch_preview_original[index][i],
+                 (unsigned long)patch->words[i].replacement_word);
+        draw_text(48.0f, 202.0f + (float)i * 14.0f, 0x29243fff, line);
+    }
+    draw_text(48.0f, 390.0f, 0xb27b35ff,
+              "EXPERIMENTAL: NOT YET VERIFIED ON A PHYSICAL PS3.");
+    draw_text(48.0f, 410.0f, 0x875be8ff,
+              "CROSS: APPLY THIS EXACT LIST | CIRCLE: CANCEL WITHOUT WRITING");
+    set_ui_font_size(14, 22);
+}
+
 static void draw_ps2_config_manager(void)
 {
     char line[192];
@@ -6388,6 +6483,9 @@ static void draw_ps2_config_manager(void)
         draw_text(58.0f, 390.0f, 0x875be8ff,
                   "These are global XMB settings. PS3 SCALE cannot change them automatically.");
     }
+
+    if (g_ps2_patch_confirm_pending && !g_ps2_enhancer_guide_open)
+        draw_ps2_patch_review();
 
     draw_text(24.0f, PS3SCALE_UI_FOOTER_SINGLE_Y, 0x77718fff,
               g_ps2_enhancer_guide_open ?
