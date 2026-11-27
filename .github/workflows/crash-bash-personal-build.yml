@@ -144,7 +144,7 @@ jobs:
               )
 
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              output.write(f"run_id={selected}\\n")
+              output.write("run_id=%s" % selected + chr(10))
           print(f"Verified successful PS3 runtime build and selected artifact from run {selected}.")
           PY
 
