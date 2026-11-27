@@ -24,7 +24,7 @@ This report is the acceptance record for the PS2 Enhancer. A successful host tes
 | Display refresh rate | NOT RECORDED |
 | Controller model | NOT RECORDED |
 | Test date / tester | NOT RECORDED |
-| PS3 SCALE build commit | `261da5906c68bf3fbf406efe9a669ec7b9388e77` |
+| PS3 SCALE build commit | `da3c88f61eea95aa0f8bcd7c0d5503f23d8f1fab` |
 
 ## Required procedure for each title
 
