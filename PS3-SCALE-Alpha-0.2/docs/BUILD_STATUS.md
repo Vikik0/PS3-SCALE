@@ -1,12 +1,27 @@
-# Build status — PS3 SCALE Alpha 0.33
+# Build status — PS3 SCALE Alpha 0.34
 
 ## Current development head
 
-- Branch: `design/splash-transitions-ui-v6`
-- Pull request: Draft PR #16, targeting `design/settings-support-ui-v5`
-- Application version shown in the UI: `ALPHA 0.33`
-- Package metadata: `APP_VER=00.33`, `VERSION=00.33`
+- Branch: `feature/ps2-enhancement-engine`
+- Pull request: Draft PR #20, targeting `design/splash-transitions-ui-v6`
+- Application version shown in the UI: `ALPHA 0.34`
+- Package metadata: `APP_VER=00.34`, `VERSION=00.34`
 - Package title ID: `PS3SCALE1`
+- Source commit used for the Alpha 0.34 package: `cf850c558550a3e6acdc76bad51578830bb86df8`
+
+## Alpha 0.34 — PS2 Enhancer and guarded patch application
+
+- The Enhancer displays the exact boot serial and PCSX2 ELF hash read from the selected PS2 ISO before enabling any game-specific patch.
+- The source-pinned catalogue contains 11 FPS, 12 widescreen and 13 480p candidates. A candidate is available only when both serial and ELF hash match and every EE address belongs to a file-backed executable ELF segment.
+- Experimental EE code patches require two CROSS presses. The first press arms the selected action; the second applies it. CIRCLE, D-pad navigation, leaving the screen or opening the display guide cancels the pending action before any CONFIG write.
+- Reapplying the exact same patch is now idempotent: the app reports ALREADY INSTALLED and leaves CONFIG unchanged. Partial overlaps or different original/replacement words at the same address are rejected.
+- CONFIG writes retain the verified backup, staged temporary file, atomic install and rollback flow. The original ISO remains read-only.
+- The visible app version and package SFO metadata are both `0.34`; a host-side contract test now checks that they cannot drift apart.
+- GitHub Actions run #988 on commit `cf850c558550a3e6acdc76bad51578830bb86df8`: **PASS** — Host-side tests, Support Edge Function checks, and PS3 ELF/SELF/standard PKG/GNPDRM PKG build and validation all passed.
+- Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/45973073598
+- Artifact: [PS3-SCALE-Alpha-0.34-build-with-embedded-theme](https://github.com/Vikik0/PS3-SCALE/actions/runs/45973073598/artifacts/15185034240) — 25,450,588 bytes; SHA-256 `54db642b381387fbe4828529db57237af7008b7683466b55d334b06b7cfa75b3`.
+- Build outputs: ELF SHA-256 `1ec375551248bd9b444e29b35c11beec75711cbd78f05231e6e8362f8ad0181c`; SELF `ccdb3bc53fa5ec7912a82344518bff616e33c5afe9892d5ff8a853e5800c530f`; standard PKG `33cf67808fb65a71cfe1fc730a762b13a53947cad88dbf2d820a1c167669e5db`; GNPDRM PKG `f25208e5f7481d99b239cecf4a167c122c419e7061f9e5d1f3d79905843f7936`.
+- Physical-console testing is still **NOT DONE**. The reported test target is a PS3 Slim with CFW 4.93 and Cobra 8.5; exact CECH model and CEX/DEX mode have not been confirmed on-device. No FPS, widescreen or 480p candidate is marked verified.
 
 ## Alpha 0.33 — durable support outbox and retry queue
 
@@ -202,4 +217,4 @@ SHA-256:
 - Community NCL files and memory profiles remain community-supplied. Exact matching, index-size validation and text checks do not prove that a patch is safe or hardware-tested.
 - Remaining compiler/configure warnings are from bundled third-party mpg123 / PS3 network dependency sources (for example, unused parameters, signedness and optional libpsl/IDN/manual support). The PS3 application source builds successfully.
 
-Do not merge Draft PR #16 until the physical-console smoke test and review are complete.
+Do not merge Draft PR #20 until the physical-console smoke test and review are complete.

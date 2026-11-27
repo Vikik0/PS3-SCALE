@@ -10,7 +10,7 @@ PS3 SCALE is a PS3 homebrew application for managing PS3/PS2 game libraries and 
 - Development branch: `feature/ps2-enhancement-engine`
 - Review: [Draft PR #20](https://github.com/Vikik0/PS3-SCALE/pull/20), targeting `design/splash-transitions-ui-v6`
 
-Alpha 0.34 is the PS2 Enhancer development build. Its current source changes add exact boot-serial / ELF-hash visibility and a two-step confirmation before experimental EE code patches are written. The version-bumped package is being rebuilt in GitHub Actions; physical-console behavior remains unverified until tested on a real PS3.
+Alpha 0.34 adds exact boot-serial / ELF-hash visibility, two-step confirmation for experimental EE code patches, and safe detection of already-installed or conflicting patches. GitHub Actions [run #988 passed](https://github.com/Vikik0/PS3-SCALE/actions/runs/45973073598) all host tests, Support Edge Function checks, and PS3 ELF/SELF/standard PKG/GNPDRM PKG validation. [Download the Alpha 0.34 build](https://github.com/Vikik0/PS3-SCALE/actions/runs/45973073598/artifacts/15185034240). Physical-console behavior remains unverified until tested on a real PS3.
 
 ## Current features
 
@@ -40,6 +40,7 @@ Alpha 0.34 is the PS2 Enhancer development build. Its current source changes add
 - Supports verified backup, restore, guarded replacement and rollback; existing backups and rollback files are not silently overwritten.
 - Shows the exact detected boot serial and PCSX2 ELF hash before exposing per-title FPS, 16:9 and 480p code-patch candidates.
 - Requires a second CROSS confirmation before writing an experimental EE patch; CIRCLE or D-pad navigation cancels the pending action.
+- Detects an exact already-installed patch and refuses partial/conflicting overlaps without changing CONFIG.
 - All code-patch candidates remain experimental until tested on the target PS3; no universal 60 FPS or native-HD result is claimed.
 - The original ISO, EBOOT and installed game files remain read-only.
 

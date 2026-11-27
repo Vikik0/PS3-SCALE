@@ -1,9 +1,9 @@
-# Device test matrix — Alpha 0.33
+# Device test matrix — Alpha 0.34
 
 Primary device (user-reported):
 - Family: PS3 Slim
 - System software: CFW 4.93
-- Exact CECH retail model: not yet confirmed
+- Exact CECH retail model: not yet confirmed (confirm before hardware-specific validation)
 - CEX / DEX: not yet verified on the console; the app queries this read-only when supported
 - Cobra version: 8.5 (user-reported)
 - Available HDD space: not yet confirmed
@@ -99,9 +99,9 @@ Host CI also runs the actual local HTTP transport against a loopback webMAN mock
 13. Confirm PS2 Classics cannot use the plaintext local profile builder; only an exact matching encrypted ENC catalogue entry may be installed.
 14. Confirm the UI states that generic CONFIG toggles do not unlock 60 FPS. Treat the 11 source-pinned FPS candidates, 12 widescreen profiles and 13 480p profiles as separate exact per-game options; verify a wrong serial or ELF hash never exposes Apply, and verify generated `0x0A` entries include the exact original-word guard. The Enhancer must display the detected serial/hash; the first CROSS arms a code patch, the second CROSS applies it, and CIRCLE or D-pad navigation cancels without changing CONFIG.
 15. Reapply the exact same patch and verify the app reports ALREADY INSTALLED without changing CONFIG. Confirm a partial overlap or conflicting replacement word is rejected and leaves CONFIG unchanged.
-15. On the physical PS3 Slim, test each FPS candidate separately and record actual frame rate, gameplay timing, audio, cutscenes, controller input, crashes and stability. A successful CONFIG write is not proof of 60 FPS.
-16. For display scaling, test XMB `PS / PS2 Upscaler` Normal and Full Screen, then test `PS / PS2 Smoothing` On and Off. Record the TV-reported output mode and best combination per title; PS3 SCALE does not change these XMB settings or claim native HD rendering.
-17. Do not mark any option as hardware-verified until the test is completed on the physical PS3 Slim.
+16. On the physical PS3 Slim, test each FPS candidate separately and record actual frame rate, gameplay timing, audio, cutscenes, controller input, crashes and stability. A successful CONFIG write is not proof of 60 FPS.
+17. For display scaling, test XMB `PS / PS2 Upscaler` Normal and Full Screen, then test `PS / PS2 Smoothing` On and Off. Record the TV-reported output mode and best combination per title; PS3 SCALE does not change these XMB settings or claim native HD rendering.
+18. Do not mark any option as hardware-verified until the test is completed on the physical PS3 Slim.
 
 ## Other hardware targets after the Slim test
 

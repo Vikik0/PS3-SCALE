@@ -4,7 +4,15 @@
 
 This report is the acceptance record for the PS2 Enhancer. A successful host test, ELF/SELF/PKG build, CONFIG write or exact game match is not proof of a working enhancement.
 
-## Test environment
+## Planned target device (reported project setup; not yet physically tested)
+
+- Device family: PS3 Slim.
+- System software: CFW 4.93.
+- Cobra: 8.5.
+- Exact CECH retail model and CEX/DEX mode remain unconfirmed on-device.
+- This is the intended test target only. No physical test has been performed; the actual test record below remains unfilled.
+
+## Actual test environment (pending physical run)
 
 | Field | Recorded value |
 |---|---|
@@ -16,7 +24,7 @@ This report is the acceptance record for the PS2 Enhancer. A successful host tes
 | Display refresh rate | NOT RECORDED |
 | Controller model | NOT RECORDED |
 | Test date / tester | NOT RECORDED |
-| PS3 SCALE build commit | `b2113918081dad5aaab6127e1cc52f766454acea` |
+| PS3 SCALE build commit | `cf850c558550a3e6acdc76bad51578830bb86df8` |
 
 ## Required procedure for each title
 
