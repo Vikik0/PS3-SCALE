@@ -58,29 +58,52 @@ static int has_dot_segment(const char *path)
 
 static int supported_ps2_iso_path(const char *path, int *is_usb)
 {
-    static const char hdd_root[] = "/dev_hdd0/PS2ISO/";
-    char usb_root[32];
+    static const char *const hdd_roots[] = {
+        "/dev_hdd0/PS2ISO/",
+        "/dev_hdd0/PS3/PS2ISO/"
+    };
+    char usb_root[40];
     unsigned int index;
     size_t i;
+    size_t root_index;
     int usb = 0;
+    int root_found = 0;
 
     if (!path || !path[0] || strlen(path) >= PS3SCALE_PATH_MAX)
         return 0;
-    if (strncmp(path, hdd_root, sizeof(hdd_root) - 1u) == 0) {
-        usb = 0;
-    } else {
-        for (index = 0; index <= 7u; ++index) {
+
+    for (root_index = 0;
+         root_index < sizeof(hdd_roots) / sizeof(hdd_roots[0]);
+         ++root_index) {
+        size_t root_length = strlen(hdd_roots[root_index]);
+        if (strncmp(path, hdd_roots[root_index], root_length) == 0) {
+            root_found = 1;
+            break;
+        }
+    }
+
+    if (!root_found) {
+        for (index = 0; index <= 7u && !root_found; ++index) {
             int written = snprintf(usb_root, sizeof(usb_root),
                                    "/dev_usb%03u/PS2ISO/", index);
             if (written > 0 && (size_t)written < sizeof(usb_root) &&
                 strncmp(path, usb_root, (size_t)written) == 0) {
                 usb = 1;
+                root_found = 1;
+                break;
+            }
+            written = snprintf(usb_root, sizeof(usb_root),
+                               "/dev_usb%03u/PS3/PS2ISO/", index);
+            if (written > 0 && (size_t)written < sizeof(usb_root) &&
+                strncmp(path, usb_root, (size_t)written) == 0) {
+                usb = 1;
+                root_found = 1;
                 break;
             }
         }
-        if (index > 7u)
-            return 0;
     }
+    if (!root_found)
+        return 0;
 
     if (strstr(path, "//") || has_dot_segment(path))
         return 0;
