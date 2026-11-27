@@ -1,4 +1,3 @@
-import copy
 import unittest
 
 from tools.ps3mapi.validate_campaign_player_pair_capture import validate_capture
@@ -86,6 +85,56 @@ class CampaignPlayerPairCaptureTests(unittest.TestCase):
         self.assertFalse(result["explicit_pair_loss_observed"])
         self.assertFalse(result["auto_rebind_cycle_observed_in_supplied_data"])
         self.assertIn("camera_owner_mismatch", [x["reason"] for x in result["rejected_observations"]])
+
+    def test_best_reconnect_run_survives_a_later_malformed_sample(self):
+        data = valid_capture()
+        malformed = observation(1500)
+        malformed["players"][1]["camera_owner_entity_id"] = "wrong-owner"
+        data["observations"] = (
+            [observation(0, connected=False)]
+            + [observation(i * 250 + 250) for i in range(5)]
+            + [malformed]
+        )
+        result = validate_capture(data)
+        self.assertEqual(result["reconnect_stable_run_after_pair_loss"], 5)
+        self.assertEqual(result["reconnect_current_run_after_last_break"], 0)
+        self.assertTrue(result["auto_rebind_cycle_observed_in_supplied_data"])
+
+    def test_best_reconnect_run_survives_a_later_valid_identity_change(self):
+        data = valid_capture()
+        changed = observation(1500)
+        for index, player_record in enumerate(changed["players"]):
+            entity = f"replacement-{index}"
+            player_record["entity_id"] = entity
+            player_record["camera_owner_entity_id"] = entity
+            player_record["hud_owner_entity_id"] = entity
+        changed["level_player_entity_id"] = "replacement-0"
+        changed["playengineeffects_entity_id"] = "replacement-1"
+        data["observations"] = (
+            [observation(0, connected=False)]
+            + [observation(i * 250 + 250) for i in range(5)]
+            + [changed]
+        )
+        result = validate_capture(data)
+        self.assertEqual(result["reconnect_stable_run_after_pair_loss"], 5)
+        self.assertEqual(result["reconnect_current_run_after_last_break"], 1)
+        self.assertTrue(result["auto_rebind_cycle_observed_in_supplied_data"])
+
+    def test_missing_required_observation_field_fails_closed(self):
+        data = valid_capture()
+        del data["observations"][0]["player_array_count"]
+        with self.assertRaisesRegex(ValueError, "missing required fields: player_array_count"):
+            validate_capture(data)
+
+    def test_non_object_player_record_is_rejected_without_crashing(self):
+        data = valid_capture()
+        data["observations"][0]["players"][1] = None
+        result = validate_capture(data)
+        self.assertFalse(result["stable_pair_observation_validated"])
+        self.assertIn(
+            "player_record_not_object",
+            [item["reason"] for item in result["rejected_observations"]],
+        )
 
     def test_four_stable_samples_are_incomplete(self):
         data = valid_capture()
