@@ -47,6 +47,11 @@ int ps3scale_ps2_config_build_with_patches(
     uint8_t *out, size_t capacity, unsigned flags,
     const ps3scale_ps2_code_patch_t *patches, size_t patch_count,
     size_t *out_size);
+/*
+ * Append exact EE patches to a compatible CONFIG.
+ * Returns -6 when every requested patch is already installed byte-for-byte;
+ * returns -3 for a conflicting/partially overlapping or unsupported patch list.
+ */
 int ps3scale_ps2_config_append_patches(
     const uint8_t *base, size_t base_size,
     const ps3scale_ps2_code_patch_t *patches, size_t patch_count,
