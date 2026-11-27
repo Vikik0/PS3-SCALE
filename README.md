@@ -4,13 +4,13 @@ PS3 SCALE is a PS3 homebrew application for managing PS3/PS2 game libraries and 
 
 ## Current development snapshot
 
-- Application: **Alpha 0.33**
-- Package metadata: `APP_VER=00.33`, `VERSION=00.33`
+- Application: **Alpha 0.34**
+- Package metadata: `APP_VER=00.34`, `VERSION=00.34`
 - Package ID: `PS3SCALE1`
-- Development branch: `design/splash-transitions-ui-v6`
-- Review: [Draft PR #16](https://github.com/Vikik0/PS3-SCALE/pull/16)
+- Development branch: `feature/ps2-enhancement-engine`
+- Review: [Draft PR #20](https://github.com/Vikik0/PS3-SCALE/pull/20), targeting `design/splash-transitions-ui-v6`
 
-The Alpha 0.33 code build recorded in GitHub Actions run #903 passed host tests, the support Edge Function type-check, and PS3 ELF/SELF/standard PKG/GNPDRM PKG validation. A successful CI build is not a substitute for a physical-console smoke test; hardware behavior remains explicitly unverified until tested on a real PS3.
+Alpha 0.34 is the PS2 Enhancer development build. Its current source changes add exact boot-serial / ELF-hash visibility and a two-step confirmation before experimental EE code patches are written. The version-bumped package is being rebuilt in GitHub Actions; physical-console behavior remains unverified until tested on a real PS3.
 
 ## Current features
 
@@ -35,11 +35,12 @@ The Alpha 0.33 code build recorded in GitHub Actions run #903 passed host tests,
 - If safe profile arming is unavailable, the app can fall back to an unmodified webMAN launch when the selected game identity is still valid.
 - Foreign webMAN scripts are not overwritten or removed.
 
-### PS2 CONFIG Manager
-- Builds a restricted in-memory CONFIG preview.
-- Supports verified backup, restore, guarded replacement and rollback for supported PS2 ISO sidecars and PS2 Classics CONFIG files.
-- Backup/restore operations are bounded and byte-verified.
-- Existing backups and rollback files are not silently overwritten.
+### PS2 CONFIG Manager and Enhancer
+- Builds restricted netemu CONFIG profiles for supported PS2 ISO sidecars; PS2 Classics remain on the exact encrypted ENC catalogue route.
+- Supports verified backup, restore, guarded replacement and rollback; existing backups and rollback files are not silently overwritten.
+- Shows the exact detected boot serial and PCSX2 ELF hash before exposing per-title FPS, 16:9 and 480p code-patch candidates.
+- Requires a second CROSS confirmation before writing an experimental EE patch; CIRCLE or D-pad navigation cancels the pending action.
+- All code-patch candidates remain experimental until tested on the target PS3; no universal 60 FPS or native-HD result is claimed.
 - The original ISO, EBOOT and installed game files remain read-only.
 
 ### Interface and settings
