@@ -104,7 +104,10 @@ disc_source = (root / "source/disc_browser.c").read_text(encoding="utf-8")
 launch_args = (root / "source/game_launch_args.c").read_text(encoding="utf-8")
 assert '"--menu"' not in launch_args, "Local Crash Bash launch must load the selected CUE directly."
 assert "#define SCREEN_DISC_SELECT 3" in source
-assert "cb_disc_scan(discs, CB_DISC_MAX, &scanned)" in source
+assert "#define LOBBY_WORK_SCAN_DISCS 16" in source
+assert "static int start_lobby_disc_scan_worker(" in source
+assert "cb_disc_scan(task->discs, CB_DISC_MAX, &task->disc_count)" in source
+assert "scan_open_selector" in source
 assert re.search(
     r"cb_launch_game\(discs\[launch_disc\]\.path,\s*1,\s*netplay_nickname",
     source,
@@ -160,6 +163,8 @@ assert source.count("player_has_disc_confirmation(&session, &view)") >= 4
 # Room lifecycle HTTP requests are dispatched to the worker, never called on
 # the frame/render loop. This prevents 9-second HTTP timeouts from freezing UI.
 menu_loop = source[source.index("int cb_online_menu"):]
+assert "cb_disc_scan(" not in menu_loop, "Disc directory scans must not block the render loop."
+assert menu_loop.count("start_lobby_disc_scan_worker(") >= 3
 for synchronous_call in (
     "cb_online_join_any_room(&session",
     "cb_online_join_room(",
@@ -188,6 +193,7 @@ for operation in (
     "LOBBY_WORK_SET_DISC", "LOBBY_WORK_CLEAR_DISC",
     "LOBBY_WORK_MARK_STARTED", "LOBBY_WORK_CANCEL_STARTED",
     "LOBBY_WORK_NETPLAY_ENDPOINT", "LOBBY_WORK_CONFIRM_DISC",
+    "LOBBY_WORK_SCAN_DISCS",
 ):
     assert operation in source
 assert "worker_active && worker.operation != LOBBY_WORK_LIST" in source
