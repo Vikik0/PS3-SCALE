@@ -96,4 +96,4 @@ For USB images, webMAN caches the ISO under `/dev_hdd0/PS2ISO/<filename>`. The m
 References: [webMAN mount route and `emu=` parameter](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount.h#L45-L60), [selector parsing](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount.h#L255-L270), [PS2 ISO cache and mount logic](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount_cobra.h#L245-L315).
 
 
-For PS2 ISO mounts from USB, the mount request uses a separate bounded read wait of up to 180 seconds. This prevents a large webMAN USB-to-HDD cache copy from being misreported as an immediate HTTP failure. The wait runs on the game-launch worker, not the controller/render thread; the following `/play.ps3` request uses the normal short timeout.
+For PS2 ISO mounts from USB, the mount request uses a separate bounded read wait of up to 600 seconds. This prevents a large webMAN USB-to-HDD cache copy from being misreported as an immediate HTTP failure. The wait runs on the game-launch worker, not the controller/render thread; the following `/play.ps3` request uses the normal short timeout.
