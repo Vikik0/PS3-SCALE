@@ -9,12 +9,20 @@
     "builder_tests_use_real_analyzer_modules": true,
     "extracted_kit_analyzer_import_smoke_test_added": true
   },
-  "status": "IMPLEMENTED; CI_VALIDATION_PENDING",
+  "status": "CI_PASS",
   "runtime_boundary": {
     "physical_ps3_tested": false,
     "player_two": "NOT_PROVEN",
     "shared_interactions_ready": "0/4",
     "original_mission_handlers_migrated": 0,
     "retail_fastfiles_modified": false
+  },
+  "ci": {
+    "workflow_run": 1671,
+    "workflow_url": "https://github.com/Vikik0/PS3-SCALE/actions/runs/45974528487",
+    "python_tests_passed": 628,
+    "capture_kit_files_verified": 93,
+    "extracted_analyzer_import_smoke_test": true,
+    "capture_kit_artifact_id": 15185978900
   }
 }
