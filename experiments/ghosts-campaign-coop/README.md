@@ -533,3 +533,14 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - Reconfirmed the four blocked shared interactions: Black Ice event_player_turns_key, Carrier cut_the_rope, Cornered gun_down_trigger_internal, and Cornered upload_virus_enter.
 - Decision: no mass replacement. Migrate one handler only after a physical PS3 capture proves the native Campaign Player 2 entity and input path.
 - See docs/phase118-trigger-callsite-inventory.md and reports/PHASE118_REPORT_AR.md.
+
+
+### Phase 119 — Phase 118 inventory validation gate
+
+- Added a validator for the pinned Phase 118 archive identity, all 15 original trigger call sites, their 3/2/10 mission distribution, source hashes, four critical interactions and Event Lock IDs.
+- The Phase 118 machine-readable validation and Arabic report must agree; the validator rejects any premature claim that Player 2 is proven or that shared interactions are ready.
+- Integrated the validator into the capture-kit verifier and reproducible kit builder, so missing or inconsistent Phase 118 evidence prevents a package PASS.
+- Removed a duplicate copy of the Arabic runtime-capture quick-start from the ZIP builder and added a regression assertion that the ZIP contains exactly one copy.
+- Added direct validator tests and capture-kit tamper tests.
+- This is static evidence and packaging hardening only. No original mission handler, EBOOT, SELF or retail FastFile was modified. Player 2 remains NOT_PROVEN; shared interactions remain 0/4.
+- See docs/phase119-inventory-validation-gate.md and reports/PHASE119_REPORT_AR.md.

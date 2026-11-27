@@ -178,17 +178,19 @@ def build_capture_kit(
             callsite_doc,
             root / "Docs" / "PHASE118_TRIGGER_CALLSITE_INVENTORY.md",
         )
+        phase119_doc = project_root / "docs" / "phase119-inventory-validation-gate.md"
+        if not phase119_doc.is_file():
+            raise FileNotFoundError(f"missing Phase 119 validation gate document: {phase119_doc}")
+        shutil.copy2(
+            phase119_doc,
+            root / "Docs" / "PHASE119_INVENTORY_VALIDATION_GATE.md",
+        )
 
         quickstart = (
             project_root / "docs" / "phase116-ps3-runtime-capture-quickstart-ar.md"
         )
         if not quickstart.is_file():
             raise FileNotFoundError(f"missing PS3 runtime capture quick start: {quickstart}")
-        shutil.copy2(
-            quickstart,
-            root / "Docs" / "PS3_RUNTIME_CAPTURE_QUICKSTART_AR.md",
-        )
-
         # Capture scripts, runtime analyzers, and integrity verifier.
         ps3mapi_root = project_root / "tools" / "ps3mapi"
         ps3mapi_destination = root / "Tools" / "ps3mapi"
@@ -204,6 +206,7 @@ def build_capture_kit(
             "verify_capture_kit.py",
             "verify_mission_event_lock_map.py",
             "mission_event_activator_audit.py",
+            "verify_phase118_trigger_inventory.py",
         ):
             source = project_root / "tools" / filename
             if not source.is_file():
@@ -246,6 +249,8 @@ def build_capture_kit(
             "PHASE118_REPORT_AR.md",
             "PHASE118_TRIGGER_CALLSITE_INVENTORY.json",
             "PHASE118_VALIDATION.json",
+            "PHASE119_REPORT_AR.md",
+            "PHASE119_VALIDATION.json",
         ):
             source = project_root / "reports" / filename
             if source.is_file():
@@ -271,13 +276,17 @@ The mission trigger/activator audit report is pinned to the original source arch
 
     python Tools/mission_event_activator_audit.py --archive Ghosts_Campaign_Missions_Phase31.zip --json-out Reports/PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json
 
+The Phase 118 call-site inventory is validated with:
+
+    python Tools/verify_phase118_trigger_inventory.py --inventory Reports/PHASE118_TRIGGER_CALLSITE_INVENTORY.json --validation Reports/PHASE118_VALIDATION.json --report Reports/PHASE118_REPORT_AR.md
+
 ## Contents
 
 - PS3 CEX bootstrap PRX build and the two read-only controller probes.
 - Campaign and Multiplayer probe mode files.
 - PS3MAPI memory-dump scripts and TU1.16 runtime analyzers.
 - Experimental GSC source and GSCBIN under Experimental_GSC_Not_Installed only.
-- Selected Phase 84–90 and Phase 112–118 reports, event-lock map, activator-lineage audit, mission refactor graph, Arabic runtime capture quick start, trigger call-site inventory and MANIFEST.json with per-file SHA-256 checksums.
+- Selected Phase 84–90 and Phase 112–119 reports, event-lock map, activator-lineage audit, mission refactor graph, Arabic runtime capture quick start, validated trigger call-site inventory and MANIFEST.json with per-file SHA-256 checksums.
 
 ## Recommended offline test
 
@@ -288,6 +297,10 @@ Use the comparators in Tools to analyze both logs. A passing port-input comparis
 ## Experimental GSC warning
 
 The Local Session bridge and player registry are compiled GSC scripts, not PRX files. They are not inserted into a retail FastFile and are not runtime-tested. Do not load GSCBIN through PS3MAPI. The bridge includes activator-aware entity-trigger and player-command adapters, but neither is wired into original mission handlers yet.
+
+## Phase 119 inventory gate
+
+The Phase 118 inventory validator runs as part of python Tools/verify_capture_kit.py. It checks all 15 pinned legacy call sites, the four blocked shared interactions, and the NOT_PROVEN runtime boundary.
 
 ## Not yet proven
 

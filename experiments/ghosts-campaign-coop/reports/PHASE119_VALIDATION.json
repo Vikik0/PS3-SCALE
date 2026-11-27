@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "phase": 119,
+  "title": "Phase 118 inventory validation and capture-kit gate",
+  "source_archive_sha256": "ca4c0fb46a12b6179b406bc6f7ee5e10729c66ac7a7d2664bf9c3d3cfa14a77a",
+  "checks": {
+    "source_archive_identity_pinned": true,
+    "call_sites_total": 15,
+    "call_sites_by_mission": {
+      "black_ice": 3,
+      "carrier": 2,
+      "cornered": 10
+    },
+    "original_call_sites_migrated": 0,
+    "critical_shared_interactions": 4,
+    "event_lock_ids": [0, 1, 2, 3],
+    "capture_kit_runs_inventory_validator": true,
+    "quickstart_duplicate_zip_entries": 0
+  },
+  "status": "STATIC_INVENTORY_GATE_ADDED; NATIVE_CAMPAIGN_PLAYER_TWO_STILL_BLOCKED",
+  "runtime_boundary": {
+    "physical_ps3_tested": false,
+    "player_two": "NOT_PROVEN",
+    "shared_interactions_ready": "0/4",
+    "retail_fastfiles_modified": false
+  }
+}

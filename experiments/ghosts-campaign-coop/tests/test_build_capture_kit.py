@@ -56,6 +56,8 @@ def make_project(root: Path):
         source_root / "tools" / "mission_event_activator_audit.py",
         root / "tools" / "mission_event_activator_audit.py",
     )
+    for filename in ("verify_capture_kit.py", "verify_phase118_trigger_inventory.py"):
+        shutil.copy2(source_root / "tools" / filename, root / "tools" / filename)
     reports = root / "reports"
     reports.mkdir(parents=True, exist_ok=True)
     for filename in (
@@ -69,6 +71,8 @@ def make_project(root: Path):
         "PHASE115_VALIDATION.json",
         "PHASE117_REPORT_AR.md",
         "PHASE117_VALIDATION.json",
+        "PHASE119_REPORT_AR.md",
+        "PHASE119_VALIDATION.json",
     ):
         shutil.copy2(source_root / "reports" / filename, reports / filename)
     docs = root / "docs"
@@ -80,6 +84,10 @@ def make_project(root: Path):
     shutil.copy2(
         source_root / "docs" / "phase118-trigger-callsite-inventory.md",
         docs / "phase118-trigger-callsite-inventory.md",
+    )
+    shutil.copy2(
+        source_root / "docs" / "phase119-inventory-validation-gate.md",
+        docs / "phase119-inventory-validation-gate.md",
     )
     for filename in (
         "PHASE118_REPORT_AR.md",
@@ -181,6 +189,7 @@ class CaptureKitBuilderTests(unittest.TestCase):
                 self.assertTrue(any(name.endswith("/Experimental_GSC_Not_Installed/ghc_campaign_local_session.gscbin") for name in names))
                 self.assertFalse(any(name.startswith("Ghosts_TU116_Development_Capture_Kit/PS3/") and name.endswith(".gscbin") for name in names))
                 self.assertTrue(any(name.endswith("/Tools/mission_event_activator_audit.py") for name in names))
+                self.assertTrue(any(name.endswith("/Tools/verify_phase118_trigger_inventory.py") for name in names))
                 self.assertTrue(any(name.endswith("/Reports/PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json") for name in names))
                 self.assertTrue(any(name.endswith("/Reports/PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json") for name in names))
                 self.assertTrue(any(name.endswith("/Reports/PHASE117_REPORT_AR.md") for name in names))
@@ -188,6 +197,10 @@ class CaptureKitBuilderTests(unittest.TestCase):
                 self.assertTrue(any(name.endswith("/Docs/PS3_RUNTIME_CAPTURE_QUICKSTART_AR.md") for name in names))
                 self.assertTrue(any(name.endswith("/Docs/PHASE118_TRIGGER_CALLSITE_INVENTORY.md") for name in names))
                 self.assertTrue(any(name.endswith("/Reports/PHASE118_TRIGGER_CALLSITE_INVENTORY.json") for name in names))
+                self.assertTrue(any(name.endswith("/Reports/PHASE119_REPORT_AR.md") for name in names))
+                self.assertTrue(any(name.endswith("/Reports/PHASE119_VALIDATION.json") for name in names))
+                self.assertTrue(any(name.endswith("/Docs/PHASE119_INVENTORY_VALIDATION_GATE.md") for name in names))
+                self.assertEqual(sum(name.endswith("/Docs/PS3_RUNTIME_CAPTURE_QUICKSTART_AR.md") for name in names), 1)
 
     def test_missing_ci_artifact_payload_fails_closed(self):
         with tempfile.TemporaryDirectory() as temp:

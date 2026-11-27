@@ -142,6 +142,31 @@ def _validate_event_refactor_graph(root: Path) -> list[str]:
 
 
 
+
+def _validate_phase118_inventory(root: Path) -> list[str]:
+    inventory_path = root / "Reports" / "PHASE118_TRIGGER_CALLSITE_INVENTORY.json"
+    validation_path = root / "Reports" / "PHASE118_VALIDATION.json"
+    report_path = root / "Reports" / "PHASE118_REPORT_AR.md"
+    tool_path = root / "Tools" / "verify_phase118_trigger_inventory.py"
+    doc_path = root / "Docs" / "PHASE118_TRIGGER_CALLSITE_INVENTORY.md"
+    paths = (inventory_path, validation_path, report_path, tool_path, doc_path)
+    if not any(path.exists() for path in paths):
+        return []
+    missing = [str(path.relative_to(root)) for path in paths if not path.is_file()]
+    if missing:
+        return ["Phase 118 inventory package is incomplete: " + ", ".join(missing)]
+    try:
+        spec = importlib.util.spec_from_file_location("ghosts_phase118_inventory_validator", tool_path)
+        if spec is None or spec.loader is None:
+            return ["unable to load Phase 118 inventory validator"]
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        errors = module.validate_files(inventory_path, validation_path, report_path)
+    except (OSError, AttributeError, TypeError, ValueError) as exc:
+        return [f"Phase 118 inventory validation failed to run: {exc}"]
+    return [f"Phase 118 trigger inventory: {error}" for error in errors]
+
+
 def validate_package(root: Path) -> tuple[list[str], dict]:
     root = Path(root).resolve()
     manifest_path = root / "MANIFEST.json"
@@ -203,6 +228,16 @@ def validate_package(root: Path) -> tuple[list[str], dict]:
     errors.extend(_validate_event_lock_map(root))
     errors.extend(_validate_event_activator_audit(root))
     errors.extend(_validate_event_refactor_graph(root))
+    phase118_errors = _validate_phase118_inventory(root)
+    errors.extend(phase118_errors)
+    phase118_files = (
+        root / "Reports" / "PHASE118_TRIGGER_CALLSITE_INVENTORY.json",
+        root / "Reports" / "PHASE118_VALIDATION.json",
+        root / "Reports" / "PHASE118_REPORT_AR.md",
+        root / "Tools" / "verify_phase118_trigger_inventory.py",
+        root / "Docs" / "PHASE118_TRIGGER_CALLSITE_INVENTORY.md",
+    )
+    phase118_verified = all(path.is_file() for path in phase118_files) and not phase118_errors
 
     summary = {
         "package": manifest.get("package"),
@@ -214,6 +249,7 @@ def validate_package(root: Path) -> tuple[list[str], dict]:
         and (root / "Tools" / "mission_event_activator_audit.py").is_file(),
         "event_refactor_graph_verified": (root / "Reports" / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json").is_file()
         and (root / "Tools" / "mission_event_activator_audit.py").is_file(),
+        "phase118_trigger_inventory_verified": phase118_verified,
     }
     return errors, summary
 

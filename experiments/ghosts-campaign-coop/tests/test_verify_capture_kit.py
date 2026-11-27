@@ -74,6 +74,22 @@ def write_package(root: Path):
         source_root / "reports" / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json",
         root / "Reports" / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json",
     )
+    shutil.copy2(
+        source_root / "tools" / "verify_phase118_trigger_inventory.py",
+        root / "Tools" / "verify_phase118_trigger_inventory.py",
+    )
+    for filename in (
+        "PHASE118_REPORT_AR.md",
+        "PHASE118_TRIGGER_CALLSITE_INVENTORY.json",
+        "PHASE118_VALIDATION.json",
+    ):
+        shutil.copy2(source_root / "reports" / filename, root / "Reports" / filename)
+    docs = root / "Docs"
+    docs.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(
+        source_root / "docs" / "phase118-trigger-callsite-inventory.md",
+        docs / "PHASE118_TRIGGER_CALLSITE_INVENTORY.md",
+    )
 
     files = {}
     for path in sorted(p for p in root.rglob("*") if p.is_file() and p.name != "MANIFEST.json"):
@@ -101,6 +117,7 @@ class CaptureKitVerifierTests(unittest.TestCase):
         self.assertEqual(summary["gsc_manifests_verified"], 2)
         self.assertTrue(summary["event_activator_audit_verified"])
         self.assertTrue(summary["event_refactor_graph_verified"])
+        self.assertTrue(summary["phase118_trigger_inventory_verified"])
 
     def test_invalid_mission_event_map_is_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -196,6 +213,51 @@ class CaptureKitVerifierTests(unittest.TestCase):
             rogue.write_bytes(b"wrong location")
             errors, _ = validate_package(root)
         self.assertTrue(any("GSCBIN must remain under Experimental_GSC_Not_Installed" in error for error in errors))
+
+
+    def _refresh_manifest(self, root: Path):
+        manifest_path = root / "MANIFEST.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        files = {}
+        for path in sorted(p for p in root.rglob("*") if p.is_file() and p.name != "MANIFEST.json"):
+            files[str(path.relative_to(root)).replace("\\", "/")] = {
+                "size_bytes": path.stat().st_size,
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+        manifest["files"] = files
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    def test_phase118_inventory_semantic_tampering_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write_package(root)
+            path = root / "Reports" / "PHASE118_TRIGGER_CALLSITE_INVENTORY.json"
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["summary"]["total"] = 14
+            path.write_text(json.dumps(data), encoding="utf-8")
+            self._refresh_manifest(root)
+            errors, _ = validate_package(root)
+        self.assertTrue(any("Phase 118 trigger inventory: inventory summary total must be 15" in e for e in errors))
+
+    def test_phase118_cannot_claim_native_player_two(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write_package(root)
+            path = root / "Reports" / "PHASE118_TRIGGER_CALLSITE_INVENTORY.json"
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["runtime_boundary"]["native_campaign_player_two_proven"] = True
+            path.write_text(json.dumps(data), encoding="utf-8")
+            self._refresh_manifest(root)
+            errors, _ = validate_package(root)
+        self.assertTrue(any("Phase 118 trigger inventory: inventory must not claim native Campaign Player 2 is proven" in e for e in errors))
+
+    def test_phase118_validator_is_required_when_inventory_is_packaged(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write_package(root)
+            (root / "Tools" / "verify_phase118_trigger_inventory.py").unlink()
+            errors, _ = validate_package(root)
+        self.assertTrue(any("Phase 118 inventory package is incomplete" in e for e in errors))
 
 
 if __name__ == "__main__":
