@@ -53,18 +53,18 @@ int main(void)
     game.kind = PS3SCALE_GAME_PS2_ISO;
     strcpy(game.path, "/dev_hdd0/PS2ISO/Crash Twinsanity [SLUS_209.09].iso");
     expect_path(&game,
-        "/play.ps3/dev_hdd0/PS2ISO/Crash%20Twinsanity%20%5BSLUS_209.09%5D.iso?emu=ps2_netemu.self");
+        "/mount_ps3/dev_hdd0/PS2ISO/Crash%20Twinsanity%20%5BSLUS_209.09%5D.iso?emu=ps2_netemu.self");
 
     strcpy(game.path, "/dev_usb001/PS2ISO/Crash.bin");
-    expect_path(&game, "/play.ps3/dev_usb001/PS2ISO/Crash.bin?emu=ps2_netemu.self");
+    expect_path(&game, "/mount_ps3/dev_usb001/PS2ISO/Crash.bin?emu=ps2_netemu.self");
 
     strcpy(game.path, "/dev_usb002/PS2ISO/Gran Turismo 4 [SCUS_973.28].img");
     expect_path(&game,
-        "/play.ps3/dev_usb002/PS2ISO/Gran%20Turismo%204%20%5BSCUS_973.28%5D.img?emu=ps2_netemu.self");
+        "/mount_ps3/dev_usb002/PS2ISO/Gran%20Turismo%204%20%5BSCUS_973.28%5D.img?emu=ps2_netemu.self");
 
     strcpy(game.path, "/dev_usb003/PS2ISO/Shadow of Rome [SLUS_206.27].mdf");
     expect_path(&game,
-        "/play.ps3/dev_usb003/PS2ISO/Shadow%20of%20Rome%20%5BSLUS_206.27%5D.mdf?emu=ps2_netemu.self");
+        "/mount_ps3/dev_usb003/PS2ISO/Shadow%20of%20Rome%20%5BSLUS_206.27%5D.mdf?emu=ps2_netemu.self");
 
     strcpy(game.path, "/dev_hdd0/GAMES/Crash.iso");
     assert(ps3scale_webman_build_start_path(&game, output,
