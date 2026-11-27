@@ -103,12 +103,12 @@ jobs:
               candidates = [int(requested)]
           else:
               history = github_get(
-                  "/actions/workflows/crash-bash-build.yml/runs"
-                  "?branch=crash-bash-enhanced&status=completed&per_page=20"
+                  "/actions/runs?branch=crash-bash-enhanced&status=completed&per_page=100"
               )
               candidates = [
                   item["id"] for item in history.get("workflow_runs", [])
-                  if item.get("conclusion") == "success"
+                  if item.get("path") == ".github/workflows/crash-bash-build.yml"
+                  and item.get("conclusion") == "success"
               ]
 
           selected = None
