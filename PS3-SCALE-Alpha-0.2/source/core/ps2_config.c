@@ -209,154 +209,175 @@ int ps3scale_ps2_config_append_patches(
     const ps3scale_ps2_code_patch_t *patches, size_t patch_count,
     uint8_t *out, size_t capacity, size_t *out_size)
 {
-    size_t payload_size;
-    size_t patch_size;
+    size_t insertion_offset = 0;
+    size_t patch_offset = (size_t)-1;
+    size_t terminator_offset = (size_t)-1;
+    size_t patch_size = 0;
     size_t needed;
     size_t i;
+    int title_footer_found = 0;
 
     if (out_size)
         *out_size = 0;
     if (!base || !out || !out_size ||
         base_size < sizeof(ps2_config_header) + 4u ||
         base_size > PS3SCALE_PS2_CONFIG_MAX_BYTES ||
-        memcmp(base, ps2_config_header, sizeof(ps2_config_header)) != 0 ||
-        read_u32_le(base + base_size - 4u) != 0 ||
+        read_u32_le(base) != 0x3Du ||
         !patches_valid(patches, patch_count) || patch_count == 0)
         return -1;
 
-    payload_size = base_size - 4u;
-
-    /* Preserve the Title ID / multidisc footer as the final command. */
-    for (i = sizeof(ps2_config_header); i + 13u <= payload_size; i += 4u) {
+    /*
+     * Official/community CONFIGs may carry a Title ID footer:
+     *   00 00 00 00 "SCUS-97101"
+     * Keep that footer byte-for-byte at the end, but insert the EE patch
+     * command immediately before it. Older configs may use a different
+     * revision word in the second DWORD; preserve it unchanged.
+     */
+    for (i = sizeof(ps2_config_header); i + 4u <= base_size; i += 4u) {
         size_t id_length;
-        if (read_u32_le(base + i) == 0) {
-            for (id_length = 9u; id_length <= 12u &&
-                 i + 4u + id_length <= payload_size; ++id_length) {
-                if (looks_like_title_id(base + i + 4u, id_length))
-                    return -2;
+        if (read_u32_le(base + i) != 0)
+            continue;
+        for (id_length = 9u; id_length <= 12u; ++id_length) {
+            if (i + 4u + id_length == base_size &&
+                looks_like_title_id(base + i + 4u, id_length)) {
+                insertion_offset = i;
+                title_footer_found = 1;
+                break;
             }
         }
+        if (title_footer_found)
+            break;
+    }
+
+    if (!title_footer_found) {
+        if (read_u32_le(base + base_size - 4u) != 0)
+            return -2;
+        terminator_offset = base_size - 4u;
+        insertion_offset = terminator_offset;
+    }
+
+    /*
+     * A second 0x0A command in an arbitrary official CONFIG is not assumed
+     * to be composable. The generated PS3 SCALE subset has a strict parser
+     * and can be merged; other existing patch streams are refused safely.
+     */
+    for (i = sizeof(ps2_config_header); i + 4u <= insertion_offset; i += 4u) {
         if (read_u32_le(base + i) == 0x0Au) {
-            ps3scale_ps2_code_patch_t merged[PS3SCALE_PS2_CONFIG_MAX_CODE_PATCHES];
-            size_t pos = sizeof(ps2_config_header);
-            size_t command_end = base_size - 4u;
-            size_t old_count;
-            size_t old_patch_size;
-            size_t new_count;
-            size_t new_patch_size;
-            size_t old_patch_end;
-            size_t j;
-
-            /*
-             * Only merge a CONFIG whose complete command stream is in the
-             * allow-listed generated subset. Unknown community commands are
-             * left untouched by append-only installs, but are not rewritten.
-             */
-            if (ps3scale_ps2_config_validate_generated(base, base_size) != 0)
-                return -3;
-
-            while (pos < command_end && pos != i) {
-                uint32_t command = read_u32_le(base + pos);
-                if (command == 0x44u || command == 0x46u || command == 0x50u)
-                    pos += 4u;
-                else if (command == 0x48u)
-                    pos += 12u;
-                else
-                    return -3;
-            }
-            if (pos != i || command_end - i < 8u)
-                return -3;
-
-            old_count = read_u32_le(base + i + 4u);
-            if (old_count == 0 ||
-                old_count > PS3SCALE_PS2_CONFIG_MAX_CODE_PATCHES ||
-                patch_count > PS3SCALE_PS2_CONFIG_MAX_CODE_PATCHES - old_count)
-                return -4;
-
-            old_patch_size = 8u + old_count * 12u;
-            old_patch_end = i + old_patch_size;
-            if (old_patch_end > command_end)
-                return -3;
-
-            for (j = 0; j < old_count; ++j) {
-                size_t entry = i + 8u + j * 12u;
-                merged[j].ee_address = read_u32_le(base + entry);
-                merged[j].original_word = read_u32_le(base + entry + 4u);
-                merged[j].replacement_word = read_u32_le(base + entry + 8u);
-            }
-
-            {
-                int any_existing = 0;
-                int all_existing = 1;
-
-                /*
-                 * An exact re-apply is a no-op, not a conflicting merge.
-                 * Partial overlap or different words at the same address
-                 * remain a hard refusal.
-                 */
-                for (j = 0; j < patch_count; ++j) {
-                    size_t k;
-                    int found = 0;
-                    for (k = 0; k < old_count; ++k) {
-                        if (merged[k].ee_address == patches[j].ee_address) {
-                            found = 1;
-                            any_existing = 1;
-                            if (merged[k].original_word != patches[j].original_word ||
-                                merged[k].replacement_word != patches[j].replacement_word)
-                                return -3;
-                            break;
-                        }
-                    }
-                    if (!found)
-                        all_existing = 0;
-                }
-                if (any_existing)
-                    return all_existing ? -6 : -3;
-            }
-
-            for (j = 0; j < patch_count; ++j)
-                merged[old_count + j] = patches[j];
-
-            new_count = old_count + patch_count;
-            new_patch_size = 8u + new_count * 12u;
-            needed = base_size - old_patch_size + new_patch_size;
-            if (needed > capacity ||
-                needed > PS3SCALE_PS2_CONFIG_MAX_BYTES)
-                return -4;
-
-            memcpy(out, base, i);
-            if (write_patch_command(out + i, capacity - i,
-                    merged, new_count, &patch_size) != 0 ||
-                patch_size != new_patch_size)
-                return -5;
-            memcpy(out + i + patch_size, base + old_patch_end,
-                   base_size - old_patch_end);
-            *out_size = needed;
-            if (ps3scale_ps2_config_validate_generated(out, *out_size) != 0) {
-                *out_size = 0;
-                return -5;
-            }
-            return 0;
+            patch_offset = i;
+            break;
         }
     }
 
-    /* No existing EE patch: append one new 0x0A command before the terminator. */
+    if (patch_offset != (size_t)-1) {
+        ps3scale_ps2_code_patch_t merged[PS3SCALE_PS2_CONFIG_MAX_CODE_PATCHES];
+        size_t pos = sizeof(ps2_config_header);
+        size_t command_end = terminator_offset;
+        size_t old_count;
+        size_t old_patch_size;
+        size_t new_count;
+        size_t new_patch_size;
+        size_t old_patch_end;
+        size_t j;
+
+        if (title_footer_found ||
+            memcmp(base, ps2_config_header, sizeof(ps2_config_header)) != 0 ||
+            terminator_offset != base_size - 4u ||
+            ps3scale_ps2_config_validate_generated(base, base_size) != 0)
+            return -3;
+
+        while (pos < command_end && pos != patch_offset) {
+            uint32_t command = read_u32_le(base + pos);
+            if (command == 0x44u || command == 0x46u || command == 0x50u)
+                pos += 4u;
+            else if (command == 0x48u)
+                pos += 12u;
+            else
+                return -3;
+        }
+        if (pos != patch_offset || command_end - patch_offset < 8u)
+            return -3;
+
+        old_count = read_u32_le(base + patch_offset + 4u);
+        if (old_count == 0 ||
+            old_count > PS3SCALE_PS2_CONFIG_MAX_CODE_PATCHES ||
+            patch_count > PS3SCALE_PS2_CONFIG_MAX_CODE_PATCHES - old_count)
+            return -4;
+
+        old_patch_size = 8u + old_count * 12u;
+        old_patch_end = patch_offset + old_patch_size;
+        if (old_patch_end > command_end)
+            return -3;
+
+        for (j = 0; j < old_count; ++j) {
+            size_t entry = patch_offset + 8u + j * 12u;
+            merged[j].ee_address = read_u32_le(base + entry);
+            merged[j].original_word = read_u32_le(base + entry + 4u);
+            merged[j].replacement_word = read_u32_le(base + entry + 8u);
+        }
+
+        {
+            int any_existing = 0;
+            int all_existing = 1;
+
+            for (j = 0; j < patch_count; ++j) {
+                size_t k;
+                int found = 0;
+                for (k = 0; k < old_count; ++k) {
+                    if (merged[k].ee_address == patches[j].ee_address) {
+                        found = 1;
+                        any_existing = 1;
+                        if (merged[k].original_word != patches[j].original_word ||
+                            merged[k].replacement_word != patches[j].replacement_word)
+                            return -3;
+                        break;
+                    }
+                }
+                if (!found)
+                    all_existing = 0;
+            }
+            if (any_existing)
+                return all_existing ? -6 : -3;
+        }
+
+        for (j = 0; j < patch_count; ++j)
+            merged[old_count + j] = patches[j];
+
+        new_count = old_count + patch_count;
+        new_patch_size = 8u + new_count * 12u;
+        needed = base_size - old_patch_size + new_patch_size;
+        if (needed > capacity ||
+            needed > PS3SCALE_PS2_CONFIG_MAX_BYTES)
+            return -4;
+
+        memcpy(out, base, patch_offset);
+        if (write_patch_command(out + patch_offset, capacity - patch_offset,
+                merged, new_count, &patch_size) != 0 ||
+            patch_size != new_patch_size)
+            return -5;
+        memcpy(out + patch_offset + patch_size, base + old_patch_end,
+               base_size - old_patch_end);
+        *out_size = needed;
+        if (ps3scale_ps2_config_validate_generated(out, *out_size) != 0) {
+            *out_size = 0;
+            return -5;
+        }
+        return 0;
+    }
+
     patch_size = 8u + patch_count * 12u;
-    needed = payload_size + patch_size + 4u;
+    needed = base_size + patch_size;
     if (needed > capacity || needed > PS3SCALE_PS2_CONFIG_MAX_BYTES)
         return -4;
 
-    memcpy(out, base, payload_size);
-    if (write_patch_command(out + payload_size, capacity - payload_size,
-                            patches, patch_count, &patch_size) != 0)
+    memcpy(out, base, insertion_offset);
+    if (write_patch_command(out + insertion_offset,
+            capacity - insertion_offset, patches, patch_count,
+            &patch_size) != 0)
         return -5;
-    payload_size += patch_size;
-    out[payload_size++] = 0x00;
-    out[payload_size++] = 0x00;
-    out[payload_size++] = 0x00;
-    out[payload_size++] = 0x00;
+    memcpy(out + insertion_offset + patch_size,
+           base + insertion_offset, base_size - insertion_offset);
 
-    *out_size = payload_size;
+    *out_size = needed;
     return 0;
 }
 
