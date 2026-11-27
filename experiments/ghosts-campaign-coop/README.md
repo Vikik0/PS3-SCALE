@@ -544,3 +544,13 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - Added direct validator tests and capture-kit tamper tests.
 - This is static evidence and packaging hardening only. No original mission handler, EBOOT, SELF or retail FastFile was modified. Player 2 remains NOT_PROVEN; shared interactions remain 0/4.
 - See docs/phase119-inventory-validation-gate.md and reports/PHASE119_REPORT_AR.md.
+
+
+### Phase 120 — runtime analyzer package closure and player-pair validator hardening
+
+- Fixed reconnect-cycle accounting: the validator now preserves the best qualifying stable run after an explicit pair-loss observation, even if later samples become malformed, change identity, or break continuity.
+- Added fail-closed handling for missing observation fields and non-object player records.
+- Found and fixed a capture-kit packaging gap: the combined runtime analyzer imported modules and Ghidra scripts that were not included in the ZIP. Added the complete Python dependency closure, native player-pair capture template/validator, SELF-binding helper, and optional Ghidra scripts.
+- Extended the kit verifier to reject missing analyzer dependencies; added regression tests for reconnect accounting and package completeness.
+- This remains tooling and static-validation work. No physical PS3 runtime evidence was fabricated, no original mission handler was migrated, and no EBOOT/SELF/FastFile was modified. Player 2 remains NOT_PROVEN; shared interactions remain 0/4.
+- See docs/phase120-player-pair-capture-validator-hardening.md and reports/PHASE120_REPORT_AR.md.
