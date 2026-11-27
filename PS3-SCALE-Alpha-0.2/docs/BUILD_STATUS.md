@@ -1,13 +1,20 @@
-# Build status — PS3 SCALE Alpha 0.34
+# Build status — PS3 SCALE Alpha 0.35
 
 ## Current development head
 
 - Branch: `feature/ps2-enhancement-engine`
 - Pull request: Draft PR #20, targeting `design/splash-transitions-ui-v6`
-- Application version shown in the UI: `ALPHA 0.34`
-- Package metadata: `APP_VER=00.34`, `VERSION=00.34`
+- Application version shown in the UI: `ALPHA 0.35`
+- Package metadata: `APP_VER=00.35`, `VERSION=00.35`
 - Package title ID: `PS3SCALE1`
 - Source commit used for the Alpha 0.34 package: `cf850c558550a3e6acdc76bad51578830bb86df8`
+
+## Alpha 0.35 — exact patch review and apply-time opcode verification
+
+- The review overlay lists the matched game title, patch type, serial, ELF hash, write count, and every EE address with its original and replacement 32-bit word.
+- Original words are cached from the selected boot ELF when the exact candidate is probed, then re-read immediately before installation. Any mismatch cancels the write and asks the user to reopen the Enhancer.
+- CIRCLE and navigation cancellation remain unchanged; no file is touched until the second CROSS.
+- Alpha 0.34 baseline package and test results are retained below. The Alpha 0.35 build is being validated by the current CI run.
 
 ## Alpha 0.34 — PS2 Enhancer and guarded patch application
 
