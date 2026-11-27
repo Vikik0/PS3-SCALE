@@ -111,3 +111,12 @@ Copy this section for each candidate tested.
 | Original ISO unchanged | NOT RECORDED | NOT RECORDED | NOT TESTED |
 
 **Acceptance rule:** keep the status as NOT TESTED unless the same title and exact serial/hash pair pass repeatable physical-console checks. If any regression appears, restore the backup and mark the candidate BLOCKED; do not compensate by guessing offsets or adding unverified patches.
+
+## Integration risks addressed in Alpha 0.36
+
+- USB PS2 ISOs are cached by webMAN under `/dev_hdd0/PS2ISO`; the CONFIG must be written beside that cached image. Alpha 0.36 redirects the sidecar to the actual cache path.
+- If a same-name HDD cache already exists, the app checks its size, boot serial and PCSX2 ELF hash against the selected USB source. A stale or different cache blocks changes rather than risking a patch on the wrong image.
+- Launch now explicitly mounts through webMAN's `emu=ps2_netemu.self` selector before launching the mounted disc. This matters because CONFIG command `0x0A` is netemu-only.
+- Host tests cover HDD/USB path resolution, traversal rejection, and the explicit netemu route. These tests do not replace physical-console validation.
+
+Upstream references: [webMAN cache/mount implementation](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount_cobra.h#L245-L315), [cache target helper](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount.h#L1168-L1205), [emulator selector](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount.h#L255-L270).
