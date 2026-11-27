@@ -3776,7 +3776,7 @@ static void apply_ps2_game_patch(ps3scale_ps2_patch_kind_t patch_kind)
             sizeof(output_config), &output_size);
         if (result == -2) {
             snprintf(g_ps2_config_manager_message, sizeof(g_ps2_config_manager_message),
-                     "TITLE ID / MULTIDISC CONFIG CANNOT BE REORDERED SAFELY.");
+                     "CONFIG FOOTER OR TERMINATOR IS NOT RECOGNIZED. NO FILE WAS CHANGED.");
             goto cleanup;
         }
         if (result == -6) {
@@ -3786,7 +3786,7 @@ static void apply_ps2_game_patch(ps3scale_ps2_patch_kind_t patch_kind)
         }
         if (result == -3) {
             snprintf(g_ps2_config_manager_message, sizeof(g_ps2_config_manager_message),
-                     "CONFIG HAS A CONFLICTING OR PARTIAL EE PATCH. NO FILE WAS CHANGED.");
+                     "EXISTING EE PATCH STREAM CANNOT BE MERGED SAFELY. ORIGINAL CONFIG WAS PRESERVED.");
             goto cleanup;
         }
         if (result != 0) {
