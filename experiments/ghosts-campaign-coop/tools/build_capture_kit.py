@@ -244,9 +244,9 @@ def build_capture_kit(
         import_package = root / "tools"
         import_package.mkdir(parents=True, exist_ok=True)
         (import_package / "__init__.py").write_text(
-            '"""Case-sensitive import shim for the packaged Tools directory."""\\n'
-            "from pathlib import Path\\n"
-            '__path__ = [str(Path(__file__).resolve().parent.parent / "Tools")]\\n',
+            '"""Case-sensitive import shim for the packaged Tools directory."""\n'
+            "from pathlib import Path\n"
+            '__path__ = [str(Path(__file__).resolve().parent.parent / "Tools")]\n',
             encoding="utf-8",
         )
 
