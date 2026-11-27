@@ -368,7 +368,7 @@ static void draw_rooms(const CBOnlineRoom *rooms, int count, int selected, int p
     if (count == 0) {
         draw_rect(58, 142, 720, 120, 0x0b1720ff);
         draw_text(82, 176, 18, 0xc2d0d8ff, "No public rooms are waiting.");
-        draw_text(82, 214, 15, 0x61d9baff, "Triangle creates a room. L1 switches its privacy.");
+        draw_text(82, 214, 15, 0x61d9baff, "CROSS or TRIANGLE creates a room. L1 switches its privacy.");
     } else {
         for (i = 0; i < count; i++) {
             char row[96];
@@ -381,7 +381,10 @@ static void draw_rooms(const CBOnlineRoom *rooms, int count, int selected, int p
     }
     draw_rect(58, 438, 720, 32, 0x0b1720ff);
     draw_text(72, 444, 13, 0x9bb4c2ff, status);
-    draw_text(56, 474, 12, 0x6d8794ff, "UP/DOWN SELECT  L2 ANY BATTLE  CROSS JOIN  TRIANGLE CREATE  L1 PRIVACY  R1 CODE  SQUARE REFRESH");
+    if (count == 0)
+        draw_text(56, 474, 12, 0x6d8794ff, "CROSS CREATE  TRIANGLE CREATE  L1 PRIVACY  R1 CODE  L2 ANY BATTLE  SQUARE REFRESH");
+    else
+        draw_text(56, 474, 12, 0x6d8794ff, "UP/DOWN SELECT  CROSS JOIN  TRIANGLE CREATE  L1 PRIVACY  R1 CODE  L2 ANY BATTLE  SQUARE REFRESH");
     tiny3d_Flip();
 }
 
@@ -1113,12 +1116,21 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                     snprintf(status, status_size, "Joining a public battle...");
                 } else snprintf(status, status_size, "%s", worker.status);
             }
-            if (cross && !old_cross && room_count > 0 && !worker_active) {
-                if (start_lobby_action_worker(&worker_thread, &worker, LOBBY_WORK_JOIN,
-                                              NULL, NULL, guest_name, rooms[selected].code, 0, 0) == 0) {
-                    worker_active = 1;
-                    snprintf(status, status_size, "Joining room %.6s...", rooms[selected].code);
-                } else snprintf(status, status_size, "%s", worker.status);
+            if (cross && !old_cross && !worker_active) {
+                if (room_count > 0) {
+                    if (start_lobby_action_worker(&worker_thread, &worker, LOBBY_WORK_JOIN,
+                                                  NULL, NULL, guest_name, rooms[selected].code, 0, 0) == 0) {
+                        worker_active = 1;
+                        snprintf(status, status_size, "Joining room %.6s...", rooms[selected].code);
+                    } else snprintf(status, status_size, "%s", worker.status);
+                } else {
+                    if (start_lobby_action_worker(&worker_thread, &worker, LOBBY_WORK_CREATE,
+                                                  NULL, NULL, guest_name, NULL, 0, private_create) == 0) {
+                        worker_active = 1;
+                        snprintf(status, status_size, "Creating %s room...",
+                                 private_create ? "private" : "public");
+                    } else snprintf(status, status_size, "%s", worker.status);
+                }
             }
             if (triangle && !old_triangle && !worker_active) {
                 if (start_lobby_action_worker(&worker_thread, &worker, LOBBY_WORK_CREATE,
