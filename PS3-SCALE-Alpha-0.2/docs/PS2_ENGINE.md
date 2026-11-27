@@ -179,3 +179,8 @@ PS3 SCALE now resolves the CONFIG path using webMAN's actual cache behavior:
 Upstream behavior references: [webMAN PS2 ISO cache path and mount flow](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount_cobra.h#L245-L315), [webMAN cache copy target](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount.h#L1168-L1205), and [emulator selector parsing](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount.h#L255-L270).
 
 This fix makes the CONFIG land where webMAN looks for it; it does not make a title-specific patch universally compatible. Physical testing remains mandatory.
+
+
+## 480p metadata limitation
+
+The source-pinned PCSX2 `[480p Mode]` sections include `gsinterlacemode=1`, which is a PCSX2 graphics-setting directive, not a PS2 netemu CONFIG command. PS3 SCALE imports only the exact EE word writes from those sections. The netemu CONFIG reference describes command `0x45` as unknown, so PS3 SCALE deliberately does not emit it or pretend that it is a verified progressive-output switch. The UI therefore labels this as a **480p game-code patch**, and the review panel warns that actual netemu output mode is unverified. A candidate remains experimental until a physical PS3 and TV-reported mode confirm 480p.
