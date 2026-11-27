@@ -18,13 +18,13 @@ assert "LOBBY_WORK_LIST" in source
 # CROSS must never silently do nothing on an empty public-room list. In that
 # state it creates a room; when rooms exist it joins the selected room.
 rooms_screen = re.search(
-    r"if \\(screen == SCREEN_ROOMS\\) \\{(.*?)\\n        \\} else if \\(screen == SCREEN_JOIN_CODE\\)",
+    r"if \(screen == SCREEN_ROOMS\) \{(.*?)\n        \} else if \(screen == SCREEN_JOIN_CODE\)",
     source,
     re.S,
 )
 assert rooms_screen, "Online room screen input handler is missing"
 cross_action = re.search(
-    r"if \\(cross && !old_cross && !worker_active\\) \\{(.*?)\\n            \\}\\n            if \\(triangle",
+    r"if \(cross && !old_cross && !worker_active\) \{(.*?)\n            \}\n            if \(triangle",
     rooms_screen.group(1),
     re.S,
 )
