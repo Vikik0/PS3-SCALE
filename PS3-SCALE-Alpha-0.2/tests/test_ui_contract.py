@@ -10,7 +10,7 @@ src = source_path.read_text(encoding="utf-8")
 
 # Keep the in-app version and PS3 package metadata in sync.
 version_match = re.search(
-    r'#define PS3SCALE_APP_VERSION "ALPHA (\\d+)\\.(\\d+)"', src)
+    r'#define PS3SCALE_APP_VERSION "ALPHA (\d+)\.(\d+)"', src)
 assert version_match, "Missing application version macro"
 package_version = (
     f"{int(version_match.group(1)):02d}.{int(version_match.group(2)):02d}")
