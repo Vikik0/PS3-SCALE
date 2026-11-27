@@ -38,6 +38,13 @@ cc -std=c99 -Wall -Wextra -Werror \
 
 cc -std=c99 -Wall -Wextra -Werror \
   -I"$ROOT/include" \
+  "$ROOT/source/core/ps2_config_path.c" \
+  "$ROOT/tests/test_ps2_config_path.c" \
+  -o "$OUT/test_ps2_config_path"
+"$OUT/test_ps2_config_path"
+
+cc -std=c99 -Wall -Wextra -Werror \
+  -I"$ROOT/include" \
   "$ROOT/source/core/ps2_config_db.c" \
   "$ROOT/tests/test_ps2_config_db.c" \
   -o "$OUT/test_ps2_config_db"
