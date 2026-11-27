@@ -62,6 +62,7 @@ static void draw_text(float x, float y, int size, u32 color, const char *value)
 #define LOBBY_WORK_CANCEL_STARTED 13
 #define LOBBY_WORK_NETPLAY_ENDPOINT 14
 #define LOBBY_WORK_CONFIRM_DISC 15
+#define LOBBY_WORK_SCAN_DISCS 16
 #define DISC_ACTION_NONE 0
 #define DISC_ACTION_SELECT 1
 #define DISC_ACTION_RESCAN 2
@@ -77,6 +78,9 @@ typedef struct {
     int is_private;
     size_t room_count;
     CBOnlineRoom rooms[MENU_ROOM_LIMIT];
+    size_t disc_count;
+    CBGameDisc discs[CB_DISC_MAX];
+    int scan_open_selector;
     CBOnlineSession session;
     CBOnlineRoomView view;
     CBOnlineNetplayEndpoint endpoint;
@@ -212,6 +216,11 @@ static void lobby_worker(void *opaque)
             rc = cb_online_get_netplay_endpoint(&task->session, &task->endpoint,
                                                  error, sizeof(error));
             break;
+        case LOBBY_WORK_SCAN_DISCS:
+            rc = cb_disc_scan(task->discs, CB_DISC_MAX, &task->disc_count);
+            if (rc != 0)
+                snprintf(error, sizeof(error), "Could not scan the PS3 disc folders.");
+            break;
         case LOBBY_WORK_LEAVE:
             rc = cb_online_leave_room(&task->session, error, sizeof(error));
             break;
@@ -239,6 +248,9 @@ static void lobby_worker(void *opaque)
                 snprintf(task->status, sizeof(task->status), "Room launch lock released.");
             else if (task->operation == LOBBY_WORK_NETPLAY_ENDPOINT)
                 snprintf(task->status, sizeof(task->status), "Netplay endpoint checked.");
+            else if (task->operation == LOBBY_WORK_SCAN_DISCS)
+                snprintf(task->status, sizeof(task->status), "Found %d CUE file(s).",
+                         (int)task->disc_count);
             else if (task->operation == LOBBY_WORK_LEAVE)
                 snprintf(task->status, sizeof(task->status), "Room left.");
             else if (task->operation == LOBBY_WORK_CREATE)
@@ -310,6 +322,25 @@ static int start_lobby_fingerprint_worker(sys_ppu_thread_t *thread,
         task->result = -1;
         snprintf(task->status, sizeof(task->status),
                  "Could not start the lobby network worker.");
+        return -1;
+    }
+    return 0;
+}
+
+static int start_lobby_disc_scan_worker(sys_ppu_thread_t *thread,
+                                        LobbyWorkerTask *task,
+                                        int open_selector)
+{
+    if (!thread || !task) return -1;
+    memset(task, 0, sizeof(*task));
+    task->operation = LOBBY_WORK_SCAN_DISCS;
+    task->scan_open_selector = open_selector;
+    if (sysThreadCreate(thread, lobby_worker, task, 1500,
+                        LOBBY_WORKER_STACK_SIZE, THREAD_JOINABLE,
+                        g_lobby_worker_name) != 0) {
+        task->result = -1;
+        snprintf(task->status, sizeof(task->status),
+                 "Could not start the disc scan worker.");
         return -1;
     }
     return 0;
@@ -750,6 +781,34 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                     snprintf(status, status_size, "%s",
                              worker.status[0] ? worker.status : "Room refresh failed.");
                 }
+            } else if (completed_operation == LOBBY_WORK_SCAN_DISCS) {
+                if (worker.result == 0) {
+                    memcpy(discs, worker.discs, sizeof(discs));
+                    disc_count = (int)worker.disc_count;
+                    if (worker.scan_open_selector) {
+                        disc_selected = 0;
+                        netplay_waiting = 0;
+                        netplay_wait_attempts = 0;
+                        netplay_poll_frames = 0;
+                        if (disc_count > 0) {
+                            screen = SCREEN_DISC_SELECT;
+                            snprintf(status, status_size,
+                                     "Select the same Crash Bash CUE file on every console.");
+                        } else {
+                            disc_selected = 0;
+                            snprintf(status, status_size,
+                                     "Copy the Crash Bash CUE file to a PSXISO folder, then rescan.");
+                        }
+                    } else {
+                        if (disc_count == 0) disc_selected = 0;
+                        else if (disc_selected >= disc_count) disc_selected = disc_count - 1;
+                        snprintf(status, status_size, "%s", worker.status);
+                    }
+                } else {
+                    if (worker.scan_open_selector) disc_count = 0;
+                    snprintf(status, status_size, "%s",
+                             worker.status[0] ? worker.status : "Disc scan failed.");
+                }
             } else if (completed_operation == LOBBY_WORK_JOIN_ANY ||
                        completed_operation == LOBBY_WORK_JOIN ||
                        completed_operation == LOBBY_WORK_CREATE) {
@@ -900,13 +959,11 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                         netplay_waiting = 0;
                         host_disc_waiting = 0;
                         host_disc_selected = -1;
-                        if (cb_disc_scan(discs, CB_DISC_MAX, &scanned) == 0) {
-                            disc_count = (int)scanned;
-                            if (disc_count == 0) disc_selected = 0;
-                            else if (disc_selected >= disc_count) disc_selected = disc_count - 1;
-                            snprintf(status, status_size, "Found %d CUE file(s).", disc_count);
+                        if (start_lobby_disc_scan_worker(&worker_thread, &worker, 0) == 0) {
+                            worker_active = 1;
+                            snprintf(status, status_size, "Scanning PSXISO folders...");
                         } else {
-                            snprintf(status, status_size, "Disc scan failed.");
+                            snprintf(status, status_size, "%s", worker.status);
                         }
                     } else if (action == DISC_ACTION_BACK) {
                         netplay_waiting = 0;
@@ -1238,17 +1295,14 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                         snprintf(status, status_size, "%s", worker.status);
                     }
                 } else {
-                    size_t scanned = 0;
                     netplay_waiting = 0;
                     host_disc_waiting = 0;
                     host_disc_selected = -1;
-                    if (cb_disc_scan(discs, CB_DISC_MAX, &scanned) == 0) {
-                        disc_count = (int)scanned;
-                        if (disc_count == 0) disc_selected = 0;
-                        else if (disc_selected >= disc_count) disc_selected = disc_count - 1;
-                        snprintf(status, status_size, "Found %d CUE file(s).", disc_count);
+                    if (start_lobby_disc_scan_worker(&worker_thread, &worker, 0) == 0) {
+                        worker_active = 1;
+                        snprintf(status, status_size, "Scanning PSXISO folders...");
                     } else {
-                        snprintf(status, status_size, "Disc scan failed.");
+                        snprintf(status, status_size, "%s", worker.status);
                     }
                 }
             }
@@ -1303,22 +1357,11 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                 if (!view.is_ready) {
                     snprintf(status, status_size, "At least two players must join and all must be READY.");
                 } else {
-                    size_t scanned = 0;
-                    if (cb_disc_scan(discs, CB_DISC_MAX, &scanned) != 0) {
-                        disc_count = 0;
-                        snprintf(status, status_size, "Could not scan the PS3 disc folders.");
+                    if (start_lobby_disc_scan_worker(&worker_thread, &worker, 1) == 0) {
+                        worker_active = 1;
+                        snprintf(status, status_size, "Scanning PSXISO folders...");
                     } else {
-                        disc_count = (int)scanned;
-                        disc_selected = 0;
-                        netplay_waiting = 0;
-                        netplay_wait_attempts = 0;
-                        netplay_poll_frames = 0;
-                        screen = SCREEN_DISC_SELECT;
-                    }
-                    if (disc_count == 0) {
-                        snprintf(status, status_size, "Copy the Crash Bash CUE file to a PSXISO folder, then rescan.");
-                    } else {
-                        snprintf(status, status_size, "Select the same Crash Bash CUE file on every console.");
+                        snprintf(status, status_size, "%s", worker.status);
                     }
                 }
             }
