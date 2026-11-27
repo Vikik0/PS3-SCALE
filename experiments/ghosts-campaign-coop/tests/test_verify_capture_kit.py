@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tools.verify_capture_kit import validate_package
+from tools.verify_capture_kit import RUNTIME_ANALYZER_REQUIRED_FILES, validate_package
 
 
 REQUIRED = (
@@ -24,6 +24,11 @@ def write_package(root: Path):
         path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(("payload:" + relative).encode("utf-8"))
+
+    for relative in RUNTIME_ANALYZER_REQUIRED_FILES:
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(("dependency:" + relative).encode("utf-8"))
 
     for name in ("ghc_campaign_player_registry", "ghc_campaign_local_session"):
         base = root / "Experimental_GSC_Not_Installed"
@@ -118,6 +123,17 @@ class CaptureKitVerifierTests(unittest.TestCase):
         self.assertTrue(summary["event_activator_audit_verified"])
         self.assertTrue(summary["event_refactor_graph_verified"])
         self.assertTrue(summary["phase118_trigger_inventory_verified"])
+        self.assertTrue(summary["runtime_analyzer_dependencies_verified"])
+
+    def test_missing_runtime_analyzer_dependency_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write_package(root)
+            missing = root / "Tools" / "ps3mapi" / "validate_campaign_player_pair_capture.py"
+            missing.unlink()
+            errors, summary = validate_package(root)
+        self.assertFalse(summary["runtime_analyzer_dependencies_verified"])
+        self.assertTrue(any("runtime analyzer dependency missing" in error for error in errors))
 
     def test_invalid_mission_event_map_is_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
