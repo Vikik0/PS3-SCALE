@@ -15,7 +15,11 @@
 - If the same-name HDD cache already exists, PS3 SCALE compares file size, boot serial and PCSX2 ELF hash with the selected USB image. A mismatch blocks all writes and directs the user to remove the stale cache.
 - PS2 launch now uses webMAN's documented `/mount_ps3/<path>?emu=ps2_netemu.self` route, then `/play.ps3`, ensuring netemu-only CONFIG command `0x0A` is not silently bypassed by the saved emulator selection.
 - New host tests cover HDD and USB CONFIG path resolution, path traversal rejection, and explicit netemu launch routing.
-- CI validation for Alpha 0.36 is pending. Physical-console testing remains **NOT DONE**.
+- GitHub Actions run #1022 on commit `da3c88f61eea95aa0f8bcd7c0d5503f23d8f1fab`: **PASS** — Host-side tests, Support Edge Function checks, PS3 ELF/SELF/standard PKG/GNPDRM PKG build and package validation.
+- Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/46000292398
+- Artifact: [PS3-SCALE-Alpha-0.36-build-with-embedded-theme](https://github.com/Vikik0/PS3-SCALE/actions/runs/46000292398/artifacts/15197672995) — 25,460,724 bytes; SHA-256 `5d34ee8180c48605ef39a866e012b28889b196f7e8cce1d48a8d14e55b153af5`.
+- Build outputs: ELF `f69d585f0a0447b2224e913b2d4c61b192973fc8203080cd83840b779b1098dc`; SELF `715b49a8987d7c78e63997253cf4e0afc8bff97be9941486192c4de4e68cd075`; standard PKG `37267dfa645f3a92ed82c914c8457845448d9df044541245b6d2c2ade69eab0b`; GNPDRM PKG `46ff2a59ded91438d5cb4ffea16599db0732ab5dce80157a3c459fd1524cc7c8`.
+- Physical-console testing remains **NOT DONE**. The 480p entries are game-code patches only; actual netemu output mode is not verified.
 
 ## Alpha 0.35 — exact patch review and apply-time opcode verification
 
