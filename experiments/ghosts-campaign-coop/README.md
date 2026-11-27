@@ -554,3 +554,13 @@ The Phase 79 handoff package is Ghosts_TU116_Capture_Kit_Phase79.zip (8 payload 
 - Extended the kit verifier to reject missing analyzer dependencies; added regression tests for reconnect accounting and package completeness.
 - This remains tooling and static-validation work. No physical PS3 runtime evidence was fabricated, no original mission handler was migrated, and no EBOOT/SELF/FastFile was modified. Player 2 remains NOT_PROVEN; shared interactions remain 0/4.
 - See docs/phase120-player-pair-capture-validator-hardening.md and reports/PHASE120_REPORT_AR.md.
+
+
+### Phase 121 — cross-platform capture-kit import shim
+
+- Found a case-sensitive import failure by extracting the Phase 120 artifact on Linux: the package exposed Tools/ while Python imports used tools.*.
+- Added a lowercase package shim that maps imports to the existing Tools directory without duplicating project modules.
+- Made the shim a required integrity-checked package file.
+- Replaced placeholder analyzer modules in the builder test fixture with real project files and added an extracted-ZIP analyzer import smoke test.
+- This is a portability fix only. No PS3 runtime proof or mission integration is claimed; Player 2 remains NOT_PROVEN and shared interactions remain 0/4.
+- See docs/phase121-cross-platform-kit-import-shim.md and reports/PHASE121_REPORT_AR.md.
