@@ -3159,7 +3159,7 @@ static void start_selected_game(void)
     g_network_task_running = 1;
 
     if (is_ps2_iso)
-        set_details_message("MOUNTING PS2 ISO VIA WEBMAN. WAIT FOR THE RESPONSE.");
+        set_details_message("MOUNTING PS2 ISO WITH NETEMU. USB CACHE COPY MAY TAKE SEVERAL MINUTES.");
     else if (script_state == 1)
         set_details_message("STARTING GAME WITH ONE-LAUNCH PROFILE.");
     else if (force_unmodified)
