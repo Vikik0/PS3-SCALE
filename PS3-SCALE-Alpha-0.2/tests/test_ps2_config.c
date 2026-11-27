@@ -210,7 +210,11 @@ int main(void)
 
         assert(ps3scale_ps2_config_append_patches(
             community_config, sizeof(community_config) - 4u,
-            &patch, 1, merged, sizeof(merged), &merged_size) == -1);
+            &patch, 1, merged, sizeof(merged), &merged_size) == 0);
+        assert(merged_size == sizeof(community_config) - 4u + 20u);
+        assert(memcmp(merged, community_config, 16u) == 0);
+        assert(merged[16] == 0x0A && merged[20] == 0x01);
+        assert(memcmp(merged + 36u, community_config + 16u, 4u) == 0);
     }
 
     patch.ee_address = 0x00161861u;
