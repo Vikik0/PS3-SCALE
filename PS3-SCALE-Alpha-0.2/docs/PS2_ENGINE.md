@@ -45,6 +45,7 @@ Artemis PS3 is not treated as a generic runtime cheat injector for a PS2 game in
 The PS2 Enhancer screen now provides:
 - Probe the selected ISO boot ELF on entry and show the exact boot serial + PCSX2 ELF hash, alongside FPS, 16:9 and 480p match availability; these actions are gated behind confirmed Slim / Super Slim netemu hardware.
 - Validate every candidate patch address against a file-backed executable ELF segment before showing it as available; the apply path repeats this check.
+- Host CI exercises all 36 catalogue candidates against a synthetic executable `PT_LOAD` ELF segment, and verifies non-executable or non-file-backed mappings are rejected.
 - Require a two-step CROSS confirmation before writing any experimental EE code patch. The review overlay lists every EE address, original word read from the selected boot ELF, replacement word, exact title, serial, hash and write count. CIRCLE or changing the selected row cancels the pending action without changing CONFIG.
 - Re-read every original opcode immediately before writing and refuse the install if any opcode differs from the review preview, even if the serial/hash still appears to match.
 
