@@ -4,7 +4,7 @@
 
 ## حالة المشروع
 
-هذا فرع التطوير `feature/ps2-enhancement-engine` المرتبط بـ Draft PR #20، ويستهدف `design/splash-transitions-ui-v6`. الإصدار Alpha 0.36 يعالج مشكلة ملفات CONFIG لألعاب PS2 الموجودة على USB، بحيث تُحفظ بجانب نسخة HDD التي يستخدمها webMAN، ويتحقق من عدم وجود نسخة مخزنة قديمة للعبة. كما أصبح تشغيل ألعاب PS2 يطلب `ps2_netemu` صراحة قبل بدء اللعبة. اختبارات البناء الآلية قيد التشغيل؛ ولم يتم بعد اعتماد أي تحسين FPS أو 16:9 أو 480p على جهاز PS3 فعلي.
+هذا فرع التطوير `feature/ps2-enhancement-engine` المرتبط بـ Draft PR #20، ويستهدف `design/splash-transitions-ui-v6`. الإصدار Alpha 0.36 يعالج ملفات CONFIG لألعاب PS2 الموجودة على USB، ويحمي من استخدام نسخة HDD مخزنة قديمة، ويطلب تشغيل `ps2_netemu` صراحة. اجتازت اختبارات Host وفحوصات الدعم وبناء ELF/SELF/PKG في GitHub Actions رقم 1022. [تحميل Alpha 0.36](https://github.com/Vikik0/PS3-SCALE/actions/runs/46000292398/artifacts/15197672995). لم يتم بعد اعتماد أي تحسين FPS أو 16:9 أو 480p على جهاز PS3 فعلي.
 
 ## الواجهة
 
