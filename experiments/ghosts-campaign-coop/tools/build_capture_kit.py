@@ -21,6 +21,9 @@ PS3MAPI_FILES = (
     "SELF_MEMORY_MAP_TU116.json",
     "TU116_EXECUTABLE_MANIFEST.json",
     "analyze_tu116_runtime_capture.py",
+    "CAMPAIGN_NATIVE_PLAYER_CAPTURE_TEMPLATE.json",
+    "campaign_capture_binding.py",
+    "validate_campaign_player_pair_capture.py",
     "compare_runtime_strings.py",
     "diff_runtime_elfs.py",
     "dump_campaign_tu116.bat",
@@ -185,6 +188,13 @@ def build_capture_kit(
             phase119_doc,
             root / "Docs" / "PHASE119_INVENTORY_VALIDATION_GATE.md",
         )
+        phase120_doc = project_root / "docs" / "phase120-player-pair-capture-validator-hardening.md"
+        if not phase120_doc.is_file():
+            raise FileNotFoundError(f"missing Phase 120 player-pair validator document: {phase120_doc}")
+        shutil.copy2(
+            phase120_doc,
+            root / "Docs" / "PHASE120_PLAYER_PAIR_CAPTURE_VALIDATOR_HARDENING.md",
+        )
 
         quickstart = (
             project_root / "docs" / "phase116-ps3-runtime-capture-quickstart-ar.md"
@@ -207,11 +217,20 @@ def build_capture_kit(
             "verify_mission_event_lock_map.py",
             "mission_event_activator_audit.py",
             "verify_phase118_trigger_inventory.py",
+            "compare_ppu_function_inventories.py",
+            "compare_splitscreen_builtin_xrefs.py",
+            "ps3_elf_inspect.py",
+            "run_ghidra_ppu_inventory.py",
         ):
             source = project_root / "tools" / filename
             if not source.is_file():
                 raise FileNotFoundError(f"missing analyzer tool: {source}")
             shutil.copy2(source, root / "Tools" / filename)
+
+        ghidra_sources = project_root / "tools" / "ghidra"
+        if not ghidra_sources.is_dir():
+            raise FileNotFoundError(f"missing Ghidra script directory: {ghidra_sources}")
+        _copy_tree(ghidra_sources, root / "Tools" / "ghidra")
 
         # Keep the two dump scripts at the documented PS3 root paths too.
         for filename in ("dump_campaign_tu116.bat", "dump_multiplayer_tu116.bat"):
@@ -251,6 +270,8 @@ def build_capture_kit(
             "PHASE118_VALIDATION.json",
             "PHASE119_REPORT_AR.md",
             "PHASE119_VALIDATION.json",
+            "PHASE120_REPORT_AR.md",
+            "PHASE120_VALIDATION.json",
         ):
             source = project_root / "reports" / filename
             if source.is_file():
@@ -286,7 +307,7 @@ The Phase 118 call-site inventory is validated with:
 - Campaign and Multiplayer probe mode files.
 - PS3MAPI memory-dump scripts and TU1.16 runtime analyzers.
 - Experimental GSC source and GSCBIN under Experimental_GSC_Not_Installed only.
-- Selected Phase 84–90 and Phase 112–119 reports, event-lock map, activator-lineage audit, mission refactor graph, Arabic runtime capture quick start, validated trigger call-site inventory and MANIFEST.json with per-file SHA-256 checksums.
+- Selected Phase 84–90 and Phase 112–120 reports, event-lock map, activator-lineage audit, mission refactor graph, complete Campaign/Multiplayer analyzer dependency set, native player-pair capture template/validator, Arabic runtime capture quick start, validated trigger call-site inventory and MANIFEST.json with per-file SHA-256 checksums.
 
 ## Recommended offline test
 
@@ -301,6 +322,16 @@ The Local Session bridge and player registry are compiled GSC scripts, not PRX f
 ## Phase 119 inventory gate
 
 The Phase 118 inventory validator runs as part of python Tools/verify_capture_kit.py. It checks all 15 pinned legacy call sites, the four blocked shared interactions, and the NOT_PROVEN runtime boundary.
+
+## Phase 120 player-pair capture
+
+The package includes the native Campaign player-pair template and validator, the SELF-binding helper, and every Python module imported by the combined runtime analyzer. Optional Ghidra analysis scripts are included as well. The verifier rejects a kit missing any of these dependencies.
+
+Fill the template only with measured PS3 runtime values, calculate campaign_self_sha256 from the exact Campaign default.self, and run:
+
+    python Tools/ps3mapi/validate_campaign_player_pair_capture.py --capture campaign_player_pair_capture.json
+
+The combined analyzer checks the SELF hash binding when the capture is supplied. Structural validation does not authenticate the operator or prove a physical PS3 capture; Player 2 remains NOT_PROVEN until genuine runtime evidence is reviewed.
 
 ## Not yet proven
 
