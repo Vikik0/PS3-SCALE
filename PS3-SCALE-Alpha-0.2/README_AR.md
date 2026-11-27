@@ -1,10 +1,10 @@
-# PS3 SCALE — Alpha 0.34
+# PS3 SCALE — Alpha 0.35
 
 **الهدف:** إدارة مكتبة ألعاب PS3 وPS2، عرض معلومات كل لعبة، ومراجعة ملفات تحسين FPS المتاحة مع مطابقة دقيقة قبل تثبيتها.
 
 ## حالة المشروع
 
-هذا فرع التطوير `feature/ps2-enhancement-engine` المرتبط بـ Draft PR #20، ويستهدف `design/splash-transitions-ui-v6`. اجتاز Alpha 0.34 اختبارات Host وSupport Edge Function وبناء ELF/SELF/PKG في GitHub Actions رقم 988. [تحميل حزمة Alpha 0.34](https://github.com/Vikik0/PS3-SCALE/actions/runs/45973073598/artifacts/15185034240). نجاح البناء لا يعني أن تحسينات FPS أو 16:9 أو 480p اختُبرت فعلياً؛ ما زال يلزم اختبارها على جهاز PS3.
+هذا فرع التطوير `feature/ps2-enhancement-engine` المرتبط بـ Draft PR #20، ويستهدف `design/splash-transitions-ui-v6`. الإصدار Alpha 0.35 يضيف شاشة مراجعة تعرض كل عنوان EE والكلمة الأصلية والبديلة قبل التطبيق، ويعيد التحقق من الكلمات الأصلية لحظة التثبيت. يجري بناء النسخة الجديدة في GitHub Actions. نجاح البناء لا يعني أن تحسينات FPS أو 16:9 أو 480p اختُبرت فعلياً؛ ما زال يلزم اختبارها على جهاز PS3.
 
 ## الواجهة
 
