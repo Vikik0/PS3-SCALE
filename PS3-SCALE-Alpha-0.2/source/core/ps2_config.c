@@ -285,14 +285,37 @@ int ps3scale_ps2_config_append_patches(
                 merged[j].replacement_word = read_u32_le(base + entry + 8u);
             }
 
-            for (j = 0; j < patch_count; ++j) {
-                size_t k;
-                for (k = 0; k < old_count + j; ++k) {
-                    if (merged[k].ee_address == patches[j].ee_address)
-                        return -3;
+            {
+                int any_existing = 0;
+                int all_existing = 1;
+
+                /*
+                 * An exact re-apply is a no-op, not a conflicting merge.
+                 * Partial overlap or different words at the same address
+                 * remain a hard refusal.
+                 */
+                for (j = 0; j < patch_count; ++j) {
+                    size_t k;
+                    int found = 0;
+                    for (k = 0; k < old_count; ++k) {
+                        if (merged[k].ee_address == patches[j].ee_address) {
+                            found = 1;
+                            any_existing = 1;
+                            if (merged[k].original_word != patches[j].original_word ||
+                                merged[k].replacement_word != patches[j].replacement_word)
+                                return -3;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        all_existing = 0;
                 }
-                merged[old_count + j] = patches[j];
+                if (any_existing)
+                    return all_existing ? -6 : -3;
             }
+
+            for (j = 0; j < patch_count; ++j)
+                merged[old_count + j] = patches[j];
 
             new_count = old_count + patch_count;
             new_patch_size = 8u + new_count * 12u;
