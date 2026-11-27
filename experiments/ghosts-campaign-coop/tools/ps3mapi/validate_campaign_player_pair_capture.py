@@ -74,6 +74,8 @@ def _valid_observation(observation: dict[str, Any]) -> tuple[bool, str, tuple | 
         return False, "native_player_count_not_two", None
 
     for player in players:
+        if not isinstance(player, dict):
+            return False, "player_record_not_object", None
         missing = [field for field in REQUIRED_PLAYER_FIELDS if field not in player]
         if missing:
             return False, "missing_player_fields:" + ",".join(missing), None
@@ -179,6 +181,8 @@ def validate_capture(
     saw_explicit_pair_loss = False
     reconnect_run = 0
     reconnect_signature = None
+    best_reconnect_run = 0
+    best_reconnect_signature = None
     rejected = []
     continuity_breaks = []
 
@@ -190,6 +194,16 @@ def validate_capture(
             raise ValueError(f"observation {index} timestamp_ms must be a non-negative integer")
         if timestamp <= previous_timestamp:
             raise ValueError("observation timestamps must be strictly increasing")
+
+        required_observation_fields = ("split_screen", "players", "player_array_count")
+        missing_observation_fields = [
+            field for field in required_observation_fields if field not in observation
+        ]
+        if missing_observation_fields:
+            raise ValueError(
+                f"observation {index} missing required fields: "
+                + ", ".join(missing_observation_fields)
+            )
 
         if previous_timestamp >= 0:
             sample_gap = timestamp - previous_timestamp
@@ -246,9 +260,12 @@ def validate_capture(
             else:
                 reconnect_signature = signature
                 reconnect_run = 1
+            if reconnect_run > best_reconnect_run:
+                best_reconnect_run = reconnect_run
+                best_reconnect_signature = signature
 
     stable = best_run >= required_stable_samples
-    reconnect = reconnect_run >= required_stable_samples
+    reconnect = best_reconnect_run >= required_stable_samples
     best_pair_mapping = []
     if best_signature is not None:
         for row in best_signature:
@@ -273,7 +290,9 @@ def validate_capture(
         "best_stable_run": best_run,
         "stable_pair_observation_validated": stable,
         "explicit_pair_loss_observed": saw_explicit_pair_loss,
-        "reconnect_stable_run_after_pair_loss": reconnect_run,
+        "reconnect_stable_run_after_pair_loss": best_reconnect_run,
+        "reconnect_current_run_after_last_break": reconnect_run,
+        "best_reconnect_pair_signature": best_reconnect_signature,
         "auto_rebind_cycle_observed_in_supplied_data": reconnect,
         "native_local_client_fields_consistent": stable,
         "controller_to_player_mapping_fields_consistent": stable,
@@ -288,7 +307,7 @@ def validate_capture(
             "A structural validation error is not treated as proof of a disconnect; reconnect requires an explicit split-screen loss or sub-two-player array observation.",
             "Stable samples must be no more than max_sample_gap_ms apart; widely separated snapshots cannot be combined into one stable run.",
             "A passing pair capture does not by itself prove that the original mission handlers are safe to patch.",
-            "A reconnect cycle is reported separately and requires an explicit pair-loss observation followed by a new stable run.",
+            "A reconnect cycle is reported separately and requires an explicit pair-loss observation followed by a new stable run; the best qualifying post-loss run is retained even if later samples break continuity.",
         ],
     }
 
