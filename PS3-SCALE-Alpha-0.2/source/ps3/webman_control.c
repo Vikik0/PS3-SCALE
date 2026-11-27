@@ -307,6 +307,17 @@ int ps3scale_webman_start_game(const ps3scale_game_t *game)
                                          sizeof(request_path)) != 0)
         return PS3SCALE_WEBMAN_ERROR_INVALID_REQUEST;
 
+    if (game->kind == PS3SCALE_GAME_PS2_ISO) {
+        int mount_result = webman_http_get(
+            request_path, response, sizeof(response), 0);
+        if (mount_result != 0)
+            return mount_result;
+
+        /* /mount_ps3 selects netemu and mounts the ISO without autoplay.
+           Start the now-mounted PS2 disc only after the mount request returns. */
+        return webman_http_get("/play.ps3", response, sizeof(response), 0);
+    }
+
     return webman_http_get(request_path, response, sizeof(response), 0);
 }
 
