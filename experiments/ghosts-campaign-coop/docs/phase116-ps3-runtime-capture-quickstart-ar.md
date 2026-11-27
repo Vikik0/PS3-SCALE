@@ -8,7 +8,7 @@
 - webMAN MOD مع تفعيل PS3MAPI.
 - وحدتا تحكم موصولتان قبل تشغيل اللعبة.
 - كمبيوتر على نفس الشبكة.
-- حزمة التطوير والالتقاط من [CI run #1642](https://github.com/Vikik0/PS3-SCALE/actions/runs/45863929336/artifacts/15139148167).
+- حزمة التطوير والالتقاط: نزّل أحدث artifact باسم ghosts-tu116-development-capture-kit من آخر GitHub Actions run ناجح على فرع المشروع. الحزمة تحتوي أدوات الالتقاط والتحقق والتقارير الحالية.
 
 نفّذ الاختبارات في Offline فقط. لا تشغّل Pad Probe وDualShock Input Probe في الوقت نفسه.
 
