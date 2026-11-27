@@ -21,7 +21,7 @@ cc -std=c99 -D_XOPEN_SOURCE=700 -Wall -Wextra -Werror \
   -o "$OUT/test_scanner"
 "$OUT/test_scanner"
 
-cc -std=c99 -Wall -Wextra -Werror \
+cc -std=c99 -DPS3SCALE_HOST_TEST=1 -Wall -Wextra -Werror \
   -I"$ROOT/include" \
   "$ROOT/source/core/iso9660.c" \
   "$ROOT/source/core/ps2_game_patch.c" \
