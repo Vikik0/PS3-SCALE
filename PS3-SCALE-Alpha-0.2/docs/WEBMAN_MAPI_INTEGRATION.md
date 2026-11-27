@@ -94,3 +94,6 @@ This is deliberate: PS2 SCALE's EE replacement command `0x0A` is documented as n
 For USB images, webMAN caches the ISO under `/dev_hdd0/PS2ISO/<filename>`. The matching CONFIG must be beside that cached image. PS3 SCALE writes the sidecar at the cache location and compares any existing same-name cache with the selected source by size, boot serial and PCSX2 ELF hash. A mismatch blocks writes until the stale cache is removed.
 
 References: [webMAN mount route and `emu=` parameter](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount.h#L45-L60), [selector parsing](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount.h#L255-L270), [PS2 ISO cache and mount logic](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount_cobra.h#L245-L315).
+
+
+For PS2 ISO mounts from USB, the mount request uses a separate bounded read wait of up to 180 seconds. This prevents a large webMAN USB-to-HDD cache copy from being misreported as an immediate HTTP failure. The wait runs on the game-launch worker, not the controller/render thread; the following `/play.ps3` request uses the normal short timeout.
