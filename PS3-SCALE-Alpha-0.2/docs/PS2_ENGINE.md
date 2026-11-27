@@ -43,8 +43,9 @@ Artemis PS3 is not treated as a generic runtime cheat injector for a PS2 game in
 ## PS3 SCALE implementation
 
 The PS2 Enhancer screen now provides:
-- Probe the selected ISO boot ELF on entry and show exact-match availability for FPS, 16:9 and 480p before the user applies a patch; these actions are gated behind confirmed Slim / Super Slim netemu hardware.
+- Probe the selected ISO boot ELF on entry and show the exact boot serial + PCSX2 ELF hash, alongside FPS, 16:9 and 480p match availability; these actions are gated behind confirmed Slim / Super Slim netemu hardware.
 - Validate every candidate patch address against a file-backed executable ELF segment before showing it as available; the apply path repeats this check.
+- Require a two-step CROSS confirmation before writing any experimental EE code patch. CIRCLE or changing the selected row cancels the pending action without changing CONFIG.
 
 - `0x46` L2H performance toggle (on by default).
 - `0x44` smoothing-disable / sharper-pixel toggle (off by default).
