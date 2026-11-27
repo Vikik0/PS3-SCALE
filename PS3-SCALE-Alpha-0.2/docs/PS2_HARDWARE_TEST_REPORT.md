@@ -64,14 +64,14 @@ All source files are pinned to PCSX2 patch commit `1fd98102b8e2fffe3e0c29aab5533
 | Teen Titans | `SLUS_211.83` | `E1F17139` | NOT TESTED |
 | Disney's Kim Possible - What's the Switch | `SLUS_214.37` | `86B490D1` | NOT TESTED |
 | Jimmy Neutron: Jet Fusion | `SLUS_206.96` | `FCC09959` | NOT TESTED |
-| 7 Sins (PAL-M) | \`SLES_532.80\` | \`52DEB87B\` | NOT TESTED |
-| Shadow Hearts (NTSC-U) | \`SLUS_203.47\` | \`8BE3D7B2\` | NOT TESTED |
-| Teenage Mutant Ninja Turtles 2: Battle Nexus (PAL-M5) | \`SLES_530.17\` | \`C7375C85\` | NOT TESTED |
-| Obscure (NTSC-U) | \`SLUS_207.77\` | \`A06047D6\` | NOT TESTED |
-| Armored Core 3 (PAL-E) | \`SLES_513.99\` | \`DE5AF9A8\` | NOT TESTED |
-| Bionicle (NTSC-U) | \`SLUS_208.18\` | \`8371B27B\` | NOT TESTED |
-| Tom Clancy's Splinter Cell: Double Agent (PAL-M3) | \`SLES_538.27\` | \`6BD0E9C2\` | NOT TESTED |
-| La Pucelle: Tactics (PAL) | \`SLES_529.78\` | \`474EC389\` | NOT TESTED |
+| 7 Sins (PAL-M) | `SLES_532.80` | `52DEB87B` | NOT TESTED |
+| Shadow Hearts (NTSC-U) | `SLUS_203.47` | `8BE3D7B2` | NOT TESTED |
+| Teenage Mutant Ninja Turtles 2: Battle Nexus (PAL-M5) | `SLES_530.17` | `C7375C85` | NOT TESTED |
+| Obscure (NTSC-U) | `SLUS_207.77` | `A06047D6` | NOT TESTED |
+| Armored Core 3 (PAL-E) | `SLES_513.99` | `DE5AF9A8` | NOT TESTED |
+| Bionicle (NTSC-U) | `SLUS_208.18` | `8371B27B` | NOT TESTED |
+| Tom Clancy's Splinter Cell: Double Agent (PAL-M3) | `SLES_538.27` | `6BD0E9C2` | NOT TESTED |
+| La Pucelle: Tactics (PAL) | `SLES_529.78` | `474EC389` | NOT TESTED |
 
 ## 480p progressive-output candidates
 
@@ -80,16 +80,16 @@ All source files are pinned to PCSX2 patch commit `1fd98102b8e2fffe3e0c29aab5533
 | Crash of the Titans (PAL-R) | `SLES_548.43` | `AEFD7D25` | NOT TESTED |
 | George of the Jungle (PAL-M) | `SLES_549.75` | `278B7BEA` | NOT TESTED |
 | Syberia (PAL) | `SLES_513.93` | `D1ACD489` | NOT TESTED |
-| Crash of the Titans (PAL-M) | \`SLES_548.41\` | \`ECA6BFC5\` | NOT TESTED |
-| Medal of Honor: European Assault (PAL-M) | \`SLES_533.32\` | \`BB70FFB9\` | NOT TESTED |
-| SpongeBob SquarePants: Battle for Bikini Bottom (PAL-F) | \`SLES_536.23\` | \`9ADA98B4\` | NOT TESTED |
-| Star Wars: Episode III - Revenge of the Sith (PAL-M3) | \`SLES_531.55\` | \`99AD19EE\` | NOT TESTED |
-| Commandos: Strike Force (PAL-M) | \`SLES_527.68\` | \`5E1161DF\` | NOT TESTED |
-| The Punisher (PAL-S-I) | \`SLES_530.49\` | \`5AC5D875\` | NOT TESTED |
-| Driver: Parallel Lines (PAL-M) | \`SLES_540.27\` | \`D720770D\` | NOT TESTED |
-| kill.switch (PAL-M) | \`SCES_521.24\` | \`91A65EAE\` | NOT TESTED |
-| Space Chimps (PAL-M) | \`SLES_553.40\` | \`C423A2DC\` | NOT TESTED |
-| Cold Fear (PAL-M) | \`SLES_531.58\` | \`E38A0AB6\` | NOT TESTED |
+| Crash of the Titans (PAL-M) | `SLES_548.41` | `ECA6BFC5` | NOT TESTED |
+| Medal of Honor: European Assault (PAL-M) | `SLES_533.32` | `BB70FFB9` | NOT TESTED |
+| SpongeBob SquarePants: Battle for Bikini Bottom (PAL-F) | `SLES_536.23` | `9ADA98B4` | NOT TESTED |
+| Star Wars: Episode III - Revenge of the Sith (PAL-M3) | `SLES_531.55` | `99AD19EE` | NOT TESTED |
+| Commandos: Strike Force (PAL-M) | `SLES_527.68` | `5E1161DF` | NOT TESTED |
+| The Punisher (PAL-S-I) | `SLES_530.49` | `5AC5D875` | NOT TESTED |
+| Driver: Parallel Lines (PAL-M) | `SLES_540.27` | `D720770D` | NOT TESTED |
+| kill.switch (PAL-M) | `SCES_521.24` | `91A65EAE` | NOT TESTED |
+| Space Chimps (PAL-M) | `SLES_553.40` | `C423A2DC` | NOT TESTED |
+| Cold Fear (PAL-M) | `SLES_531.58` | `E38A0AB6` | NOT TESTED |
 
 ## Per-title result sheet
 
