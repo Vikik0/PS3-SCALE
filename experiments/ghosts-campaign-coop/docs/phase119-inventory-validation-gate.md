@@ -6,7 +6,8 @@ Phase 118 pinned a static inventory of the original Campaign mission trigger cal
 
 ## What is validated
 
-- The source archive identity and SHA-256 format.
+- The exact source archive filename, byte size and pinned SHA-256.
+- The exact 15 call-site tuples and all 11 source-file SHA-256 pins, not just their counts.
 - Exactly 15 call sites, distributed as 3 Black Ice, 2 Carrier and 10 Cornered.
 - Positive source line numbers, non-empty callers, stable helper names and consistent per-file source hashes.
 - Four critical interactions with stable Event Lock IDs 0–3.

@@ -71,5 +71,25 @@ class Phase118InventoryValidatorTests(unittest.TestCase):
         self.assertTrue(any("must disclose Player 2 NOT_PROVEN and 0/4" in error for error in errors))
 
 
+    def test_rejects_archive_hash_changed_even_if_both_json_files_match(self):
+        inventory, validation, report = baseline()
+        inventory["source_archive"]["sha256"] = "0" * 64
+        validation["source_archive_sha256"] = "0" * 64
+        errors = validate_inventory(inventory, validation, report)
+        self.assertTrue(any("source archive SHA-256 does not match the pinned reference" in error for error in errors))
+
+    def test_rejects_positive_but_wrong_source_line(self):
+        inventory, validation, report = baseline()
+        inventory["callsites"][0]["line"] += 1
+        errors = validate_inventory(inventory, validation, report)
+        self.assertTrue(any("call-site identities do not match the pinned source inventory" in error for error in errors))
+
+    def test_rejects_source_file_hash_not_matching_pinned_source(self):
+        inventory, validation, report = baseline()
+        inventory["callsites"][0]["source_sha256"] = "0" * 64
+        errors = validate_inventory(inventory, validation, report)
+        self.assertTrue(any("source file SHA-256 does not match the pinned source" in error for error in errors))
+
+
 if __name__ == "__main__":
     unittest.main()

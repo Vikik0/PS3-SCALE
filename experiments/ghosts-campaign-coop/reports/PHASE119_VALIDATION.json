@@ -13,9 +13,17 @@
     },
     "original_call_sites_migrated": 0,
     "critical_shared_interactions": 4,
-    "event_lock_ids": [0, 1, 2, 3],
+    "event_lock_ids": [
+      0,
+      1,
+      2,
+      3
+    ],
     "capture_kit_runs_inventory_validator": true,
-    "quickstart_duplicate_zip_entries": 0
+    "quickstart_duplicate_zip_entries": 0,
+    "source_archive_bytes": 1530334,
+    "callsite_identity_exact": true,
+    "source_file_sha256_pins": 11
   },
   "status": "STATIC_INVENTORY_GATE_ADDED; NATIVE_CAMPAIGN_PLAYER_TWO_STILL_BLOCKED",
   "runtime_boundary": {
