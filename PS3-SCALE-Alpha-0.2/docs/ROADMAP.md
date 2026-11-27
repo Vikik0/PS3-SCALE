@@ -88,6 +88,8 @@
 - [x] Seed a source-pinned experimental PS2 FPS / widescreen / 480p catalogue with exact serial + ELF-hash matching.
 - [x] Display the detected boot serial and ELF hash before applying a per-game patch.
 - [x] Require a two-step controller confirmation before writing an experimental EE patch; navigation cancels without writing.
+- [x] Add a full patch review overlay listing every address, original opcode and replacement opcode before the final CROSS.
+- [x] Re-read and compare every original opcode at apply time; refuse if the boot ELF differs from the review preview.
 - [ ] Validate each candidate on physical hardware before calling it a working or verified enhancement.
 
 ## Alpha 0.4 — PS3 title-specific patch manager
