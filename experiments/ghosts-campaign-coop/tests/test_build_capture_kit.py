@@ -58,6 +58,21 @@ def make_project(root: Path):
     )
     for filename in ("verify_capture_kit.py", "verify_phase118_trigger_inventory.py"):
         shutil.copy2(source_root / "tools" / filename, root / "tools" / filename)
+    for filename in (
+        "compare_ppu_function_inventories.py",
+        "compare_splitscreen_builtin_xrefs.py",
+        "ps3_elf_inspect.py",
+        "run_ghidra_ppu_inventory.py",
+    ):
+        (root / "tools" / filename).write_text(f"# {filename}\\n", encoding="utf-8")
+    ghidra = root / "tools" / "ghidra"
+    ghidra.mkdir()
+    for filename in (
+        "ExportGhostsPpuFunctionInventory.java",
+        "FindGhostsSplitScreenBuiltins.java",
+        "SeedGhostsOpdFunctions.java",
+    ):
+        (ghidra / filename).write_text(f"// {filename}\\n", encoding="utf-8")
     reports = root / "reports"
     reports.mkdir(parents=True, exist_ok=True)
     for filename in (
@@ -73,6 +88,8 @@ def make_project(root: Path):
         "PHASE117_VALIDATION.json",
         "PHASE119_REPORT_AR.md",
         "PHASE119_VALIDATION.json",
+        "PHASE120_REPORT_AR.md",
+        "PHASE120_VALIDATION.json",
     ):
         shutil.copy2(source_root / "reports" / filename, reports / filename)
     docs = root / "docs"
@@ -88,6 +105,10 @@ def make_project(root: Path):
     shutil.copy2(
         source_root / "docs" / "phase119-inventory-validation-gate.md",
         docs / "phase119-inventory-validation-gate.md",
+    )
+    shutil.copy2(
+        source_root / "docs" / "phase120-player-pair-capture-validator-hardening.md",
+        docs / "phase120-player-pair-capture-validator-hardening.md",
     )
     for filename in (
         "PHASE118_REPORT_AR.md",
@@ -190,6 +211,12 @@ class CaptureKitBuilderTests(unittest.TestCase):
                 self.assertFalse(any(name.startswith("Ghosts_TU116_Development_Capture_Kit/PS3/") and name.endswith(".gscbin") for name in names))
                 self.assertTrue(any(name.endswith("/Tools/mission_event_activator_audit.py") for name in names))
                 self.assertTrue(any(name.endswith("/Tools/verify_phase118_trigger_inventory.py") for name in names))
+                self.assertTrue(any(name.endswith("/Tools/ps3mapi/validate_campaign_player_pair_capture.py") for name in names))
+                self.assertTrue(any(name.endswith("/Tools/ps3mapi/campaign_capture_binding.py") for name in names))
+                self.assertTrue(any(name.endswith("/Tools/ps3mapi/CAMPAIGN_NATIVE_PLAYER_CAPTURE_TEMPLATE.json") for name in names))
+                self.assertTrue(any(name.endswith("/Tools/ps3mapi/analyze_tu116_runtime_capture.py") for name in names))
+                self.assertTrue(any(name.endswith("/Tools/run_ghidra_ppu_inventory.py") for name in names))
+                self.assertTrue(any(name.endswith("/Tools/ghidra/ExportGhostsPpuFunctionInventory.java") for name in names))
                 self.assertTrue(any(name.endswith("/Reports/PHASE89_MISSION_EVENT_ACTIVATOR_AUDIT.json") for name in names))
                 self.assertTrue(any(name.endswith("/Reports/PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json") for name in names))
                 self.assertTrue(any(name.endswith("/Reports/PHASE117_REPORT_AR.md") for name in names))
@@ -200,6 +227,9 @@ class CaptureKitBuilderTests(unittest.TestCase):
                 self.assertTrue(any(name.endswith("/Reports/PHASE119_REPORT_AR.md") for name in names))
                 self.assertTrue(any(name.endswith("/Reports/PHASE119_VALIDATION.json") for name in names))
                 self.assertTrue(any(name.endswith("/Docs/PHASE119_INVENTORY_VALIDATION_GATE.md") for name in names))
+                self.assertTrue(any(name.endswith("/Reports/PHASE120_REPORT_AR.md") for name in names))
+                self.assertTrue(any(name.endswith("/Reports/PHASE120_VALIDATION.json") for name in names))
+                self.assertTrue(any(name.endswith("/Docs/PHASE120_PLAYER_PAIR_CAPTURE_VALIDATOR_HARDENING.md") for name in names))
                 self.assertEqual(sum(name.endswith("/Docs/PS3_RUNTIME_CAPTURE_QUICKSTART_AR.md") for name in names), 1)
 
     def test_missing_ci_artifact_payload_fails_closed(self):
