@@ -1087,6 +1087,17 @@ assert "PS3SCALE_PS2_CFG_FRAME_PACING" in src
 assert "ps3scale_ps2_iso_load_boot_elf" in src
 assert "ps3scale_ps2_elf_read_exec_word" in src
 assert "ps3scale_ps2_game_patch_find" in src
+assert "cache_ps2_patch_preview" in src
+assert "g_ps2_patch_preview_original" in src
+assert "BOOT ELF CHANGED SINCE REVIEW. REOPEN THE ENHANCER." in src
+patch_preview = section("static void draw_ps2_patch_review(void)",
+                        "static void draw_ps2_config_manager(void)")
+for token in ("REVIEW EXPERIMENTAL PS2 PATCH", "EE ADDRESS",
+              "ORIGINAL WORD", "REPLACEMENT WORD",
+              "CROSS: APPLY THIS EXACT LIST | CIRCLE: CANCEL WITHOUT WRITING",
+              "EXPERIMENTAL: NOT YET VERIFIED ON A PHYSICAL PS3."):
+    assert token in patch_preview
+assert "draw_ps2_patch_review();" in ps2_enhancer_ui
 assert "ps2_netemu_iso_supported" in src
 assert "ps3scale_hardware_supports_netemu_ps2_iso(&g_hardware_info)" in src
 assert "if (!ps2_netemu_iso_supported())" in src
