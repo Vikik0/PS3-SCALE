@@ -32,7 +32,7 @@
 #define WEBMAN_IO_TIMEOUT_SEC 2
 #endif
 #ifndef WEBMAN_PS2_MOUNT_TIMEOUT_SEC
-#define WEBMAN_PS2_MOUNT_TIMEOUT_SEC 180
+#define WEBMAN_PS2_MOUNT_TIMEOUT_SEC 600
 #endif
 
 static int network_modules_ready(void)
