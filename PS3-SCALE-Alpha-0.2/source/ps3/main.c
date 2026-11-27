@@ -3618,9 +3618,14 @@ static void apply_ps2_game_patch(ps3scale_ps2_patch_kind_t patch_kind)
                      "TITLE ID / MULTIDISC CONFIG CANNOT BE REORDERED SAFELY.");
             goto cleanup;
         }
+        if (result == -6) {
+            snprintf(g_ps2_config_manager_message, sizeof(g_ps2_config_manager_message),
+                     "EXACT PATCH ALREADY INSTALLED. NO FILE WAS CHANGED.");
+            goto cleanup;
+        }
         if (result == -3) {
             snprintf(g_ps2_config_manager_message, sizeof(g_ps2_config_manager_message),
-                     "CONFIG HAS A DUPLICATE OR UNSUPPORTED EE PATCH. NO FILE WAS CHANGED.");
+                     "CONFIG HAS A CONFLICTING OR PARTIAL EE PATCH. NO FILE WAS CHANGED.");
             goto cleanup;
         }
         if (result != 0) {
