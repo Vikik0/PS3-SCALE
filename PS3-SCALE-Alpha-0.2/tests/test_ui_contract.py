@@ -8,6 +8,17 @@ import sys
 source_path = pathlib.Path(sys.argv[1])
 src = source_path.read_text(encoding="utf-8")
 
+# Keep the in-app version and PS3 package metadata in sync.
+version_match = re.search(
+    r'#define PS3SCALE_APP_VERSION "ALPHA (\\d+)\\.(\\d+)"', src)
+assert version_match, "Missing application version macro"
+package_version = (
+    f"{int(version_match.group(1)):02d}.{int(version_match.group(2)):02d}")
+sfo_path = source_path.parent.parent.parent / "sfo.xml"
+sfo_xml = sfo_path.read_text(encoding="utf-8")
+assert f'<value name="APP_VER" type="string">{package_version}</value>' in sfo_xml
+assert f'<value name="VERSION" type="string">{package_version}</value>' in sfo_xml
+
 def section(start, end):
     a = src.index(start)
     b = src.index(end, a + len(start))
