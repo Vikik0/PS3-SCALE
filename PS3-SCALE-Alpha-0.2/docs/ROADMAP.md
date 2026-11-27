@@ -86,6 +86,8 @@
 - [x] Build the per-game EE instruction patch pipeline around exact `0x0A` CONFIG entries; no guessed offsets.
 - [x] Validate every FPS / widescreen / 480p patch address against a file-backed executable ELF segment before showing a profile as available; revalidate on apply.
 - [x] Seed a source-pinned experimental PS2 FPS / widescreen / 480p catalogue with exact serial + ELF-hash matching.
+- [x] Display the detected boot serial and ELF hash before applying a per-game patch.
+- [x] Require a two-step controller confirmation before writing an experimental EE patch; navigation cancels without writing.
 - [ ] Validate each candidate on physical hardware before calling it a working or verified enhancement.
 
 ## Alpha 0.4 — PS3 title-specific patch manager
