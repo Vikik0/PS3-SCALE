@@ -140,15 +140,53 @@ int main(void)
         }
 
         {
-            uint8_t title_id_config[64] = {
+            static const uint8_t title_id_config[] = {
                 0x3D, 0x00, 0x00, 0x00, 0x57, 0x44, 0x00, 0x00,
                 0x00, 0x00, 0x00, 0x00,
-                'S', 'L', 'U', 'S', '-', '2', '1', '2', '6', '0',
-                0x00, 0x00, 0x00, 0x00
+                'S', 'L', 'U', 'S', '-', '2', '1', '2', '6', '0'
             };
             assert(ps3scale_ps2_config_append_patches(
                 title_id_config, sizeof(title_id_config),
-                &patch, 1, merged, sizeof(merged), &merged_size) == -2);
+                &patch, 1, merged, sizeof(merged), &merged_size) == 0);
+            assert(merged_size == sizeof(title_id_config) + 20u);
+            assert(memcmp(merged, title_id_config, 8u) == 0);
+            assert(merged[8] == 0x0A && merged[12] == 0x01);
+            assert(memcmp(merged + 28u, title_id_config + 8u,
+                          sizeof(title_id_config) - 8u) == 0);
+        }
+
+        {
+            static const uint8_t official_config[] = {
+                0x3D, 0x00, 0x00, 0x00, 0x89, 0x3D, 0x00, 0x00,
+                0x1C, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+                0x1D, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                'S', 'C', 'U', 'S', '-', '9', '7', '1', '0', '1'
+            };
+            uint8_t official_merged[128];
+            size_t official_merged_size = 0;
+            ps3scale_ps2_code_patch_t official_second = {
+                0x00161864u, 0x11223344u, 0x55667788u
+            };
+
+            assert(ps3scale_ps2_config_validate_external(
+                official_config, sizeof(official_config), "NET") == 0);
+            assert(ps3scale_ps2_config_append_patches(
+                official_config, sizeof(official_config),
+                &patch, 1, official_merged, sizeof(official_merged),
+                &official_merged_size) == 0);
+            assert(official_merged_size == sizeof(official_config) + 20u);
+            assert(memcmp(official_merged, official_config, 24u) == 0);
+            assert(official_merged[24] == 0x0A &&
+                   official_merged[28] == 0x01);
+            assert(memcmp(official_merged + 44u, official_config + 24u,
+                          sizeof(official_config) - 24u) == 0);
+            assert(ps3scale_ps2_config_validate_external(
+                official_merged, official_merged_size, "NET") == 0);
+
+            assert(ps3scale_ps2_config_append_patches(
+                official_merged, official_merged_size, &official_second, 1,
+                merged, sizeof(merged), &merged_size) == -3);
         }
     }
 
