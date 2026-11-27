@@ -4,7 +4,7 @@ The public repository intentionally does not contain the Crash Bash disc image o
 
 ## Current verified runtime
 
-The personal-build workflow automatically selects the newest successful `Crash Bash Enhanced PS3 Build` run on `crash-bash-enhanced` that still has a valid, unexpired `Crash-Bash-RetroArch-Stage` artifact. Leave `runtime_run_id` blank to use this automatic selection, or enter a run ID to pin a specific verified build.
+The personal-build workflow automatically selects the newest successful `push` or `workflow_dispatch` run from this repository on `crash-bash-enhanced` that still has a valid, unexpired `Crash-Bash-RetroArch-Stage` artifact. Pull-request runs and artifacts from other repositories are excluded. Leave `runtime_run_id` blank to use this automatic selection, or enter a run ID to pin a specific verified build.
 
 ## One-time private archive handoff
 
