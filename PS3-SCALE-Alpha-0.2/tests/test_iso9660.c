@@ -145,6 +145,45 @@ static unsigned int pcsx2_hash(const unsigned char *data, size_t size)
     return hash;
 }
 
+static unsigned char *make_catalogue_test_elf(size_t *size_out)
+{
+    const size_t segment_offset = 0x1000u;
+    const uint32_t segment_vaddr = 0x00100000u;
+    const uint32_t segment_filesz = 0x00501000u;
+    const size_t total_size = segment_offset + segment_filesz;
+    unsigned char *elf = (unsigned char *)calloc(1, total_size);
+    unsigned char *ph;
+
+    assert(elf != NULL);
+    elf[0] = 0x7F;
+    memcpy(elf + 1, "ELF", 3);
+    elf[4] = 1;
+    elf[5] = 1;
+    elf[6] = 1;
+    put16le(elf + 16, 2);
+    put16le(elf + 18, 8);
+    put32le(elf + 20, 1);
+    put32le(elf + 24, segment_vaddr);
+    put32le(elf + 28, 52);
+    put16le(elf + 40, 52);
+    put16le(elf + 42, 32);
+    put16le(elf + 44, 1);
+
+    ph = elf + 52;
+    put32le(ph, 1);
+    put32le(ph + 4, (unsigned int)segment_offset);
+    put32le(ph + 8, segment_vaddr);
+    put32le(ph + 12, segment_vaddr);
+    put32le(ph + 16, segment_filesz);
+    put32le(ph + 20, segment_filesz);
+    put32le(ph + 24, 5);
+    put32le(ph + 28, 0x1000u);
+    memset(elf + segment_offset, 0xA5, segment_filesz);
+
+    *size_out = total_size;
+    return elf;
+}
+
 int main(void)
 {
     const char *path = "build-host/sample_ps2.iso";
@@ -358,6 +397,63 @@ int main(void)
     }
     free(loaded_elf);
 
+    /*
+     * Exercise every source-pinned catalogue entry against a synthetic,
+     * file-backed executable PT_LOAD segment. This catches offsets that are
+     * aligned and in range numerically but cannot be read from executable ELF.
+     */
+    {
+        unsigned char *catalogue_elf;
+        size_t catalogue_elf_size = 0;
+        size_t catalogue_count;
+        size_t counts[4] = {0, 0, 0, 0};
+        size_t catalogue_index;
+
+        catalogue_elf = make_catalogue_test_elf(&catalogue_elf_size);
+        catalogue_count = ps3scale_ps2_game_patch_catalogue_count();
+        assert(catalogue_count == 36u);
+        assert(ps3scale_ps2_game_patch_catalogue_at(catalogue_count) == NULL);
+
+        for (catalogue_index = 0; catalogue_index < catalogue_count;
+             ++catalogue_index) {
+            const ps3scale_ps2_game_patch_t *candidate =
+                ps3scale_ps2_game_patch_catalogue_at(catalogue_index);
+            size_t word_index;
+
+            assert(candidate != NULL);
+            assert(candidate->kind >= PS3SCALE_PS2_PATCH_FPS &&
+                   candidate->kind <= PS3SCALE_PS2_PATCH_480P);
+            ++counts[candidate->kind];
+            assert(ps3scale_ps2_game_patch_elf_addresses_valid(
+                candidate, catalogue_elf, catalogue_elf_size) == 1);
+            for (word_index = 0; word_index < candidate->word_count;
+                 ++word_index) {
+                uint32_t original_word = 0;
+                assert(ps3scale_ps2_elf_read_exec_word(
+                    catalogue_elf, catalogue_elf_size,
+                    candidate->words[word_index].ee_address,
+                    &original_word) == 0);
+                assert(original_word == 0xA5A5A5A5u);
+            }
+        }
+        assert(counts[PS3SCALE_PS2_PATCH_FPS] == 11u);
+        assert(counts[PS3SCALE_PS2_PATCH_WIDESCREEN] == 12u);
+        assert(counts[PS3SCALE_PS2_PATCH_480P] == 13u);
+
+        /* An executable flag is mandatory; writable-only data is rejected. */
+        put32le(catalogue_elf + 52u + 24u, 4u);
+        assert(ps3scale_ps2_game_patch_elf_addresses_valid(
+            ps3scale_ps2_game_patch_catalogue_at(0),
+            catalogue_elf, catalogue_elf_size) == 0);
+
+        /* A mapped virtual address is not enough if the bytes are not file-backed. */
+        put32le(catalogue_elf + 52u + 24u, 5u);
+        put32le(catalogue_elf + 52u + 16u, 0x100u);
+        assert(ps3scale_ps2_game_patch_elf_addresses_valid(
+            ps3scale_ps2_game_patch_catalogue_at(0),
+            catalogue_elf, catalogue_elf_size) == 0);
+        free(catalogue_elf);
+    }
 
     /* A nested SYSTEM.CNF boot path resolves through ISO9660 directories. */
     write_sector(path, 21, cnf_nested, sizeof(cnf_nested) - 1u);
