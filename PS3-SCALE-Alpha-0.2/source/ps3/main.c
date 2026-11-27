@@ -3793,7 +3793,7 @@ static void apply_ps2_game_patch(ps3scale_ps2_patch_kind_t patch_kind)
                  "EXPERIMENTAL FPS PATCH INSTALLED. ORIGINAL ISO WAS NOT CHANGED." :
                  (is_widescreen ?
                   "EXPERIMENTAL 16:9 PATCH INSTALLED. ORIGINAL ISO WAS NOT CHANGED." :
-                  "EXPERIMENTAL 480P PATCH INSTALLED. ORIGINAL ISO WAS NOT CHANGED."));
+                  "EXPERIMENTAL 480P GAME PATCH INSTALLED. OUTPUT MODE IS NOT VERIFIED."));
         g_details_cache_valid = 0;
     } else {
         (void)unlink(g_ps2_config_manager_download_temp);
@@ -6273,7 +6273,7 @@ static void draw_ps2_patch_review(void)
     const char *kind_label =
         g_ps2_patch_confirm_kind == PS3SCALE_PS2_PATCH_FPS ? "60 FPS" :
         (g_ps2_patch_confirm_kind == PS3SCALE_PS2_PATCH_WIDESCREEN ?
-         "16:9 WIDESCREEN" : "480P OUTPUT");
+         "16:9 WIDESCREEN" : "480P GAME PATCH");
 
     draw_rounded_rect(24.0f, 92.0f, 806.0f, 340.0f, 14.0f, 0xfaf8ffff);
     draw_rounded_outline(24.0f, 92.0f, 806.0f, 340.0f, 14.0f, 0xd9d1eaff);
@@ -6308,6 +6308,9 @@ static void draw_ps2_patch_review(void)
                  (unsigned long)patch->words[i].replacement_word);
         draw_text(48.0f, 202.0f + (float)i * 14.0f, 0x29243fff, line);
     }
+    if (g_ps2_patch_confirm_kind == PS3SCALE_PS2_PATCH_480P)
+        draw_text(48.0f, 374.0f, 0xb27b35ff,
+                  "GAME PATCH ONLY; NETEMU OUTPUT MODE IS NOT VERIFIED.");
     draw_text(48.0f, 390.0f, 0xb27b35ff,
               "EXPERIMENTAL: NOT YET VERIFIED ON A PHYSICAL PS3.");
     draw_text(48.0f, 410.0f, 0x875be8ff,
@@ -6349,7 +6352,7 @@ static void draw_ps2_config_manager(void)
         (!can_generate ? "ISO PATCH ONLY" :
          (!netemu_supported ? "NETEMU HARDWARE REQUIRED" :
           (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
-           (g_ps2_patch_480p_available ? "APPLY 480P OUTPUT PATCH" :
+           (g_ps2_patch_480p_available ? "APPLY 480P GAME PATCH" :
                                          "NO EXACT 480P PATCH"))));
     const char *config_state =
         g_ps2_config_manager_target_state == 1 ? "PRESENT" :
