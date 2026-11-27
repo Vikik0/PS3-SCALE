@@ -4,13 +4,13 @@ PS3 SCALE is a PS3 homebrew application for managing PS3/PS2 game libraries and 
 
 ## Current development snapshot
 
-- Application: **Alpha 0.34**
-- Package metadata: `APP_VER=00.34`, `VERSION=00.34`
+- Application: **Alpha 0.35**
+- Package metadata: `APP_VER=00.35`, `VERSION=00.35`
 - Package ID: `PS3SCALE1`
 - Development branch: `feature/ps2-enhancement-engine`
 - Review: [Draft PR #20](https://github.com/Vikik0/PS3-SCALE/pull/20), targeting `design/splash-transitions-ui-v6`
 
-Alpha 0.34 adds exact boot-serial / ELF-hash visibility, two-step confirmation for experimental EE code patches, and safe detection of already-installed or conflicting patches. GitHub Actions [run #988 passed](https://github.com/Vikik0/PS3-SCALE/actions/runs/45973073598) all host tests, Support Edge Function checks, and PS3 ELF/SELF/standard PKG/GNPDRM PKG validation. [Download the Alpha 0.34 build](https://github.com/Vikik0/PS3-SCALE/actions/runs/45973073598/artifacts/15185034240). Physical-console behavior remains unverified until tested on a real PS3.
+Alpha 0.35 adds a full patch-review overlay with every EE address, original opcode and replacement opcode. The app re-reads and compares those opcodes immediately before installation, preventing a stale preview from being applied. Alpha 0.34's [CI run #988 passed](https://github.com/Vikik0/PS3-SCALE/actions/runs/45973073598); the Alpha 0.35 build is running in GitHub Actions. Physical-console behavior remains unverified until tested on a real PS3.
 
 ## Current features
 
