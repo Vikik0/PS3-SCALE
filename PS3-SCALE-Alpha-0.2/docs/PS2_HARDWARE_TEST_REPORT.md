@@ -9,7 +9,7 @@ This report is the acceptance record for the PS2 Enhancer. A successful host tes
 - Device family: PS3 Slim.
 - System software: CFW 4.93.
 - Cobra: 8.5.
-- Exact CECH retail model and CEX/DEX mode remain unconfirmed on-device.
+- Reported model: CECH-2504A; exact retail label and CEX/DEX mode still require on-device confirmation.
 - This is the intended test target only. No physical test has been performed; the actual test record below remains unfilled.
 
 ## Actual test environment (pending physical run)
