@@ -36,6 +36,10 @@ int main(void)
                 "/dev_hdd0/PS2ISO/Crash.iso.CONFIG", 1);
     expect_path("/dev_usb007/PS2ISO/Shadow of Rome [SLUS_206.27].MDF",
                 "/dev_hdd0/PS2ISO/Shadow of Rome [SLUS_206.27].MDF.CONFIG", 1);
+    expect_path("/dev_hdd0/PS3/PS2ISO/Crash.iso",
+                "/dev_hdd0/PS3/PS2ISO/Crash.iso.CONFIG", 0);
+    expect_path("/dev_usb003/PS3/PS2ISO/Crash.iso",
+                "/dev_hdd0/PS2ISO/Crash.iso.CONFIG", 1);
     expect_path("/dev_hdd0/PS2ISO/Gran Turismo.bin",
                 "/dev_hdd0/PS2ISO/Gran Turismo.bin.CONFIG", 0);
 
