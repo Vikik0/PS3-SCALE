@@ -10,7 +10,7 @@ PS3 SCALE is a PS3 homebrew application for managing PS3/PS2 game libraries and 
 - Development branch: `feature/ps2-enhancement-engine`
 - Review: [Draft PR #20](https://github.com/Vikik0/PS3-SCALE/pull/20), targeting `design/splash-transitions-ui-v6`
 
-Alpha 0.36 fixes two PS2 integration gaps: USB PS2 ISOs now receive their CONFIG beside webMAN's HDD-cached image (with stale-cache identity checks), and launch explicitly mounts with `emu=ps2_netemu.self` before starting the disc. New host tests cover HDD/USB sidecar resolution, unsafe paths and netemu launch routing. CI validation is pending. Physical-console behavior remains unverified until tested on a real PS3.
+Alpha 0.36 fixes PS2 integration issues: USB ISO CONFIG files now go beside webMAN's HDD-cached image, stale same-name cache files are checked against the selected ISO, and launch explicitly mounts with `emu=ps2_netemu.self` before starting the disc. USB cache mounts now allow up to 10 minutes for large images. Host tests and the full PS3 build passed in [GitHub Actions run #1022](https://github.com/Vikik0/PS3-SCALE/actions/runs/46000292398). [Download Alpha 0.36](https://github.com/Vikik0/PS3-SCALE/actions/runs/46000292398/artifacts/15197672995). Physical-console behavior remains unverified until tested on a real PS3.
 
 ## Current features
 
