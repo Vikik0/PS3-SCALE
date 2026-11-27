@@ -18,6 +18,30 @@ REQUIRED_FILES = (
     "PS3/dump_multiplayer_tu116.bat",
 )
 
+RUNTIME_ANALYZER_REQUIRED_FILES = (
+    "Tools/compare_pad_probe_logs.py",
+    "Tools/compare_pad_input_probe_logs.py",
+    "Tools/compare_ppu_function_inventories.py",
+    "Tools/compare_splitscreen_builtin_xrefs.py",
+    "Tools/ps3_elf_inspect.py",
+    "Tools/run_ghidra_ppu_inventory.py",
+    "Tools/ps3mapi/SELF_MEMORY_MAP_TU116.json",
+    "Tools/ps3mapi/TU116_EXECUTABLE_MANIFEST.json",
+    "Tools/ps3mapi/analyze_tu116_runtime_capture.py",
+    "Tools/ps3mapi/campaign_capture_binding.py",
+    "Tools/ps3mapi/validate_campaign_player_pair_capture.py",
+    "Tools/ps3mapi/CAMPAIGN_NATIVE_PLAYER_CAPTURE_TEMPLATE.json",
+    "Tools/ps3mapi/compare_runtime_strings.py",
+    "Tools/ps3mapi/diff_runtime_elfs.py",
+    "Tools/ps3mapi/reconstruct_elf_from_ps3mapi_dumps.py",
+    "Tools/ps3mapi/scan_runtime_strings.py",
+    "Tools/ps3mapi/verify_capture_metadata.py",
+    "Tools/ps3mapi/verify_tu116_dump.py",
+    "Tools/ghidra/ExportGhostsPpuFunctionInventory.java",
+    "Tools/ghidra/FindGhostsSplitScreenBuiltins.java",
+    "Tools/ghidra/SeedGhostsOpdFunctions.java",
+)
+
 
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
@@ -217,6 +241,13 @@ def validate_package(root: Path) -> tuple[list[str], dict]:
         if not path.is_file():
             errors.append(f"required package file missing: {relative}")
 
+    runtime_analyzer_verified = True
+    for relative in RUNTIME_ANALYZER_REQUIRED_FILES:
+        path = root / PurePosixPath(relative)
+        if not path.is_file():
+            errors.append(f"runtime analyzer dependency missing: {relative}")
+            runtime_analyzer_verified = False
+
     # Experimental GSC scripts must never be packaged as PS3 PRX payloads.
     ps3_dir = root / "PS3"
     if ps3_dir.exists():
@@ -250,6 +281,7 @@ def validate_package(root: Path) -> tuple[list[str], dict]:
         "event_refactor_graph_verified": (root / "Reports" / "PHASE90_MISSION_EVENT_REFACTOR_GRAPH.json").is_file()
         and (root / "Tools" / "mission_event_activator_audit.py").is_file(),
         "phase118_trigger_inventory_verified": phase118_verified,
+        "runtime_analyzer_dependencies_verified": runtime_analyzer_verified,
     }
     return errors, summary
 
