@@ -786,8 +786,8 @@ assert '"/dev_usb000/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3"' in src
 assert "rename(temp_path, PS3SCALE_MUSIC1_PATH)" in src
 assert "MUSIC 1 IMPORTED FROM USB" in settings
 sfo = (project_root / "sfo.xml").read_text(encoding="utf-8")
-assert '<value name="APP_VER" type="string">00.33</value>' in sfo
-assert '<value name="VERSION" type="string">00.33</value>' in sfo
+assert f'<value name="APP_VER" type="string">{package_version}</value>' in sfo
+assert f'<value name="VERSION" type="string">{package_version}</value>' in sfo
 
 # Startup failure and package-integrity regression checks.
 startup = section("int main(int argc, char *argv[])", "while (!g_exit_requested)")
@@ -896,7 +896,7 @@ assert "actions/upload-artifact@v4" not in build_workflow
 assert "actions/setup-python@v5" not in index_workflow
 
 # Keep the visible app, support payload and local report on one version.
-assert '#define PS3SCALE_APP_VERSION "ALPHA 0.33"' in src
+assert version_match.group(0) in src
 assert '#define SETTINGS_COUNT 10' in src
 assert '#include "ps3scale/atomic_file.h"' in src
 assert '"settings_version=3\\n"' in src
