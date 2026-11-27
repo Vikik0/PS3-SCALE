@@ -1130,6 +1130,8 @@ assert "g_ps2_patch_fps_available" in src
 assert "g_ps2_patch_widescreen_available" in src
 assert "g_ps2_patch_480p_available" in src
 assert "ps3scale_ps2_config_append_patches" in src
+assert "result == -6" in src
+assert "EXACT PATCH ALREADY INSTALLED. NO FILE WAS CHANGED." in src
 assert "request_ps2_game_patch(PS3SCALE_PS2_PATCH_FPS);" in src
 assert "request_ps2_game_patch(PS3SCALE_PS2_PATCH_WIDESCREEN);" in src
 assert "request_ps2_game_patch(PS3SCALE_PS2_PATCH_480P);" in src
