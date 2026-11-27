@@ -3440,6 +3440,29 @@ cleanup:
     return result;
 }
 
+static int ps2_config_prepare_target_directory(const ps3scale_game_t *game)
+{
+    char config_path[PS3SCALE_PATH_MAX];
+    struct stat directory_stat;
+    int uses_hdd_cache = 0;
+
+    if (!game || game->kind != PS3SCALE_GAME_PS2_ISO)
+        return 0;
+    if (ps3scale_ps2_iso_config_path(game->path, config_path,
+            sizeof(config_path), &uses_hdd_cache) != 0)
+        return -1;
+    if (!uses_hdd_cache)
+        return 0;
+
+    if (mkdir(PS3SCALE_PS2_HDD_CACHE_DIR, 0777) != 0 &&
+        errno != EEXIST)
+        return -1;
+    if (stat(PS3SCALE_PS2_HDD_CACHE_DIR, &directory_stat) != 0 ||
+        !S_ISDIR(directory_stat.st_mode))
+        return -1;
+    return 0;
+}
+
 static void refresh_ps2_config_manager_cache(void)
 {
     const ps3scale_game_t *game = selected_game();
@@ -3565,6 +3588,13 @@ static void apply_ps2_local_profile(void)
         snprintf(g_ps2_config_manager_message,
                  sizeof(g_ps2_config_manager_message),
                  "CONFIG PATH IS INVALID OR THE FILE EXCEEDS THE SAFE SIZE LIMIT.");
+        return;
+    }
+
+    if (ps2_config_prepare_target_directory(game) != 0) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "COULD NOT PREPARE WEBMAN HDD CACHE FOLDER.");
         return;
     }
 
@@ -3724,6 +3754,11 @@ static void apply_ps2_game_patch(ps3scale_ps2_patch_kind_t patch_kind)
     if (g_ps2_config_manager_target_state < 0) {
         snprintf(g_ps2_config_manager_message, sizeof(g_ps2_config_manager_message),
                  "CONFIG PATH IS INVALID OR THE FILE EXCEEDS THE SAFE SIZE LIMIT.");
+        goto cleanup;
+    }
+    if (ps2_config_prepare_target_directory(game) != 0) {
+        snprintf(g_ps2_config_manager_message, sizeof(g_ps2_config_manager_message),
+                 "COULD NOT PREPARE WEBMAN HDD CACHE FOLDER.");
         goto cleanup;
     }
     if (g_ps2_config_manager_target_state == 1) {
@@ -3928,6 +3963,7 @@ static void start_ps2_config_download(void){
  if((strcmp(entry->type,"ENC")==0&&game->kind!=PS3SCALE_GAME_PS2_CLASSIC)||(strcmp(entry->type,"ENC")!=0&&game->kind!=PS3SCALE_GAME_PS2_ISO)){set_details_message("CONFIG TYPE DOES NOT MATCH THIS PS2 GAME FORMAT.");goto copy_message;}
  if(ps2_config_paths_for_game(game,target,sizeof(target),backup,sizeof(backup),backup_temp,sizeof(backup_temp),rollback,sizeof(rollback),restore_temp,sizeof(restore_temp),temporary,sizeof(temporary),&max_bytes)!=0){set_details_message("PS2 CONFIG TARGET PATH IS INVALID OR TOO LONG.");goto copy_message;}
  if(game->kind==PS3SCALE_GAME_PS2_ISO&&!ps2_iso_cached_copy_matches_source(game)){set_details_message("WEBMAN HDD CACHE IS A DIFFERENT ISO. REMOVE THE OLD CACHE FIRST.");goto copy_message;}
+ if(game->kind==PS3SCALE_GAME_PS2_ISO&&ps2_config_prepare_target_directory(game)!=0){set_details_message("COULD NOT PREPARE WEBMAN HDD CACHE FOLDER.");goto copy_message;}
  if(strcmp(entry->type,"ENC")==0){struct stat st;if(stat(PS3SCALE_PS2_CLASSICS_CONFIG_DIR,&st)!=0||!S_ISDIR(st.st_mode)){set_details_message("INSTALL THE WEBMAN PS2CONFIG PACKAGE FOR ENC FILES.");goto copy_message;}}
  state=ps3scale_ps2_config_store_probe(target,max_bytes,NULL);
  if(state<0){set_details_message("EXISTING CONFIG IS INVALID OR EXCEEDS THE SAFE SIZE LIMIT.");goto copy_message;}
