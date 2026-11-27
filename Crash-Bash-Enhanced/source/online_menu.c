@@ -955,7 +955,6 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                         snprintf(status, status_size,
                                  "Selection changed. Press CROSS to confirm this disc.");
                     } else if (action == DISC_ACTION_RESCAN) {
-                        size_t scanned = 0;
                         netplay_waiting = 0;
                         host_disc_waiting = 0;
                         host_disc_selected = -1;
@@ -1312,7 +1311,6 @@ int cb_online_menu(const char *guest_name, int *network_state, int *online_state
                     snprintf(status, status_size,
                              "Room changed. All active players must be READY again.");
                 } else {
-                    char fingerprint[17];
                     if (start_lobby_fingerprint_worker(&worker_thread, &worker,
                                                        &session, &view,
                                                        discs[disc_selected].path) == 0) {
