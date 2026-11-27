@@ -228,6 +228,10 @@ static int g_ps2_patch_probe_valid=0;
 static int g_ps2_patch_fps_available=0;
 static int g_ps2_patch_widescreen_available=0;
 static int g_ps2_patch_480p_available=0;
+static char g_ps2_patch_serial[16] = "";
+static uint32_t g_ps2_patch_elf_hash = 0;
+static int g_ps2_patch_confirm_pending = 0;
+static ps3scale_ps2_patch_kind_t g_ps2_patch_confirm_kind = PS3SCALE_PS2_PATCH_FPS;
 static unsigned int g_ps2_enhancement_flags = PS3SCALE_PS2_CFG_ENABLE_L2H;
 static size_t g_ps2_config_manager_target_size=0,g_ps2_config_manager_backup_size=0,g_ps2_config_manager_max_bytes=PS3SCALE_PS2_CONFIG_MAX_BYTES;
 static char g_ps2_config_manager_message[128]="SELECT AN ACTION.";
@@ -1519,6 +1523,9 @@ static void refresh_ps2_patch_availability(void)
     g_ps2_patch_fps_available = 0;
     g_ps2_patch_widescreen_available = 0;
     g_ps2_patch_480p_available = 0;
+    g_ps2_patch_serial[0] = '\0';
+    g_ps2_patch_elf_hash = 0;
+    g_ps2_patch_confirm_pending = 0;
     if (!game || game->kind != PS3SCALE_GAME_PS2_ISO)
         return;
 
@@ -1531,6 +1538,8 @@ static void refresh_ps2_patch_availability(void)
     if (ps3scale_ps2_iso_load_boot_elf(game->path, &elf_data, &elf_size,
             serial, sizeof(serial), &elf_hash) == 0) {
         g_ps2_patch_probe_valid = 1;
+        snprintf(g_ps2_patch_serial, sizeof(g_ps2_patch_serial), "%s", serial);
+        g_ps2_patch_elf_hash = elf_hash;
         g_ps2_patch_fps_available =
             ps3scale_ps2_game_patch_elf_addresses_valid(
                 ps3scale_ps2_game_patch_find(serial, elf_hash,
@@ -3665,6 +3674,55 @@ cleanup:
     refresh_ps2_config_manager_cache();
 }
 
+static int ps2_game_patch_is_available(ps3scale_ps2_patch_kind_t patch_kind)
+{
+    if (patch_kind == PS3SCALE_PS2_PATCH_FPS)
+        return g_ps2_patch_fps_available;
+    if (patch_kind == PS3SCALE_PS2_PATCH_WIDESCREEN)
+        return g_ps2_patch_widescreen_available;
+    if (patch_kind == PS3SCALE_PS2_PATCH_480P)
+        return g_ps2_patch_480p_available;
+    return 0;
+}
+
+/*
+ * Code patches alter the PS2 EE instruction stream. The first CROSS only
+ * arms the exact, already-probed candidate; a second CROSS applies it.
+ * Navigation or CIRCLE cancels the pending action without touching CONFIG.
+ */
+static void request_ps2_game_patch(ps3scale_ps2_patch_kind_t patch_kind)
+{
+    const char *label =
+        patch_kind == PS3SCALE_PS2_PATCH_FPS ? "60 FPS" :
+        (patch_kind == PS3SCALE_PS2_PATCH_WIDESCREEN ? "16:9" : "480P");
+
+    if (g_ps2_patch_confirm_pending) {
+        if (g_ps2_patch_confirm_kind != patch_kind) {
+            g_ps2_patch_confirm_pending = 0;
+            snprintf(g_ps2_config_manager_message,
+                     sizeof(g_ps2_config_manager_message),
+                     "PATCH CONFIRMATION CANCELLED. NO FILE WAS CHANGED.");
+            return;
+        }
+        g_ps2_patch_confirm_pending = 0;
+        apply_ps2_game_patch(patch_kind);
+        return;
+    }
+
+    /* Let the existing validation path explain unsupported / unmatched cases. */
+    if (!ps2_game_patch_is_available(patch_kind)) {
+        apply_ps2_game_patch(patch_kind);
+        return;
+    }
+
+    g_ps2_patch_confirm_pending = 1;
+    g_ps2_patch_confirm_kind = patch_kind;
+    snprintf(g_ps2_config_manager_message,
+             sizeof(g_ps2_config_manager_message),
+             "REVIEW %s PATCH. PRESS CROSS AGAIN TO APPLY; CIRCLE CANCELS.",
+             label);
+}
+
 static void ps2_config_download_worker(void *arg)
 {
     unsigned char *data = NULL;
@@ -3832,17 +3890,17 @@ static void perform_ps2_config_manager_action(void)
     }
 
     if (g_ps2_config_manager_selection == 5) {
-        apply_ps2_game_patch(PS3SCALE_PS2_PATCH_FPS);
+        request_ps2_game_patch(PS3SCALE_PS2_PATCH_FPS);
         return;
     }
 
     if (g_ps2_config_manager_selection == 6) {
-        apply_ps2_game_patch(PS3SCALE_PS2_PATCH_WIDESCREEN);
+        request_ps2_game_patch(PS3SCALE_PS2_PATCH_WIDESCREEN);
         return;
     }
 
     if (g_ps2_config_manager_selection == 7) {
-        apply_ps2_game_patch(PS3SCALE_PS2_PATCH_480P);
+        request_ps2_game_patch(PS3SCALE_PS2_PATCH_480P);
         return;
     }
 
@@ -6074,21 +6132,33 @@ static void draw_ps2_config_manager(void)
         game && game->kind == PS3SCALE_GAME_PS2_ISO;
     const int netemu_supported = ps2_netemu_iso_supported();
     const int local_profile_supported = can_generate && netemu_supported;
-    const char *fps_patch_label = !can_generate ? "ISO PATCH ONLY" :
-        (!netemu_supported ? "NETEMU HARDWARE REQUIRED" :
-        (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
-         (g_ps2_patch_fps_available ? "APPLY EXPERIMENTAL 60 FPS PATCH" :
-                                      "NO EXACT 60 FPS PATCH")));
-    const char *widescreen_patch_label = !can_generate ? "ISO PATCH ONLY" :
-        (!netemu_supported ? "NETEMU HARDWARE REQUIRED" :
-         (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
-          (g_ps2_patch_widescreen_available ? "APPLY 16:9 WIDESCREEN PATCH" :
-                                              "NO EXACT 16:9 PATCH")));
-    const char *p480_patch_label = !can_generate ? "ISO PATCH ONLY" :
-        (!netemu_supported ? "NETEMU HARDWARE REQUIRED" :
-         (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
-          (g_ps2_patch_480p_available ? "APPLY 480P OUTPUT PATCH" :
-                                        "NO EXACT 480P PATCH")));
+    const char *fps_patch_label =
+        g_ps2_patch_confirm_pending &&
+        g_ps2_patch_confirm_kind == PS3SCALE_PS2_PATCH_FPS ?
+        "CONFIRM 60 FPS PATCH" :
+        (!can_generate ? "ISO PATCH ONLY" :
+         (!netemu_supported ? "NETEMU HARDWARE REQUIRED" :
+          (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
+           (g_ps2_patch_fps_available ? "APPLY EXPERIMENTAL 60 FPS PATCH" :
+                                        "NO EXACT 60 FPS PATCH"))));
+    const char *widescreen_patch_label =
+        g_ps2_patch_confirm_pending &&
+        g_ps2_patch_confirm_kind == PS3SCALE_PS2_PATCH_WIDESCREEN ?
+        "CONFIRM 16:9 PATCH" :
+        (!can_generate ? "ISO PATCH ONLY" :
+         (!netemu_supported ? "NETEMU HARDWARE REQUIRED" :
+          (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
+           (g_ps2_patch_widescreen_available ? "APPLY 16:9 WIDESCREEN PATCH" :
+                                               "NO EXACT 16:9 PATCH"))));
+    const char *p480_patch_label =
+        g_ps2_patch_confirm_pending &&
+        g_ps2_patch_confirm_kind == PS3SCALE_PS2_PATCH_480P ?
+        "CONFIRM 480P PATCH" :
+        (!can_generate ? "ISO PATCH ONLY" :
+         (!netemu_supported ? "NETEMU HARDWARE REQUIRED" :
+          (g_ps2_patch_probe_valid < 0 ? "BOOT ELF NOT READABLE" :
+           (g_ps2_patch_480p_available ? "APPLY 480P OUTPUT PATCH" :
+                                         "NO EXACT 480P PATCH"))));
     const char *config_state =
         g_ps2_config_manager_target_state == 1 ? "PRESENT" :
         (g_ps2_config_manager_target_state == 0 ? "MISSING" :
@@ -6167,6 +6237,14 @@ static void draw_ps2_config_manager(void)
                "NETEMU OPTIONS ENABLED FOR THIS DEVICE." :
                "NETEMU OPTIONS DISABLED: SLIM / SUPER SLIM REQUIRED.") :
               "LOCAL PROFILES AND PATCHES REQUIRE A PS2 ISO.");
+    if (can_generate && g_ps2_patch_probe_valid == 1) {
+        snprintf(line, sizeof(line), "EXACT MATCH: %.15s | ELF HASH: %08lX",
+                 g_ps2_patch_serial, (unsigned long)g_ps2_patch_elf_hash);
+        draw_text(430.0f, 220.0f, 0x514b69ff, line);
+    } else {
+        draw_text(430.0f, 220.0f, 0xb27b35ff,
+                  "EXACT MATCH: UNAVAILABLE");
+    }
 
     draw_soft_card(48.0f, 232.0f, 352.0f, 38.0f,
                    g_ps2_config_manager_selection == 0);
@@ -6309,7 +6387,9 @@ static void draw_ps2_config_manager(void)
     draw_text(24.0f, PS3SCALE_UI_FOOTER_SINGLE_Y, 0x77718fff,
               g_ps2_enhancer_guide_open ?
               "TRIANGLE / CIRCLE: CLOSE DISPLAY GUIDE" :
-              "UP/DOWN: SELECT | CROSS: TOGGLE / RUN | TRIANGLE: DISPLAY GUIDE | CIRCLE: BACK");
+              (g_ps2_patch_confirm_pending ?
+               "EXPERIMENTAL PATCH: CROSS CONFIRMS | CIRCLE CANCELS" :
+               "UP/DOWN: SELECT | CROSS: TOGGLE / REVIEW PATCH | TRIANGLE: DISPLAY GUIDE | CIRCLE: BACK"));
     set_ui_font_size(14, 22);
 }
 
@@ -7875,18 +7955,45 @@ int main(int argc, char *argv[])
                     (circle && !old_circle) || (select && !old_select))
                     g_ps2_enhancer_guide_open = 0;
             } else if (triangle && !old_triangle) {
+                if (g_ps2_patch_confirm_pending) {
+                    g_ps2_patch_confirm_pending = 0;
+                    snprintf(g_ps2_config_manager_message,
+                             sizeof(g_ps2_config_manager_message),
+                             "PATCH CONFIRMATION CANCELLED. NO FILE WAS CHANGED.");
+                }
                 g_ps2_enhancer_guide_open = 1;
             } else if ((circle && !old_circle) ||
                        (select && !old_select) || (left && !old_left)) {
-                g_screen = SCREEN_DETAILS;
-                g_details_cache_valid = 0;
+                if (g_ps2_patch_confirm_pending) {
+                    g_ps2_patch_confirm_pending = 0;
+                    snprintf(g_ps2_config_manager_message,
+                             sizeof(g_ps2_config_manager_message),
+                             "PATCH CONFIRMATION CANCELLED. NO FILE WAS CHANGED.");
+                } else {
+                    g_screen = SCREEN_DETAILS;
+                    g_details_cache_valid = 0;
+                }
             } else {
-                if (up && !old_up)
+                if (up && !old_up) {
+                    if (g_ps2_patch_confirm_pending) {
+                        g_ps2_patch_confirm_pending = 0;
+                        snprintf(g_ps2_config_manager_message,
+                                 sizeof(g_ps2_config_manager_message),
+                                 "PATCH CONFIRMATION CANCELLED. NO FILE WAS CHANGED.");
+                    }
                     g_ps2_config_manager_selection =
                         (g_ps2_config_manager_selection + 10) % 11;
-                if (down && !old_down)
+                }
+                if (down && !old_down) {
+                    if (g_ps2_patch_confirm_pending) {
+                        g_ps2_patch_confirm_pending = 0;
+                        snprintf(g_ps2_config_manager_message,
+                                 sizeof(g_ps2_config_manager_message),
+                                 "PATCH CONFIRMATION CANCELLED. NO FILE WAS CHANGED.");
+                    }
                     g_ps2_config_manager_selection =
                         (g_ps2_config_manager_selection + 1) % 11;
+                }
                 if (cross && !old_cross) perform_ps2_config_manager_action();
             }
         } else if (g_screen == SCREEN_FPS_CONTROL) {
