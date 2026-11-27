@@ -135,6 +135,15 @@ class CaptureKitVerifierTests(unittest.TestCase):
         self.assertFalse(summary["runtime_analyzer_dependencies_verified"])
         self.assertTrue(any("runtime analyzer dependency missing" in error for error in errors))
 
+    def test_missing_case_sensitive_import_shim_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write_package(root)
+            (root / "tools" / "__init__.py").unlink()
+            errors, summary = validate_package(root)
+        self.assertFalse(summary["runtime_analyzer_dependencies_verified"])
+        self.assertTrue(any("runtime analyzer dependency missing: tools/__init__.py" == error for error in errors))
+
     def test_invalid_mission_event_map_is_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
