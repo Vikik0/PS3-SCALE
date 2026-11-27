@@ -7,17 +7,17 @@
 - Application version shown in the UI: `ALPHA 0.35`
 - Package metadata: `APP_VER=00.35`, `VERSION=00.35`
 - Package title ID: `PS3SCALE1`
-- Source commit used for the Alpha 0.35 package: `5147da208a6b7b29865f5a8cb1115febb513b608`
+- Source commit used for the Alpha 0.35 package: `261da5906c68bf3fbf406efe9a669ec7b9388e77`
 
 ## Alpha 0.35 — exact patch review and apply-time opcode verification
 
 - The review overlay lists the matched game title, patch type, serial, ELF hash, write count, and every EE address with its original and replacement 32-bit word.
 - Original words are cached from the selected boot ELF when the exact candidate is probed, then re-read immediately before installation. Any mismatch cancels the write and asks the user to reopen the Enhancer.
 - CIRCLE and navigation cancellation remain unchanged; no file is touched until the second CROSS.
-- GitHub Actions run #993 on commit `5147da208a6b7b29865f5a8cb1115febb513b608`: **PASS** — Host-side tests, Support Edge Function checks, and PS3 ELF/SELF/standard PKG/GNPDRM PKG build and validation all passed.
-- Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/45976461282
-- Artifact: [PS3-SCALE-Alpha-0.35-build-with-embedded-theme](https://github.com/Vikik0/PS3-SCALE/actions/runs/45976461282/artifacts/15187382067) — 25,454,272 bytes; SHA-256 `20e5274ca9c849f22c69ae02e728d1e4227d6136eeacd015f22c38520f1986fd`.
-- Build outputs: ELF `1ff60f6a223ef52d77950ff5b94d79a1c989c98fb5a2879c23ea26ef6e710b8d`; SELF `35d3d05717cbbe7e796ba4b9831d1c67249cb2dd146a8f89ed65ebcb54483463`; standard PKG `b5bc3fed3fbecf52a67fa59e4e5fc2b9128320a23210698a09fd2d759659931e`; GNPDRM PKG `094d1fb6f0fed7ee4f61cd0e0222805d146750ea1098e2123ccc0e522ba1abcb`.
+- GitHub Actions run #999 on commit `261da5906c68bf3fbf406efe9a669ec7b9388e77`: **PASS** — all host-side tests (including every one of the 36 PS2 patch candidates against executable ELF mappings), Support Edge Function checks, and PS3 ELF/SELF/standard PKG/GNPDRM PKG build and validation passed.
+- Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/45977326170
+- Artifact: [PS3-SCALE-Alpha-0.35-build-with-embedded-theme](https://github.com/Vikik0/PS3-SCALE/actions/runs/45977326170/artifacts/15187966759) — 25,453,834 bytes; SHA-256 `edc649792b21e8579a52616f977967049594cbdefb87b35d75be11f1312ebf3e`.
+- Build outputs: ELF `665864e8f1b601b11bd32a42e2080e3b12b3a7d9fb88352a0e741e1a731155bf`; SELF `f8707e8688a74faa1c85de8a8fec9eee26b0f753d123a09a0fd2e6f0bbf6d08a`; standard PKG `75c6b6cd4a4177f6ce1371a4abf7ac7805c30c7f8e2e6b3e7fc1c57084e36574`; GNPDRM PKG `1c6cae7caf37dfc6d78b2b776edbe287395d90e24bb11f5b7efe456926d0b706`.
 - Physical-console testing remains **NOT DONE**; do not mark any FPS, widescreen or 480p entry as hardware-verified.
 
 - Alpha 0.34 baseline package and test results are retained below.
