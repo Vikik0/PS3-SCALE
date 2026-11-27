@@ -30,6 +30,8 @@
 #endif
 #ifndef WEBMAN_IO_TIMEOUT_SEC
 #define WEBMAN_IO_TIMEOUT_SEC 2
+#endif
+#ifndef WEBMAN_PS2_MOUNT_TIMEOUT_SEC
 #define WEBMAN_PS2_MOUNT_TIMEOUT_SEC 180
 #endif
 
