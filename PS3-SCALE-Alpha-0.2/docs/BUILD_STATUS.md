@@ -1,13 +1,21 @@
-# Build status — PS3 SCALE Alpha 0.35
+# Build status — PS3 SCALE Alpha 0.36
 
 ## Current development head
 
 - Branch: `feature/ps2-enhancement-engine`
 - Pull request: Draft PR #20, targeting `design/splash-transitions-ui-v6`
-- Application version shown in the UI: `ALPHA 0.35`
-- Package metadata: `APP_VER=00.35`, `VERSION=00.35`
+- Application version shown in the UI: `ALPHA 0.36`
+- Package metadata: `APP_VER=00.36`, `VERSION=00.36`
 - Package title ID: `PS3SCALE1`
 - Source commit used for the Alpha 0.35 package: `261da5906c68bf3fbf406efe9a669ec7b9388e77`
+
+## Alpha 0.36 — USB CONFIG cache routing and explicit netemu launch
+
+- USB PS2 ISO CONFIG sidecars now target the actual webMAN cache location: `/dev_hdd0/PS2ISO/<filename>.CONFIG`.
+- If the same-name HDD cache already exists, PS3 SCALE compares file size, boot serial and PCSX2 ELF hash with the selected USB image. A mismatch blocks all writes and directs the user to remove the stale cache.
+- PS2 launch now uses webMAN's documented `/mount_ps3/<path>?emu=ps2_netemu.self` route, then `/play.ps3`, ensuring netemu-only CONFIG command `0x0A` is not silently bypassed by the saved emulator selection.
+- New host tests cover HDD and USB CONFIG path resolution, path traversal rejection, and explicit netemu launch routing.
+- CI validation for Alpha 0.36 is pending. Physical-console testing remains **NOT DONE**.
 
 ## Alpha 0.35 — exact patch review and apply-time opcode verification
 
