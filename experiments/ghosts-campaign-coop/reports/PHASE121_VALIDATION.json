@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "phase": 121,
+  "title": "Cross-platform capture-kit import shim",
+  "checks": {
+    "lowercase_tools_import_shim_packaged": true,
+    "analyzer_import_paths_resolve_on_case_sensitive_hosts": true,
+    "capture_kit_verifier_requires_import_shim": true,
+    "builder_tests_use_real_analyzer_modules": true,
+    "extracted_kit_analyzer_import_smoke_test_added": true
+  },
+  "status": "IMPLEMENTED; CI_VALIDATION_PENDING",
+  "runtime_boundary": {
+    "physical_ps3_tested": false,
+    "player_two": "NOT_PROVEN",
+    "shared_interactions_ready": "0/4",
+    "original_mission_handlers_migrated": 0,
+    "retail_fastfiles_modified": false
+  }
+}
