@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       runtime_run_id:
-        description: "Successful PS3 RetroArch-stage workflow run ID with an unexpired runtime artifact"
-        required: true
-        default: "45864425109"
+        description: "Optional successful PS3 runtime build ID; leave blank to select the latest verified build automatically"
+        required: false
+        default: ""
         type: string
 
 permissions:
@@ -67,43 +67,85 @@ jobs:
             -outform DER "$CERT"
           openssl cms -cmsout -print -inform DER -in /tmp/cb-preflight.cms >/dev/null
 
-      - name: Validate the selected RetroArch runtime build and artifact
+      - name: Validate and select a successful RetroArch runtime artifact
+        id: runtime
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUNTIME_RUN_ID: ${{ inputs.runtime_run_id }}
+          REQUESTED_RUNTIME_RUN_ID: ${{ inputs.runtime_run_id }}
         run: |
           set -euo pipefail
-          [[ "$RUNTIME_RUN_ID" =~ ^[0-9]+$ ]]
-          curl --fail --silent --show-error --location \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$RUNTIME_RUN_ID" \
-            --output /tmp/cb-runtime-run.json
-          curl --fail --silent --show-error --location \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$RUNTIME_RUN_ID/artifacts" \
-            --output /tmp/cb-runtime-artifacts.json
           python3 - <<'PY'
           import json
-          with open("/tmp/cb-runtime-run.json", encoding="utf-8") as stream:
-              run = json.load(stream)
-          if run.get("head_branch") != "crash-bash-enhanced":
-              raise SystemExit("Runtime artifact must come from crash-bash-enhanced.")
-          if run.get("path") != ".github/workflows/crash-bash-build.yml":
-              raise SystemExit("Selected run is not the PS3 build workflow.")
-          if run.get("status") != "completed" or run.get("conclusion") != "success":
-              raise SystemExit("Selected PS3 runtime build has not completed successfully.")
-          with open("/tmp/cb-runtime-artifacts.json", encoding="utf-8") as stream:
-              artifacts = json.load(stream)
-          valid = [item for item in artifacts.get("artifacts", [])
-                   if item.get("name") == "Crash-Bash-RetroArch-Stage" and not item.get("expired")]
-          if not valid:
-              raise SystemExit("Selected run has no unexpired Crash-Bash-RetroArch-Stage artifact.")
-          if valid[0].get("size_in_bytes", 0) > 64 * 1024 * 1024:
-              raise SystemExit("Selected runtime artifact is oversized; use the RGUI-trimmed build to stay below the PSL1GHT 1,024-entry PKG cap.")
-          print("Verified successful PS3 runtime build, unexpired artifact and trimmed RGUI payload.")
+          import os
+          import urllib.request
+
+          repository = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GITHUB_TOKEN"]
+          requested = os.environ.get("REQUESTED_RUNTIME_RUN_ID", "").strip()
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+          }
+
+          def github_get(path):
+              request = urllib.request.Request(
+                  f"https://api.github.com/repos/{repository}{path}",
+                  headers=headers,
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+
+          if requested:
+              if not requested.isdigit():
+                  raise SystemExit("runtime_run_id must contain digits only.")
+              candidates = [int(requested)]
+          else:
+              history = github_get(
+                  "/actions/workflows/crash-bash-build.yml/runs"
+                  "?branch=crash-bash-enhanced&status=completed&per_page=20"
+              )
+              candidates = [
+                  item["id"] for item in history.get("workflow_runs", [])
+                  if item.get("conclusion") == "success"
+              ]
+
+          selected = None
+          for run_id in candidates:
+              run = github_get(f"/actions/runs/{run_id}")
+              if (
+                  run.get("head_branch") != "crash-bash-enhanced"
+                  or run.get("path") != ".github/workflows/crash-bash-build.yml"
+                  or run.get("status") != "completed"
+                  or run.get("conclusion") != "success"
+              ):
+                  if requested:
+                      raise SystemExit("Selected run is not a successful Crash Bash PS3 runtime build.")
+                  continue
+
+              artifacts = github_get(f"/actions/runs/{run_id}/artifacts")
+              valid = [
+                  item for item in artifacts.get("artifacts", [])
+                  if item.get("name") == "Crash-Bash-RetroArch-Stage"
+                  and not item.get("expired")
+                  and 0 < item.get("size_in_bytes", 0) <= 64 * 1024 * 1024
+              ]
+              if valid:
+                  selected = run_id
+                  break
+              if requested:
+                  raise SystemExit("Selected run has no valid, unexpired RetroArch runtime artifact.")
+
+          if selected is None:
+              raise SystemExit(
+                  "No successful Crash-Bash-RetroArch-Stage artifact is available. "
+                  "Run the Crash Bash Enhanced PS3 Build workflow first."
+              )
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"run_id={selected}\\n")
+          print(f"Verified successful PS3 runtime build and selected artifact from run {selected}.")
           PY
 
       - name: Download and validate the private BIN/CUE archive
@@ -207,7 +249,7 @@ jobs:
         with:
           name: Crash-Bash-RetroArch-Stage
           path: Crash-Bash-Enhanced/pkgfiles/USRDIR/retroarch
-          run-id: ${{ inputs.runtime_run_id }}
+          run-id: ${{ steps.runtime.outputs.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify the downloaded embedded runtime
