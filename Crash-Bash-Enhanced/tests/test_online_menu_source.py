@@ -14,6 +14,26 @@ assert "sysThreadCreate(thread, lobby_worker, task" in source
 assert "sysThreadJoin(thread, &result)" in source
 assert "LOBBY_WORK_CONNECT" in source
 assert "LOBBY_WORK_LIST" in source
+
+# CROSS must never silently do nothing on an empty public-room list. In that
+# state it creates a room; when rooms exist it joins the selected room.
+rooms_screen = re.search(
+    r"if \\(screen == SCREEN_ROOMS\\) \\{(.*?)\\n        \\} else if \\(screen == SCREEN_JOIN_CODE\\)",
+    source,
+    re.S,
+)
+assert rooms_screen, "Online room screen input handler is missing"
+cross_action = re.search(
+    r"if \\(cross && !old_cross && !worker_active\\) \\{(.*?)\\n            \\}\\n            if \\(triangle",
+    rooms_screen.group(1),
+    re.S,
+)
+assert cross_action, "CROSS room action must be handled when no request is pending"
+assert "room_count > 0" in cross_action.group(1)
+assert "LOBBY_WORK_JOIN" in cross_action.group(1)
+assert "LOBBY_WORK_CREATE" in cross_action.group(1)
+assert "CROSS or TRIANGLE creates a room." in source
+assert "CROSS CREATE" in source
 assert "CONNECTING TO ONLINE ROOMS" in source
 assert "if (worker_active && worker.done)" in source
 assert "start_lobby_worker(&worker_thread, &worker, LOBBY_WORK_CONNECT)" in source
