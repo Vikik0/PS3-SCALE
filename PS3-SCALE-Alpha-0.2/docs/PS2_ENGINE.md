@@ -164,3 +164,18 @@ Physical-console acceptance criteria and the per-title result register are maint
 - [PSX-Place — PS2 netemu CONFIG discussion](https://psx-place.com/threads/w-i-p-configs-for-ps2_netemu-explained.15034/)
 
 Host-side tests validate CONFIG serialization and safe file staging. They do not prove game compatibility or a real FPS gain. Physical-console validation remains required.
+
+## PS2 ISO routing and CONFIG sidecar location
+
+A practical integration failure was found in the first implementation: webMAN MOD does not always run an external USB PS2 ISO from its original USB path. On CFW it caches non-primary-drive PS2 images to `/dev_hdd0/PS2ISO/<filename>` and mounts that cached copy. A CONFIG written beside the USB source is therefore ignored by netemu.
+
+PS3 SCALE now resolves the CONFIG path using webMAN's actual cache behavior:
+
+- Internal HDD image: `/dev_hdd0/PS2ISO/<filename>.CONFIG`.
+- USB image: `/dev_hdd0/PS2ISO/<filename>.CONFIG` beside webMAN's cached ISO, not beside the USB source.
+- If a same-name HDD cache already exists, PS3 SCALE compares file size, boot serial and PCSX2 ELF hash against the selected USB source. A mismatch blocks CONFIG writes and asks the user to remove the stale cache; this prevents applying a patch to a different cached game revision.
+- Game launch uses the documented `/mount_ps3/<path>?emu=ps2_netemu.self` route first, then `/play.ps3`. This explicitly selects netemu because CONFIG command `0x0A` is netemu-only.
+
+Upstream behavior references: [webMAN PS2 ISO cache path and mount flow](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount_cobra.h#L245-L315), [webMAN cache copy target](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount.h#L1168-L1205), and [emulator selector parsing](https://github.com/aldostools/webMAN-MOD/blob/master/include/mount/mount.h#L255-L270).
+
+This fix makes the CONFIG land where webMAN looks for it; it does not make a title-specific patch universally compatible. Physical testing remains mandatory.
