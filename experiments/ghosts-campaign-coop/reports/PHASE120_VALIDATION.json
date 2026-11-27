@@ -13,12 +13,19 @@
     "missing_observation_fields_fail_closed": true,
     "non_object_player_records_rejected_without_crash": true
   },
-  "status": "IMPLEMENTED; TESTS_ADDED; CI_NOT_YET_CONFIRMED",
+  "status": "CI_PASS",
   "runtime_boundary": {
     "physical_ps3_tested": false,
     "player_two": "NOT_PROVEN",
     "shared_interactions_ready": "0/4",
     "original_mission_handlers_migrated": 0,
     "retail_fastfiles_modified": false
+  },
+  "ci": {
+    "workflow_run": 1662,
+    "workflow_url": "https://github.com/Vikik0/PS3-SCALE/actions/runs/45973672795",
+    "python_tests_passed": 627,
+    "capture_kit_files_verified": 89,
+    "capture_kit_artifact_id": 15186645667
   }
 }
