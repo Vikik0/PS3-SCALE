@@ -114,6 +114,17 @@ int main(void)
         assert(patch_merged[20] == 0x60 && patch_merged[21] == 0x18);
         assert(patch_merged[32] == 0x64 && patch_merged[33] == 0x18);
         {
+            uint8_t already_output[128];
+            size_t already_size = 0;
+            memset(already_output, 0xA5, sizeof(already_output));
+            assert(ps3scale_ps2_config_append_patches(
+                patch_merged, patch_merged_size, &second_patch, 1,
+                already_output, sizeof(already_output), &already_size) == -6);
+            assert(already_size == 0);
+            assert(already_output[0] == 0xA5 &&
+                   already_output[sizeof(already_output) - 1u] == 0xA5);
+        }
+        {
             ps3scale_ps2_code_patch_t conflicting_patch = {
                 0x00161860u, 0x04030201u, 0x2C620001u
             };
@@ -127,9 +138,6 @@ int main(void)
                 patch_base, patch_base_size, partial_patches, 2,
                 patch_merged, sizeof(patch_merged), &patch_merged_size) == -3);
         }
-        assert(ps3scale_ps2_config_append_patches(
-            patch_merged, patch_merged_size, &second_patch, 1,
-            patch_base, sizeof(patch_base), &patch_base_size) == -6);
 
         {
             uint8_t title_id_config[64] = {
