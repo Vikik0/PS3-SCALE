@@ -143,6 +143,20 @@ static const ps3scale_ps2_game_patch_t g_patches[]={
  PATCH("SLES_531.58",0xE38A0AB6u,"Cold Fear (PAL-M)","SLES-53158_E38A0AB6.pnach",PS3SCALE_PS2_PATCH_480P,p480_cold_fear)
 
 };
+#ifdef PS3SCALE_HOST_TEST
+size_t ps3scale_ps2_game_patch_catalogue_count(void)
+{
+ return sizeof(g_patches) / sizeof(g_patches[0]);
+}
+
+const ps3scale_ps2_game_patch_t *ps3scale_ps2_game_patch_catalogue_at(size_t index)
+{
+ if (index >= ps3scale_ps2_game_patch_catalogue_count())
+  return NULL;
+ return &g_patches[index];
+}
+#endif
+
 const ps3scale_ps2_game_patch_t *ps3scale_ps2_game_patch_find(
  const char *serial,uint32_t hash,ps3scale_ps2_patch_kind_t kind)
 {
