@@ -3,10 +3,12 @@
 #endif
 
 #include "ps3scale/ps2_config_store.h"
+#include "ps3scale/ps2_config.h"
 
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -34,6 +36,135 @@ int ps3scale_ps2_config_store_probe(const char *path, size_t max_bytes,
     if (file_size)
         *file_size = (size_t)st.st_size;
     return 1;
+}
+
+int ps3scale_ps2_config_store_stage(const char *path, const void *data,
+                                    size_t length, size_t max_bytes)
+{
+    const unsigned char *bytes = (const unsigned char *)data;
+    size_t offset = 0;
+    int descriptor;
+    int created = 0;
+
+    if (!path || !path[0] || !data || length == 0 ||
+        max_bytes == 0 || length > max_bytes)
+        return -1;
+
+    if (ps3scale_ps2_config_store_probe(path, max_bytes, NULL) != 0)
+        return -2;
+
+    descriptor = open(path, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    if (descriptor < 0)
+        return -3;
+    created = 1;
+
+    while (offset < length) {
+        ssize_t count = write(descriptor, bytes + offset, length - offset);
+
+        if (count < 0 && errno == EINTR)
+            continue;
+        if (count <= 0)
+            goto fail;
+        offset += (size_t)count;
+    }
+
+    if (fsync(descriptor) != 0)
+        goto fail;
+    if (close(descriptor) != 0) {
+        descriptor = -1;
+        goto fail_unlink;
+    }
+    descriptor = -1;
+
+    {
+        size_t staged_size = 0;
+        if (ps3scale_ps2_config_store_probe(path, max_bytes,
+                                            &staged_size) != 1 ||
+            staged_size != length)
+            goto fail_unlink;
+    }
+
+    return 0;
+
+fail:
+    (void)close(descriptor);
+    descriptor = -1;
+fail_unlink:
+    if (created)
+        (void)unlink(path);
+    return -4;
+}
+
+int ps3scale_ps2_config_store_is_generated(const char *path,
+                                           size_t max_bytes)
+{
+    FILE *file;
+    unsigned char *data;
+    size_t file_size = 0;
+    int state;
+    int valid;
+
+    state = ps3scale_ps2_config_store_probe(path, max_bytes, &file_size);
+    if (state != 1)
+        return state;
+    if (file_size == 0 || file_size > max_bytes)
+        return -1;
+
+    data = (unsigned char *)malloc(file_size);
+    if (!data)
+        return -1;
+
+    file = fopen(path, "rb");
+    if (!file) {
+        free(data);
+        return -1;
+    }
+
+    valid = fread(data, 1, file_size, file) == file_size;
+    if (fclose(file) != 0)
+        valid = 0;
+    if (!valid) {
+        free(data);
+        return -1;
+    }
+
+    valid = ps3scale_ps2_config_validate_generated(data, file_size) == 0;
+    free(data);
+    return valid ? 1 : 0;
+}
+
+int ps3scale_ps2_config_store_read(const char *path, void *buffer,
+                                   size_t capacity, size_t max_bytes,
+                                   size_t *file_size)
+{
+    FILE *file;
+    size_t actual_size = 0;
+    int state;
+    int ok;
+
+    if (file_size)
+        *file_size = 0;
+    if (!path || !buffer || !file_size || capacity == 0 ||
+        max_bytes == 0 || capacity > max_bytes)
+        return -1;
+
+    state = ps3scale_ps2_config_store_probe(path, max_bytes, &actual_size);
+    if (state != 1)
+        return state;
+    if (actual_size > capacity)
+        return -2;
+
+    file = fopen(path, "rb");
+    if (!file)
+        return -3;
+    ok = fread(buffer, 1, actual_size, file) == actual_size;
+    if (fclose(file) != 0)
+        ok = 0;
+    if (!ok)
+        return -4;
+
+    *file_size = actual_size;
+    return 0;
 }
 
 static int files_equal(const char *left, const char *right, size_t max_bytes)

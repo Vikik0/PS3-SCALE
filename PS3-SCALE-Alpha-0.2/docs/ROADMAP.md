@@ -72,6 +72,26 @@
 - [x] No automatic CONFIG writes; all file changes require an explicit action in PS2 CONFIG Manager.
 - [ ] Physical validation of backup, restore and one matched CONFIG on the target PS3 Slim.
 
+## Alpha 0.34 — PS2 Enhancer
+
+- [x] Add a validated optional netemu `0x48` conservative VSYNC timing command (No-IPU, 20,000 delay).
+- [x] Add PS2 ISO profile toggles for L2H performance, sharper pixels and experimental frame pacing.
+- [x] Generate local `.iso.CONFIG` sidecars without modifying the game ISO.
+- [x] Automatically create and verify the original CONFIG backup before replacing an existing sidecar.
+- [x] Stage generated CONFIG data with exclusive file creation, fsync and size verification before atomic install.
+- [x] Keep PS2 Classics on the exact encrypted ENC catalogue route; no plaintext CONFIG is written into a Classics package.
+- [x] Document that XMB upscaling is separate and that no generic 60 FPS unlock exists.
+- [x] Resolve root-level and nested ISO9660 BOOT/BOOT2 paths; assemble bounded multi-extent SYSTEM.CNF / BOOT files and reject malformed, interleaved, oversized or mismatched extent chains.
+- [ ] Validate 0x44, 0x46 and 0x48 individually on the target PS3 Slim and representative games.
+- [x] Build the per-game EE instruction patch pipeline around exact `0x0A` CONFIG entries; no guessed offsets.
+- [x] Validate every FPS / widescreen / 480p patch address against a file-backed executable ELF segment before showing a profile as available; revalidate on apply.
+- [x] Seed a source-pinned experimental PS2 FPS / widescreen / 480p catalogue with exact serial + ELF-hash matching.
+- [x] Display the detected boot serial and ELF hash before applying a per-game patch.
+- [x] Require a two-step controller confirmation before writing an experimental EE patch; navigation cancels without writing.
+- [x] Add a full patch review overlay listing every address, original opcode and replacement opcode before the final CROSS.
+- [x] Re-read and compare every original opcode at apply time; refuse if the boot ELF differs from the review preview.
+- [ ] Validate each candidate on physical hardware before calling it a working or verified enhancement.
+
 ## Alpha 0.4 — PS3 title-specific patch manager
 
 - [ ] Cryptographically sign the online catalog and downloads; Git blob SHA-1 verification is an integrity check, not a signature.

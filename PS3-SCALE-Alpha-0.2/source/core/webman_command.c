@@ -155,7 +155,13 @@ int ps3scale_webman_build_start_path(const ps3scale_game_t *game,
             encode_game_path(game->path, encoded_path,
                              sizeof(encoded_path)) != 0)
             return -1;
-        written = snprintf(output, output_size, "/play.ps3%s", encoded_path);
+        /*
+         * The documented webMAN mount route accepts the explicit emulator
+         * selector. Mount first with netemu, then webman_control launches the
+         * mounted disc through /play.ps3.
+         */
+        written = snprintf(output, output_size,
+                           "/mount_ps3%s?emu=ps2_netemu.self", encoded_path);
     } else if (!valid_title_id(game->title_id)) {
         return -1;
     } else if (game->kind == PS3SCALE_GAME_PS3_HDD) {

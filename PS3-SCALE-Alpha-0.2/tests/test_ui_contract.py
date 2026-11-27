@@ -2,10 +2,22 @@
 """Static UI contract checks for PS3 SCALE's PS3-only UI."""
 import math
 import pathlib
+import re
 import sys
 
 source_path = pathlib.Path(sys.argv[1])
 src = source_path.read_text(encoding="utf-8")
+
+# Keep the in-app version and PS3 package metadata in sync.
+version_match = re.search(
+    r'#define PS3SCALE_APP_VERSION "ALPHA (\d+)\.(\d+)"', src)
+assert version_match, "Missing application version macro"
+package_version = (
+    f"{int(version_match.group(1)):02d}.{int(version_match.group(2)):02d}")
+sfo_path = source_path.parent.parent.parent / "sfo.xml"
+sfo_xml = sfo_path.read_text(encoding="utf-8")
+assert f'<value name="APP_VER" type="string">{package_version}</value>' in sfo_xml
+assert f'<value name="VERSION" type="string">{package_version}</value>' in sfo_xml
 
 def section(start, end):
     a = src.index(start)
@@ -774,8 +786,8 @@ assert '"/dev_usb000/BIOS - Zorrovian [Official Visualiser] (1)(2).mp3"' in src
 assert "rename(temp_path, PS3SCALE_MUSIC1_PATH)" in src
 assert "MUSIC 1 IMPORTED FROM USB" in settings
 sfo = (project_root / "sfo.xml").read_text(encoding="utf-8")
-assert '<value name="APP_VER" type="string">00.33</value>' in sfo
-assert '<value name="VERSION" type="string">00.33</value>' in sfo
+assert f'<value name="APP_VER" type="string">{package_version}</value>' in sfo
+assert f'<value name="VERSION" type="string">{package_version}</value>' in sfo
 
 # Startup failure and package-integrity regression checks.
 startup = section("int main(int argc, char *argv[])", "while (!g_exit_requested)")
@@ -884,7 +896,7 @@ assert "actions/upload-artifact@v4" not in build_workflow
 assert "actions/setup-python@v5" not in index_workflow
 
 # Keep the visible app, support payload and local report on one version.
-assert '#define PS3SCALE_APP_VERSION "ALPHA 0.33"' in src
+assert version_match.group(0) in src
 assert '#define SETTINGS_COUNT 10' in src
 assert '#include "ps3scale/atomic_file.h"' in src
 assert '"settings_version=3\\n"' in src
@@ -1050,6 +1062,109 @@ assert "profile_script_state_for_game(game, profile)" not in details_ui
 assert "CIRCLE / SELECT / LEFT: BACK" in details_ui
 assert "g_ps2_config_download_running" in details_ui
 assert "PS2 CONFIG: %u%%" in details_ui
+
+# PS2 Enhancer uses only reviewed netemu CONFIG options and keeps the ISO read-only.
+ps2_enhancer_ui = section("static void draw_ps2_config_manager(void)",
+                          "static void draw_fps_control(void)")
+for token in ("PS2 ENHANCER", "NETEMU HARDWARE REQUIRED", "L2H PERFORMANCE (0x46)",
+              "SHARPER PIXELS (0x44)", "FRAME PACING (0x48)",
+              "PRESSURE SENSITIVITY (0x50)",
+              "APPLY LOCAL PROFILE", "EXISTING CONFIG PRESERVED",
+              "APPLY EXPERIMENTAL 60 FPS PATCH",
+              "APPLY 16:9 WIDESCREEN PATCH",
+              "APPLY 480P GAME PATCH",
+              "CONFIRM 60 FPS PATCH", "CONFIRM 16:9 PATCH",
+              "CONFIRM 480P PATCH",
+              "EXACT MATCH: %.15s | ELF HASH: %08lX",
+              "DOWNLOAD EXACT GAME CONFIG", "BACK UP CURRENT CONFIG",
+              "RESTORE SAVED BACKUP",
+              "PATCH MATCH: FPS %s | 16:9 %s | 480P %s",
+              "TRIANGLE: DISPLAY GUIDE"):
+    assert token in ps2_enhancer_ui, f"Missing PS2 enhancer UI token: {token}"
+assert "ps2_config_ensure_backup" in src
+assert "ps3scale_ps2_config_store_stage" in src
+assert "PS3SCALE_PS2_CFG_FRAME_PACING" in src
+assert "ps3scale_ps2_iso_load_boot_elf" in src
+assert "ps3scale_ps2_elf_read_exec_word" in src
+assert "ps3scale_ps2_game_patch_find" in src
+assert "cache_ps2_patch_preview" in src
+assert "g_ps2_patch_preview_original" in src
+assert "BOOT ELF CHANGED SINCE REVIEW. REOPEN THE ENHANCER." in src
+patch_preview = section("static void draw_ps2_patch_review(void)",
+                        "static void draw_ps2_config_manager(void)")
+for token in ("REVIEW EXPERIMENTAL PS2 PATCH", "EE ADDRESS",
+              "ORIGINAL WORD", "REPLACEMENT WORD",
+              "CROSS: APPLY THIS EXACT LIST | CIRCLE: CANCEL WITHOUT WRITING",
+              "EXPERIMENTAL: NOT YET VERIFIED ON A PHYSICAL PS3."):
+    assert token in patch_preview
+assert "draw_ps2_patch_review();" in ps2_enhancer_ui
+assert "ps2_netemu_iso_supported" in src
+assert "ps3scale_hardware_supports_netemu_ps2_iso(&g_hardware_info)" in src
+assert "if (!ps2_netemu_iso_supported())" in src
+assert "const int local_profile_supported = can_generate && netemu_supported;" in src
+
+# Keep the pinned PS2 patch catalogue exact, aligned, bounded and source-backed.
+patch_catalog_path = source_path.parent.parent / "core" / "ps2_game_patch.c"
+patch_catalog = patch_catalog_path.read_text(encoding="utf-8")
+entry_pattern = re.compile(
+    r'PATCH\("([^"]+)",0x([0-9A-Fa-f]{8})u,"([^"]+)","([^"]+)",'
+    r'PS3SCALE_PS2_PATCH_(FPS|WIDESCREEN|480P),([A-Za-z0-9_]+)\)')
+array_pattern = re.compile(
+    r'static const ps3scale_ps2_patch_word_t\s+([A-Za-z0-9_]+)\[\]=\{([\s\S]*?)\};')
+word_pattern = re.compile(r'\{0x([0-9A-Fa-f]+)u,0x([0-9A-Fa-f]+)u\}')
+patch_arrays = {}
+for match in array_pattern.finditer(patch_catalog):
+    patch_arrays[match.group(1)] = [
+        (int(word.group(1), 16), int(word.group(2), 16))
+        for word in word_pattern.finditer(match.group(2))]
+patch_counts = {"FPS": 0, "WIDESCREEN": 0, "480P": 0}
+patch_keys = set()
+for match in entry_pattern.finditer(patch_catalog):
+    serial, elf_hash, title, filename, kind, array_name = match.groups()
+    patch_counts[kind] += 1
+    assert len(elf_hash) == 8 and filename.endswith(".pnach")
+    expected_prefix = serial.replace("_", "-").replace(".", "")
+    assert filename.startswith(expected_prefix + "_")
+    assert filename.endswith("_" + elf_hash.upper() + ".pnach")
+    assert array_name in patch_arrays and 0 < len(patch_arrays[array_name]) <= 32
+    key = (serial, elf_hash.upper(), kind)
+    assert key not in patch_keys
+    patch_keys.add(key)
+    addresses = [address for address, replacement in patch_arrays[array_name]]
+    assert len(addresses) == len(set(addresses))
+    for address, replacement in patch_arrays[array_name]:
+        assert address < 0x02000000 and address % 4 == 0
+assert patch_counts == {"FPS": 11, "WIDESCREEN": 12, "480P": 13}
+assert "1fd98102b8e2fffe3e0c29aab55339d48af0ffe5" in patch_catalog
+assert "refresh_ps2_patch_availability();" in src
+assert "g_ps2_patch_fps_available" in src
+assert "g_ps2_patch_widescreen_available" in src
+assert "g_ps2_patch_480p_available" in src
+assert "ps3scale_ps2_config_append_patches" in src
+assert "result == -6" in src
+assert "EXACT PATCH ALREADY INSTALLED. NO FILE WAS CHANGED." in src
+assert "request_ps2_game_patch(PS3SCALE_PS2_PATCH_FPS);" in src
+assert "request_ps2_game_patch(PS3SCALE_PS2_PATCH_WIDESCREEN);" in src
+assert "request_ps2_game_patch(PS3SCALE_PS2_PATCH_480P);" in src
+patch_confirmation = section("static void request_ps2_game_patch(",
+                             "static void ps2_config_download_worker(")
+assert "if (g_ps2_patch_confirm_pending)" in patch_confirmation
+assert "apply_ps2_game_patch(patch_kind);" in patch_confirmation
+assert "PRESS CROSS AGAIN TO APPLY; CIRCLE CANCELS." in patch_confirmation
+local_profile = section("static void apply_ps2_local_profile(void)",
+                        "static void apply_ps2_game_patch(")
+assert "if (had_existing_config)" in local_profile
+assert "LOCAL PROFILE WILL NOT OVERWRITE IT." in local_profile
+assert "ps3scale_ps2_config_store_is_generated" not in local_profile
+assert "g_ps2_enhancer_guide_open = 1" in src
+ps2_input = section("} else if (g_screen == SCREEN_PS2_CONFIG) {",
+                    "} else if (g_screen == SCREEN_FPS_CONTROL) {")
+assert "triangle && !old_triangle" in ps2_input
+assert "(g_ps2_config_manager_selection + 10) % 11" in ps2_input
+assert "(g_ps2_config_manager_selection + 1) % 11" in ps2_input
+assert "perform_ps2_config_manager_action();" in ps2_input
+assert "PATCH CONFIRMATION CANCELLED. NO FILE WAS CHANGED." in ps2_input
+assert "g_ps2_patch_confirm_pending = 0;" in ps2_input
 assert "draw_rounded_rect(544.0f, 376.0f, 272.0f, 4.0f" in details_ui
 tools_ui = section("static void draw_tools(void)",
                    "static void draw_help(void)")

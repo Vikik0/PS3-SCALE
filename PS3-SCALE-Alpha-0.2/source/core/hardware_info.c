@@ -60,6 +60,15 @@ const char *ps3scale_console_type_name(ps3scale_console_type_t type)
     }
 }
 
+int ps3scale_hardware_supports_netemu_ps2_iso(
+    const ps3scale_hardware_info_t *info)
+{
+    if (!info)
+        return 0;
+    return info->family == PS3SCALE_HARDWARE_SLIM ||
+           info->family == PS3SCALE_HARDWARE_SUPER_SLIM;
+}
+
 int ps3scale_hardware_info_parse(const uint8_t *raw, size_t raw_size,
                                  ps3scale_hardware_info_t *out)
 {

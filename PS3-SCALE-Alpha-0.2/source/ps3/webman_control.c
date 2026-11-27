@@ -31,6 +31,9 @@
 #ifndef WEBMAN_IO_TIMEOUT_SEC
 #define WEBMAN_IO_TIMEOUT_SEC 2
 #endif
+#ifndef WEBMAN_PS2_MOUNT_TIMEOUT_SEC
+#define WEBMAN_PS2_MOUNT_TIMEOUT_SEC 600
+#endif
 
 static int network_modules_ready(void)
 {
@@ -130,7 +133,7 @@ static int http_status_is_success(const char *response)
 }
 
 /* Do not rely only on SO_RCVTIMEO: some PS3 socket builds ignore it. */
-static int wait_for_readable(int sock)
+static int wait_for_readable(int sock, int timeout_seconds)
 {
     fd_set read_set;
     struct timeval timeout;
@@ -139,7 +142,7 @@ static int wait_for_readable(int sock)
     for (;;) {
         FD_ZERO(&read_set);
         FD_SET(sock, &read_set);
-        timeout.tv_sec = WEBMAN_IO_TIMEOUT_SEC;
+        timeout.tv_sec = timeout_seconds;
         timeout.tv_usec = 0;
         result = select(sock + 1, &read_set, NULL, NULL, &timeout);
         if (result < 0 && errno == EINTR)
@@ -150,8 +153,9 @@ static int wait_for_readable(int sock)
     return result > 0 && FD_ISSET(sock, &read_set) ? 0 : -1;
 }
 
-static int webman_http_get(const char *path, char *response,
-                           size_t response_size, int read_response_body)
+static int webman_http_get_timeout(const char *path, char *response,
+                                   size_t response_size, int read_response_body,
+                                   int io_timeout_seconds)
 {
     int sock = -1;
     int ret;
@@ -229,7 +233,7 @@ static int webman_http_get(const char *path, char *response,
     }
 
     while (used + 1 < response_size) {
-        if (wait_for_readable(sock) != 0)
+        if (wait_for_readable(sock, io_timeout_seconds) != 0)
             break;
         ret = (int)read(sock, response + used, response_size - used - 1);
         if (ret < 0 && errno == EINTR)
@@ -274,6 +278,13 @@ cleanup:
     return result;
 }
 
+static int webman_http_get(const char *path, char *response,
+                           size_t response_size, int read_response_body)
+{
+    return webman_http_get_timeout(path, response, response_size,
+                                   read_response_body, WEBMAN_IO_TIMEOUT_SEC);
+}
+
 int ps3scale_webman_available(void)
 {
     char response[1024];
@@ -306,6 +317,18 @@ int ps3scale_webman_start_game(const ps3scale_game_t *game)
     if (ps3scale_webman_build_start_path(game, request_path,
                                          sizeof(request_path)) != 0)
         return PS3SCALE_WEBMAN_ERROR_INVALID_REQUEST;
+
+    if (game->kind == PS3SCALE_GAME_PS2_ISO) {
+        int mount_result = webman_http_get_timeout(
+            request_path, response, sizeof(response), 0,
+            WEBMAN_PS2_MOUNT_TIMEOUT_SEC);
+        if (mount_result != 0)
+            return mount_result;
+
+        /* /mount_ps3 selects netemu and mounts the ISO without autoplay.
+           Start the now-mounted PS2 disc only after the mount request returns. */
+        return webman_http_get("/play.ps3", response, sizeof(response), 0);
+    }
 
     return webman_http_get(request_path, response, sizeof(response), 0);
 }
