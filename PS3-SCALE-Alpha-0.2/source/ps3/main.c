@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <dirent.h>
 #include <string.h>
 #include <ctype.h>
@@ -29,6 +30,7 @@
 #include "ps3scale/ps2_config.h"
 #include "ps3scale/ps2_config_db.h"
 #include "ps3scale/ps2_config_store.h"
+#include "ps3scale/ps2_config_path.h"
 #include "ps3scale/ps2_game_patch.h"
 #include "ps3scale/iso9660.h"
 #include "ps3scale/atomic_file.h"
@@ -236,6 +238,7 @@ static int g_ps2_patch_confirm_pending = 0;
 static ps3scale_ps2_patch_kind_t g_ps2_patch_confirm_kind = PS3SCALE_PS2_PATCH_FPS;
 static unsigned int g_ps2_enhancement_flags = PS3SCALE_PS2_CFG_ENABLE_L2H;
 static size_t g_ps2_config_manager_target_size=0,g_ps2_config_manager_backup_size=0,g_ps2_config_manager_max_bytes=PS3SCALE_PS2_CONFIG_MAX_BYTES;
+static int g_ps2_cache_mismatch = 0;
 static char g_ps2_config_manager_message[128]="SELECT AN ACTION.";
 static char g_ps2_config_manager_target[PS3SCALE_PATH_MAX],g_ps2_config_manager_backup[PS3SCALE_PATH_MAX];
 static char g_ps2_config_manager_backup_temp[PS3SCALE_PATH_MAX],g_ps2_config_manager_rollback[PS3SCALE_PATH_MAX];
@@ -3360,7 +3363,7 @@ static int ps2_config_paths_for_game(const ps3scale_game_t *game,
  char *rollback,size_t rollback_size,char *restore_temp,size_t restore_temp_size,char *download_temp,size_t download_temp_size,size_t *max_bytes){
  int n;char normalized[PS3SCALE_PS2_CONFIG_ID_MAX];const char *id;const ps3scale_ps2_config_entry_t *entry;
  if(!game||!target||!backup||!backup_temp||!rollback||!restore_temp||!download_temp||!max_bytes)return -1;
- if(game->kind==PS3SCALE_GAME_PS2_ISO){if(!game->path[0])return -1;n=snprintf(target,target_size,"%s.CONFIG",game->path);*max_bytes=PS3SCALE_PS2_CONFIG_MAX_BYTES;}
+ if(game->kind==PS3SCALE_GAME_PS2_ISO){if(ps3scale_ps2_iso_config_path(game->path,target,target_size,NULL)!=0)return -1;n=(int)strlen(target);*max_bytes=PS3SCALE_PS2_CONFIG_MAX_BYTES;}
  else if(game->kind==PS3SCALE_GAME_PS2_CLASSIC){entry=ps2_config_for_game(game);id=(entry&&strcmp(entry->type,"ENC")==0)?entry->title_id:(game->disc_id[0]?game->disc_id:game->title_id);
   if(!id[0]||ps3scale_ps2_config_normalize_id(id,normalized,sizeof(normalized))!=0)return -1;
   n=snprintf(target,target_size,"%s/%s.ENC",PS3SCALE_PS2_CLASSICS_CONFIG_DIR,normalized);*max_bytes=PS3SCALE_PS2_CONFIG_DOWNLOAD_LIMIT;}
@@ -3372,6 +3375,71 @@ static int ps2_config_paths_for_game(const ps3scale_game_t *game,
  n=snprintf(restore_temp,restore_temp_size,"%s.ps3scale.restore.tmp",target);if(n<0||(size_t)n>=restore_temp_size)return -1;
  n=snprintf(download_temp,download_temp_size,"%s.ps3scale.tmp",target);if(n<0||(size_t)n>=download_temp_size)return -1;return 0;
 }
+/*
+ * webMAN MOD copies PS2 ISOs from USB to /dev_hdd0/PS2ISO and reuses an
+ * existing cached file instead of replacing it. Never write a CONFIG for a
+ * USB source if the same-name HDD cache belongs to a different ISO/revision.
+ */
+static int ps2_iso_cached_copy_matches_source(const ps3scale_game_t *game)
+{
+    char config_path[PS3SCALE_PATH_MAX];
+    char cache_iso_path[PS3SCALE_PATH_MAX];
+    unsigned char *source_elf = NULL;
+    unsigned char *cache_elf = NULL;
+    size_t source_elf_size = 0;
+    size_t cache_elf_size = 0;
+    uint32_t source_hash = 0;
+    uint32_t cache_hash = 0;
+    char source_serial[16];
+    char cache_serial[16];
+    struct stat source_stat;
+    struct stat cache_stat;
+    int uses_hdd_cache = 0;
+    int result = 0;
+    size_t length;
+
+    if (!game || game->kind != PS3SCALE_GAME_PS2_ISO)
+        return 1;
+    if (ps3scale_ps2_iso_config_path(game->path, config_path,
+            sizeof(config_path), &uses_hdd_cache) != 0)
+        return 0;
+    if (!uses_hdd_cache)
+        return 1;
+
+    length = strlen(config_path);
+    if (length <= 7u || strcmp(config_path + length - 7u, ".CONFIG") != 0)
+        return 0;
+    if (length - 7u >= sizeof(cache_iso_path))
+        return 0;
+    memcpy(cache_iso_path, config_path, length - 7u);
+    cache_iso_path[length - 7u] = '\0';
+
+    if (stat(cache_iso_path, &cache_stat) != 0)
+        return errno == ENOENT ? 1 : 0;
+    if (stat(game->path, &source_stat) != 0 ||
+        !S_ISREG(source_stat.st_mode) || !S_ISREG(cache_stat.st_mode) ||
+        source_stat.st_size != cache_stat.st_size)
+        return 0;
+
+    if (ps3scale_ps2_iso_load_boot_elf(game->path, &source_elf,
+            &source_elf_size, source_serial, sizeof(source_serial),
+            &source_hash) != 0)
+        goto cleanup;
+    if (ps3scale_ps2_iso_load_boot_elf(cache_iso_path, &cache_elf,
+            &cache_elf_size, cache_serial, sizeof(cache_serial),
+            &cache_hash) != 0)
+        goto cleanup;
+
+    result = source_elf_size == cache_elf_size &&
+             source_hash == cache_hash &&
+             strcmp(source_serial, cache_serial) == 0;
+
+cleanup:
+    free(source_elf);
+    free(cache_elf);
+    return result;
+}
+
 static void refresh_ps2_config_manager_cache(void)
 {
     const ps3scale_game_t *game = selected_game();
@@ -3382,6 +3450,7 @@ static void refresh_ps2_config_manager_cache(void)
     g_ps2_config_manager_target_size = 0;
     g_ps2_config_manager_backup_size = 0;
     g_ps2_config_manager_max_bytes = PS3SCALE_PS2_CONFIG_MAX_BYTES;
+    g_ps2_cache_mismatch = 0;
 
     if (ps2_config_paths_for_game(
             game,
@@ -3401,6 +3470,10 @@ static void refresh_ps2_config_manager_cache(void)
         g_ps2_config_manager_message[0] = '\0';
         return;
     }
+
+    g_ps2_cache_mismatch = game &&
+        game->kind == PS3SCALE_GAME_PS2_ISO &&
+        !ps2_iso_cached_copy_matches_source(game);
 
     g_ps2_config_manager_target_state = ps3scale_ps2_config_store_probe(
         g_ps2_config_manager_target, g_ps2_config_manager_max_bytes,
@@ -3482,6 +3555,12 @@ static void apply_ps2_local_profile(void)
     }
 
     refresh_ps2_config_manager_cache();
+    if (g_ps2_cache_mismatch) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "WEBMAN HDD CACHE IS A DIFFERENT ISO. REMOVE THE OLD CACHE FIRST.");
+        return;
+    }
     if (g_ps2_config_manager_target_state < 0) {
         snprintf(g_ps2_config_manager_message,
                  sizeof(g_ps2_config_manager_message),
@@ -3637,6 +3716,11 @@ static void apply_ps2_game_patch(ps3scale_ps2_patch_kind_t patch_kind)
         code_patches[i].replacement_word = catalog_patch->words[i].replacement_word;
     }
     refresh_ps2_config_manager_cache();
+    if (g_ps2_cache_mismatch) {
+        snprintf(g_ps2_config_manager_message, sizeof(g_ps2_config_manager_message),
+                 "WEBMAN HDD CACHE IS A DIFFERENT ISO. REMOVE THE OLD CACHE FIRST.");
+        goto cleanup;
+    }
     if (g_ps2_config_manager_target_state < 0) {
         snprintf(g_ps2_config_manager_message, sizeof(g_ps2_config_manager_message),
                  "CONFIG PATH IS INVALID OR THE FILE EXCEEDS THE SAFE SIZE LIMIT.");
@@ -3843,6 +3927,7 @@ static void start_ps2_config_download(void){
  if(ps3scale_ps2_config_build_url(entry,url,sizeof(url))!=0){set_details_message("PS2 CONFIG SOURCE URL IS INVALID.");goto copy_message;}
  if((strcmp(entry->type,"ENC")==0&&game->kind!=PS3SCALE_GAME_PS2_CLASSIC)||(strcmp(entry->type,"ENC")!=0&&game->kind!=PS3SCALE_GAME_PS2_ISO)){set_details_message("CONFIG TYPE DOES NOT MATCH THIS PS2 GAME FORMAT.");goto copy_message;}
  if(ps2_config_paths_for_game(game,target,sizeof(target),backup,sizeof(backup),backup_temp,sizeof(backup_temp),rollback,sizeof(rollback),restore_temp,sizeof(restore_temp),temporary,sizeof(temporary),&max_bytes)!=0){set_details_message("PS2 CONFIG TARGET PATH IS INVALID OR TOO LONG.");goto copy_message;}
+ if(game->kind==PS3SCALE_GAME_PS2_ISO&&!ps2_iso_cached_copy_matches_source(game)){set_details_message("WEBMAN HDD CACHE IS A DIFFERENT ISO. REMOVE THE OLD CACHE FIRST.");goto copy_message;}
  if(strcmp(entry->type,"ENC")==0){struct stat st;if(stat(PS3SCALE_PS2_CLASSICS_CONFIG_DIR,&st)!=0||!S_ISDIR(st.st_mode)){set_details_message("INSTALL THE WEBMAN PS2CONFIG PACKAGE FOR ENC FILES.");goto copy_message;}}
  state=ps3scale_ps2_config_store_probe(target,max_bytes,NULL);
  if(state<0){set_details_message("EXISTING CONFIG IS INVALID OR EXCEEDS THE SAFE SIZE LIMIT.");goto copy_message;}
@@ -3876,6 +3961,12 @@ static void perform_ps2_config_manager_action(void)
     }
 
     refresh_ps2_config_manager_cache();
+    if (g_ps2_cache_mismatch) {
+        snprintf(g_ps2_config_manager_message,
+                 sizeof(g_ps2_config_manager_message),
+                 "WEBMAN HDD CACHE IS A DIFFERENT ISO. REMOVE THE OLD CACHE FIRST.");
+        return;
+    }
     if (g_ps2_config_manager_target_state < 0) {
         snprintf(g_ps2_config_manager_message,
                  sizeof(g_ps2_config_manager_message),
@@ -4509,6 +4600,7 @@ static int ps2_config_target_exists(const ps3scale_game_t *game,const ps3scale_p
  char target[PS3SCALE_PATH_MAX],backup[PS3SCALE_PATH_MAX],bt[PS3SCALE_PATH_MAX],rollback[PS3SCALE_PATH_MAX],rt[PS3SCALE_PATH_MAX],dt[PS3SCALE_PATH_MAX];
  size_t max=PS3SCALE_PS2_CONFIG_MAX_BYTES;(void)entry;
  if(ps2_config_paths_for_game(game,target,sizeof(target),backup,sizeof(backup),bt,sizeof(bt),rollback,sizeof(rollback),rt,sizeof(rt),dt,sizeof(dt),&max)!=0)return 0;
+ if(game&&game->kind==PS3SCALE_GAME_PS2_ISO&&!ps2_iso_cached_copy_matches_source(game))return 0;
  return ps3scale_ps2_config_store_probe(target,max,NULL)==1;
 }
 
@@ -6315,11 +6407,17 @@ static void draw_ps2_config_manager(void)
         draw_text(430.0f, 182.0f, 0x514b69ff, line);
     }
     if (target_name && target_name[0]) {
-        snprintf(line, sizeof(line), "Target: %.52s", target_name);
+        const int usb_cache_target =
+            game && game->kind == PS3SCALE_GAME_PS2_ISO &&
+            strncmp(game->path, "/dev_usb", 8u) == 0;
+        snprintf(line, sizeof(line), "Target: %.34s%s", target_name,
+                 usb_cache_target ? " (WEBMAN HDD CACHE)" : "");
         draw_text(48.0f, 204.0f, 0x514b69ff, line);
     }
     if (can_generate && !netemu_supported) {
         snprintf(line, sizeof(line), "PATCH MATCH: NETEMU HARDWARE REQUIRED");
+    } else if (g_ps2_cache_mismatch) {
+        snprintf(line, sizeof(line), "HDD CACHE MISMATCH: APPLY DISABLED");
     } else if (can_generate && g_ps2_patch_probe_valid == 1) {
         snprintf(line, sizeof(line), "PATCH MATCH: FPS %s | 16:9 %s | 480P %s",
                  g_ps2_patch_fps_available ? "YES" : "NO",
@@ -6452,6 +6550,8 @@ static void draw_ps2_config_manager(void)
                               2.0f, 0x9568edff);
     } else {
         draw_text(48.0f, 410.0f, 0x875be8ff,
+                  g_ps2_cache_mismatch ?
+                  "DELETE THE STALE /dev_hdd0/PS2ISO CACHE COPY, THEN RESCAN." :
                   g_ps2_config_manager_message);
     }
 
