@@ -7,14 +7,20 @@
 - Application version shown in the UI: `ALPHA 0.35`
 - Package metadata: `APP_VER=00.35`, `VERSION=00.35`
 - Package title ID: `PS3SCALE1`
-- Source commit used for the Alpha 0.34 package: `cf850c558550a3e6acdc76bad51578830bb86df8`
+- Source commit used for the Alpha 0.35 package: `5147da208a6b7b29865f5a8cb1115febb513b608`
 
 ## Alpha 0.35 — exact patch review and apply-time opcode verification
 
 - The review overlay lists the matched game title, patch type, serial, ELF hash, write count, and every EE address with its original and replacement 32-bit word.
 - Original words are cached from the selected boot ELF when the exact candidate is probed, then re-read immediately before installation. Any mismatch cancels the write and asks the user to reopen the Enhancer.
 - CIRCLE and navigation cancellation remain unchanged; no file is touched until the second CROSS.
-- Alpha 0.34 baseline package and test results are retained below. The Alpha 0.35 build is being validated by the current CI run.
+- GitHub Actions run #993 on commit `5147da208a6b7b29865f5a8cb1115febb513b608`: **PASS** — Host-side tests, Support Edge Function checks, and PS3 ELF/SELF/standard PKG/GNPDRM PKG build and validation all passed.
+- Run: https://github.com/Vikik0/PS3-SCALE/actions/runs/45976461282
+- Artifact: [PS3-SCALE-Alpha-0.35-build-with-embedded-theme](https://github.com/Vikik0/PS3-SCALE/actions/runs/45976461282/artifacts/15187382067) — 25,454,272 bytes; SHA-256 `20e5274ca9c849f22c69ae02e728d1e4227d6136eeacd015f22c38520f1986fd`.
+- Build outputs: ELF `1ff60f6a223ef52d77950ff5b94d79a1c989c98fb5a2879c23ea26ef6e710b8d`; SELF `35d3d05717cbbe7e796ba4b9831d1c67249cb2dd146a8f89ed65ebcb54483463`; standard PKG `b5bc3fed3fbecf52a67fa59e4e5fc2b9128320a23210698a09fd2d759659931e`; GNPDRM PKG `094d1fb6f0fed7ee4f61cd0e0222805d146750ea1098e2123ccc0e522ba1abcb`.
+- Physical-console testing remains **NOT DONE**; do not mark any FPS, widescreen or 480p entry as hardware-verified.
+
+- Alpha 0.34 baseline package and test results are retained below.
 
 ## Alpha 0.34 — PS2 Enhancer and guarded patch application
 
