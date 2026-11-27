@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "phase": 120,
+  "title": "Runtime analyzer dependency closure and player-pair validator hardening",
+  "checks": {
+    "native_player_pair_template_packaged": true,
+    "pair_capture_validator_packaged": true,
+    "campaign_self_binding_helper_packaged": true,
+    "combined_analyzer_python_import_closure_packaged": true,
+    "optional_ghidra_script_closure_packaged": true,
+    "capture_kit_verifier_requires_analyzer_dependencies": true,
+    "best_post_loss_reconnect_run_preserved": true,
+    "missing_observation_fields_fail_closed": true,
+    "non_object_player_records_rejected_without_crash": true
+  },
+  "status": "IMPLEMENTED; TESTS_ADDED; CI_NOT_YET_CONFIRMED",
+  "runtime_boundary": {
+    "physical_ps3_tested": false,
+    "player_two": "NOT_PROVEN",
+    "shared_interactions_ready": "0/4",
+    "original_mission_handlers_migrated": 0,
+    "retail_fastfiles_modified": false
+  }
+}
