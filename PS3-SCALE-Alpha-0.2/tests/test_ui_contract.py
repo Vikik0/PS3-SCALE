@@ -1062,6 +1062,9 @@ for token in ("PS2 ENHANCER", "NETEMU HARDWARE REQUIRED", "L2H PERFORMANCE (0x46
               "APPLY EXPERIMENTAL 60 FPS PATCH",
               "APPLY 16:9 WIDESCREEN PATCH",
               "APPLY 480P OUTPUT PATCH",
+              "CONFIRM 60 FPS PATCH", "CONFIRM 16:9 PATCH",
+              "CONFIRM 480P PATCH",
+              "EXACT MATCH: %.15s | ELF HASH: %08lX",
               "DOWNLOAD EXACT GAME CONFIG", "BACK UP CURRENT CONFIG",
               "RESTORE SAVED BACKUP",
               "PATCH MATCH: FPS %s | 16:9 %s | 480P %s",
@@ -1116,9 +1119,14 @@ assert "g_ps2_patch_fps_available" in src
 assert "g_ps2_patch_widescreen_available" in src
 assert "g_ps2_patch_480p_available" in src
 assert "ps3scale_ps2_config_append_patches" in src
-assert "apply_ps2_game_patch(PS3SCALE_PS2_PATCH_FPS);" in src
-assert "apply_ps2_game_patch(PS3SCALE_PS2_PATCH_WIDESCREEN);" in src
-assert "apply_ps2_game_patch(PS3SCALE_PS2_PATCH_480P);" in src
+assert "request_ps2_game_patch(PS3SCALE_PS2_PATCH_FPS);" in src
+assert "request_ps2_game_patch(PS3SCALE_PS2_PATCH_WIDESCREEN);" in src
+assert "request_ps2_game_patch(PS3SCALE_PS2_PATCH_480P);" in src
+patch_confirmation = section("static void request_ps2_game_patch(",
+                             "static void ps2_config_download_worker(")
+assert "if (g_ps2_patch_confirm_pending)" in patch_confirmation
+assert "apply_ps2_game_patch(patch_kind);" in patch_confirmation
+assert "PRESS CROSS AGAIN TO APPLY; CIRCLE CANCELS." in patch_confirmation
 local_profile = section("static void apply_ps2_local_profile(void)",
                         "static void apply_ps2_game_patch(")
 assert "if (had_existing_config)" in local_profile
@@ -1131,6 +1139,8 @@ assert "triangle && !old_triangle" in ps2_input
 assert "(g_ps2_config_manager_selection + 10) % 11" in ps2_input
 assert "(g_ps2_config_manager_selection + 1) % 11" in ps2_input
 assert "perform_ps2_config_manager_action();" in ps2_input
+assert "PATCH CONFIRMATION CANCELLED. NO FILE WAS CHANGED." in ps2_input
+assert "g_ps2_patch_confirm_pending = 0;" in ps2_input
 assert "draw_rounded_rect(544.0f, 376.0f, 272.0f, 4.0f" in details_ui
 tools_ui = section("static void draw_tools(void)",
                    "static void draw_help(void)")
