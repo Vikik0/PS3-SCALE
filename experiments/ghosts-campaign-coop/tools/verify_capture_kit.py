@@ -19,6 +19,7 @@ REQUIRED_FILES = (
 )
 
 RUNTIME_ANALYZER_REQUIRED_FILES = (
+    "tools/__init__.py",
     "Tools/compare_pad_probe_logs.py",
     "Tools/compare_pad_input_probe_logs.py",
     "Tools/compare_ppu_function_inventories.py",
